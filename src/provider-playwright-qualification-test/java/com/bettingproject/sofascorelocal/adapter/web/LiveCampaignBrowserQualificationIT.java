@@ -309,6 +309,59 @@ class LiveCampaignBrowserQualificationIT {
         }
     }
 
+    @Test
+    @Timeout(45)
+    void suspensionReasonIsRemovedFromLayoutUntilJ4ReportsASuspension() throws Exception {
+        String configured = System.getProperty("provider.playwright.browser-cache", "");
+        assertThat(configured).as("explicit browser cache opt-in").isNotBlank();
+        assertThat(Path.of(configured).toRealPath()).isEqualTo(
+                Path.of(System.getenv("PLAYWRIGHT_BROWSERS_PATH")).toRealPath());
+        String html = statusReasonPage();
+        String css = resource("/static/css/app.css");
+        String script = resource("/static/js/live-campaign.js");
+        String origin = "http://127.0.0.1:8087";
+        AtomicInteger revision = new AtomicInteger(10);
+        AtomicInteger external = new AtomicInteger();
+        try (Playwright playwright = Playwright.create();
+             Browser browser = playwright.chromium().launch(new BrowserType.LaunchOptions().setHeadless(true));
+             BrowserContext context = browser.newContext(new Browser.NewContextOptions()
+                     .setAcceptDownloads(false).setServiceWorkers(ServiceWorkerPolicy.BLOCK))) {
+            context.route("**/*", route -> {
+                if (!route.request().url().startsWith(origin + "/")) {
+                    external.incrementAndGet(); route.abort(); return;
+                }
+                String path = java.net.URI.create(route.request().url()).getPath();
+                String body;
+                String type;
+                switch (path) {
+                    case "/events" -> { body = html; type = "text/html"; }
+                    case "/css/app.css" -> { body = css; type = "text/css"; }
+                    case "/js/live-campaign.js" -> { body = script; type = "text/javascript"; }
+                    case "/events/state" -> { body = statusReasonState(revision.get()); type = "application/json"; }
+                    default -> { route.fulfill(new Route.FulfillOptions().setStatus(404).setBody("")); return; }
+                }
+                route.fulfill(new Route.FulfillOptions().setStatus(200).setContentType(type + "; charset=UTF-8")
+                        .setHeaders(java.util.Map.of("Cache-Control", "no-store", "Content-Security-Policy",
+                                "default-src 'self'; script-src 'self'; style-src 'self'; frame-ancestors 'none'; form-action 'self'"))
+                        .setBody(body));
+            });
+            Page page = context.newPage();
+            page.navigate(origin + "/events");
+            page.waitForCondition(() -> "inprogress".equals(page.locator("[data-live-sport-status]").textContent()));
+            Locator reasonRow = page.locator("[data-live-status-reason-row]");
+            assertThat(reasonRow.getAttribute("hidden")).isNotNull();
+            assertThat(reasonRow.boundingBox()).isNull();
+
+            revision.set(11);
+            page.reload();
+            page.waitForCondition(reasonRow::isVisible);
+            assertThat(reasonRow.getAttribute("hidden")).isNull();
+            assertThat(page.locator("[data-live-status-reason]").textContent())
+                    .isEqualTo("Suspension temporaire décidée par l’arbitre");
+            assertThat(external.get()).isZero();
+        }
+    }
+
     private static String campaignEventLink() {
         return "/live-campaigns/" + CAMPAIGN + "?eventId=" + EVENT + "#live-event-" + EVENT;
     }
@@ -349,12 +402,37 @@ class LiveCampaignBrowserQualificationIT {
                 """.formatted(EVENT, cell, EVENT, EVENT);
     }
 
+    private static String statusReasonPage() {
+        return """
+                <!DOCTYPE html><html lang="fr"><head><meta charset="UTF-8">
+                <link rel="stylesheet" href="/css/app.css"><script defer src="/js/live-campaign.js"></script>
+                </head><body><main class="shell"><section class="panel" data-live-monitor data-live-state-url="/events/state">
+                <p data-live-refresh-status role="status"></p><div data-live-event-id="%s">
+                <span data-live-sport-status></span><dl class="detail-grid">
+                <div><dt>Score courant J4</dt><dd data-live-score>—</dd></div>
+                <div data-live-status-reason-row hidden><dt>Raison de suspension J4</dt>
+                <dd data-live-status-reason>—</dd></div></dl></div></section></main></body></html>
+                """.formatted(EVENT);
+    }
+
     private static String runtimeWarningState(int revision) {
         String runtime = revision == 10 ? """
                 {"state":"STOPPED_ERROR","reason":"LOCAL_CLEANUP_PENDING","collectionStopped":true,
                 "cleanupPending":true,"cleanupInProgress":false,"label":"Collecte arrêtée / clôture locale requise."}
                 """ : "null";
         return state(revision).replace("\"events\":[", "\"runtimeStatus\":" + runtime + ",\"events\":[");
+    }
+
+    private static String statusReasonState(int revision) {
+        boolean suspended = revision == 11;
+        return """
+                [{"campaignId":"%s","revision":%d,"state":"RUNNING","preparedAt":"2026-09-11T19:00:00Z",
+                "startedAt":"2026-09-11T19:00:01Z","events":[{"canonicalEventId":"%s","sportStatus":"%s",
+                "statusReason":%s,"state":"%s","selectionBlocked":false,"score":"0 – 1","canonicalCurrent":true,
+                "sourceReceivedAt":"2026-09-11T19:00:00Z"}]}]
+                """.formatted(CAMPAIGN, revision, EVENT, suspended ? "suspended" : "inprogress",
+                suspended ? "\"Suspension temporaire décidée par l’arbitre\"" : "null",
+                suspended ? "WAITING_SUSPENDED_RECHECK" : "COLLECTING");
     }
 
     private static void send(HttpExchange exchange, int status, String type, String body) throws IOException {

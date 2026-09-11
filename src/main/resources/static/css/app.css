@@ -525,6 +525,11 @@ dl div {
   border-bottom: 1px solid #e7edef;
 }
 
+/* Keep semantic hidden detail rows out of the layout despite the shared flex rule above. */
+dl div[hidden] {
+  display: none !important;
+}
+
 dl div:last-child {
   border-bottom: 0;
 }

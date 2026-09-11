@@ -1672,3 +1672,10 @@ y compris lorsqu'une section de famille est créée dynamiquement dans le naviga
 Les tests standards et d'intégration utilisent leurs doubles, fixtures et PostgreSQL local ; la
 qualification Chromium route toutes ses requêtes vers loopback. Aucun endpoint SofaScore, cookie,
 session, proxy, défi ou navigateur persistant n'a été utilisé par cette qualification.
+
+#### Correction de présentation `statusReason` — 11 septembre
+
+La qualification Chromium loopback couvre la correction de présentation de `statusReason` :
+hors `suspended`, la ligne porte `hidden` et n'a pas de boîte de mise en page ; avec un statut
+`suspended`, la raison J4 observable redevient visible. Aucune route extérieure n'est autorisée par
+ce test.

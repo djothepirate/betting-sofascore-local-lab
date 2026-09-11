@@ -63,6 +63,9 @@ Les évolutions notables du SofaScore Local Lab sont consignées dans ce fichier
 - Conserve le lissage V9 déterministe déjà qualifié (slots, fences de 500 ms et réserve de 1 s)
   et n'ajoute pas de jitter aléatoire ou adaptatif à une vague de dix rencontres qui occupe déjà
   toute sa fenêtre de 60 s.
+- Corrige le rendu de la raison de suspension J4 : une ligne HTML `hidden` sort désormais réellement
+  de la mise en page malgré la grille de détails en flex. La qualification Chromium loopback couvre
+  l'état `inprogress` sans raison et la transition `suspended` avec une raison rendue.
 - Affiche pour `live-v9` l'état terminal `FINISHED_J5_INCOMPLETE` lorsque J4 confirme le résultat
   mais que le dernier cycle J5 facultatif est incomplet. Les politiques historiques conservent
   leur libellé `FINISHED_CONFIRMED` et aucune nouvelle collecte n'est déclenchée.
