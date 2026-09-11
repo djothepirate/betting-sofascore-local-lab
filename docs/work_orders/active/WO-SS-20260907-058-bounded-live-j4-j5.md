@@ -1556,3 +1556,16 @@ V4 à V8 conservent leur libellé historique `FINISHED_CONFIRMED`.
 
 Cette finition n'a démarré ni navigateur, ni application, ni campagne, et les validations ne
 contiennent aucun appel réel au fournisseur.
+
+#### Validation fonctionnelle opérateur — 11 septembre
+
+Après ajout délibéré du profil V9 dans son lanceur local, l'opérateur a lancé la campagne locale
+`5ab7dd5f-2f03-4181-9281-fe4dfb351e40` et a confirmé que la restitution graphique est conforme.
+Les cartes affichent notamment les sorties observées et un carton jaune issus de `EVENT_INCIDENTS`,
+tandis que le panneau individuel d'un joueur entrant conserve ses minutes, sa note et ses mesures
+J5 lineups avec la mention « Entrée observée · 46′ ». Cette observation couvre le cas réel où les
+compositions comportent déjà des mesures joueur mais omettent les faits de carton ou de remplacement.
+
+Les captures ont été fournies dans le suivi opérateur et ne sont pas copiées dans le dépôt. Ce
+retour valide l'affichage local; il ne constitue ni une preuve d'acceptation fournisseur, ni une
+modification d'opt-in, de quota ou de politique de transport.
