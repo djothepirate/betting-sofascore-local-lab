@@ -74,10 +74,11 @@ foreach ($endpoint in $expectedEnvelopes.Keys) {
 }
 
 # This utility is deliberately display-only. It neither writes the Eclipse launch
-# configuration nor sets process/user/machine environment variables. The capacity
-# and rate rows below are review metadata; only the nine envelope-related entries
-# map to the local V10 configuration keys.
+# configuration nor sets process/user/machine environment variables. The qualified
+# capacity, proof and envelope values render the ten local V10 configuration keys;
+# the rate rows below remain review metadata.
 $settings = @(
+    [pscustomobject]@{ Name = 'SOFASCORE_LIVE_QUALIFIED_MATCH_CAPACITY'; Value = '8' }
     [pscustomobject]@{ Name = 'SOFASCORE_LIVE_GROUPED_V10_QUALIFICATION_SHA256'; Value = $profileSha256 }
     [pscustomobject]@{ Name = 'SOFASCORE_LIVE_GROUPED_V10_J4_REQUEST_ENVELOPE'; Value = '300ms' }
     [pscustomobject]@{ Name = 'SOFASCORE_LIVE_GROUPED_V10_J4_PROCESSING_ENVELOPE'; Value = '500ms' }

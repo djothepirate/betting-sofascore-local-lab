@@ -15,6 +15,9 @@ Les évolutions notables du SofaScore Local Lab sont consignées dans ce fichier
 - Versionne un profil V10 autonome, sans repli depuis V8 ou V9, et sa preuve de replay hors
   réseau. Une absence de profil V10 complet et cohérent ferme l'admission ; le lanceur reste une
   action opérateur distincte et manuelle.
+- Le lecteur V10 en lecture seule affiche les **dix** entrées à reporter dans Eclipse :
+  `SOFASCORE_LIVE_QUALIFIED_MATCH_CAPACITY=8`, le SHA-256 V10 et les huit enveloppes. Il ne
+  modifie ni lanceur, ni environnement, ni opt-in live, et n'exécute aucun appel fournisseur.
 - Préserve les manifestes, preuves, lectures et règles de pression `live-v9` déjà persistés. Les
   règles J4/J5 et la révalidation conditionnelle restent confinées à leur contexte neuf ; aucune
   nouvelle campagne ne convertit une campagne V9.

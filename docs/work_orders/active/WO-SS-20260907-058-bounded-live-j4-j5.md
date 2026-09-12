@@ -1728,7 +1728,8 @@ La preuve versionnée
 `docs/validation/WO058-GROUPED-LIVE-V10-PROFILE-20260912.json` est qualifiée pour le replay local
 à huit rencontres, 32 départs nominaux/minute, 35/60 s et 2 100/h. Son lecteur
 `scripts/Show-LiveGroupedV10LauncherConfiguration.ps1` reste en lecture seule : il affiche les
-neuf variables V10 de revue du lanceur Eclipse sans écrire de configuration, démarrer
+**dix** variables V10 de revue du lanceur Eclipse, dont
+`SOFASCORE_LIVE_QUALIFIED_MATCH_CAPACITY=8`, sans écrire de configuration, démarrer
 l'application ou Playwright, ni lancer une campagne.
 
 #### Validation V10 déjà exécutée
@@ -1736,7 +1737,7 @@ l'application ou Playwright, ni lancer une campagne.
 | Validation ciblée | Résultat vérifié |
 | --- | --- |
 | Preuve Java V10 avec la preuve historique V9 | **4 tests Maven**, zéro échec et zéro erreur. |
-| Lecteur PowerShell V10 | **Pester 3/3** vert ; aucune écriture, mutation d'environnement, processus ou trafic réseau. |
+| Lecteur PowerShell V10 | **Pester 3/3** vert ; il affiche dix entrées Eclipse, dont `SOFASCORE_LIVE_QUALIFIED_MATCH_CAPACITY=8`, sans écriture, mutation d'environnement, processus ou trafic réseau. |
 | Migration V54 | **FlywayMigrationIT : 74 tests** verts. |
 | Persistance des campagnes V10 | **LiveCampaignPersistenceIT : 65 tests** verts. |
 | Persistance de la protection de départ V10 | **ProviderResiliencePersistenceIT : 30 tests** verts. |

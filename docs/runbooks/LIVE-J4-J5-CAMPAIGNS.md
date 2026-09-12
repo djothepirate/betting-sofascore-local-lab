@@ -31,8 +31,9 @@ fenêtres persistantes de 35/60 s et 2 100/h. Tant que cette preuve n'est pas qu
 SHA n'est pas délibérément reporté par l'opérateur, l'admission V10 est fermée avec une capacité
 zéro. Les valeurs V8 et V9 ne sont jamais une solution de repli.
 
-Après revue humaine de la preuve, l'opérateur obtient les **neuf** entrées V10 à reporter
-manuellement dans l'attribut `environmentVariables` du lanceur Eclipse actif :
+Après revue humaine de la preuve, l'opérateur obtient les **dix** entrées V10 à reporter
+manuellement dans l'attribut `environmentVariables` du lanceur Eclipse actif. Elles comprennent
+`SOFASCORE_LIVE_QUALIFIED_MATCH_CAPACITY=8`, le SHA-256 V10 et les huit enveloppes V10 :
 
 ```powershell
 .\scripts\Show-LiveGroupedV10LauncherConfiguration.ps1 -OutputFormat Eclipse

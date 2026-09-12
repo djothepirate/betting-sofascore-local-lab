@@ -26,14 +26,15 @@ Describe 'WO-058 V10 launcher configuration display' {
         $source | Should Not Match 'SOFASCORE_LIVE_ENABLED.*='
     }
 
-    It 'renders exactly the nine reviewed V10 variables, the independent qualified binding and the requested local guards' {
+    It 'renders exactly the ten reviewed V10 variables, the independent qualified binding and the requested local guards' {
         $expectedSha256 = (Get-FileHash -LiteralPath $profilePath -Algorithm SHA256).Hash.ToLowerInvariant()
         $before = [Environment]::GetEnvironmentVariable('SOFASCORE_LIVE_GROUPED_V10_QUALIFICATION_SHA256', 'Process')
 
         $output = @(& $scriptPath -OutputFormat Eclipse)
         $mapEntries = @($output | Where-Object { $_ -like '<mapEntry *' })
 
-        $mapEntries.Count | Should Be 9
+        $mapEntries.Count | Should Be 10
+        ($mapEntries -contains '<mapEntry key="SOFASCORE_LIVE_QUALIFIED_MATCH_CAPACITY" value="8"/>') | Should Be $true
         ($mapEntries -contains ('<mapEntry key="SOFASCORE_LIVE_GROUPED_V10_QUALIFICATION_SHA256" value="{0}"/>' -f $expectedSha256)) | Should Be $true
         ($mapEntries -contains '<mapEntry key="SOFASCORE_LIVE_GROUPED_V10_J4_REQUEST_ENVELOPE" value="300ms"/>') | Should Be $true
         ($mapEntries -contains '<mapEntry key="SOFASCORE_LIVE_GROUPED_V10_J4_PROCESSING_ENVELOPE" value="500ms"/>') | Should Be $true

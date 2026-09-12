@@ -224,7 +224,9 @@ class EventExplorerControllerTest {
         String html = response.getContentAsString();
         assertThat(html).doesNotContain("La politique live-v5 attend");
         if (capacity == 0) {
-            assertThat(html).contains("La préparation des campagnes est indisponible", "qualification hors fournisseur");
+            assertThat(html).contains("La préparation des campagnes est indisponible",
+                    "profil local live-v10 qualifié", "Show-LiveGroupedV10LauncherConfiguration.ps1",
+                    "SOFASCORE_LIVE_QUALIFIED_MATCH_CAPACITY=8", "n’active pas le live");
             var prepare = Pattern.compile("<button\\b[^>]*data-live-prepare[^>]*>").matcher(html);
             assertThat(prepare.find()).isTrue();
             assertThat(prepare.group()).contains("disabled=\"disabled\"");
