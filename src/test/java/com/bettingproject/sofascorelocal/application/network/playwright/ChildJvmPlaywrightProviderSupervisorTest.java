@@ -576,8 +576,8 @@ class ChildJvmPlaywrightProviderSupervisorTest {
         assertThat(failures).allSatisfy(failure -> assertThat(failure.get()).isNull());
     }
 
-    @ParameterizedTest @ValueSource(strings = {"live-v4", "live-v5", "live-v8", "live-v9"})
-    void groupedPoliciesKeepHistoricalContinuationsButV8AndV9FenceEveryFamilyExchange(String policy)
+    @ParameterizedTest @ValueSource(strings = {"live-v4", "live-v5", "live-v8", "live-v9", "live-v10"})
+    void groupedPoliciesKeepHistoricalContinuationsButV8V9AndV10FenceEveryFamilyExchange(String policy)
             throws Exception {
         ProviderPlaywrightProperties properties = enabledProperties("live-group-delay.jar");
         Instant rootStartedAt = Instant.parse("2026-09-08T10:00:00Z");
@@ -601,6 +601,7 @@ class ChildJvmPlaywrightProviderSupervisorTest {
         UUID campaignId = UUID.randomUUID(), groupId = UUID.randomUUID();
         long event = 16_416_319L;
         PlaywrightProviderCampaign campaign = switch (policy) {
+            case "live-v10" -> supervisor.openLiveGroupedV10(campaignId, endpoints);
             case "live-v9" -> supervisor.openLiveGroupedV9(campaignId, endpoints);
             case "live-v5" -> supervisor.openLiveGroupedV5(campaignId, endpoints);
             case "live-v8" -> supervisor.openLiveGroupedV8(campaignId, endpoints);
@@ -619,7 +620,8 @@ class ChildJvmPlaywrightProviderSupervisorTest {
                 PlaywrightDispatchAdmission.UNRESTRICTED);
         campaign.executeGrouped(PlaywrightProviderRequest.eventLineups(event), playing,
                 PlaywrightDispatchAdmission.UNRESTRICTED);
-        boolean v8PressureProfile = "live-v8".equals(policy) || "live-v9".equals(policy);
+        boolean v8PressureProfile = "live-v8".equals(policy) || "live-v9".equals(policy)
+                || "live-v10".equals(policy);
         long continuationFenceMillis = v8PressureProfile ? 500 : 0;
         long groupFenceMillis = "live-v5".equals(policy) ? 1_000 : v8PressureProfile ? 500 : 3_000;
         assertThat(observedStarts).containsExactly(0L,
@@ -652,10 +654,11 @@ class ChildJvmPlaywrightProviderSupervisorTest {
         assertThat(workerFailure.get()).isNull();
     }
 
-    @Test
-    void liveV9TransmitsOnlyTheOpaqueConditionalValidatorAndAcceptsAnEmpty304Response()
+    @ParameterizedTest
+    @ValueSource(strings = {"live-v9", "live-v10"})
+    void liveV9AndV10TransmitOnlyTheOpaqueConditionalValidatorAndAcceptAnEmpty304Response(String policy)
             throws Exception {
-        ProviderPlaywrightProperties properties = enabledProperties("live-v9-conditional.jar");
+        ProviderPlaywrightProperties properties = enabledProperties(policy + "-conditional.jar");
         Instant rootStartedAt = Instant.parse("2026-09-11T12:00:00Z");
         OwnedHandle root = ownedHandle(2_109L, rootStartedAt, true, true);
         Process process = processWithStartInstant(root.handle(), rootStartedAt);
@@ -675,7 +678,9 @@ class ChildJvmPlaywrightProviderSupervisorTest {
                 SofascoreEndpointType.EVENT_LINEUPS);
         UUID campaignId = UUID.randomUUID();
         long eventId = 16_416_319L;
-        try (PlaywrightProviderCampaign campaign = supervisor.openLiveGroupedV9(campaignId, endpoints)) {
+        try (PlaywrightProviderCampaign campaign = "live-v10".equals(policy)
+                ? supervisor.openLiveGroupedV10(campaignId, endpoints)
+                : supervisor.openLiveGroupedV9(campaignId, endpoints)) {
             PlaywrightProviderResponse response = campaign.executeGrouped(
                     PlaywrightProviderRequest.eventDetails(
                             eventId, PlaywrightProviderEntityTag.of(requestTag)),

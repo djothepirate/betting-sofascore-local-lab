@@ -18,6 +18,10 @@ public final class ProviderResilienceData {
     public static final Duration LIVE_V8_MINIMUM_DEPARTURE_INTERVAL = Duration.ofMillis(500);
     public static final int LIVE_V8_MAXIMUM_DEPARTURES_PER_MINUTE = 45;
     public static final int LIVE_V8_MAXIMUM_DEPARTURES_PER_HOUR = 2756;
+    /** V10 keeps a small independent local envelope for at most eight live matches. */
+    public static final Duration LIVE_V10_MINIMUM_DEPARTURE_INTERVAL = Duration.ofMillis(500);
+    public static final int LIVE_V10_MAXIMUM_DEPARTURES_PER_MINUTE = 35;
+    public static final int LIVE_V10_MAXIMUM_DEPARTURES_PER_HOUR = 2100;
     public static final Duration MAXIMUM_RETRY_AFTER = Duration.ofDays(365);
 
     public enum State { OPEN, SUSPENDED }
@@ -34,7 +38,9 @@ public final class ProviderResilienceData {
         LEGACY_V1("legacy-v1", MINIMUM_DEPARTURE_INTERVAL,
                 MAXIMUM_DEPARTURES_PER_MINUTE, MAXIMUM_DEPARTURES_PER_HOUR),
         LIVE_V8("live-v8", LIVE_V8_MINIMUM_DEPARTURE_INTERVAL,
-                LIVE_V8_MAXIMUM_DEPARTURES_PER_MINUTE, LIVE_V8_MAXIMUM_DEPARTURES_PER_HOUR);
+                LIVE_V8_MAXIMUM_DEPARTURES_PER_MINUTE, LIVE_V8_MAXIMUM_DEPARTURES_PER_HOUR),
+        LIVE_V10("live-v10", LIVE_V10_MINIMUM_DEPARTURE_INTERVAL,
+                LIVE_V10_MAXIMUM_DEPARTURES_PER_MINUTE, LIVE_V10_MAXIMUM_DEPARTURES_PER_HOUR);
 
         private final String persistenceValue;
         private final Duration minimumDepartureInterval;

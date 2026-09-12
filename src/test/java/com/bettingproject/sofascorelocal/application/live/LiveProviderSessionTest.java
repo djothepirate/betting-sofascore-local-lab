@@ -25,12 +25,13 @@ import static org.mockito.Mockito.*;
 
 class LiveProviderSessionTest {
     @ParameterizedTest
-    @ValueSource(strings = {"live-v1", "live-v2", "live-v3", "live-v4", "live-v5", "live-v6", "live-v7", "live-v8", "live-v9"})
+    @ValueSource(strings = {"live-v1", "live-v2", "live-v3", "live-v4", "live-v5", "live-v6", "live-v7", "live-v8", "live-v9", "live-v10"})
     void opensOnlyTheExplicitPolicyFactory(String policy) {
         var factory = mock(PlaywrightProviderCampaignFactory.class);
         var campaign = mock(PlaywrightProviderCampaign.class);
         var id = UUID.randomUUID();
         switch (policy) {
+            case "live-v10" -> when(factory.openLiveGroupedV10(id, LiveProviderSession.ENDPOINTS)).thenReturn(campaign);
             case "live-v9" -> when(factory.openLiveGroupedV9(id, LiveProviderSession.ENDPOINTS)).thenReturn(campaign);
             case "live-v8" -> when(factory.openLiveGroupedV8(id, LiveProviderSession.ENDPOINTS)).thenReturn(campaign);
             case "live-v7" -> when(factory.openLiveGroupedV7(id, LiveProviderSession.ENDPOINTS)).thenReturn(campaign);
@@ -41,6 +42,7 @@ class LiveProviderSessionTest {
         }
         try (var ignored = new LiveProviderSession(factory, id, policy)) {
             switch (policy) {
+                case "live-v10" -> verify(factory).openLiveGroupedV10(id, LiveProviderSession.ENDPOINTS);
                 case "live-v9" -> verify(factory).openLiveGroupedV9(id, LiveProviderSession.ENDPOINTS);
                 case "live-v8" -> verify(factory).openLiveGroupedV8(id, LiveProviderSession.ENDPOINTS);
                 case "live-v7" -> verify(factory).openLiveGroupedV7(id, LiveProviderSession.ENDPOINTS);
@@ -54,15 +56,19 @@ class LiveProviderSessionTest {
         verify(campaign).close();
     }
 
-    @Test
-    void v9SendsAValidatorOnlyAfterTheExactParsedResultWasCommittedAndReusesItsFactsOn304() {
+    @ParameterizedTest
+    @ValueSource(strings = {"live-v9", "live-v10"})
+    void v9AndV10SendAValidatorOnlyAfterTheExactParsedResultWasCommittedAndReuseItsFactsOn304(String policy) {
         var factory = mock(PlaywrightProviderCampaignFactory.class);
         var campaign = mock(PlaywrightProviderCampaign.class);
         var campaignId = UUID.randomUUID();
         var original = PlaywrightProviderEntityTag.of("\"initial-v9\"");
         var refreshed = PlaywrightProviderEntityTag.of("\"refreshed-v9\"");
         var dispatched = new ArrayList<PlaywrightProviderRequest>();
-        when(factory.openLiveGroupedV9(campaignId, LiveProviderSession.ENDPOINTS)).thenReturn(campaign);
+        if ("live-v10".equals(policy))
+            when(factory.openLiveGroupedV10(campaignId, LiveProviderSession.ENDPOINTS)).thenReturn(campaign);
+        else
+            when(factory.openLiveGroupedV9(campaignId, LiveProviderSession.ENDPOINTS)).thenReturn(campaign);
         when(campaign.executeGrouped(any(), any(), any())).thenAnswer(invocation -> {
             dispatched.add(invocation.getArgument(0));
             return switch (dispatched.size()) {
@@ -74,7 +80,7 @@ class LiveProviderSessionTest {
         var facts = new LiveProviderSession.ScheduleFacts("suspended", Map.of("finish", false),
                 Instant.parse("2026-09-11T10:00:00Z"), null, null);
 
-        try (var session = new LiveProviderSession(factory, campaignId, "live-v9")) {
+        try (var session = new LiveProviderSession(factory, campaignId, policy)) {
             var first = execute(session, campaignId);
             assertThat(dispatched.getFirst().ifNoneMatch()).isEmpty();
 

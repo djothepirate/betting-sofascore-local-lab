@@ -958,9 +958,10 @@ class LiveCampaignControllerTest {
             "LIVE_STORAGE_PROBE_INVALID,ne peut pas être mesuré", "LIVE_STORAGE_PROBE_INTERRUPTED,interrompu",
             "LIVE_STORAGE_CAPACITY_REFUSED,insuffisant", "LIVE_POLICY_INVALID,limites",
             "LIVE_CAPACITY_QUALIFICATION_REQUIRED,preuve de qualification",
-            "LIVE_GROUPED_QUALIFICATION_REQUIRED,SOFASCORE_LIVE_GROUPED_V9_QUALIFICATION_SHA256",
+            "LIVE_GROUPED_QUALIFICATION_REQUIRED,SOFASCORE_LIVE_GROUPED_V10_QUALIFICATION_SHA256",
             "LIVE_V8_FRESHNESS_CAPACITY_UNAVAILABLE,fraîcheur de 60 secondes",
-            "LIVE_V9_FRESHNESS_CAPACITY_UNAVAILABLE,fraîcheur de 60 secondes"})
+            "LIVE_V9_FRESHNESS_CAPACITY_UNAVAILABLE,fraîcheur de 60 secondes",
+            "LIVE_V10_FRESHNESS_CAPACITY_UNAVAILABLE,fraîcheur de 60 secondes"})
     void localPreparationFailuresExposeOnlyTheirKnownCodeAndAction(String code, String action) throws Exception {
         MockHttpSession session = new MockHttpSession();
         when(service.prepareSelection(List.of(EVENT_ID))).thenThrow(new IllegalStateException(code));
@@ -975,7 +976,7 @@ class LiveCampaignControllerTest {
 
     @ParameterizedTest
     @ValueSource(strings = {"LIVE_SELECTION_EXCEEDS_QUALIFIED_CAPACITY", "LIVE_CAPACITY_REFUSED_REDUCE_SELECTION"})
-    void capacityRefusalSuggestsReducedSelectionThroughTheV9ProfileAndNeverEchoesArbitraryExceptionText(String code)
+    void capacityRefusalSuggestsReducedSelectionThroughTheV10ProfileAndNeverEchoesArbitraryExceptionText(String code)
             throws Exception {
         MockHttpSession session = new MockHttpSession();
         when(service.prepareSelection(List.of(EVENT_ID))).thenThrow(
@@ -985,7 +986,7 @@ class LiveCampaignControllerTest {
                 .andExpect(status().isBadRequest())
                 .andExpect(model().attribute("liveErrorCode", code))
                 .andExpect(content().string(containsString("Réduire la sélection")))
-                .andExpect(content().string(containsString("profil live-v9")));
+                .andExpect(content().string(containsString("profil live-v10")));
         doThrow(new IllegalStateException("SECRET_PRIVATE_RUNTIME")).when(service).prepareSelection(List.of(EVENT_ID));
         mvc.perform(post("/live-campaigns/prepare").header("Host", HOST).session(session)
                         .param("localFormToken", tokens.issue(session)).param("eventId", EVENT_ID.toString()))
@@ -1316,7 +1317,8 @@ class LiveCampaignControllerTest {
 
     @ParameterizedTest
     @CsvSource({"live-v4,60,10,1000,3000,5 minutes nominales", "live-v5,100,20,2500,20000,5 minutes nominales",
-            "live-v8,60,10,2500,20000,60 secondes nominales", "live-v9,60,10,2500,20000,60 secondes nominales"})
+            "live-v8,60,10,2500,20000,60 secondes nominales", "live-v9,60,10,2500,20000,60 secondes nominales",
+            "live-v10,60,8,2500,20000,60 secondes nominales"})
     void groupedPreparationRendersActualCapacityCadencesProofAndAutonomyBeforeLaunch(String policy, int interval,
                 int capacity, int eventCalls, int campaignCalls, String lineupLabel) throws Exception {
         var envelopes = new java.util.EnumMap<SofascoreEndpointType, EndpointEnvelope>(SofascoreEndpointType.class);
@@ -1324,9 +1326,10 @@ class LiveCampaignControllerTest {
                 SofascoreEndpointType.EVENT_STATISTICS, SofascoreEndpointType.EVENT_LINEUPS))
             envelopes.put(endpoint, new EndpointEnvelope(Duration.ofMillis(400), Duration.ofMillis(100)));
         var target = manifest().targets().getFirst();
+        String schedulerProfilePolicy = "live-v10".equals(policy) ? "live-v9" : policy;
         var grouped = new Manifest(CAMPAIGN_ID, HASH, policy, NOW, NOW.plusSeconds(300), Duration.ofHours(4),
                 eventCalls, campaignCalls, 1_000_000, capacity, List.of(target), new AdmissionProfile(Duration.ofSeconds(10),
-                Duration.ofSeconds(1), "", new GroupedAdmissionProfile(envelopes, "b".repeat(64), policy)), Duration.ofSeconds(interval));
+                Duration.ofSeconds(1), "", new GroupedAdmissionProfile(envelopes, "b".repeat(64), schedulerProfilePolicy)), Duration.ofSeconds(interval));
         when(service.state(CAMPAIGN_ID)).thenReturn(new CampaignView(grouped, "PREPARED", null, null, null,
                 0, 0, 1, null, List.of(new EventView(target, "PREPARED", null, 0, 0, null, List.of())), List.of(), List.of()));
         mvc.perform(get("/live-campaigns/" + CAMPAIGN_ID).header("Host", HOST))
@@ -1352,6 +1355,17 @@ class LiveCampaignControllerTest {
                     .andExpect(content().string(containsString("data-live-v9-pressure-note")))
                     .andExpect(content().string(containsString("data-live-v9-cadence-note")))
                     .andExpect(content().string(containsString("data-live-v9-policy-note")));
+        }
+        if ("live-v10".equals(policy)) {
+            mvc.perform(get("/live-campaigns/" + CAMPAIGN_ID).header("Host", HOST))
+                    .andExpect(status().isOk())
+                    .andExpect(content().string(containsString("500 ms")))
+                    .andExpect(content().string(containsString("35 départs par minute et 2 100 par heure")))
+                    .andExpect(content().string(containsString("créneaux qualifiés de 60 secondes")))
+                    .andExpect(content().string(containsString("Pression observée de cette campagne live-v10")))
+                    .andExpect(content().string(containsString("data-live-v10-pressure-note")))
+                    .andExpect(content().string(containsString("data-live-v10-cadence-note")))
+                    .andExpect(content().string(containsString("data-live-v10-policy-note")));
         }
         verify(service, never()).launch(any(), any());
     }

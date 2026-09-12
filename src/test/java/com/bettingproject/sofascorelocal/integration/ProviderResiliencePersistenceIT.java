@@ -570,6 +570,72 @@ class ProviderResiliencePersistenceIT {
         assertThat(restarted.snapshot()).isEqualTo(suspension);
     }
 
+    @Test
+    void v10AuthenticatedRequestEvidenceRequiresAndPersistsTheV10DepartureProfile() {
+        Fixture f=fixture("54"); UUID dispatch=UUID.randomUUID();
+        Instant requested=T0.plusMillis(250),observed=T0.plusMillis(500);
+        assertThat(f.store.tryReserveDeparture(dispatch,DepartureProfile.LIVE_V10,T0).allowed()).isTrue();
+
+        // The V8 path cannot claim an independently reserved V10 departure.
+        assertThatThrownBy(()->f.store.recordAuthenticatedV8Departure(dispatch,requested,observed))
+                .hasMessage("PROVIDER_AUTHENTICATED_DEPARTURE_PROFILE_INVALID");
+        f.store.recordAuthenticatedV10Departure(dispatch,requested,observed);
+        assertThat(f.jdbc.queryForObject("select admission_profile from provider_departure_reservation where dispatch_id=?",String.class,dispatch))
+                .isEqualTo(DepartureProfile.LIVE_V10.persistenceValue());
+        assertThat(f.jdbc.queryForMap("select departure_at,source from provider_departure_accounting where dispatch_id=?",dispatch))
+                .containsEntry("departure_at",Timestamp.from(requested))
+                .containsEntry("source","AUTHENTICATED_WORKER_REQUEST");
+        f.store.markDepartureFinished(dispatch,T0.plusSeconds(1));
+        assertThat(f.newStore().snapshot().unresolvedDispatchId()).isNull();
+    }
+
+    @Test
+    void v10MinuteHourlyAndInitialEightMatchBudgetsAreDurable() {
+        Fixture minute=fixture("54");
+        for(int i=0;i<35;i++) assertThat(minute.exchange(UUID.randomUUID(),DepartureProfile.LIVE_V10,T0.plusMillis(i*500L)).allowed()).isTrue();
+        DepartureDecision minuteDenied=minute.store.departureDecision(DepartureProfile.LIVE_V10,T0.plusMillis(17_500));
+        assertThat(minuteDenied.reason()).isEqualTo(DepartureReason.RATE_LIMITED);
+        assertThat(minuteDenied.nextAllowedAt()).isEqualTo(T0.plusSeconds(60));
+        assertThat(minute.store.tryReserveDeparture(UUID.randomUUID(),DepartureProfile.LIVE_V10,T0.plusSeconds(60)).allowed()).isTrue();
+
+        Fixture initial=fixture("54"); Instant now=T0.plusSeconds(60);
+        // Eight selected matches have a first wave of 32 J4/J5 departures. Three
+        // retained departures still leave that exact wave admissible; four do not.
+        for(int i=0;i<3;i++) assertThat(initial.exchange(UUID.randomUUID(),DepartureProfile.LIVE_V10,
+                now.minusSeconds(10).plusMillis(i*500L)).allowed()).isTrue();
+        assertThat(initial.store.departureCapacityDecision(DepartureProfile.LIVE_V10,32,now))
+                .extracting(DepartureDecision::allowed,DepartureDecision::reason)
+                .containsExactly(true,DepartureReason.ALLOWED);
+        assertThat(initial.exchange(UUID.randomUUID(),DepartureProfile.LIVE_V10,
+                now.minusSeconds(10).plusMillis(1_500)).allowed()).isTrue();
+        DepartureDecision initialDenied=initial.store.departureCapacityDecision(DepartureProfile.LIVE_V10,32,now);
+        assertThat(initialDenied.reason()).isEqualTo(DepartureReason.RATE_LIMITED);
+        assertThat(initialDenied.nextAllowedAt()).isEqualTo(now.plusSeconds(50));
+
+        Fixture hourly=fixture("54"); Instant first=T0,admittedAt=T0.plusSeconds(3_599),expiry=first.plus(Duration.ofHours(1));
+        hourly.jdbc.update("""
+            insert into provider_departure_reservation(dispatch_id,reserved_at,policy_version,admission_profile)
+                select gen_random_uuid(),?,'provider-resilience-v1','live-v10' from generate_series(1,2099)
+            """,Timestamp.from(first));
+        hourly.jdbc.update("insert into provider_departure_completion(dispatch_id,finished_at) select dispatch_id,reserved_at from provider_departure_reservation");
+        hourly.jdbc.update("""
+            update provider_resilience_state set last_departure_at=?,last_departure_finished_at=?,
+                last_departure_admission_profile='live-v10' where singleton_id=1
+            """,Timestamp.from(first),Timestamp.from(first));
+        UUID departure2100=UUID.randomUUID();
+        assertThat(hourly.store.tryReserveDeparture(departure2100,DepartureProfile.LIVE_V10,admittedAt))
+                .extracting(DepartureDecision::allowed,DepartureDecision::reason)
+                .containsExactly(true,DepartureReason.ALLOWED);
+        hourly.store.markDepartureFinished(departure2100,admittedAt);
+        DepartureDecision hourlyDenied=hourly.newStore().tryReserveDeparture(UUID.randomUUID(),DepartureProfile.LIVE_V10,
+                admittedAt.plusMillis(500));
+        assertThat(hourlyDenied.reason()).isEqualTo(DepartureReason.RATE_LIMITED);
+        assertThat(hourlyDenied.nextAllowedAt()).isEqualTo(expiry);
+        assertThat(hourly.newStore().tryReserveDeparture(UUID.randomUUID(),DepartureProfile.LIVE_V10,expiry))
+                .extracting(DepartureDecision::allowed,DepartureDecision::reason)
+                .containsExactly(true,DepartureReason.ALLOWED);
+    }
+
     private static String rearmOutcome(Fixture f,CountDownLatch start,long version) throws InterruptedException {
         start.await();
         try {return f.newStore().rearm(version,T0.plusSeconds(1)).state().name();}

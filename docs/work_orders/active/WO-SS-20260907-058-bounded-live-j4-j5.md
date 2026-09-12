@@ -9,8 +9,10 @@
 - **Base exacte :** `6dfd14286d4f269cbe100bd965257c20298538db`, sommet GitHub vérifié le 7 septembre.
 - **Worktree :** `.tmp/wo058-live-j4-j5`, depuis le dossier Codex du Lab ; worktree distinct d'Eclipse.
 - **Autorité reçue :** ADR-SS-005 v0.1 accepté, puis déclaration « Je valide le WO-058 les travaux peuvent commencer » et demande explicite d'exécuter le plan de réalisation ; port 8087 libéré pour les tests.
-- **ADR courant :** [ADR-SS-005 v0.10](../../../ADR-SS-005-bounded-local-live-j4-j5-campaigns.md), autorisation explicite du calendrier v7 et de son contrôle hors fournisseur. La protection persistante commune J3/J4/J5, la capacité v6 au plus sept et la capacité v7 au plus trois restent distinctes ; les manifestes v1–v6 gardent leurs règles. Proposition v0.1 acceptée conservée au SHA-256 `48004b4240138bcc430db0286113fee197a521c8e3548d7674ed410c25348f2e`.
+- **ADR courant :** [ADR-SS-005 v0.11](../../../ADR-SS-005-bounded-local-live-j4-j5-campaigns.md), qui conserve les décisions historiques et encadre les nouvelles préparations `live-v10` à huit rencontres au plus, 35 départs comptabilisés / 60 s et 2 100 / heure. La protection persistante commune J3/J4/J5, la capacité v6 au plus sept et la capacité v7 au plus trois restent distinctes ; les manifestes v1–v9 gardent leurs règles. Proposition v0.1 acceptée conservée au SHA-256 `48004b4240138bcc430db0286113fee197a521c8e3548d7674ed410c25348f2e`.
 - **Évolution V8 autorisée :** demande propriétaire du 10 septembre de conserver la cible de fraîcheur à 60 s et de préparer une admission locale plus agressive : dix rencontres au plus, fence local de 500 ms, 45 départs/minute et 2 756 départs/heure. Pour un lancement qui précède T0 de moins d'une minute, le premier contrôle de bascule reste sur la phase stable `max(T0 sérialisé, J4 initial + 60 s)` afin de ne pas créer une seconde vague J4/J5 au même créneau. Le constat ultérieur d'un report de cadence de près de six minutes autorise le correctif local associé : une vague J4 dont le départ authentifié sort de la fenêtre stricte reste manquée, mais son prochain J4 est reproposé sur la phase stable suivante au lieu d'hériter du backoff de timeout. Elle ne crée aucun endpoint, transport, proxy, rotation d'adresse ou lancement fournisseur ; l'ADR n'est pas modifié dans ce lot documentaire.
+- **Révision V10 en cours :** décision propriétaire du 12 septembre de limiter les nouvelles campagnes à huit rencontres sélectionnables et d'appliquer un plafond local durable de 35 départs comptabilisés dans toute fenêtre de 60 s, 2 100 par heure. La charge nominale visée est `8 × 4 = 32` départs/minute. Cette borne est une protection interne du Lab : elle ne prouve aucun quota, accord, seuil ou disponibilité du fournisseur, n'ajoute aucun mécanisme d'évitement et ne modifie pas les campagnes V9 déjà persistées.
+- **État V10 :** `IN_PROGRESS` — la mise en œuvre `live-v10`, la migration append-only V54, le replay local et les preuves ciblées unitaires, PowerShell et PostgreSQL sont réalisés. La validation opérateur, la revue humaine, la PR et la fusion restent à effectuer avant toute clôture. La révision V9 historique reste consultable avec sa preuve et ses règles propres.
 - **Livrable présent :** ADR accepté, WO validé, correctif v0.9 réalisé et [rapport de qualification fonctionnelle](../../validation/WO058-SLOW-TIMEOUT-RECOVERY-20260909.md), avec inventaire de 56 fichiers, commandes, empreintes et résultats ; premier lot de résilience et profil temporel dédiés déjà qualifiés. La [preuve de capacité V8](../../validation/WO058-LIVE-V8-CAPACITY-20260910.md) versionne aussi le rapport natif et le profil loopback à dix rencontres ; la [note de reprise de cadence](../../validation/WO058-LIVE-V8-CADENCE-RECHECK-20260910.md) isole son recontrôle J4 sans modifier le transport. Ces preuves restent distinctes d'une acceptation fournisseur ou d'une modification du lanceur. Le complément V4/V46/v7/V47 est détaillé dans son [rapport hors fournisseur](../../validation/WO058-PEOPLE-AND-LIVE-V7-20260909.md) et le [profil v7 versionné](../../validation/WO058-LIVE-V7-CAPACITY-20260910.md) rend ses trois rencontres, ses enveloppes et son SHA reproductibles sans réglage automatique. Le [complément pays/métriques](../../validation/WO058-LINEUPS-COUNTRY-AND-METRICS-20260910.md) conserve la frontière de provenance des compositions V3. Les réalisations et preuves antérieures restent conservées, notamment v5/V40 et le complément compositions V3/V41 avec son [contrat](../../architecture/J5-LINEUPS-V3-PLAYER-DETAILS.md) et sa [qualification du 09/09](../../validation/WO058-PLAYER-DETAILS-20260909.md). La preuve de fraîcheur fournisseur ne découle pas de la qualification locale.
 - **Alignement de gouvernance :** renvois ciblés dans ADR-SS-001 et AGENTS.md ; ADR-SS-002 à 004 inchangés.
 - **Réalisations historiques :** réalisées et qualifiées hors fournisseur, correctifs HTTP 404/sélection puis plafond paramétrable jusqu'à 25 vérifiés sous les anciennes politiques ; compléments prématch/phase/clôture et incidents V16/V17 décrits dans les retours ci-dessous, statistiques intégrées aux pages. Les préparations v5 conservées restent limitées à vingt rencontres selon leur propre qualification ; **validation formelle du WO :** acquise ; **revue de réalisation :** à effectuer ; **campagnes fournisseur historiques :** essai à 8 arrêté volontairement, essai à 16 interrompu après coupure PostgreSQL, puis nouveaux lancements manuels à 7 et à 4 ; dernière exécution de cette série terminée, observations distinctes des qualifications locales.
@@ -1679,3 +1681,75 @@ La qualification Chromium loopback couvre la correction de présentation de `sta
 hors `suspended`, la ligne porte `hidden` et n'a pas de boîte de mise en page ; avec un statut
 `suspended`, la raison J4 observable redevient visible. Aucune route extérieure n'est autorisée par
 ce test.
+
+## Révision du 12 septembre — politique `live-v10` à huit rencontres
+
+### Objectif et périmètre
+
+La décision propriétaire du 12 septembre borne les **nouvelles préparations** `live-v10` à
+**huit rencontres sélectionnables**. Les quatre familles planifiées par rencontre — J4 détails,
+J5 incidents, J5 statistiques et J5 compositions — portent une charge nominale maximale de
+**32 départs comptabilisés par minute** (`8 × 4`). Le profil durable doit refuser tout départ qui
+ferait dépasser **35 départs comptabilisés dans une fenêtre glissante de 60 secondes** ou
+**2 100 dans une fenêtre glissante d'une heure**.
+
+Cette réduction remplace uniquement la politique des nouvelles préparations. Les manifestes,
+preuves, statistiques de pression, résultats `304`, diagnostics et campagnes `live-v9` déjà
+persistés restent historiques et inchangés. V10 reprend les règles J4/J5 et de révalidation
+conditionnelle V9, sans changer leur sens : un `304` corrélé ne devient pas une donnée fraîche et
+ne justifie ni relance, ni réarmement. La révision ne crée aucun endpoint, proxy, rotation ou
+changement d'adresse, furtivité, cookie/session persistante, défi, retry ou reprise automatique.
+
+| Élément | Borne V10 attendue |
+| --- | --- |
+| Politique des nouvelles préparations | `live-v10`, distincte de V8 et V9 |
+| Sélection maximale | 8 rencontres |
+| Familles nominales | 4 par rencontre et par minute |
+| Charge nominale à capacité maximale | 32 départs comptabilisés / 60 s |
+| Garde durable de 60 s | 35 départs comptabilisés au plus dans toute fenêtre glissante |
+| Garde durable horaire | 2 100 départs comptabilisés au plus dans toute fenêtre glissante |
+| Prévol de lancement | marge locale de `4 × N` avant la vague initiale, donc 32 au maximum |
+| Admission sans profil V10 complet | capacité zéro, sans repli V8/V9 |
+
+Les valeurs ci-dessus sont des paramètres de sécurité et de diagnostic du Local Lab. Elles ne
+constituent pas une mesure de débit du fournisseur, une garantie d'acceptation, un quota public,
+ou une promesse d'absence de refus HTTP. La campagne reste locale, manuelle, opt-in, attachée à
+un contexte Playwright neuf et exécutable seulement après action explicite de l'opérateur.
+
+### Réalisation et qualification locale effectuées
+
+La réalisation isole V10 de V9 : elle introduit un profil de départ durable, l'admission et le
+replay V10, un profil de configuration à empreinte propre et la migration Flyway append-only V54.
+Les contraintes SQL et l'admission Java convergent sur le manifeste V10, la sélection de huit, les
+fenêtres 35/60 s et 2 100/h, la première vague `4 × N`, le budget et la lecture de pression.
+Aucune migration antérieure ni ligne V9 existante n'est réécrite.
+
+La preuve versionnée
+`docs/validation/WO058-GROUPED-LIVE-V10-PROFILE-20260912.json` est qualifiée pour le replay local
+à huit rencontres, 32 départs nominaux/minute, 35/60 s et 2 100/h. Son lecteur
+`scripts/Show-LiveGroupedV10LauncherConfiguration.ps1` reste en lecture seule : il affiche les
+neuf variables V10 de revue du lanceur Eclipse sans écrire de configuration, démarrer
+l'application ou Playwright, ni lancer une campagne.
+
+#### Validation V10 déjà exécutée
+
+| Validation ciblée | Résultat vérifié |
+| --- | --- |
+| Preuve Java V10 avec la preuve historique V9 | **4 tests Maven**, zéro échec et zéro erreur. |
+| Lecteur PowerShell V10 | **Pester 3/3** vert ; aucune écriture, mutation d'environnement, processus ou trafic réseau. |
+| Migration V54 | **FlywayMigrationIT : 74 tests** verts. |
+| Persistance des campagnes V10 | **LiveCampaignPersistenceIT : 65 tests** verts. |
+| Persistance de la protection de départ V10 | **ProviderResiliencePersistenceIT : 30 tests** verts. |
+| Régression V10 ciblée | **294 tests** verts. |
+| `mvnw.cmd clean verify` | **BUILD SUCCESS** en 10 min 26 s ; Surefire : **2 304 tests**, zéro échec, zéro erreur, cinq ignorés ; Failsafe : **241 tests**, zéro échec, zéro erreur, zéro ignoré. |
+| `mvnw.cmd -Pintegration-tests verify` | **BUILD SUCCESS** en 10 min 11 s ; Surefire : **2 304 tests**, zéro échec, zéro erreur, cinq ignorés ; Failsafe : **241 tests**, zéro échec, zéro erreur, zéro ignoré. |
+
+Ces résultats sont des qualifications locales ciblées et ne constituent ni une campagne
+fournisseur, ni une acceptation ou un quota du fournisseur.
+
+### État et prochaine action
+
+Cette révision reste `IN_PROGRESS`. Le Work Order demeure dans `docs/work_orders/active` : la
+validation opérateur, la revue humaine, la PR et la fusion sont des étapes distinctes et restent
+à effectuer. Aucune clôture n'est déduite de cette qualification locale avant validation opérateur
+explicite.

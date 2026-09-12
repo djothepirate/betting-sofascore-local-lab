@@ -62,6 +62,9 @@ public final class ResilientPlaywrightProviderCampaignFactory implements Playwri
         // local transport envelope, so it deliberately charges the V8 pressure profile.
         return openProtected(id,()->delegate.openLiveGroupedV9(id,endpoints),true,DepartureProfile.LIVE_V8);
     }
+    @Override public PlaywrightProviderCampaign openLiveGroupedV10(UUID id, Set<SofascoreEndpointType> endpoints) {
+        return openProtected(id,()->delegate.openLiveGroupedV10(id,endpoints),true,DepartureProfile.LIVE_V10);
+    }
     @Override public PlaywrightProviderCampaign openManualJ5Grouped(UUID id, Set<SofascoreEndpointType> endpoints) {
         return openProtected(id,()->delegate.openManualJ5Grouped(id,endpoints));
     }
@@ -117,7 +120,7 @@ public final class ResilientPlaywrightProviderCampaignFactory implements Playwri
                             // A known refusal remains first: an incoherent worker timestamp
                             // can stop V8, but must never discard a 403/429 suspension.
                             observeRefusal(diagnostic,dispatchId,campaignId,refusal);
-                            recordAuthenticatedV8Departure(dispatchId,departureProfile,
+                            recordAuthenticatedDeparture(dispatchId,departureProfile,
                                     diagnostic == null ? null : diagnostic.requestedAt(),clock.instant());
                         }
                         catch (RuntimeException failure) { refusalFailure = failure; }
@@ -139,12 +142,12 @@ public final class ResilientPlaywrightProviderCampaignFactory implements Playwri
                     // A completed response is an idempotent fallback for transports that
                     // cannot stream REQUEST_SENT progress.  Its constructor already proves
                     // requestedAt <= receivedAt; the store also checks the active reservation.
-                    recordAuthenticatedV8Departure(dispatchId,departureProfile,response.requestedAt(),response.receivedAt());
+                    recordAuthenticatedDeparture(dispatchId,departureProfile,response.requestedAt(),response.receivedAt());
                     finishDeparture();
                     return response;
                 } catch(PlaywrightProviderException failure) {
                     observeRefusal(failure.diagnostic(),dispatchId,campaignId,refusal);
-                    recordAuthenticatedV8Departure(dispatchId,departureProfile,
+                    recordAuthenticatedDeparture(dispatchId,departureProfile,
                             failure.diagnostic()==null?null:failure.diagnostic().requestedAt(),clock.instant());
                     // The terminal acknowledgement includes verified page/context cleanup.
                     // Persist the charge's end before the caller may defer or emit again.
@@ -202,17 +205,14 @@ public final class ResilientPlaywrightProviderCampaignFactory implements Playwri
                 d.headersReceivedAt()==null?clock.instant():d.headersReceivedAt(),d.retryAfterNotBefore());
         if(observed.compareAndSet(null,evidence)) persistRefusal(evidence);
     }
-    /**
-     * V8 and V9 share the qualified V8 pressure profile and therefore upgrade a charged
-     * reservation to the worker-side departure timestamp. A missing timestamp is deliberately
-     * not inferred: the completion trigger retains its conservative fallback instead.
-     */
-    private void recordAuthenticatedV8Departure(UUID dispatchId, DepartureProfile profile,
-                                                Instant requestedAt, Instant observedAt) {
-        if (profile != DepartureProfile.LIVE_V8 || requestedAt == null) return;
+    /** Authenticated worker evidence is accepted only for explicitly qualified profiles. */
+    private void recordAuthenticatedDeparture(UUID dispatchId, DepartureProfile profile,
+                                             Instant requestedAt, Instant observedAt) {
+        if ((profile != DepartureProfile.LIVE_V8 && profile != DepartureProfile.LIVE_V10) || requestedAt == null) return;
         if (observedAt == null || requestedAt.isAfter(observedAt))
             throw new IllegalStateException("PROVIDER_REQUESTED_TIMESTAMP_INCOHERENT");
-        store.recordAuthenticatedV8Departure(dispatchId,requestedAt,observedAt);
+        if (profile == DepartureProfile.LIVE_V10) store.recordAuthenticatedV10Departure(dispatchId,requestedAt,observedAt);
+        else store.recordAuthenticatedV8Departure(dispatchId,requestedAt,observedAt);
     }
     private void persistRefusal(Refusal refusal) {
         pendingRefusal.compareAndSet(null,refusal);

@@ -59,7 +59,7 @@ class LiveProviderGroupTrackerTest {
     }
 
     @ParameterizedTest
-    @EnumSource(value = LiveProviderGroupTracker.Authority.class, names = {"LIVE_V6", "LIVE_V7", "LIVE_V8", "LIVE_V9"})
+    @EnumSource(value = LiveProviderGroupTracker.Authority.class, names = {"LIVE_V6", "LIVE_V7", "LIVE_V8", "LIVE_V9", "LIVE_V10"})
     void laterLiveAuthoritiesAcceptEveryOrderedSubsetAfterJ4WithoutAllowingAnyFamilyTwice(LiveProviderGroupTracker.Authority authority) {
         var families = java.util.List.of(PlaywrightProviderRequest.eventIncidents(event),
                 PlaywrightProviderRequest.eventStatistics(event), PlaywrightProviderRequest.eventLineups(event));
@@ -108,7 +108,7 @@ class LiveProviderGroupTrackerTest {
     }
 
     @ParameterizedTest
-    @EnumSource(value = LiveProviderGroupTracker.Authority.class, names = {"LIVE_V6", "LIVE_V7", "LIVE_V8", "LIVE_V9"})
+    @EnumSource(value = LiveProviderGroupTracker.Authority.class, names = {"LIVE_V6", "LIVE_V7", "LIVE_V8", "LIVE_V9", "LIVE_V10"})
     void aProvenTimeoutClosesItsGroupPermanentlyButAllowsAFutureGroup(LiveProviderGroupTracker.Authority authority) {
         var v6 = new LiveProviderGroupTracker(campaign, authority);
         v6.dispatched(PlaywrightProviderRequest.eventDetails(event), context(CHECK));
@@ -171,7 +171,7 @@ class LiveProviderGroupTrackerTest {
     }
 
     @ParameterizedTest
-    @EnumSource(value = LiveProviderGroupTracker.Authority.class, names = {"LIVE_V5", "LIVE_V6", "LIVE_V7", "LIVE_V8", "LIVE_V9"})
+    @EnumSource(value = LiveProviderGroupTracker.Authority.class, names = {"LIVE_V5", "LIVE_V6", "LIVE_V7", "LIVE_V8", "LIVE_V9", "LIVE_V10"})
     void laterLiveHistoryAllowsExactlyTwentyThousandGroupsWithoutReopeningAny(LiveProviderGroupTracker.Authority authority) {
         var v5 = new LiveProviderGroupTracker(campaign, authority);
         var first = context(CHECK);

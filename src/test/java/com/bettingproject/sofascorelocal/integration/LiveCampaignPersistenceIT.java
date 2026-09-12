@@ -280,6 +280,15 @@ class LiveCampaignPersistenceIT {
                         new GroupedAdmissionProfile(syntheticGroupedEnvelopes(),"9".repeat(64),"live-v9")),Duration.ofSeconds(60));
     }
 
+    private static Manifest v10Manifest(List<Target> targets) {
+        // V10 owns its 35/60 s pressure profile, while deliberately retaining the
+        // immutable V9 grouped J4/J5 scheduler shape in the persisted profile.
+        return new Manifest(UUID.randomUUID(),"a".repeat(64),"live-v10",T0,T0.plusSeconds(300),Duration.ofHours(4),
+                2500,20000,15_728_640_000L,8,targets,
+                new AdmissionProfile(Duration.ofSeconds(1),Duration.ofSeconds(1),"b".repeat(64),
+                        new GroupedAdmissionProfile(syntheticGroupedEnvelopes(),"a".repeat(64),"live-v9")),Duration.ofSeconds(60));
+    }
+
     @Test
     void v7UpgradePreservesFrozenV6AndPersistsDistinctMinuteLineupsAndPrematchGroups() {
         Fixture f=fixture("46"); Target target=f.seed(EVENT);
@@ -489,6 +498,70 @@ class LiveCampaignPersistenceIT {
     }
 
     @Test
+    void v10UpgradeFromV53PreservesFrozenV9EvidenceAndAdmitsAnEightTargetManifest() {
+        Fixture f=fixture("53"); Target historical=f.seed(EVENT+10_000);
+        Manifest v9=v9Manifest(List.of(historical));
+        assertThat(f.store.prepare(v9)).isEqualTo(v9);
+        CampaignView frozenV9=f.store.find(v9.campaignId()).orElseThrow();
+        Map<String,List<String>> v9Evidence=new LinkedHashMap<>();
+        for(String table:List.of("live_campaign","live_grouped_policy","live_event"))
+            v9Evidence.put(table,f.jdbc.queryForList("select to_jsonb(t)::text from "+table
+                    +" t where campaign_id=? order by to_jsonb(t)::text",String.class,v9.campaignId()));
+
+        assertThat(f.migrate("54").migrationsExecuted).isOne();
+        assertThat(f.store.find(v9.campaignId())).contains(frozenV9);
+        v9Evidence.forEach((table,rows)->assertThat(f.jdbc.queryForList("select to_jsonb(t)::text from "+table
+                +" t where campaign_id=? order by to_jsonb(t)::text",String.class,v9.campaignId())).isEqualTo(rows));
+
+        List<Target> targets=new ArrayList<>();
+        for(int index=0;index<8;index++) targets.add(f.seed(EVENT+10_100+index));
+        Manifest v10=v10Manifest(targets);
+        assertThat(f.store.prepare(v10)).isEqualTo(v10);
+        assertThat(f.store.find(v10.campaignId())).hasValueSatisfying(saved -> {
+            assertThat(saved.manifest()).isEqualTo(v10);
+            assertThat(saved.events()).hasSize(8);
+        });
+        assertThat(f.jdbc.queryForMap("""
+                select policy_version,qualified_match_capacity,target_count,cycle_interval_seconds
+                from live_campaign where campaign_id=?
+                """,v10.campaignId()))
+                .containsEntry("policy_version","live-v10")
+                .containsEntry("qualified_match_capacity",8)
+                .containsEntry("target_count",8)
+                .containsEntry("cycle_interval_seconds",60);
+    }
+
+    @Test
+    void v10SqlRejectsCapacityAboveEightAndRequiresTheQualifiedGroupedProfile() {
+        Fixture f=fixture("54");
+        String admitted="{\"EVENT_DETAILS\":{\"requestNanos\":500000000,\"processingNanos\":100000000},"
+                +"\"EVENT_INCIDENTS\":{\"requestNanos\":500000000,\"processingNanos\":100000000},"
+                +"\"EVENT_STATISTICS\":{\"requestNanos\":500000000,\"processingNanos\":100000000},"
+                +"\"EVENT_LINEUPS\":{\"requestNanos\":500000000,\"processingNanos\":100000000}}";
+
+        UUID missingProfile=UUID.randomUUID();
+        assertThatThrownBy(()->insertPolicyManifestRow(f,missingProfile,"live-v10",2500,20000,15_728_640_000L,8,60))
+                .hasMessageContaining("live-v10 requires its immutable qualified grouped profile");
+        assertThat(f.jdbc.queryForObject("select count(*) from live_campaign where campaign_id=?",Long.class,missingProfile)).isZero();
+
+        UUID accepted=UUID.randomUUID();
+        new TransactionTemplate(new JdbcTransactionManager(f.ds)).executeWithoutResult(status->{
+            insertPolicyManifestRow(f,accepted,"live-v10",2500,20000,15_728_640_000L,8,60);
+            insertGroupedPolicyRow(f,accepted,60,60,500_000_000L,admitted);
+        });
+        assertThat(f.jdbc.queryForMap("select critical_interval_seconds,lineup_interval_seconds,inter_group_delay_nanos from live_grouped_policy where campaign_id=?",accepted))
+                .containsEntry("critical_interval_seconds",60).containsEntry("lineup_interval_seconds",60)
+                .containsEntry("inter_group_delay_nanos",500_000_000L);
+
+        assertThatThrownBy(()->insertPolicyManifestRow(f,UUID.randomUUID(),"live-v10",2500,20000,15_728_640_000L,9,60))
+                .hasMessageContaining("live_campaign_v10_policy_bounds_check");
+        assertThatThrownBy(()->insertPolicyManifestRow(f,UUID.randomUUID(),"live-v10",2500,20000,15_728_640_000L,8,100))
+                .hasMessageContaining("live_campaign_v10_policy_bounds_check");
+        assertThatThrownBy(()->insertPolicyManifestRow(f,UUID.randomUUID(),"live-v10",2500,20000,15_728_640_001L,8,60))
+                .hasMessageContaining("live_campaign_v10_policy_bounds_check");
+    }
+
+    @Test
     void validatedV9NotModifiedReleasesOnlyTheLogicalCollectionBudget() {
         Fixture f=fixture("52"); Target target=f.seed(EVENT); Manifest manifest=v9Manifest(List.of(target));
         Ownership ownership=f.start(manifest); UUID group=UUID.randomUUID();
@@ -540,6 +613,34 @@ class LiveCampaignPersistenceIT {
         assertThatThrownBy(() -> f.store.publishResult(ownership,noDispatch.attemptId(),noChange,
                 NormalizedReferences::none)).hasMessageContaining("LIVE_NOT_MODIFIED_TRANSPORT_UNVERIFIED");
         assertThat(f.store.find(manifest.campaignId()).orElseThrow().reservedCalls()).isEqualTo(3);
+    }
+
+    @Test
+    void validatedV10NotModifiedReleasesOnlyTheLogicalCollectionBudget() {
+        Fixture f=fixture("54"); Target target=f.seed(EVENT); Manifest manifest=v10Manifest(List.of(target));
+        Ownership ownership=f.start(manifest); UUID group=UUID.randomUUID();
+        ReservedAttempt attempt=f.store.reserveAttempt(groupedRequest(ownership,target,0,
+                SofascoreEndpointType.EVENT_DETAILS,group,0,0)).orElseThrow();
+        Instant requested=T0.plusSeconds(10),received=requested.plusMillis(100);
+        f.store.recordDispatch(ownership,attempt.attemptId(),requested);
+        f.diagnostics.recordTransport(manifest.campaignId(),attempt.attemptId(),SofascoreEndpointType.EVENT_DETAILS,
+                new PlaywrightTransportDiagnostic(PlaywrightTransportDiagnostic.Phase.COMPLETE,30_000,
+                        requested,received,304,null,true,null,null,false));
+        Publication noChange=new Publication("NOT_MODIFIED","NONE","HTTP_304",received,null,false,
+                "COLLECTING","inprogress",null,null,null,null);
+
+        Result result=f.store.publishResult(ownership,attempt.attemptId(),noChange,NormalizedReferences::none);
+        CampaignView after=f.store.find(manifest.campaignId()).orElseThrow();
+        assertThat(result.publication()).isEqualTo(noChange);
+        assertThat(after.reservedCalls()).isZero();
+        assertThat(after.events().getFirst().reservedCalls()).isZero();
+        assertThat(f.jdbc.queryForObject("select count(*) from live_call_receipt where attempt_id=?",Long.class,
+                attempt.attemptId())).isZero();
+        assertThat(new JdbcLiveCampaignPressureReadStore(f.jdbc).read(manifest.campaignId()).observedDepartures()).isZero();
+        assertThat(f.diagnostics.findTransport(manifest.campaignId(),attempt.attemptId())).hasValueSatisfying(diagnostic -> {
+            assertThat(diagnostic.httpStatus()).isEqualTo(304);
+            assertThat(diagnostic.responseComplete()).isTrue();
+        });
     }
 
     @Test

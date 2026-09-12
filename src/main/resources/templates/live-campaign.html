@@ -91,10 +91,11 @@
       </section>
     </details>
     <details data-live-pressure th:with="pressure=${campaign.pressure}">
-      <summary th:text="${manifest.policyVersion == 'live-v9' ? 'Pression observée de cette campagne live-v9' : 'Pression observée de cette campagne'}">Pression observée de cette campagne</summary>
+      <summary th:text="${manifest.policyVersion == 'live-v10' ? 'Pression observée de cette campagne live-v10' : (manifest.policyVersion == 'live-v9' ? 'Pression observée de cette campagne live-v9' : 'Pression observée de cette campagne')}">Pression observée de cette campagne</summary>
       <p class="muted">Cette lecture utilise les instants <code>REQUEST_SENT</code> des collectes comptabilisées par la campagne.
         Une revalidation conditionnelle <code>HTTP 304</code> validée réutilise le cache local et est exclue ; sa trace de transport reste consultable dans le diagnostic. Le trafic hors du Lab n’est pas inclus ; ces valeurs ne définissent aucun seuil d’acceptation fournisseur.</p>
       <p class="muted" th:if="${manifest.policyVersion == 'live-v9'}" data-live-v9-pressure-note>Pour live-v9, les pics de collecte sont séparés des protections locales de cadence et des règles J4 qui peuvent réduire les familles planifiées.</p>
+      <p class="muted" th:if="${manifest.policyVersion == 'live-v10'}" data-live-v10-pressure-note>Pour live-v10, la protection locale durable borne les départs à 35 par fenêtre glissante de 60 secondes et 2 100 par heure. Les contrôles J4 peuvent réduire les familles planifiées.</p>
       <p data-live-pressure-empty th:hidden="${pressure.observedDepartures > 0}">Aucune collecte comptabilisée avec un départ worker <code>REQUEST_SENT</code>
         n’est observée dans cette campagne.</p>
       <div data-live-pressure-data th:hidden="${pressure.observedDepartures == 0}">
@@ -134,18 +135,19 @@
       <div><dt>Fin au plus tard (UTC)</dt><dd data-live-ends-at th:text="${campaign.endsAt ?: (campaign.state == 'PREPARED' ? 'Fixée au lancement' : '—')}">—</dd></div>
       <div><dt>Collectes comptabilisées / plafond</dt><dd data-live-calls th:text="${campaign.reservedCalls + ' / ' + campaign.maximumCalls}">0</dd></div>
       <div><dt>Octets reçus / plafond</dt><dd data-live-bytes th:text="${campaign.receivedBytes + ' / ' + campaign.maximumBytes}">0</dd></div>
-      <div><dt th:text="${(manifest.policyVersion == 'live-v6' or manifest.policyVersion == 'live-v7' or manifest.policyVersion == 'live-v8' or manifest.policyVersion == 'live-v9') ? 'Intervalle nominal de collecte' : 'Intervalle de collecte'}">Intervalle de collecte</dt><dd th:text="${manifest.cycleInterval.toSeconds() + ' secondes'}">60 secondes</dd></div>
+      <div><dt th:text="${(manifest.policyVersion == 'live-v6' or manifest.policyVersion == 'live-v7' or manifest.policyVersion == 'live-v8' or manifest.policyVersion == 'live-v9' or manifest.policyVersion == 'live-v10') ? 'Intervalle nominal de collecte' : 'Intervalle de collecte'}">Intervalle de collecte</dt><dd th:text="${manifest.cycleInterval.toSeconds() + ' secondes'}">60 secondes</dd></div>
       <div th:if="${campaign.cadence != null}"><dt>Compositions pendant le jeu</dt><dd th:text="${campaign.cadence.lineupSeconds == 60 ? '60 secondes nominales' : '5 minutes nominales'}">60 secondes nominales</dd></div>
-      <div th:if="${campaign.cadence != null}"><dt th:text="${(manifest.policyVersion == 'live-v6' or manifest.policyVersion == 'live-v7' or manifest.policyVersion == 'live-v8' or manifest.policyVersion == 'live-v9') ? 'Capacité admise par le profil' : 'Capacité qualifiée à ' + campaign.cadence.targetSeconds + ' secondes'}">Capacité qualifiée</dt><dd th:text="${campaign.cadence.qualifiedCapacity + ' rencontres'}">0</dd></div>
+      <div th:if="${campaign.cadence != null}"><dt th:text="${(manifest.policyVersion == 'live-v6' or manifest.policyVersion == 'live-v7' or manifest.policyVersion == 'live-v8' or manifest.policyVersion == 'live-v9' or manifest.policyVersion == 'live-v10') ? 'Capacité admise par le profil' : 'Capacité qualifiée à ' + campaign.cadence.targetSeconds + ' secondes'}">Capacité qualifiée</dt><dd th:text="${campaign.cadence.qualifiedCapacity + ' rencontres'}">0</dd></div>
       <div th:if="${campaign.cadence != null}"><dt>Autonomie estimée à ce rythme</dt><dd data-live-autonomy th:text="${campaign.runtimeStatus != null and campaign.runtimeStatus.collectionStopped ? 'Collecte arrêtée' : campaign.cadence.estimatedMinutes() + ' minutes environ'}">—</dd></div>
     </dl>
     <p class="muted" th:if="${campaign.cadence != null}">L’estimation utilise les appels restants, les phases actuelles et les réserves de fin.
       L’intervalle de <span th:text="${manifest.cycleInterval.toSeconds()}">100</span> secondes est une cible nominale ; la collecte s’arrête à l’épuisement des plafonds.
       Le plafond d’octets peut être atteint avant l’autonomie estimée en appels.</p>
-    <p class="muted" th:if="${manifest.policyVersion == 'live-v6' or manifest.policyVersion == 'live-v7' or manifest.policyVersion == 'live-v8' or manifest.policyVersion == 'live-v9'}">Le budget fournisseur partagé et les réponses indisponibles peuvent espacer les collectes.
+    <p class="muted" th:if="${manifest.policyVersion == 'live-v6' or manifest.policyVersion == 'live-v7' or manifest.policyVersion == 'live-v8' or manifest.policyVersion == 'live-v9' or manifest.policyVersion == 'live-v10'}">Le budget fournisseur partagé et les réponses indisponibles peuvent espacer les collectes.
       L’intervalle nominal ne garantit pas la fraîcheur réelle. Un refus HTTP 403 ou 429 suspend l’accès fournisseur ;
       son état et les conditions de réarmement sont consultables dans <a th:href="@{/provider-access}">l’état de l’accès fournisseur</a>.</p>
     <p class="muted" th:if="${manifest.policyVersion == 'live-v9'}" data-live-v9-cadence-note>Le profil live-v9 conserve une cible nominale de 60 secondes pendant le jeu. Les contrôles J4 peuvent retirer des familles prévues, sans augmenter cette cadence ni les budgets locaux.</p>
+    <p class="muted" th:if="${manifest.policyVersion == 'live-v10'}" data-live-v10-cadence-note>Le profil live-v10 conserve une cible nominale de 60 secondes pendant le jeu pour huit rencontres au plus. Les contrôles J4 peuvent retirer des familles prévues, sans augmenter la cadence ni les plafonds locaux.</p>
     <p class="muted" data-live-refresh-status role="status" aria-live="polite">Lecture locale toutes les cinq secondes, suspendue lorsque l’onglet est masqué.</p>
     <form th:if="${campaign.state == 'RUNNING' or (campaign.runtimeStatus != null and campaign.runtimeStatus.cleanupPending)}"
           data-live-stop-form data-live-global-stop-form method="post"
@@ -192,7 +194,7 @@
     <dl class="detail-grid">
       <div><dt>Rencontres retenues</dt><dd th:text="${manifest.targets.size()}">1</dd></div>
       <div><dt>Plafond de rencontres éligibles</dt><dd th:text="${manifest.qualifiedMatchCapacity}">1</dd></div>
-      <div><dt th:text="${(manifest.policyVersion == 'live-v6' or manifest.policyVersion == 'live-v7' or manifest.policyVersion == 'live-v8' or manifest.policyVersion == 'live-v9') ? 'Intervalle nominal de collecte' : 'Intervalle de collecte'}">Intervalle de collecte</dt><dd th:text="${manifest.cycleInterval.toSeconds() + ' secondes'}">60 secondes</dd></div>
+      <div><dt th:text="${(manifest.policyVersion == 'live-v6' or manifest.policyVersion == 'live-v7' or manifest.policyVersion == 'live-v8' or manifest.policyVersion == 'live-v9' or manifest.policyVersion == 'live-v10') ? 'Intervalle nominal de collecte' : 'Intervalle de collecte'}">Intervalle de collecte</dt><dd th:text="${manifest.cycleInterval.toSeconds() + ' secondes'}">60 secondes</dd></div>
       <div><dt>Durée maximale</dt><dd th:text="${manifest.duration.toMinutes() + ' minutes'}">240 minutes</dd></div>
       <div><dt>Expiration de la préparation (UTC)</dt><dd th:text="${manifest.expiresAt}">—</dd></div>
       <div><dt>Appels maximum par rencontre</dt><dd th:text="${manifest.maximumCallsPerEvent}">1000</dd></div>
@@ -201,16 +203,18 @@
     </dl>
     <details>
       <summary>Profil de capacité utilisé pour cette préparation</summary>
-      <dl class="detail-grid" th:if="${manifest.policyVersion != 'live-v4' and manifest.policyVersion != 'live-v5' and manifest.policyVersion != 'live-v6' and manifest.policyVersion != 'live-v7' and manifest.policyVersion != 'live-v8' and manifest.policyVersion != 'live-v9'}">
+      <dl class="detail-grid" th:if="${manifest.policyVersion != 'live-v4' and manifest.policyVersion != 'live-v5' and manifest.policyVersion != 'live-v6' and manifest.policyVersion != 'live-v7' and manifest.policyVersion != 'live-v8' and manifest.policyVersion != 'live-v9' and manifest.policyVersion != 'live-v10'}">
         <div><dt>Durée retenue par appel fournisseur</dt><dd th:text="${manifest.admissionProfile.requestEnvelope.toMillis() + ' ms'}">10000 ms</dd></div>
         <div><dt>Traitement local retenu par appel</dt><dd th:text="${manifest.admissionProfile.processingEnvelope.toMillis() + ' ms'}">1000 ms</dd></div>
         <div><dt>Preuve de qualification</dt><dd class="mono hash-value"
           th:text="${#strings.isEmpty(manifest.admissionProfile.qualificationSha256) ? 'Profil initial conservateur' : manifest.admissionProfile.qualificationSha256}">Profil initial conservateur</dd></div>
       </dl>
-      <div th:if="${manifest.policyVersion == 'live-v4' or manifest.policyVersion == 'live-v5' or manifest.policyVersion == 'live-v6' or manifest.policyVersion == 'live-v7' or manifest.policyVersion == 'live-v8' or manifest.policyVersion == 'live-v9'}">
-        <p th:if="${manifest.policyVersion != 'live-v8'}">Les appels d’un match sont séquentiels et regroupés. La pause entre les groupes de cette campagne est de
+      <div th:if="${manifest.policyVersion == 'live-v4' or manifest.policyVersion == 'live-v5' or manifest.policyVersion == 'live-v6' or manifest.policyVersion == 'live-v7' or manifest.policyVersion == 'live-v8' or manifest.policyVersion == 'live-v9' or manifest.policyVersion == 'live-v10'}">
+        <p th:if="${manifest.policyVersion != 'live-v8' and manifest.policyVersion != 'live-v10'}">Les appels d’un match sont séquentiels et regroupés. La pause entre les groupes de cette campagne est de
           <span th:text="${manifest.admissionProfile.groupedProfile.interGroupDelay.toSeconds() + ' seconde(s)'}">3 seconde(s)</span>.</p>
         <p th:if="${manifest.policyVersion == 'live-v8'}">Les appels d’un match sont séquentiels et regroupés dans des créneaux fixes. Après la fin vérifiée d’un échange, le garde-fou local avant le départ suivant est de
+          <span th:text="${manifest.admissionProfile.groupedProfile.interGroupDelay.toMillis() + ' ms'}">500 ms</span>.</p>
+        <p th:if="${manifest.policyVersion == 'live-v10'}" data-live-v10-profile-note>Les appels d’un match sont séquentiels et regroupés dans des créneaux fixes. Après la fin vérifiée d’un échange, le garde-fou local avant le départ suivant est de
           <span th:text="${manifest.admissionProfile.groupedProfile.interGroupDelay.toMillis() + ' ms'}">500 ms</span>.</p>
         <p th:if="${manifest.policyVersion == 'live-v6' or manifest.policyVersion == 'live-v7'}">Le budget partagé autorise au plus 25 départs par minute et 1 000 par heure,
           avec au moins deux secondes après la fin de l’appel précédent. Il est conservé entre les campagnes et les redémarrages.</p>
@@ -218,6 +222,8 @@
            avec au moins 500 ms après la fin de l’appel précédent. Il est conservé entre les campagnes et les redémarrages ; un refus HTTP 403 ou 429 suspend toujours l’accès partagé.</p>
         <p th:if="${manifest.policyVersion == 'live-v9'}" data-live-v9-budget-note>Le budget partagé autorise au plus 45 départs par minute et 2 756 par heure,
            avec au moins 500 ms après la fin de l’appel précédent. Les créneaux live-v9 restent qualifiés par famille ; les contrôles J4 peuvent retirer une famille sans hausser ce budget. Un refus HTTP 403 ou 429 suspend toujours l’accès partagé.</p>
+        <p th:if="${manifest.policyVersion == 'live-v10'}" data-live-v10-budget-note>Le budget local partagé autorise au plus 35 départs par minute et 2 100 par heure,
+           avec au moins 500 ms après la fin de l’appel précédent. Un HTTP 304 corrélé réutilise uniquement le cache local et reste exclu des collectes fonctionnelles ; un refus HTTP 403 ou 429 suspend toujours l’accès partagé.</p>
         <dl class="detail-grid"><div><dt>Preuve de qualification des groupes</dt><dd class="mono hash-value"
           th:text="${manifest.admissionProfile.groupedProfile.qualificationSha256}">SHA-256</dd></div></dl>
         <table><thead><tr><th>Famille</th><th>Appel budgété</th><th>Traitement budgété</th></tr></thead>
@@ -262,12 +268,19 @@
       À l’heure prévue, J4 vérifie le début chaque minute. Lorsque J4 confirme <strong>inprogress</strong>,
       les familles autorisées par les faits J4 visent toutes <strong>60 secondes par rencontre</strong>.
       Un fait J4 peut retirer une famille non applicable sans accélérer les autres ; les départs normaux restent placés dans des créneaux qualifiés de 60 secondes et les retards restent visibles.</p>
+    <p th:if="${manifest.policyVersion == 'live-v10'}" data-live-v10-policy-note>Au lancement, une rencontre non commencée reçoit une vérification de J4 et des trois familles J5.
+      Si le coup d’envoi est à plus d’une heure, le prochain groupe complet attend une heure avant le début prévu.
+      Pendant cette dernière heure, seules les compositions sont vérifiées toutes les cinq minutes jusqu’à leur confirmation.
+      Les cinq dernières minutes avant le coup d’envoi ne déclenchent aucun appel.
+      À l’heure prévue, J4 vérifie le début chaque minute. Lorsque J4 confirme <strong>inprogress</strong>,
+      les familles autorisées par les faits J4 visent toutes <strong>60 secondes par rencontre</strong>.
+      Un fait J4 peut retirer une famille non applicable sans accélérer les autres. Les départs normaux restent placés dans des créneaux qualifiés de 60 secondes, sous la borne durable de 35 par minute et 2 100 par heure ; les retards restent visibles.</p>
     <p th:if="${manifest.policyVersion == 'live-v6'}">La sélection admet au plus <strong>sept rencontres</strong>, selon le profil qualifié.
       Pendant le jeu, J4, les incidents et les statistiques visent un intervalle nominal de <strong>100 secondes par rencontre</strong>,
       et les compositions cinq minutes. Avant le début, J4 et les compositions disponibles visent 100 secondes.
       Les limites partagées et l’espacement progressif des réponses 404 peuvent repousser les collectes ; les retards restent visibles.
       Les statistiques et incidents deviennent éligibles lorsque J4 confirme le début du match.</p>
-    <p th:if="${manifest.policyVersion != 'live-v4' and manifest.policyVersion != 'live-v5' and manifest.policyVersion != 'live-v6' and manifest.policyVersion != 'live-v7' and manifest.policyVersion != 'live-v8' and manifest.policyVersion != 'live-v9'}">J4 vérifie le statut avant le match et J5 collecte statistiques, incidents et compositions en cours de match toutes les
+    <p th:if="${manifest.policyVersion != 'live-v4' and manifest.policyVersion != 'live-v5' and manifest.policyVersion != 'live-v6' and manifest.policyVersion != 'live-v7' and manifest.policyVersion != 'live-v8' and manifest.policyVersion != 'live-v9' and manifest.policyVersion != 'live-v10'}">J4 vérifie le statut avant le match et J5 collecte statistiques, incidents et compositions en cours de match toutes les
       <span th:text="${manifest.cycleInterval.toSeconds()}">60</span> secondes. J4 confirme ensuite la fin.
       Cet intervalle est fixé pour cette sélection. Les appels sont sérialisés. Une lecture de cette page ne lance aucune collecte.</p>
     <form method="post" th:action="@{/live-campaigns/{id}/launch(id=${campaign.campaignId})}">

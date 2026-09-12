@@ -563,12 +563,18 @@ public class JdbcLiveCampaignStore implements LiveCampaignStore {
             var value=tree.get(endpoint.name());
             envelopes.put(endpoint,new EndpointEnvelope(Duration.ofNanos(value.get("requestNanos").asLong()),Duration.ofNanos(value.get("processingNanos").asLong())));
         }
-        return new GroupedAdmissionProfile(envelopes,(String)row.get("qualification_sha256"),(String)campaign.get("policy_version"));
+        String campaignPolicy = (String) campaign.get("policy_version");
+        // The V10 manifest keeps its independent policy and qualification in the
+        // campaign row.  Its nested profile remains the immutable V9 scheduler
+        // contract, exactly as it was when the manifest was prepared.
+        String schedulerPolicy = "live-v10".equals(campaignPolicy) ? "live-v9" : campaignPolicy;
+        return new GroupedAdmissionProfile(envelopes, (String) row.get("qualification_sha256"), schedulerPolicy);
     }
     private static boolean groupedPolicy(Map<String,Object> campaign) {
         return "live-v4".equals(campaign.get("policy_version")) || "live-v5".equals(campaign.get("policy_version"))
                 || "live-v6".equals(campaign.get("policy_version")) || "live-v7".equals(campaign.get("policy_version"))
-                || "live-v8".equals(campaign.get("policy_version")) || "live-v9".equals(campaign.get("policy_version"));
+                || "live-v8".equals(campaign.get("policy_version")) || "live-v9".equals(campaign.get("policy_version"))
+                || "live-v10".equals(campaign.get("policy_version"));
     }
     /**
      * The immutable result ledger is the exact-once release proof.  A request whose response
@@ -577,8 +583,8 @@ public class JdbcLiveCampaignStore implements LiveCampaignStore {
      */
     private void requireVerifiedNotModified(Map<String,Object> campaign, UUID attemptId,
                                             Publication publication, NormalizedReferences refs) {
-        if (!"live-v9".equals(campaign.get("policy_version")))
-            throw new IllegalArgumentException("conditional live result requires live-v9");
+        if (!"live-v9".equals(campaign.get("policy_version")) && !"live-v10".equals(campaign.get("policy_version")))
+            throw new IllegalArgumentException("conditional live result requires live-v9 or live-v10");
         if (!refs.equals(NormalizedReferences.none()))
             throw new IllegalArgumentException("HTTP 304 cannot publish normalized references");
         Boolean verified=jdbc.queryForObject("""

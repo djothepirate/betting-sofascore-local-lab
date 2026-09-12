@@ -71,6 +71,16 @@ public class JdbcProviderResilienceStore implements ProviderResilienceStore {
 
     @Override @Transactional
     public void recordAuthenticatedV8Departure(UUID dispatchId, Instant requestedAt, Instant observedAt) {
+        recordAuthenticatedDeparture(dispatchId, requestedAt, observedAt, DepartureProfile.LIVE_V8);
+    }
+
+    @Override @Transactional
+    public void recordAuthenticatedV10Departure(UUID dispatchId, Instant requestedAt, Instant observedAt) {
+        recordAuthenticatedDeparture(dispatchId, requestedAt, observedAt, DepartureProfile.LIVE_V10);
+    }
+
+    private void recordAuthenticatedDeparture(UUID dispatchId, Instant requestedAt, Instant observedAt,
+                                             DepartureProfile expectedProfile) {
         Objects.requireNonNull(dispatchId); Objects.requireNonNull(requestedAt); Objects.requireNonNull(observedAt);
         if (!supportedTimestamp(requestedAt) || !supportedTimestamp(observedAt))
             throw new IllegalStateException("PROVIDER_REQUESTED_TIMESTAMP_INVALID");
@@ -96,7 +106,7 @@ public class JdbcProviderResilienceStore implements ProviderResilienceStore {
                 """,(rs,row)->new ReservationRow(at(rs,"reserved_at"),rs.getString("admission_profile")),dispatchId);
         if (reservations.isEmpty()) throw new IllegalStateException("PROVIDER_DEPARTURE_RESERVATION_MISSING");
         ReservationRow reservation=reservations.getFirst();
-        if (DepartureProfile.fromPersistenceValue(reservation.profile()) != DepartureProfile.LIVE_V8)
+        if (DepartureProfile.fromPersistenceValue(reservation.profile()) != expectedProfile)
             throw new IllegalStateException("PROVIDER_AUTHENTICATED_DEPARTURE_PROFILE_INVALID");
         if (requested.isBefore(reservation.reservedAt()))
             throw new IllegalStateException("PROVIDER_REQUESTED_BEFORE_RESERVATION");
@@ -207,14 +217,14 @@ public class JdbcProviderResilienceStore implements ProviderResilienceStore {
         rateDeadline=latest(rateDeadline,capacityDeadline(now,Duration.ofHours(1),
                 requestedProfile.maximumDeparturesPerHour(),requiredDepartures));
         // A rolling-window ceiling is durable pressure even when its release is
-        // shorter than the local fence.  V8 alone exposes a completed-exchange
+        // shorter than the local fence.  V8 and V10 expose a completed-exchange
         // fence explicitly, so the scheduler can retain the same pending due
         // without recording a missed collection. Historical policies keep their
         // established RATE_LIMITED surface.
         if (rateDeadline!=null && rateDeadline.isAfter(now))
             return new DepartureDecision(false,DepartureReason.RATE_LIMITED,rateDeadline,state);
         if (fenceDeadline!=null && fenceDeadline.isAfter(now)) {
-            DepartureReason reason=requestedProfile==DepartureProfile.LIVE_V8
+            DepartureReason reason=(requestedProfile==DepartureProfile.LIVE_V8 || requestedProfile==DepartureProfile.LIVE_V10)
                     ? DepartureReason.POST_EXCHANGE_FENCE : DepartureReason.RATE_LIMITED;
             return new DepartureDecision(false,reason,fenceDeadline,state);
         }

@@ -5,14 +5,60 @@ Références : [ADR-SS-005 accepté](../../ADR-SS-005-bounded-local-live-j4-j5-c
 [architecture](../architecture/LIVE-J4-J5-CAMPAIGNS.md),
 [qualification V8 locale historique](../validation/WO058-LIVE-V8-CAPACITY-20260910.md).
 
-## Nouvelles préparations : `live-v9`, profil local distinct et activation manuelle
+## Nouvelles préparations : `live-v10`, profil local distinct et activation manuelle
 
-Les nouvelles préparations visent `live-v9`. Cette politique garde la borne maximale de
-**dix rencontres** et l'enveloppe prudente V8 de départ, mais choisit les familles J5 à partir
-des faits J4 persistés. Les familles restent J4, incidents, statistiques et compositions ; une
-absence de famille est un fait de planification local, jamais une preuve de fraîcheur ou de
-donnée fournisseur. Les manifestes v1–v8 restent immuables et consultables avec leur propre
-politique ; aucun profil historique, y compris V8, ne sert de repli à V9.
+Les nouvelles préparations visent `live-v10`. Cette politique limite la sélection à **huit
+rencontres** et conserve les quatre familles live (J4 détails, J5 incidents, J5 statistiques,
+J5 compositions). Sa charge nominale maximale est donc de **32 départs comptabilisés par minute**
+(`8 × 4`). Chaque départ doit également passer le garde durable local : au plus **35 départs
+comptabilisés dans toute fenêtre glissante de 60 secondes** et **2 100 dans toute fenêtre glissante
+d'une heure**. Ces plafonds restent des gardes locales ; ils ne décrivent pas un quota, une
+acceptation ou un seuil supposé du fournisseur.
+
+La campagne demeure strictement locale, manuelle et opt-in. Le lancement requiert un profil V10
+complet, la marge durable pour sa première vague de `4 × N` départs et un `CampaignLease` exclusif.
+Les réservations sont sérialisées et persistent jusqu'à leur clôture prouvée. Le garde ne peut être
+réinitialisé ni en changeant de campagne, ni par redémarrage, ni par une action de connexion. Cette
+révision n'ajoute ni proxy, changement d'adresse, cookie, état de navigateur persistant, furtivité,
+résolution de défi, retry ou reprise automatique. Une réponse 403/429 continue de suivre le chemin
+d'arrêt local existant.
+
+V10 exige son **propre** SHA-256 et ses huit enveloppes
+`SOFASCORE_LIVE_GROUPED_V10_{J4,INCIDENTS,STATISTICS,LINEUPS}_{REQUEST,PROCESSING}_ENVELOPE`.
+La preuve versionnée [WO058-GROUPED-LIVE-V10-PROFILE-20260912.json](../validation/WO058-GROUPED-LIVE-V10-PROFILE-20260912.json)
+doit lier ces valeurs au replay hors réseau du planificateur, à la borne de huit rencontres et aux
+fenêtres persistantes de 35/60 s et 2 100/h. Tant que cette preuve n'est pas qualifiée et que son
+SHA n'est pas délibérément reporté par l'opérateur, l'admission V10 est fermée avec une capacité
+zéro. Les valeurs V8 et V9 ne sont jamais une solution de repli.
+
+Après revue humaine de la preuve, l'opérateur obtient les **neuf** entrées V10 à reporter
+manuellement dans l'attribut `environmentVariables` du lanceur Eclipse actif :
+
+```powershell
+.\scripts\Show-LiveGroupedV10LauncherConfiguration.ps1 -OutputFormat Eclipse
+```
+
+Ce script de lecture seule recalcule le SHA-256 du profil V10 et n'écrit ni fichier `.launch`,
+ni variable d'environnement, ni base. Il ne démarre ni l'application, ni un navigateur, ni une
+campagne. `SOFASCORE_LIVE_ENABLED` reste une décision d'opt-in distincte ; pour V10,
+`SOFASCORE_LIVE_QUALIFIED_MATCH_CAPACITY` ne peut pas dépasser `8` et
+`SOFASCORE_PLAYWRIGHT_REQUEST_TIMEOUT` reste borné à `30s`. Le script et la qualification ne
+constituent pas une validation opérateur d'une campagne réelle.
+
+Les règles J4/J5, la présentation des compositions et la révalidation conditionnelle strictement
+confinée au contexte neuf sont héritées de V9. Un `304 Not Modified` correctement corrélé garde la
+dernière réponse `200` comme source de la consultation et ne crée ni nouveau corps, snapshot ou
+normalisation ; il ne justifie ni nouvelle fraîcheur de donnée ni relance. Les manifestes V9 et
+leurs preuves restent historiques, consultables et inchangés.
+
+## Profil `live-v9` historique, conservé pour les campagnes déjà préparées
+
+Les campagnes `live-v9` déjà préparées conservent leur borne maximale de **dix rencontres** et
+leur enveloppe prudente V8 de départ, tout en choisissant les familles J5 à partir des faits J4
+persistés. Les familles restent J4, incidents, statistiques et compositions ; une absence de
+famille est un fait de planification local, jamais une preuve de fraîcheur ou de donnée
+fournisseur. Les manifestes v1–v8 restent immuables et consultables avec leur propre politique ;
+aucun profil historique, y compris V8, ne sert de repli à V9. V10 ne convertit pas ces campagnes.
 
 V9 exige son **propre** SHA-256 et ses huit enveloppes
 `SOFASCORE_LIVE_GROUPED_V9_{J4,INCIDENTS,STATISTICS,LINEUPS}_{REQUEST,PROCESSING}_ENVELOPE`.
@@ -89,9 +135,9 @@ valeur inchangée, notamment son défaut de trois secondes ; ne pas lui attribue
 Cette documentation ne modifie pas le fichier `.launch`, ne redémarre pas le Lab et ne lance
 aucune campagne fournisseur.
 
-### Règles V9 à appliquer après une qualification distincte
+### Règles V9 historiques, héritées par V10 après qualification distincte
 
-| Fait J4 persistant | Décision V9 locale |
+| Fait J4 persistant | Décision V9, conservée par V10 |
 | --- | --- |
 | `event.finalResultOnly=true` | La cible est arrêtée à la fin de ce premier J4, sans J5. Une sélection ne peut pas le savoir avant cette lecture. |
 | `status=notstarted`, `postponed` ou `delayed` | J5 statistiques et incidents ne sont pas proposés. Les compositions gardent leur règle de capacité propre. |
@@ -111,9 +157,10 @@ visibles même lorsqu'une carte possède une note ou des minutes J5 lineups, ou 
 statistics est disponible. Cette décoration est en lecture seule : elle ne modifie ni le snapshot
 ni les statistiques normalisées de J5 lineups.
 
-### Révalidation HTTP conditionnelle V9
+### Révalidation HTTP conditionnelle V9, reprise par V10 dans le même périmètre
 
-Une campagne `live-v9` peut revalider **uniquement** ses quatre routes de collecte live
+Une campagne `live-v9` — et une préparation `live-v10` après sa qualification — peut revalider
+**uniquement** ses quatre routes de collecte live
 (`J4 détails`, `J5 incidents`, `J5 statistiques` et `J5 compositions`) avec
 `If-None-Match`. Le premier échange de chaque couple rencontre/famille reste inconditionnel.
 Un validateur n'est réutilisable qu'après une réponse réellement reçue, intégralement lisible,

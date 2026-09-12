@@ -4,6 +4,25 @@ Les évolutions notables du SofaScore Local Lab sont consignées dans ce fichier
 
 ## [Non publié]
 
+### WO-058 — politique locale `live-v10` à huit rencontres et 35 départs par minute
+
+- Introduit `live-v10` pour les **nouvelles** préparations de campagne locale : la sélection est
+  plafonnée à huit rencontres et les quatre familles J4/J5 représentent au plus 32 départs
+  comptabilisés par minute dans la charge nominale (`8 × 4`).
+- Ajoute un plafond durable, sérialisé et partagé de 35 départs comptabilisés sur toute fenêtre
+  glissante de 60 secondes et de 2 100 sur toute fenêtre glissante d'une heure. La vague initiale
+  exige la capacité locale `4 × N` ; les réservations et leurs clôtures restent auditables.
+- Versionne un profil V10 autonome, sans repli depuis V8 ou V9, et sa preuve de replay hors
+  réseau. Une absence de profil V10 complet et cohérent ferme l'admission ; le lanceur reste une
+  action opérateur distincte et manuelle.
+- Préserve les manifestes, preuves, lectures et règles de pression `live-v9` déjà persistés. Les
+  règles J4/J5 et la révalidation conditionnelle restent confinées à leur contexte neuf ; aucune
+  nouvelle campagne ne convertit une campagne V9.
+- Documente ces bornes comme des gardes internes du Local Lab. Elles n'affirment ni quota, ni
+  acceptation, ni absence de refus du fournisseur et n'ajoutent aucun proxy, changement d'adresse,
+  contexte persistant, cookie, défi, retry ou reprise automatique. La qualification locale et la
+  validation opérateur de V10 restent à effectuer avant de clôturer WO-058.
+
 ### WO-059 — plafond local de pagination manuelle J3 à 35 pages
 
 - Porte les nouvelles collectes J3 `SCHEDULED_EVENTS`, directes ou importées localement, de 25 à

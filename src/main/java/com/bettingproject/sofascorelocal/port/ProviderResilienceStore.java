@@ -54,6 +54,10 @@ public interface ProviderResilienceStore {
     default void recordAuthenticatedV8Departure(UUID dispatchId, Instant requestedAt, Instant observedAt) {
         throw new IllegalStateException("PROVIDER_AUTHENTICATED_DEPARTURE_UNSUPPORTED");
     }
+    /** Same bounded worker proof as V8, attributed to the independent V10 pressure profile. */
+    default void recordAuthenticatedV10Departure(UUID dispatchId, Instant requestedAt, Instant observedAt) {
+        throw new IllegalStateException("PROVIDER_AUTHENTICATED_DEPARTURE_UNSUPPORTED");
+    }
     /** Close only after return/failure and verified transport cleanup. An unresolved reservation blocks all departures. */
     Snapshot markDepartureFinished(UUID dispatchId, Instant at);
     /** Publish confirmed response status as soon as known, independently of body completion. */

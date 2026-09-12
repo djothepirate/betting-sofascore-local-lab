@@ -30,8 +30,9 @@ public final class LiveProviderSession implements AutoCloseable {
         this(factory, campaignId, "live-v3");
     }
     public LiveProviderSession(PlaywrightProviderCampaignFactory factory, UUID campaignId, String policyVersion) {
-        conditionalRevalidation = "live-v9".equals(policyVersion);
+        conditionalRevalidation = "live-v9".equals(policyVersion) || "live-v10".equals(policyVersion);
         campaign = switch (policyVersion) {
+            case "live-v10" -> factory.openLiveGroupedV10(campaignId, ENDPOINTS);
             case "live-v9" -> factory.openLiveGroupedV9(campaignId, ENDPOINTS);
             case "live-v8" -> factory.openLiveGroupedV8(campaignId, ENDPOINTS);
             case "live-v7" -> factory.openLiveGroupedV7(campaignId, ENDPOINTS);
@@ -51,7 +52,7 @@ public final class LiveProviderSession implements AutoCloseable {
     }
 
     /**
-     * Returns the exact previously accepted facts only after a correlated V9 304.  No provider
+     * Returns the exact previously accepted facts only after a correlated V9/V10 304.  No provider
      * response body, raw snapshot, normalized observation, or persisted cache entry is created by
      * this method.  The caller must publish its ledger result before {@link #acceptNotModified}.
      */

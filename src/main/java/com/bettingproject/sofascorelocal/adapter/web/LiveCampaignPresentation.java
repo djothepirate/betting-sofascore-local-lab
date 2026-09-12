@@ -152,8 +152,8 @@ public class LiveCampaignPresentation {
         if (!grouped(policyVersion)) return null;
         long interval = view.manifest().cycleInterval().toSeconds();
         boolean minutePolicy = "live-v7".equals(policyVersion) || "live-v8".equals(policyVersion)
-                || "live-v9".equals(policyVersion);
-        // Prematch V7/V8/V9 is sparse; one J4/minute at kickoff is the conservative waiting rate.
+                || "live-v9".equals(policyVersion) || "live-v10".equals(policyVersion);
+        // Prematch V7/V8/V9/V10 is sparse; one J4/minute at kickoff is the conservative waiting rate.
         double waitingRate = minutePolicy ? 1 : 120.0 / interval;
         double playingRate = minutePolicy ? 240.0 / interval : 180.0 / interval + 0.2;
         List<EventView> active = view.events().stream().filter(e -> !terminal(e.state())).toList();
@@ -178,7 +178,8 @@ public class LiveCampaignPresentation {
     private static boolean grouped(String policyVersion) {
         return "live-v4".equals(policyVersion) || "live-v5".equals(policyVersion)
                 || "live-v6".equals(policyVersion) || "live-v7".equals(policyVersion)
-                || "live-v8".equals(policyVersion) || "live-v9".equals(policyVersion);
+                || "live-v8".equals(policyVersion) || "live-v9".equals(policyVersion)
+                || "live-v10".equals(policyVersion);
     }
 
     private Event event(CampaignView campaign, EventView event, Instant observedAt) {
@@ -236,12 +237,13 @@ public class LiveCampaignPresentation {
      * durable scheduler state remains terminal; only this policy exposes the incomplete cycle.
      */
     private static String displayedState(String policyVersion, EventView event) {
-        return "live-v9".equals(policyVersion) && "FINISHED_CONFIRMED".equals(event.state()) && !event.finalComplete()
+        return ("live-v9".equals(policyVersion) || "live-v10".equals(policyVersion))
+                && "FINISHED_CONFIRMED".equals(event.state()) && !event.finalComplete()
                 ? "FINISHED_J5_INCOMPLETE" : event.state();
     }
 
     private static String displayedReason(String policyVersion, EventView event) {
-        if ("live-v9".equals(policyVersion) && "FINISHED_CONFIRMED".equals(event.state())
+        if (("live-v9".equals(policyVersion) || "live-v10".equals(policyVersion)) && "FINISHED_CONFIRMED".equals(event.state())
                 && !event.finalComplete()) {
             return "Résultat final J4 confirmé ; dernier cycle J5 incomplet.";
         }
@@ -479,7 +481,7 @@ public class LiveCampaignPresentation {
      */
     private Instant acceptedV9CacheRevalidatedAt(CampaignView campaign, FamilyCursor cursor) {
         Result result = cursor.latestResult();
-        if (!"live-v9".equals(campaign.manifest().policyVersion()) || result == null
+        if (!("live-v9".equals(campaign.manifest().policyVersion()) || "live-v10".equals(campaign.manifest().policyVersion())) || result == null
                 || cursor.lastAttemptId() == null || !cursor.lastAttemptId().equals(result.attemptId())
                 || diagnostics == null) return null;
         AttemptView attempt = campaign.attempts().stream()

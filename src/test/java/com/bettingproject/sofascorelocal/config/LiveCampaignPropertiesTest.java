@@ -30,7 +30,7 @@ class LiveCampaignPropertiesTest {
         var properties = bind(Map.of());
 
         assertThat(properties.isEnabled()).isFalse();
-        assertThat(properties.getPreparationPolicyVersion()).isEqualTo("live-v9");
+        assertThat(properties.getPreparationPolicyVersion()).isEqualTo("live-v10");
         assertThat(properties.getQualifiedMatchCapacity()).isEqualTo(1);
         assertThat(properties.getPostgresContainer()).isEqualTo("betting-sofascore-local-lab-postgres");
         assertThat(properties.getDuration()).isEqualTo(Duration.ofHours(4));
@@ -42,6 +42,13 @@ class LiveCampaignPropertiesTest {
             assertThat(envelope.getProcessingEnvelope()).isEqualTo(Duration.ofSeconds(1));
         });
         assertThatThrownBy(properties::groupedAdmissionProfileV9)
+                .hasMessage("LIVE_GROUPED_QUALIFICATION_REQUIRED");
+        assertThat(properties.getGroupedV10().getQualificationSha256()).isEmpty();
+        assertThat(properties.getGroupedV10().getEndpoints().values()).allSatisfy(envelope -> {
+            assertThat(envelope.getRequestEnvelope()).isEqualTo(Duration.ofSeconds(10));
+            assertThat(envelope.getProcessingEnvelope()).isEqualTo(Duration.ofSeconds(1));
+        });
+        assertThatThrownBy(properties::groupedAdmissionProfileV10)
                 .hasMessage("LIVE_GROUPED_QUALIFICATION_REQUIRED");
         assertThat(properties.getDiskReserveBytes()).isEqualTo(1_073_741_824L);
         assertThatThrownBy(() -> new DockerLiveStorageCapacityProbe(properties).availableBytes())
@@ -241,6 +248,31 @@ class LiveCampaignPropertiesTest {
         assertThat(profile.interGroupDelay()).isEqualTo(Duration.ofMillis(500));
         assertThat(LiveAdmissionPolicy.qualifiedCapacityV9(profile)).isEqualTo(10);
         assertThatThrownBy(properties::groupedAdmissionProfileV8).hasMessage("LIVE_GROUPED_QUALIFICATION_REQUIRED");
+        assertThat(properties.isEnabled()).isFalse();
+    }
+
+    @Test
+    void v10EnvironmentBindsAnIndependentProofWhileKeepingTheV9ProfileUnavailableAndTransportDisabled() throws Exception {
+        var values = new java.util.HashMap<String, Object>();
+        values.put("SOFASCORE_LIVE_GROUPED_V10_QUALIFICATION_SHA256", "b".repeat(64));
+        for (String family : java.util.List.of("J4", "INCIDENTS", "STATISTICS", "LINEUPS")) {
+            values.put("SOFASCORE_LIVE_GROUPED_V10_" + family + "_REQUEST_ENVELOPE", "500ms");
+            values.put("SOFASCORE_LIVE_GROUPED_V10_" + family + "_PROCESSING_ENVELOPE", "100ms");
+        }
+
+        var properties = bind(values);
+        var profile = properties.groupedAdmissionProfileV10();
+
+        // The V10 evidence and configuration are independent. The nested profile
+        // retains V9's immutable scheduler shape so historic V9 evidence remains valid.
+        assertThat(properties.getPreparationPolicyVersion()).isEqualTo("live-v10");
+        assertThat(profile.policyVersion()).isEqualTo("live-v9");
+        assertThat(profile.qualificationSha256()).isEqualTo("b".repeat(64));
+        assertThat(profile.criticalInterval()).isEqualTo(Duration.ofSeconds(60));
+        assertThat(profile.lineupInterval()).isEqualTo(Duration.ofSeconds(60));
+        assertThat(profile.minimumRequestStartInterval()).isEqualTo(Duration.ofMillis(500));
+        assertThat(profile.interGroupDelay()).isEqualTo(Duration.ofMillis(500));
+        assertThatThrownBy(properties::groupedAdmissionProfileV9).hasMessage("LIVE_GROUPED_QUALIFICATION_REQUIRED");
         assertThat(properties.isEnabled()).isFalse();
     }
 

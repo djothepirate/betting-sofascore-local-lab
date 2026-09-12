@@ -249,6 +249,14 @@ public final class ChildJvmPlaywrightProviderSupervisor
     }
 
     @Override
+    public PlaywrightProviderCampaign openLiveGroupedV10(UUID campaignId, Set<SofascoreEndpointType> allowedEndpoints) {
+        if (!Set.of(SofascoreEndpointType.EVENT_DETAILS, SofascoreEndpointType.EVENT_INCIDENTS,
+                SofascoreEndpointType.EVENT_STATISTICS, SofascoreEndpointType.EVENT_LINEUPS).equals(allowedEndpoints))
+            throw new PlaywrightProviderException(PlaywrightProviderFailure.INVALID_ENDPOINT);
+        return open(campaignId, allowedEndpoints, LiveProviderGroupTracker.Authority.LIVE_V10);
+    }
+
+    @Override
     public PlaywrightProviderCampaign openManualJ5Grouped(
             UUID campaignId, Set<SofascoreEndpointType> allowedEndpoints) {
         if (!Set.of(SofascoreEndpointType.EVENT_STATISTICS, SofascoreEndpointType.EVENT_INCIDENTS,
@@ -479,7 +487,7 @@ public final class ChildJvmPlaywrightProviderSupervisor
             throw new PlaywrightProviderException(PlaywrightProviderFailure.INVALID_ENDPOINT);
         }
         if (request.ifNoneMatch().isPresent()
-                && (state.liveGroups == null || !state.liveGroups.isLiveV9())) {
+                && (state.liveGroups == null || !state.liveGroups.usesConditionalRevalidation())) {
             throw new PlaywrightProviderException(PlaywrightProviderFailure.INVALID_REQUEST);
         }
         if (group != null && state.liveGroups == null)
@@ -497,10 +505,10 @@ public final class ChildJvmPlaywrightProviderSupervisor
                 int timeoutMillis = toMillis(properties.getRequestTimeout());
                 long responseDeadline;
                 long requestDeadline;
-                boolean liveV9Wire = state.liveGroups != null && state.liveGroups.isLiveV9();
+                boolean conditionalWire = state.liveGroups != null && state.liveGroups.usesConditionalRevalidation();
                 boolean continuation = state.liveGroups != null && state.liveGroups.isContinuation(request, group);
                 Runnable continuationGuard = () -> { requireActive(state); admission.check(); };
-                // Historical grouped continuations retain their no-pause protocol. V8 and V9
+                // Historical grouped continuations retain their no-pause protocol. V8, V9 and V10
                 // deliberately share the qualified 500 ms local-pressure fence after every
                 // family exchange, including J5 continuations.
                 if (continuation && !state.liveGroups.requiresPostExchangeFenceForContinuation())
@@ -520,7 +528,7 @@ public final class ChildJvmPlaywrightProviderSupervisor
                     requestDeadline = System.nanoTime() + properties.getRequestTimeout().toNanos();
                     responseDeadline = requestDeadline + Duration.ofSeconds(
                             supportsProvenTimeoutRecovery ? 3 : 1).toNanos();
-                    output.writeByte(liveV9Wire ? GET_LIVE_V9
+                    output.writeByte(conditionalWire ? GET_LIVE_V9
                             : supportsProvenTimeoutRecovery ? GET_LIVE_V6 : GET);
                     output.writeUTF(request.endpoint().name());
                     switch (request.endpoint()) {
@@ -537,7 +545,7 @@ public final class ChildJvmPlaywrightProviderSupervisor
                         default -> throw new PlaywrightProviderException(
                                 PlaywrightProviderFailure.INVALID_ENDPOINT);
                     }
-                    if (liveV9Wire) {
+                    if (conditionalWire) {
                         output.writeBoolean(request.ifNoneMatch().isPresent());
                         if (request.ifNoneMatch().isPresent()) {
                             output.writeUTF(request.ifNoneMatch().orElseThrow().value());
@@ -602,7 +610,7 @@ public final class ChildJvmPlaywrightProviderSupervisor
                     recoverableTimeoutEvidence = true;
                     throw new PlaywrightProviderException(PlaywrightProviderFailure.TIMEOUT, diagnostic);
                 }
-                if (frame != (liveV9Wire ? RESPONSE_V9 : RESPONSE)) {
+                if (frame != (conditionalWire ? RESPONSE_V9 : RESPONSE)) {
                     throw new PlaywrightProviderException(
                             PlaywrightProviderFailure.PROTOCOL_ERROR);
                 }
@@ -624,7 +632,7 @@ public final class ChildJvmPlaywrightProviderSupervisor
                 String contentType = input.readUTF();
                 requireContentType(contentType);
                 Optional<PlaywrightProviderEntityTag> entityTag = Optional.empty();
-                if (liveV9Wire) {
+                if (conditionalWire) {
                     int entityTagPresent = input.readUnsignedByte();
                     if (entityTagPresent != 0 && entityTagPresent != 1) {
                         throw new PlaywrightProviderException(
@@ -645,7 +653,7 @@ public final class ChildJvmPlaywrightProviderSupervisor
                     throw new PlaywrightProviderException(
                             PlaywrightProviderFailure.PAYLOAD_TOO_LARGE);
                 }
-                if (liveV9Wire && status == 304 && length != 0) {
+                if (conditionalWire && status == 304 && length != 0) {
                     throw new PlaywrightProviderException(
                             PlaywrightProviderFailure.PROTOCOL_ERROR);
                 }

@@ -340,7 +340,7 @@ class FlywayMigrationIT {
         assertThat(exportTable).isEqualTo("export_manifest");
         assertThat(deliveryTable).isEqualTo("j7_delivery");
         assertThat(networkEnabled).isFalse();
-        assertThat(flywayVersion).isEqualTo("53");
+        assertThat(flywayVersion).isEqualTo("54");
         assertThat(rawColumn).isEqualTo("bytea");
     }
 
@@ -7155,7 +7155,7 @@ class FlywayMigrationIT {
 
         assertThat(jdbcTemplate.queryForObject(
                 powerShellHereString(script, "$flywaySql"),
-                String.class)).isEqualTo("53");
+                String.class)).isEqualTo("54");
         assertThat(jdbcTemplate.queryForObject(
                 powerShellHereString(script, "$snapshotFingerprintSql"),
                 String.class)).isNotNull();
@@ -7222,8 +7222,8 @@ class FlywayMigrationIT {
                     .dataSource(sourceDataSource)
                     .locations("classpath:db/migration")
                     .load();
-            assertThat(sourceFlyway.migrate().migrationsExecuted).isEqualTo(53);
-            assertThat(sourceFlyway.info().current().getVersion().getVersion()).isEqualTo("53");
+            assertThat(sourceFlyway.migrate().migrationsExecuted).isEqualTo(54);
+            assertThat(sourceFlyway.info().current().getVersion().getVersion()).isEqualTo("54");
 
             JdbcTemplate sourceJdbc = new JdbcTemplate(sourceDataSource);
             UUID campaignId = UUID.randomUUID();
@@ -7472,7 +7472,7 @@ class FlywayMigrationIT {
                     order by installed_rank desc
                     limit 1
                     """,
-                    String.class)).isEqualTo("53");
+                    String.class)).isEqualTo("54");
             assertThat(restoreJdbc.queryForObject(j8FingerprintSql, String.class))
                     .isEqualTo(sourceJ8Fingerprint);
             assertThat(restoreJdbc.queryForObject(

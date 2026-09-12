@@ -1,13 +1,47 @@
 # Campagnes live locales J4/J5 — architecture WO-058
 
 Statuts : `EXPERIMENTAL`, `LOCAL_ONLY`, `NOT_PRODUCTION_APPROVED`, `NO_CRITICAL_DEPENDENCY`.
-Décisions historiques applicables : [ADR-SS-005 v0.9](../../ADR-SS-005-bounded-local-live-j4-j5-campaigns.md), correctif de réponses lentes/timeouts isolés réalisé et qualifié fonctionnellement hors fournisseur, et le calendrier v7 de l'ADR courant. Le premier lot de résilience et son profil nominal restent qualifiés dans leur portée : [rapport initial](../validation/WO-058-provider-resilience-qualification-20260909.md), [qualification temporelle v6](../validation/WO058-LIVE-V6-CAPACITY-20260909.md). Le [rapport du correctif](../validation/WO058-SLOW-TIMEOUT-RECOVERY-20260909.md) conserve séparément les validations finales réussies et leurs étapes intermédiaires. La révision V8 est autorisée par la demande propriétaire du 10 septembre et sa [qualification loopback locale](../validation/WO058-LIVE-V8-CAPACITY-20260910.md) est achevée ; elle ne vaut ni acceptation ni seuil du fournisseur et cette mise à jour ne modifie pas l'ADR. Les preuves v4/v5 restent historiques.
+Décision courante : [ADR-SS-005 v0.11](../../ADR-SS-005-bounded-local-live-j4-j5-campaigns.md). Le correctif de réponses lentes/timeouts isolés et le calendrier v7 restent qualifiés dans leurs périmètres historiques. Le premier lot de résilience et son profil nominal restent également qualifiés dans leur portée : [rapport initial](../validation/WO-058-provider-resilience-qualification-20260909.md), [qualification temporelle v6](../validation/WO058-LIVE-V6-CAPACITY-20260909.md). Le [rapport du correctif](../validation/WO058-SLOW-TIMEOUT-RECOVERY-20260909.md) conserve séparément les validations finales réussies et leurs étapes intermédiaires. La révision V8 est autorisée par la demande propriétaire du 10 septembre et sa [qualification loopback locale](../validation/WO058-LIVE-V8-CAPACITY-20260910.md) est achevée ; elle ne vaut ni acceptation ni seuil du fournisseur. Les preuves v4 à V9 restent historiques.
 Réalisation : [WO-058](../work_orders/active/WO-SS-20260907-058-bounded-live-j4-j5.md).
 
-## Révision live-v9 — faits J4, réduction bornée des J5 et activation manuelle distincte
+## Révision live-v10 — huit rencontres et pression locale durable réduite
 
-`live-v9` est la politique des nouvelles préparations. Elle conserve la borne de dix rencontres
-et l'enveloppe stricte de pression V8, mais place ou supprime les J5 après un J4 normalisé. Le
+`live-v10` est la politique des **nouvelles** préparations. Elle remplace `live-v9` pour
+une nouvelle sélection, sans réécrire, convertir ni réinterpréter un manifeste, une preuve,
+un résultat de campagne ou une réservation V9 déjà persistés. Les règles métier J4/J5,
+la présentation des compositions et la révalidation conditionnelle décrites pour V9 restent
+la référence fonctionnelle héritée ; cette révision ne modifie que l'admission et la borne de
+pression locale associées aux nouvelles préparations.
+
+La sélection est limitée à **huit rencontres**. Avec les quatre familles (`EVENT_DETAILS`,
+`EVENT_INCIDENTS`, `EVENT_STATISTICS`, `EVENT_LINEUPS`) planifiées au plus une fois par minute,
+la charge nominale maximale est de **32 départs comptabilisés par 60 secondes** (`8 × 4`).
+Le profil durable refuse tout départ qui ferait dépasser **35 départs comptabilisés sur toute
+fenêtre glissante de 60 secondes** ou **2 100 sur toute fenêtre glissante d'une heure**. Le
+lancement exige localement la place pour sa vague initiale de `4 × N` départs, soit 32 à la
+capacité maximale. Chaque réservation demeure sérialisée et persistante jusqu'à sa clôture
+prouvée : changer d'UUID, relancer l'application ou ouvrir une autre campagne ne recrée aucune
+marge.
+
+Ces chiffres sont des bornes internes de sécurité et de diagnostic. Ils ne constituent pas une
+mesure, une garantie, un quota ou une autorisation de SofaScore, et ne modifient ni le transport
+Playwright local, ni l'opt-in opérateur, ni les protections contre les réponses 403/429. Ils
+n'autorisent aucun proxy, changement d'adresse, furtivité, réutilisation de cookie, contexte
+persistant, défi ou reprise automatique. Les départs conditionnels qui aboutissent à un `304`
+restent soumis à la même isolation de contexte et à la même preuve de cache que V9 ; la
+révision ne transforme pas le cache en donnée fraîche ni en permission de relancer une collecte.
+
+V10 possède un profil de qualification SHA-256 et huit enveloppes qui lui sont propres. Sans ce
+profil complet et vérifié, sa capacité est zéro ; les valeurs V8 ou V9 ne constituent jamais un
+repli. La qualification attendue couvre le replay hors réseau, les fenêtres durables de 35/60 s
+et 2 100/h, la capacité de huit, la persistance PostgreSQL append-only et les régressions V9.
+Elle reste distincte de la validation opérateur, d'une campagne fournisseur et de la clôture du
+Work Order.
+
+## Révision live-v9 — faits J4, réduction bornée des J5 et activation manuelle distincte (historique)
+
+Les campagnes `live-v9` déjà préparées conservent la borne de dix rencontres et l'enveloppe
+stricte de pression V8, mais placent ou suppriment les J5 après un J4 normalisé. Le
 J4 conserve séparément, dans sa projection, les présences et valeurs de `finalResultOnly`,
 `detailId`, `hasEventPlayerStatistics`,
 `tournament.uniqueTournament.hasEventPlayerStatistics`, `status.description` et
@@ -56,9 +90,10 @@ de dix rencontres, la réservation remplit les 60 secondes. Le terme « jitter �
 variabilité locale déjà absorbée par les fences et la réserve ; aucun délai aléatoire ou adaptatif
 n'est introduit, car il ferait sortir la planification de sa borne qualifiée.
 
-### Révalidation HTTP conditionnelle V9
+### Révalidation HTTP conditionnelle V9, reprise par V10 dans le même périmètre
 
-Le transport V9 peut porter `If-None-Match` seulement après qu'une réponse de la même famille,
+Le transport V9 — et V10 après qualification de son profil indépendant — peut porter
+`If-None-Match` seulement après qu'une réponse de la même famille,
 de la même rencontre et de la même campagne a été reçue, lue intégralement, normalisée et
 publiée avec succès. Le validateur associé est conservé en mémoire du contexte Playwright neuf,
 non persistant, puis supprimé à la fin de la campagne. Il ne rejoint ni les snapshots, ni les

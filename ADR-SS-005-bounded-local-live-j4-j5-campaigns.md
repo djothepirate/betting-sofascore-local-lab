@@ -1,8 +1,8 @@
 # ADR-SS-005 — Campagnes live locales et bornées J4/J5
 
-- **Version :** 0.10.
+- **Version :** 0.11.
 - **Statut :** `ACCEPTED` — v0.1 formellement acceptée ; capacité adaptative puis collecte des compositions avant le début explicitement demandées par le propriétaire le 7 septembre.
-- **Date :** 2026-09-09.
+- **Date :** 2026-09-12.
 - **Décideur :** propriétaire du Betting Project.
 - **Acceptation formelle initiale, v0.1 :** `OWNER_ACCEPTED_2026_09_07` — « Je valide formellement la v0.1 de l'ADR ».
 - **Observation de l'acceptation :** `2026-09-07T09:23:14Z` ; l'heure exacte du message n'est pas disponible.
@@ -16,10 +16,11 @@
 - **Autorité de la v0.7 :** demande du propriétaire le 9 septembre d’un timeout Playwright « un peu plus élevé » pour le prochain essai après PLAYWRIGHT_TIMEOUT. La borne retenue est vingt secondes pour live-v5. Ce complément donne davantage de temps à un échange lent ; il ne change ni cadence, ni enveloppes qualifiées, ni budgets et n’autorise aucun lancement par l’agent.
 - **Autorité de la v0.8 :** le 9 septembre, après les essais à 19–20 rencontres interrompus sur refus ou timeout, le propriétaire donne la priorité à la robustesse puis autorise explicitement le premier lot diagnostic/suspension et le lissage/404 hors fournisseur. Cette décision introduit `live-v6` et une protection persistante commune J3/J4/J5. La réalisation est qualifiée fonctionnellement hors fournisseur ; son profil temporel distinct est ensuite qualifié à sept rencontres en boucle locale synthétique le même jour. Aucune capacité fournisseur ni nouvelle campagne réelle ne découle de cette décision.
 - **Autorité de la v0.9 :** le 9 septembre, après de nouveaux retours sur réponses lentes et timeouts isolés, le propriétaire autorise le correctif et sa qualification hors fournisseur, en conservant la suspension sur 403/429. Cette révision permet, pour la seule session live-v6 déjà lancée, une reprise différée du match lorsque la fin de l'échange et la réutilisabilité du contexte sont nouvellement prouvées. Elle corrige aussi le refus local d'un groupe dont une famille est différée après 404. La réalisation est qualifiée fonctionnellement hors fournisseur, avec vérification complète réussie le 9 septembre à 17:17:59Z ; cette décision ne déclenche aucune collecte fournisseur.
+- **Autorité de la v0.11 :** le 12 septembre, le propriétaire décide de borner les nouvelles campagnes live locales à huit rencontres sélectionnables et à 35 départs comptabilisés par fenêtre glissante de 60 secondes, avec une borne horaire de 2 100. Cette décision remplace `live-v9` uniquement pour les nouvelles préparations ; elle conserve intégralement les manifestes, preuves et campagnes V9 historiques. Elle ne constitue ni un quota ni une autorisation de SofaScore, et n'autorise aucun mécanisme d'évitement des refus fournisseur.
 - **Work Order :** [WO-SS-20260907-058](docs/work_orders/active/WO-SS-20260907-058-bounded-live-j4-j5.md), validé par le propriétaire ; correctif et qualification de réalisation distincts de cette décision.
 - **Branche :** `feature/V0.1.0-RC01-CODEX-WO-SS-20260907-058`.
 - **Base :** `6dfd14286d4f269cbe100bd965257c20298538db`, train `feature/V0.1.0-RC01` vérifié à l'ouverture.
-- **Effet de cette révision :** cadre de sélection et cadence du correctif WO-058 ; aucun lancement de campagne fournisseur par cette rédaction.
+- **Effet de cette révision :** cadre de sélection et cadence du correctif WO-058, y compris le profil versionné `live-v10` des nouvelles préparations ; aucun lancement de campagne fournisseur par cette rédaction.
 
 Les prescriptions ci-dessous définissent la décision **acceptée**. L'acceptation établit le cadre
 d'architecture ; la validation du WO et la qualification de la réalisation restent nécessaires
@@ -28,6 +29,36 @@ les limites de sélection et les cadences correspondantes de la v0.1. Les autres
 applicables ; la copie exacte acceptée de la v0.1 et les preuves de ses paliers sont conservées.
 La v0.3 ajoute seulement la collecte prématch LINEUPS au manifeste `live-v3`. Les manifestes
 historiques `live-v1` et `live-v2` gardent leur comportement, leurs échéances et leurs empreintes.
+
+## 0.2. Décision courante live-v10 — huit rencontres et pression locale durable
+
+Les nouvelles préparations utilisent `live-v10`. La sélection est limitée à **huit rencontres**.
+Le groupe normal conserve les quatre familles `EVENT_DETAILS`, `EVENT_INCIDENTS`,
+`EVENT_STATISTICS` et `EVENT_LINEUPS`, avec la cadence de 60 secondes déjà qualifiée localement.
+À pleine sélection, la charge nominale est donc de **32 départs comptabilisés sur 60 secondes**
+(`8 × 4`). Les règles J4/J5 de V9 — notamment `finalResultOnly`, les états de match, la mi-temps,
+la suspension et les familles conditionnelles — restent inchangées pour cette nouvelle politique.
+
+La garde persistante autorise au plus **35 départs comptabilisés dans toute fenêtre glissante de
+60 secondes** et **2 100 dans toute fenêtre glissante d'une heure**. Avant le premier départ,
+l'admission vérifie une marge de `4 × N` pour la vague initiale, soit au plus 32. Chaque départ
+reste sérialisé et conservé jusqu'à sa clôture locale prouvée. Un budget insuffisant reporte ou
+refuse localement l'action prévue ; il ne déclenche ni rafale de rattrapage, ni augmentation de
+cadence, ni nouvelle instance de navigateur.
+
+Le profil V10 est indépendant et fermé par défaut : il exige son SHA-256 et ses huit enveloppes
+de qualification, sans reprise des valeurs V8 ou V9. La migration V54 est append-only ; elle
+admet le manifeste et le profil de pression V10 sans modifier une campagne, une réservation ou
+une preuve historique. Les manifestes `live-v9` restent lisibles avec la politique et l'enveloppe
+de pression qui leur étaient propres.
+
+Les bornes V10 sont des protections locales de planification et de diagnostic. Elles ne permettent
+pas de déduire un quota, un accord, une disponibilité ou un seuil fournisseur. Elles n'autorisent
+aucun proxy, changement d'adresse, furtivité, cookie ou session persistante, résolution de défi,
+réarmement automatique ou reprise de campagne. Les réponses 403/429, les timeouts incertains et
+les anomalies de transport conservent leurs chemins d'arrêt et de revue existants. La qualification
+hors fournisseur et la validation opérateur V10 restent nécessaires avant toute clôture du
+Work Order.
 
 ## 0. Décision courante live-v7 — fenêtres avant match et familles à la minute
 
@@ -672,6 +703,7 @@ humaine et à la fusion vers le train exact.
 | 2026-09-07 | « SOFASCORE_LIVE_QUALIFIED_MATCH_CAPACITY paramétrable doit servir au nombre maximum de rencontres éligibles sélectionnable pour une même campagne live » | Le plafond configuré porte sur la sélection ; il ne doit pas invalider une campagne plus petite. |
 | 2026-09-07 | Choix « Adapter selon le nombre retenu : 60 s pour 1–3 matchs, 90 s pour 4, 120 s pour 5 » puis demande explicite de 10 et 25 rencontres | Autorité de la v0.2. La progression est prolongée par D = max(60, 30 × (N − 1)) s ; l'heure exacte de ces messages n'est pas disponible. |
 | 2026-09-07 | Demande de LINEUPS avant coup d'envoi, confirmée « Oui, collecte initiale puis périodique » | Autorité de la v0.3 ; J4 confirme `notstarted`, puis LINEUPS à D jusqu'au début constaté. Pas de statistiques/incidents prématch, ni de réduction de D. |
+| 2026-09-12 | Décision de poursuivre le Local Lab avec au plus huit rencontres simultanées, 35 départs comptabilisés / 60 s et 2 100 / h | Autorité de la v0.11 : nouvelles préparations `live-v10` uniquement, profil V10 fermé sans repli et conservation intégrale de V9 historique. Cette borne locale ne constitue pas un quota ou une acceptation fournisseur. |
 
 État historique au moment de l'enregistrement de l'acceptation v0.1, avant réalisation :
 
