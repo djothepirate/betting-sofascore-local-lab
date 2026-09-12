@@ -1,6 +1,6 @@
 # Qualification — plafond J3 de pagination manuelle à 35 pages
 
-- **Work Order :** [WO-SS-20260912-059](../work_orders/active/WO-SS-20260912-059-j3-pagination-cap-35.md)
+- **Work Order :** [WO-SS-20260912-059](../work_orders/completed/WO-SS-20260912-059-j3-pagination-cap-35.md)
 - **ADR :** [ADR-SS-006](../../ADR-SS-006-j3-manual-pagination-cap-35.md)
 - **Branche :** `feature/V0.1.0-RC01-CODEX-WO-SS-20260912-059`
 - **Base examinée :** `4f0413b`
@@ -51,6 +51,16 @@ Le test V5 concerné et son entrée brute ne sont pas modifiés par ce Work Orde
 - La migration V53 est append-only et le déclencheur PostgreSQL existant conserve la borne stockée de chaque campagne historique.
 - Les références actives du parcours J3 à 25 sont remplacées par 35. Les seules mentions restantes de `1..25` dans ADR-SS-002 décrivent une décision historique explicitement rendue non prospective par ADR-SS-006 ; d'autres occurrences concernent les lots J5 hors champ.
 
+## Validation fonctionnelle du propriétaire — 2026-09-12
+
+Le propriétaire confirme le correctif conforme à l'attendu et la gestion du cache conforme
+également. La vérification locale montre une collecte terminée à 27 pages : deux transports
+fournisseur, vingt-cinq cache hits locaux, une intention déclarée avec max=35, puis l'état
+COMPLETED avec arrêt global réappliqué et circuit verrouillé.
+
+Cette décision humaine clôt la revue fonctionnelle du candidat 64ef138. Elle ne modifie pas la
+limite documentée des suites globales : l'écart de hash V5 préexistant demeure extérieur au lot.
+
 ## Conclusion de qualification
 
-Le comportement demandé est démontré localement : une date comportant 27 pages peut désormais être collectée jusqu'à sa terminaison normale, et la barrière locale ne s'applique qu'après la page 35. Le lot est prêt pour revue humaine, avec la limite de la suite globale V5 consignée ci-dessus.
+Le comportement demandé est démontré localement : une date comportant 27 pages peut désormais être collectée jusqu'à sa terminaison normale, et la barrière locale ne s'applique qu'après la page 35. Le lot est clôturé après validation fonctionnelle du propriétaire, avec la limite de la suite globale V5 consignée ci-dessus.

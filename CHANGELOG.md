@@ -17,8 +17,11 @@ Les évolutions notables du SofaScore Local Lab sont consignées dans ce fichier
 - Ajoute V53 append-only : les nouvelles campagnes J8 `J3_SCHEDULED_EVENTS` sont créées à 35,
   tandis que les campagnes historiques à 25 restent lisibles et conservent leur borne persistée.
 - Cadre la réalisation par [ADR-SS-006](ADR-SS-006-j3-manual-pagination-cap-35.md) et
-  [WO-SS-20260912-059](docs/work_orders/active/WO-SS-20260912-059-j3-pagination-cap-35.md) ;
+  [WO-SS-20260912-059](docs/work_orders/completed/WO-SS-20260912-059-j3-pagination-cap-35.md) ;
   aucune validation de ce lot n'effectue d'appel fournisseur.
+- Validation propriétaire du 12 septembre : la collecte fonctionnelle de 27 pages est conforme,
+  avec deux transports fournisseur, vingt-cinq cache hits locaux, l'intention max=35, le terminal
+  COMPLETED et la réapplication de l'arrêt global.
 
 ### WO-058 — règles J4/J5 `live-v9` et cartes joueurs enrichies par les incidents
 

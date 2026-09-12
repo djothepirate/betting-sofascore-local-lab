@@ -1,6 +1,6 @@
 # WO-SS-20260912-059 — Plafond J3 de pagination manuelle à 35 pages
 
-- **Statut :** `READY_FOR_REVIEW` — qualification ciblée et migration PostgreSQL réussies ; les deux suites globales ont été exécutées mais restent bloquées par l'échec V5 hors périmètre documenté dans le rapport de qualification.
+- **Statut :** COMPLETED_OWNER_VALIDATED — validation fonctionnelle explicite du propriétaire le 12 septembre 2026 ; l'écart V5 hors périmètre reste documenté dans le rapport de qualification.
 - **Date de démarrage :** 2026-09-12.
 - **Jalon :** J3 — collecte manuelle `SCHEDULED_EVENTS`, avec compatibilité d'audit J8.
 - **Branche :** `feature/V0.1.0-RC01-CODEX-WO-SS-20260912-059`.
@@ -72,7 +72,7 @@ Le détail, les commandes et la limite connue des suites globales sont consigné
 
 Aucun appel fournisseur n'a été effectué. La qualification PostgreSQL utilise uniquement Testcontainers et Docker local.
 
-## 7. Définition de fini
+## 7. Définition de fini satisfaite
 
 1. les limites 25 actives du parcours J3 sont remplacées par 35 dans le code et la documentation courante, sans modifier les archives historiques ;
 2. V53 est append-only et les lectures J8 historiques à 25 sont couvertes ;
@@ -80,3 +80,17 @@ Aucun appel fournisseur n'a été effectué. La qualification PostgreSQL utilise
 4. les commandes globales requises sont exécutées et leurs résultats réels sont documentés ;
 5. le diff est contrôlé pour les secrets, payloads, URI ou mécanismes hors périmètre ;
 6. la revue humaine décide de la clôture du Work Order.
+
+## 8. Clôture propriétaire — 2026-09-12
+
+Le propriétaire confirme que le correctif est conforme à l'attendu et que la gestion du cache est également conforme.
+
+La vérification fonctionnelle locale observée montre une collecte J3 terminée à 27 pages avec
+hasNextPage=false, deux transports fournisseur et vingt-cinq cache hits locaux. L'intention
+déclare max=35, son état est COMPLETED, l'arrêt global est réappliqué et le circuit est verrouillé
+après la collecte. Cette attestation valide le comportement livré au commit 64ef138.
+
+Aucune suite Maven n'a été relancée pour cette seule clôture documentaire. Le blocage historique de
+la suite globale par le hash V5 reste consigné dans le rapport de qualification ; il n'est ni masqué
+ni attribué à ce Work Order. La clôture ne publie, ne fusionne et ne déclenche aucun appel
+fournisseur.

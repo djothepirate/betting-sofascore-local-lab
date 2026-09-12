@@ -4,7 +4,7 @@
 - **Statut :** `ACCEPTED` — décision du propriétaire du Betting Project le 12 septembre 2026 ; la réalisation et sa qualification restent distinctes.
 - **Date :** 2026-09-12.
 - **Décideur :** propriétaire du Betting Project.
-- **Work Order :** [WO-SS-20260912-059](docs/work_orders/active/WO-SS-20260912-059-j3-pagination-cap-35.md).
+- **Work Order :** [WO-SS-20260912-059](docs/work_orders/completed/WO-SS-20260912-059-j3-pagination-cap-35.md).
 - **Branche :** `feature/V0.1.0-RC01-CODEX-WO-SS-20260912-059`.
 - **Base :** `4f0413b`.
 
