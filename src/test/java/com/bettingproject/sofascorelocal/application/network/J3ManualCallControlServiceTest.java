@@ -6,6 +6,7 @@ import com.bettingproject.sofascorelocal.domain.provider.J3CircuitReason;
 import com.bettingproject.sofascorelocal.domain.provider.J3CircuitState;
 import com.bettingproject.sofascorelocal.domain.provider.J3ManualCallIntentState;
 import com.bettingproject.sofascorelocal.domain.provider.J3ProviderQualificationSnapshot;
+import com.bettingproject.sofascorelocal.domain.provider.ScheduledEventsProviderPageRequest;
 import com.bettingproject.sofascorelocal.domain.provider.SofascoreEndpointType;
 import org.junit.jupiter.api.Test;
 
@@ -69,12 +70,12 @@ class J3ManualCallControlServiceTest {
         assertThat(prepared.intent().requestId()).isEqualTo(REQUEST_ID);
         assertThat(prepared.intent().requestKey())
                 .isEqualTo(
-                        "SCHEDULED_EVENTS|date=2026-08-12|pagination=has-next-page|max=25");
+                        "SCHEDULED_EVENTS|date=2026-08-12|pagination=has-next-page|max=35");
         assertThat(prepared.intent().state())
                 .isEqualTo(J3ManualCallIntentState.AWAITING_CONFIRMATION);
         assertThat(prepared.intent().confirmationPhrase())
                 .isEqualTo(
-                        "CONFIRMER SCHEDULED_EVENTS 2026-08-12 PAGINATION DYNAMIQUE MAX 25 000042");
+                        "CONFIRMER SCHEDULED_EVENTS 2026-08-12 PAGINATION DYNAMIQUE MAX 35 000042");
         assertThat(prepared.intent().expiresAt())
                 .isEqualTo(NOW.plus(J3ManualCallControlService.CONFIRMATION_TTL));
 
@@ -277,10 +278,10 @@ class J3ManualCallControlServiceTest {
         assertThat(prepared.intent().completedPages()).isZero();
         assertThat(prepared.intent().requestKey())
                 .isEqualTo(
-                        "SCHEDULED_EVENTS|date=2026-08-13|pagination=has-next-page|max=25");
+                        "SCHEDULED_EVENTS|date=2026-08-13|pagination=has-next-page|max=35");
         assertThat(prepared.intent().confirmationPhrase())
                 .isEqualTo(
-                        "CONFIRMER SCHEDULED_EVENTS 2026-08-13 PAGINATION DYNAMIQUE MAX 25 000042");
+                        "CONFIRMER SCHEDULED_EVENTS 2026-08-13 PAGINATION DYNAMIQUE MAX 35 000042");
 
         service.confirm(REQUEST_ID, prepared.intent().confirmationPhrase(), true);
         var claim = service.claimExecution(REQUEST_ID);
@@ -329,6 +330,33 @@ class J3ManualCallControlServiceTest {
         assertThat(secondPrepared.intent().date()).isEqualTo(QUALIFICATION_DATE.plusDays(1));
         assertThat(secondPrepared.intent().state())
                 .isEqualTo(J3ManualCallIntentState.AWAITING_CONFIRMATION);
+    }
+
+    @Test
+    void acceptsThePageThirtyFiveBoundaryAndFailsOnlyTheBlockedPageThirtySix() {
+        J3ManualCallControlService service = executingService();
+
+        for (int page = ScheduledEventsProviderPageRequest.FIRST_PAGE;
+                page <= ScheduledEventsProviderPageRequest.MAXIMUM_COLLECTION_PAGE;
+                page++) {
+            service.recordPageCompleted(REQUEST_ID, page);
+        }
+
+        assertRejected(
+                () -> service.recordPageCompleted(
+                        REQUEST_ID,
+                        ScheduledEventsProviderPageRequest.MAXIMUM_COLLECTION_PAGE + 1),
+                J3ManualCallControlError.PAGE_SEQUENCE_INVALID);
+
+        var failed = service.failExecution(
+                REQUEST_ID,
+                ScheduledEventsProviderPageRequest.MAXIMUM_COLLECTION_PAGE + 1,
+                "PAGINATION_LIMIT_REACHED");
+
+        assertThat(failed.intent().state()).isEqualTo(J3ManualCallIntentState.FAILED);
+        assertThat(failed.intent().completedPages()).isEqualTo(35);
+        assertThat(failed.intent().failedPage()).isEqualTo(36);
+        assertThat(failed.intent().terminalCode()).isEqualTo("PAGINATION_LIMIT_REACHED");
     }
 
     private static J3ManualCallControlService service(Clock clock) {

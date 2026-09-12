@@ -1329,7 +1329,7 @@ troisième campagne ou décision J9 n'est autorisée.
 - qualification Windows du parcours opérateur local et des politiques simulées, avec preuve explicite
   que l’action fournisseur reste indisponible ;
 - chemin J3 dédié à une collecte manuelle explicite démarrant toujours en page `1`, poursuivie
-  uniquement tant que le parseur retourne `hasNextPage=true` et bornée localement à 25 pages ;
+  uniquement tant que le parseur retourne `hasNextPage=true` et bornée localement à 35 pages ;
 - client fournisseur sans proxy, redirection, cookie, jeton, compte ou donnée de session, avec arrêt
   au premier incident et aucun retry ;
 - parcours répétable uniquement après réarmement, activation, nouvelle intention datée,
@@ -1338,8 +1338,8 @@ troisième campagne ou décision J9 n'est autorisée.
   seuls les snapshots `PARSED` frais selon le TTL de dix minutes et le parseur courant sont relus
   hors ligne ; un cache hit ne déclenche ni transport, ni attente, ni mutation de persistance ;
 - alternative J3 après la même confirmation : import atomique des seuls corps JSON
-  `page-1.json` à `page-N.json`, avec prévalidation de la pagination, 5 Mio maximum par page,
-  25 Mio maximum au total, zéro transport/cache et preuve minimisée v5 portant
+  `page-1.json` à `page-N.json`, avec prévalidation de la pagination de 1 à 35 pages, 5 Mio maximum
+  par page, 25 Mio maximum au total, zéro transport/cache et preuve minimisée v5 portant
   `LOCAL_JSON_IMPORT` ;
 - catalogue de tournoi reconstruit uniquement depuis les snapshots exacts de la dernière preuve J3
   `COMPLETED` du processus courant, avec contrôle pages/clé/hash/parseur et aucune reconstruction
@@ -2003,7 +2003,9 @@ une décision de gouvernance explicite et une qualification humaine dédiée.
 La qualification humaine du `2026-08-14` a collecté dix pages sur dix, après les cinq pages
 observées le `2026-08-13`. Elle confirme que le parcours repart de la page 1, persiste avant
 parsing, continue uniquement sur `hasNextPage=true` et s’arrête normalement sur `false`, sans
-conserver l’ancienne hypothèse fixe de cinq pages. Une barrière locale interdit toute page 26.
+conserver l’ancienne hypothèse fixe de cinq pages. La qualification historique utilisait alors une
+barrière locale avant la page 26 ; le plafond actif du parcours manuel est désormais de 35 pages,
+avec terminaison normale dès qu'une page porte `hasNextPage=false`.
 
 La pagination dynamique est désormais qualifiée dans le périmètre manuel J3. Toute automatisation,
 planification, collecte live ou généralisation à une autre famille reste hors périmètre.

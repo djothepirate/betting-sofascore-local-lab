@@ -340,8 +340,120 @@ class FlywayMigrationIT {
         assertThat(exportTable).isEqualTo("export_manifest");
         assertThat(deliveryTable).isEqualTo("j7_delivery");
         assertThat(networkEnabled).isFalse();
-        assertThat(flywayVersion).isEqualTo("52");
+        assertThat(flywayVersion).isEqualTo("53");
         assertThat(rawColumn).isEqualTo("bytea");
+    }
+
+    @Test
+    void upgradesV52ToV53AndPreservesHistoricalJ3CampaignBounds() {
+        // V31 defines functions explicitly in public, so this upgrade needs a separate database.
+        String database = "upgrade_v52_v53_" + UUID.randomUUID().toString().replace("-", "");
+        var adminDataSource = new DriverManagerDataSource(
+                POSTGRES.getJdbcUrl(), POSTGRES.getUsername(), POSTGRES.getPassword());
+        new JdbcTemplate(adminDataSource).execute("create database " + database);
+        String databaseUrl = POSTGRES.getJdbcUrl().substring(0, POSTGRES.getJdbcUrl().lastIndexOf('/') + 1)
+                + database;
+        String schema = "public";
+        var upgradeDataSource = new DriverManagerDataSource(
+                databaseUrl,
+                POSTGRES.getUsername(),
+                POSTGRES.getPassword());
+        Flyway throughV52 = Flyway.configure()
+                .dataSource(upgradeDataSource)
+                .schemas(schema)
+                .defaultSchema(schema)
+                .createSchemas(true)
+                .locations("classpath:db/migration")
+                .target(MigrationVersion.fromVersion("52"))
+                .load();
+
+        assertThat(throughV52.migrate().migrationsExecuted).isEqualTo(52);
+        JdbcTemplate upgradeJdbc = new JdbcTemplate(upgradeDataSource);
+        LocalDate collectionDate = LocalDate.of(2036, 9, 12);
+        Instant startedAt = Instant.parse("2036-09-12T08:00:00Z");
+        UUID historicalCampaignId = UUID.fromString("53535353-0000-0000-0000-000000000025");
+        upgradeJdbc.update("""
+                insert into j8_benchmark_campaign (
+                    campaign_id, campaign_type, execution_mode, started_at,
+                    maximum_units, collection_date
+                ) values (?, 'J3_SCHEDULED_EVENTS', 'GUARDED_PROVIDER', ?, 25, ?)
+                """, historicalCampaignId, Timestamp.from(startedAt), collectionDate);
+        upgradeJdbc.update("""
+                insert into j8_benchmark_unit (
+                    campaign_id, unit_ordinal, logical_endpoint, request_key, declared_at
+                ) values (?, 25, 'SCHEDULED_EVENTS', ?, ?)
+                """, historicalCampaignId,
+                "SCHEDULED_EVENTS|date=" + collectionDate + "|page=25",
+                Timestamp.from(startedAt.plusSeconds(1)));
+        Map<String, Object> historicalCampaignBefore = upgradeJdbc.queryForMap("""
+                select campaign_id, campaign_type, maximum_units, collection_date
+                from j8_benchmark_campaign
+                where campaign_id = ?
+                """, historicalCampaignId);
+        Map<String, Object> historicalUnitBefore = upgradeJdbc.queryForMap("""
+                select campaign_id, unit_ordinal, logical_endpoint, request_key
+                from j8_benchmark_unit
+                where campaign_id = ? and unit_ordinal = 25
+                """, historicalCampaignId);
+
+        Flyway toV53 = Flyway.configure()
+                .dataSource(upgradeDataSource)
+                .schemas(schema)
+                .defaultSchema(schema)
+                .locations("classpath:db/migration")
+                .target(MigrationVersion.fromVersion("53"))
+                .load();
+
+        assertThat(toV53.migrate().migrationsExecuted).isOne();
+        assertThat(toV53.info().current().getVersion().getVersion()).isEqualTo("53");
+        assertThat(upgradeJdbc.queryForMap("""
+                select campaign_id, campaign_type, maximum_units, collection_date
+                from j8_benchmark_campaign
+                where campaign_id = ?
+                """, historicalCampaignId)).containsAllEntriesOf(historicalCampaignBefore);
+        assertThat(upgradeJdbc.queryForMap("""
+                select campaign_id, unit_ordinal, logical_endpoint, request_key
+                from j8_benchmark_unit
+                where campaign_id = ? and unit_ordinal = 25
+                """, historicalCampaignId)).containsAllEntriesOf(historicalUnitBefore);
+        assertThatThrownBy(() -> upgradeJdbc.update("""
+                insert into j8_benchmark_unit (
+                    campaign_id, unit_ordinal, logical_endpoint, request_key, declared_at
+                ) values (?, 26, 'SCHEDULED_EVENTS', ?, ?)
+                """, historicalCampaignId,
+                "SCHEDULED_EVENTS|date=" + collectionDate + "|page=26",
+                Timestamp.from(startedAt.plusSeconds(2))))
+                .isInstanceOf(RuntimeException.class)
+                .hasStackTraceContaining("J8 benchmark unit exceeds its bounded campaign");
+
+        UUID currentCampaignId = UUID.fromString("53535353-0000-0000-0000-000000000035");
+        upgradeJdbc.update("""
+                insert into j8_benchmark_campaign (
+                    campaign_id, campaign_type, execution_mode, started_at,
+                    maximum_units, collection_date
+                ) values (?, 'J3_SCHEDULED_EVENTS', 'GUARDED_PROVIDER', ?, 35, ?)
+                """, currentCampaignId, Timestamp.from(startedAt.plusSeconds(3)), collectionDate);
+        upgradeJdbc.update("""
+                insert into j8_benchmark_unit (
+                    campaign_id, unit_ordinal, logical_endpoint, request_key, declared_at
+                ) values (?, 35, 'SCHEDULED_EVENTS', ?, ?)
+                """, currentCampaignId,
+                "SCHEDULED_EVENTS|date=" + collectionDate + "|page=35",
+                Timestamp.from(startedAt.plusSeconds(4)));
+        assertThat(upgradeJdbc.queryForObject("""
+                select maximum_units
+                from j8_benchmark_campaign
+                where campaign_id = ?
+                """, Integer.class, currentCampaignId)).isEqualTo(35);
+        assertThatThrownBy(() -> upgradeJdbc.update("""
+                insert into j8_benchmark_unit (
+                    campaign_id, unit_ordinal, logical_endpoint, request_key, declared_at
+                ) values (?, 36, 'SCHEDULED_EVENTS', ?, ?)
+                """, currentCampaignId,
+                "SCHEDULED_EVENTS|date=" + collectionDate + "|page=36",
+                Timestamp.from(startedAt.plusSeconds(5))))
+                .isInstanceOf(RuntimeException.class)
+                .hasStackTraceContaining("J8 benchmark unit exceeds its bounded campaign");
     }
 
     @Test
@@ -1853,7 +1965,7 @@ class FlywayMigrationIT {
                 J8BenchmarkCampaignType.J3_SCHEDULED_EVENTS,
                 J8BenchmarkExecutionMode.GUARDED_PROVIDER,
                 startedAt,
-                25,
+                J8BenchmarkCampaignType.J3_SCHEDULED_EVENTS.maximumUnits(),
                 Optional.of(collectionDate)));
         assertThatThrownBy(() -> insertJ8Unit(
                 scheduledCampaignId,
@@ -2081,7 +2193,7 @@ class FlywayMigrationIT {
                 J8BenchmarkCampaignType.J3_SCHEDULED_EVENTS,
                 J8BenchmarkExecutionMode.GUARDED_PROVIDER,
                 startedAt,
-                25,
+                J8BenchmarkCampaignType.J3_SCHEDULED_EVENTS.maximumUnits(),
                 Optional.of(collectionDate)));
 
         List<Long> unitIds = new ArrayList<>();
@@ -2400,7 +2512,7 @@ class FlywayMigrationIT {
                 J8BenchmarkCampaignType.J3_SCHEDULED_EVENTS,
                 J8BenchmarkExecutionMode.GUARDED_PROVIDER,
                 startedAt,
-                25,
+                J8BenchmarkCampaignType.J3_SCHEDULED_EVENTS.maximumUnits(),
                 Optional.of(collectionDate)));
 
         List<Long> unitIds = new ArrayList<>();
@@ -2623,7 +2735,7 @@ class FlywayMigrationIT {
                 J8BenchmarkCampaignType.J3_SCHEDULED_EVENTS,
                 J8BenchmarkExecutionMode.GUARDED_PROVIDER,
                 startedAt,
-                25,
+                J8BenchmarkCampaignType.J3_SCHEDULED_EVENTS.maximumUnits(),
                 Optional.of(collectionDate)));
         long unitId = j8BenchmarkEvidenceStore.declareUnit(new J8BenchmarkUnit(
                 campaignId,
@@ -2702,7 +2814,7 @@ class FlywayMigrationIT {
                 J8BenchmarkCampaignType.J3_SCHEDULED_EVENTS,
                 J8BenchmarkExecutionMode.GUARDED_PROVIDER,
                 firstStartedAt,
-                25,
+                J8BenchmarkCampaignType.J3_SCHEDULED_EVENTS.maximumUnits(),
                 Optional.of(collectionDate)));
         long firstUnitId = j8BenchmarkEvidenceStore.declareUnit(new J8BenchmarkUnit(
                 firstCampaignId,
@@ -2764,7 +2876,7 @@ class FlywayMigrationIT {
                 J8BenchmarkCampaignType.J3_SCHEDULED_EVENTS,
                 J8BenchmarkExecutionMode.GUARDED_PROVIDER,
                 secondStartedAt,
-                25,
+                J8BenchmarkCampaignType.J3_SCHEDULED_EVENTS.maximumUnits(),
                 Optional.of(collectionDate)));
         long secondUnitId = j8BenchmarkEvidenceStore.declareUnit(new J8BenchmarkUnit(
                 secondCampaignId,
@@ -7043,7 +7155,7 @@ class FlywayMigrationIT {
 
         assertThat(jdbcTemplate.queryForObject(
                 powerShellHereString(script, "$flywaySql"),
-                String.class)).isEqualTo("52");
+                String.class)).isEqualTo("53");
         assertThat(jdbcTemplate.queryForObject(
                 powerShellHereString(script, "$snapshotFingerprintSql"),
                 String.class)).isNotNull();
@@ -7082,7 +7194,7 @@ class FlywayMigrationIT {
                 .contains("j7ProviderOwnerGoRevocationCount")
                 .contains("j7ProviderOwnerGoConsumptionCount")
                 .contains("j7DeliveryLedgerSha256")
-                .contains("$sourceFlywayVersion -cne '52'");
+                .contains("$sourceFlywayVersion -cne '53'");
     }
 
     @Test
@@ -7110,8 +7222,8 @@ class FlywayMigrationIT {
                     .dataSource(sourceDataSource)
                     .locations("classpath:db/migration")
                     .load();
-            assertThat(sourceFlyway.migrate().migrationsExecuted).isEqualTo(52);
-            assertThat(sourceFlyway.info().current().getVersion().getVersion()).isEqualTo("52");
+            assertThat(sourceFlyway.migrate().migrationsExecuted).isEqualTo(53);
+            assertThat(sourceFlyway.info().current().getVersion().getVersion()).isEqualTo("53");
 
             JdbcTemplate sourceJdbc = new JdbcTemplate(sourceDataSource);
             UUID campaignId = UUID.randomUUID();
@@ -7360,7 +7472,7 @@ class FlywayMigrationIT {
                     order by installed_rank desc
                     limit 1
                     """,
-                    String.class)).isEqualTo("52");
+                    String.class)).isEqualTo("53");
             assertThat(restoreJdbc.queryForObject(j8FingerprintSql, String.class))
                     .isEqualTo(sourceJ8Fingerprint);
             assertThat(restoreJdbc.queryForObject(
@@ -7460,8 +7572,8 @@ class FlywayMigrationIT {
                 StandardCharsets.UTF_8);
 
         assertThat(script)
-                .contains("$manifest.source.flywayVersion.ToString() -cne '52'")
-                .contains("valid Flyway V52 raw-payload, J8, J7 and quiescent live ledger restore");
+                .contains("$manifest.source.flywayVersion.ToString() -cne '53'")
+                .contains("valid Flyway V53 raw-payload, J8, J7 and quiescent live ledger restore");
 
         String qualificationFields = powerShellArray(script, "$qualificationFields");
         assertThat(qualificationFields)

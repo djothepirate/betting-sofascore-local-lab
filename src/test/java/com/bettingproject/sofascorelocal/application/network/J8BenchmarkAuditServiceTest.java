@@ -752,7 +752,7 @@ class J8BenchmarkAuditServiceTest {
                 UUID.randomUUID(),
                 J8BenchmarkCampaignType.J3_SCHEDULED_EVENTS,
                 J8BenchmarkExecutionMode.GUARDED_PROVIDER,
-                25,
+                J8BenchmarkCampaignType.J3_SCHEDULED_EVENTS.maximumUnits(),
                 Optional.of(LocalDate.of(2026, 8, 29)));
 
         assertThatThrownBy(() -> scheduled.declare(
@@ -763,6 +763,21 @@ class J8BenchmarkAuditServiceTest {
                 OptionalLong.empty()))
                 .isInstanceOf(IllegalArgumentException.class)
                 .hasMessageContaining("campaign date and ordinal");
+
+        scheduled.declare(
+                35,
+                SofascoreEndpointType.SCHEDULED_EVENTS,
+                "SCHEDULED_EVENTS|date=2026-08-29|page=35",
+                Optional.empty(),
+                OptionalLong.empty());
+        assertThatThrownBy(() -> scheduled.declare(
+                36,
+                SofascoreEndpointType.SCHEDULED_EVENTS,
+                "SCHEDULED_EVENTS|date=2026-08-29|page=36",
+                Optional.empty(),
+                OptionalLong.empty()))
+                .isInstanceOf(IllegalArgumentException.class)
+                .hasMessageContaining("campaign bound");
 
         J8BenchmarkAuditService.Session phase1 = service.start(
                 UUID.randomUUID(),

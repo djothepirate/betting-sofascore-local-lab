@@ -101,7 +101,7 @@ class ManualCallControllerTest {
     void forwardsTheExactConfirmationAndAcknowledgementWithoutTransport() throws Exception {
         MockHttpSession session = new MockHttpSession();
         String token = formTokenService.issue(session);
-        String phrase = "CONFIRMER SCHEDULED_EVENTS 2026-08-12 PAGINATION DYNAMIQUE MAX 25 000042";
+        String phrase = "CONFIRMER SCHEDULED_EVENTS 2026-08-12 PAGINATION DYNAMIQUE MAX 35 000042";
         when(controlService.confirm(REQUEST_ID, phrase, true))
                 .thenReturn(rearmedSnapshot());
 
@@ -248,6 +248,65 @@ class ManualCallControllerTest {
                 eq(REQUEST_ID),
                 argThat(payloads -> payloads.size() == 2));
         verifyNoInteractions(dynamicManualCallService);
+    }
+
+    @Test
+    void forwardsTheFullThirtyFivePageJ3ImportBoundToTheLocalImportService()
+            throws Exception {
+        MockHttpSession session = new MockHttpSession();
+        String token = formTokenService.issue(session);
+        when(localJsonImportService.importPages(
+                eq(REQUEST_ID),
+                argThat(payloads -> payloads.size() == 35)))
+                .thenReturn(J3ManualCallExecutionResult.successfulLocalImport(35));
+        var request = multipart("/manual-call/import-json-pages")
+                .session(session)
+                .param("localFormToken", token)
+                .param("requestId", REQUEST_ID.toString());
+        for (int page = 35; page >= 1; page--) {
+            request.file(new MockMultipartFile(
+                    "pageFiles",
+                    "page-" + page + ".json",
+                    "application/json",
+                    "{\"scheduled\":[]}".getBytes(StandardCharsets.UTF_8)));
+        }
+
+        mockMvc.perform(request)
+                .andExpect(status().is3xxRedirection())
+                .andExpect(redirectedUrl("/dashboard#manual-call-control"))
+                .andExpect(flash().attribute("manualCallMessageKind", "safe"))
+                .andExpect(flash().attribute(
+                        "manualCallMessage",
+                        "Collecte J3 importée et validée : 35 page(s) JSON 1 à N, 0 appel fournisseur et 0 accès au cache. L’arrêt global a été réappliqué et le catalogue de tournois peut être reconstruit."));
+
+        verify(localJsonImportService).importPages(
+                eq(REQUEST_ID),
+                argThat(payloads -> payloads.size() == 35));
+        verifyNoInteractions(dynamicManualCallService);
+    }
+
+    @Test
+    void rejectsPageThirtySixBeforeCallingTheLocalImportService() throws Exception {
+        MockHttpSession session = new MockHttpSession();
+        String token = formTokenService.issue(session);
+        MockMultipartFile pageOne = new MockMultipartFile(
+                "pageFiles", "page-1.json", "application/json", "{}".getBytes(StandardCharsets.UTF_8));
+        MockMultipartFile pageThirtySix = new MockMultipartFile(
+                "pageFiles", "page-36.json", "application/json", "{}".getBytes(StandardCharsets.UTF_8));
+
+        mockMvc.perform(multipart("/manual-call/import-json-pages")
+                        .file(pageOne)
+                        .file(pageThirtySix)
+                        .session(session)
+                        .param("localFormToken", token)
+                        .param("requestId", REQUEST_ID.toString()))
+                .andExpect(status().is3xxRedirection())
+                .andExpect(flash().attribute("manualCallMessageKind", "danger"))
+                .andExpect(flash().attribute(
+                        "manualCallMessage",
+                        "Nommez les fichiers page-1.json, page-2.json, …, sans trou ni doublon."));
+
+        verifyNoInteractions(localJsonImportService, dynamicManualCallService);
     }
 
     @Test

@@ -67,6 +67,8 @@ public final class ProviderPlaywrightWorkerProtocol {
     public static final int MAX_ENTITY_TAG_BYTES = 512;
     public static final int MAX_TIMEOUT_MILLIS = 60_000;
     public static final long MAX_EVENT_ID = 999_999_999L;
+    /** Kept in sync with the parent J3 manual-collection bound. */
+    public static final int MAXIMUM_SCHEDULED_EVENTS_PAGE = 35;
 
     private ProviderPlaywrightWorkerProtocol() {
     }
@@ -129,7 +131,7 @@ public final class ProviderPlaywrightWorkerProtocol {
             switch (endpoint) {
                 case SCHEDULED_EVENTS -> {
                     requireDate(date);
-                    if (page < 1 || page > 25) {
+                    if (page < 1 || page > MAXIMUM_SCHEDULED_EVENTS_PAGE) {
                         throw new IllegalArgumentException(FailureCode.INVALID_PAGE.name());
                     }
                     if (tournamentId != 0) {

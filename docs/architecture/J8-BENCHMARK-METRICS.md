@@ -136,13 +136,16 @@ Les types et plafonds de campagne sont fixes :
 
 | `campaign_type` | Endpoint(s) admis | `maximum_units` | `collection_date` |
 |---|---|---:|---|
-| `J3_SCHEDULED_EVENTS` | `SCHEDULED_EVENTS` | 25 | obligatoire |
+| `J3_SCHEDULED_EVENTS` | `SCHEDULED_EVENTS` | 35 pour une nouvelle campagne ; 25 conservé en lecture historique | obligatoire |
 | `J3_TOURNAMENT_DISCOVERY` | `TOURNAMENT_SCHEDULED_EVENTS` | 1 | obligatoire |
 | `J4_EVENT_DETAILS_PHASE1` | `EVENT_DETAILS` | 2 | interdite |
 | `J4_EVENT_DETAILS_PHASE2` | `EVENT_DETAILS` | 1 | interdite |
 | `J5_EVENT_DATA` | `EVENT_STATISTICS`, `EVENT_INCIDENTS`, `EVENT_LINEUPS` | 3 | interdite |
 
-Le mode vaut `GUARDED_PROVIDER` ou `MANUAL_LOCAL_JSON_IMPORT`. L'import manuel est limité aux
+V53 conserve explicitement les campagnes J3 append-only déjà déclarées à `maximum_units=25` :
+elles restent lisibles et leur propre plafond ne change pas. Toute nouvelle campagne
+`J3_SCHEDULED_EVENTS` utilise la borne locale courante de 35 unités. Le mode vaut
+`GUARDED_PROVIDER` ou `MANUAL_LOCAL_JSON_IMPORT`. L'import manuel est limité aux
 campagnes `J3_SCHEDULED_EVENTS`, `J3_TOURNAMENT_DISCOVERY` et `J5_EVENT_DATA`; il réutilise les
 parcours hors ligne existants et crée zéro tentative fournisseur. Les unités d'événement exigent
 un `provider_event_id` positif ; la corrélation `canonical_event_id` éventuelle doit désigner le

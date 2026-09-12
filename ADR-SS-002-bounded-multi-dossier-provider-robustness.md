@@ -8,6 +8,12 @@
 - **Portée historique v1.0 :** une campagne locale de preuve J9 sous `WO-SS-20260831-019`
 - **Portée normative v1.1 :** une nouvelle série complète D1/D2/D3 sous un nouveau Work Order ;
   aucune campagne avant satisfaction de toutes les portes post-acceptation
+- **Applicabilité prospective depuis [ADR-SS-006](ADR-SS-006-j3-manual-pagination-cap-35.md) :**
+  les valeurs A1 `1..25`, `38` et `58` de v1.1 restent le texte accepté et la trace de son cadre de
+  décision, mais ne peuvent plus fonder un go, une campagne ou une enveloppe future. La borne J3
+  courante est `1..35`. Toute nouvelle série D1/D2/D3 exige une décision et un Work Order distincts
+  qui recomposent son plafond agrégé à partir de cette borne ; v1.0 et ses vingt tentatives restent
+  inchangés.
 - **Base historique v1.0 :** `a47c932` sur `codex/j9-decision`
 - **Base du draft v1.1 :** `1fcd2cd1a71df74e97e31850a1497a3780e7719f` sur
   `codex/j9-adr002-reexamination`

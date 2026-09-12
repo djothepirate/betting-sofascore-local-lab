@@ -300,8 +300,8 @@ Cette procédure remplace fonctionnellement la reprise fixe de la section 3.7. E
    `PAGINATION DYNAMIQUE — CONFIRMATION REQUISE` ;
 5. lever l’arrêt global puis activer le circuit ;
 6. choisir la date au format `AAAA-MM-JJ` et sélectionner **« 3. Préparer la collecte »** ;
-7. vérifier la clé `SCHEDULED_EVENTS|date=<date>|pagination=has-next-page|max=25` ;
-8. recopier exactement la phrase, acquitter le départ page 1, `hasNextPage` et le plafond 25,
+7. vérifier la clé `SCHEDULED_EVENTS|date=<date>|pagination=has-next-page|max=35` ;
+8. recopier exactement la phrase, acquitter le départ page 1, `hasNextPage` et le plafond 35,
    puis confirmer ;
 9. vérifier `CONFIRMED_READY`, puis choisir exactement une voie :
    - **Option A — collecte fournisseur directe** : sélectionner une seule fois
@@ -313,8 +313,12 @@ Cette procédure remplace fonctionnellement la reprise fixe de la section 3.7. E
      contiguës 1 à N. Ne jamais fournir HAR, export DevTools, en-tête, cookie, jeton ou donnée de
      session ;
 10. attendre le retour sans actualiser la page ;
-11. vérifier soit `COMPLETED`, soit l’arrêt sans retry au premier incident ou avant la page 26 ;
+11. vérifier soit `COMPLETED`, soit l’arrêt sans retry au premier incident ou avant la page 36 ;
 12. télécharger la preuve et contrôler au minimum :
+
+Une page 27 portant `hasNextPage=false` est un terminal normal. `PAGINATION_LIMIT_REACHED` ne
+survient que si la page 35 porte encore `hasNextPage=true`; la preuve ne doit alors contenir aucun
+départ fournisseur pour la page 36.
 
 ```text
 J3_MINIMIZED_EVIDENCE_VERSION=6
@@ -322,7 +326,7 @@ PAGINATION_MODE=HAS_NEXT_PAGE
 CACHE_POLICY=FRESH_PARSED_SNAPSHOT_FIRST
 CACHE_TTL_SECONDS=600
 PROVIDER_FIRST_PAGE=1
-MAXIMUM_PAGE_LIMIT=25
+MAXIMUM_PAGE_LIMIT=35
 PROVIDER_PAGES_REQUESTED=<liste ou NONE>
 CACHE_HIT_PAGES=<liste ou NONE>
 LOCAL_JSON_IMPORT_PAGES=<liste ou NONE>
@@ -349,10 +353,13 @@ nouveau transport sur la même date, attendre l’expiration normale ; ne jamais
 ou reclasser un snapshot.
 
 Pour l'Option B, l'application prévalide le lot entier avant de réclamer l'exécution : fichiers
-numérotés sans doublon ni trou, 1 à 25 pages, 5 Mio maximum par fichier, 25 Mio maximum au total,
+numérotés sans doublon ni trou, 1 à 35 pages, 5 Mio maximum par fichier, 25 Mio maximum au total,
 forme J3 `scheduled`, puis `hasNextPage=true` avant la dernière page et `false` sur celle-ci. Un
 refus à ce stade laisse l'intention `CONFIRMED_READY` afin de corriger le lot. Un succès doit
 afficher zéro transport et zéro cache hit, ainsi que :
+
+Un lot de 36 pages, ou tout fichier correspondant à une page 36, est refusé avant claim et avant
+persistance.
 
 ```text
 LOCAL_JSON_IMPORT_PAGES=1,...,N

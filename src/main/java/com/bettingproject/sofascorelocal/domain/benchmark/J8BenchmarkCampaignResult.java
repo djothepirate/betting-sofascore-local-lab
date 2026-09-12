@@ -17,8 +17,11 @@ public record J8BenchmarkCampaignResult(
         finishedAt = Objects.requireNonNull(finishedAt, "finishedAt");
         terminalState = Objects.requireNonNull(terminalState, "terminalState");
         terminalCode = J8BenchmarkValidation.optionalSafeCode(terminalCode, "terminalCode");
-        if (completedUnits < 0 || completedUnits > 25) {
-            throw new IllegalArgumentException("completedUnits must be between 0 and 25");
+        if (completedUnits < 0
+                || completedUnits > J8BenchmarkCampaignType.MAXIMUM_SUPPORTED_UNITS) {
+            throw new IllegalArgumentException(
+                    "completedUnits must be between 0 and "
+                            + J8BenchmarkCampaignType.MAXIMUM_SUPPORTED_UNITS);
         }
         if (terminalState != J8BenchmarkCampaignTerminalState.COMPLETED
                 && terminalCode.isEmpty()) {

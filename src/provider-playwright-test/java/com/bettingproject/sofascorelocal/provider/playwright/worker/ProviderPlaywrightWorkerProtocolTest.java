@@ -18,8 +18,12 @@ class ProviderPlaywrightWorkerProtocolTest {
 
     @Test
     void readsTheSixExactGetShapesWithoutStartingChromium() throws Exception {
+        assertThat(ProviderPlaywrightWorkerProtocol.MAXIMUM_SCHEDULED_EVENTS_PAGE).isEqualTo(35);
         ProviderPlaywrightWorkerProtocol.GetCommand scheduled = readScheduled(
-                "SCHEDULED_EVENTS", "2026-08-27", 25, 10_000);
+                "SCHEDULED_EVENTS",
+                "2026-08-27",
+                ProviderPlaywrightWorkerProtocol.MAXIMUM_SCHEDULED_EVENTS_PAGE,
+                10_000);
         ProviderPlaywrightWorkerProtocol.GetCommand tournament = readTournament(
                 "TOURNAMENT_SCHEDULED_EVENTS", "2026-08-27", 17, 10_000);
         ProviderPlaywrightWorkerProtocol.GetCommand eventDetails = readEvent(
@@ -35,7 +39,11 @@ class ProviderPlaywrightWorkerProtocolTest {
 
         assertThat(scheduled).isEqualTo(new ProviderPlaywrightWorkerProtocol.GetCommand(
                 ProviderPlaywrightWorkerProtocol.Endpoint.SCHEDULED_EVENTS,
-                LocalDate.of(2026, 8, 27), 25, 0, 0, 10_000));
+                LocalDate.of(2026, 8, 27),
+                ProviderPlaywrightWorkerProtocol.MAXIMUM_SCHEDULED_EVENTS_PAGE,
+                0,
+                0,
+                10_000));
         assertThat(tournament).isEqualTo(new ProviderPlaywrightWorkerProtocol.GetCommand(
                 ProviderPlaywrightWorkerProtocol.Endpoint.TOURNAMENT_SCHEDULED_EVENTS,
                 LocalDate.of(2026, 8, 27), 0, 17, 0, 10_000));
@@ -131,7 +139,10 @@ class ProviderPlaywrightWorkerProtocolTest {
                 .isInstanceOf(ProviderPlaywrightWorkerProtocol.ProtocolValidationException.class)
                 .hasMessage("INVALID_DATE");
         assertThatThrownBy(() -> readScheduled(
-                "SCHEDULED_EVENTS", "2026-08-27", 26, 1_000))
+                "SCHEDULED_EVENTS",
+                "2026-08-27",
+                ProviderPlaywrightWorkerProtocol.MAXIMUM_SCHEDULED_EVENTS_PAGE + 1,
+                1_000))
                 .isInstanceOf(ProviderPlaywrightWorkerProtocol.ProtocolValidationException.class)
                 .hasMessage("INVALID_PAGE");
         assertThatThrownBy(() -> readTournament(

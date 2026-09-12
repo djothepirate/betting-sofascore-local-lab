@@ -14,6 +14,22 @@ import static org.assertj.core.api.Assertions.assertThatThrownBy;
 class PlaywrightProviderRequestTest {
 
     @Test
+    void acceptsOnlyTheCurrentJ3ScheduledEventsPageRange() {
+        PlaywrightProviderRequest request = PlaywrightProviderRequest.scheduledEvents(
+                LocalDate.of(2026, 8, 27), 35);
+
+        assertThat(request.endpoint()).isEqualTo(SofascoreEndpointType.SCHEDULED_EVENTS);
+        assertThat(request.date()).isEqualTo(LocalDate.of(2026, 8, 27));
+        assertThat(request.page()).isEqualTo(35);
+        assertThat(request.uniqueTournamentId()).isZero();
+        assertThat(request.eventId()).isZero();
+        assertThatThrownBy(() -> PlaywrightProviderRequest.scheduledEvents(
+                LocalDate.of(2026, 8, 27), 36))
+                .isInstanceOf(IllegalArgumentException.class)
+                .hasMessage("invalid scheduled-events request");
+    }
+
+    @Test
     void exposesOnlyBoundedEventDetailsScalarsWithoutAnIpcUri() {
         PlaywrightProviderRequest request = PlaywrightProviderRequest.eventDetails(16_386_245L);
 

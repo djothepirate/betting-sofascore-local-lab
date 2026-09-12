@@ -24,7 +24,7 @@ class J6NativeBinaryPipelineQualificationTest {
     }
 
     @Test
-    void retentionAcceptsOnlyAV52QualifiedManifestWithoutRunningNativeTools()
+    void retentionAcceptsOnlyAV53QualifiedManifestWithoutRunningNativeTools()
             throws IOException {
         String retention = Files.readString(
                 Path.of("").toAbsolutePath().normalize()
@@ -33,8 +33,8 @@ class J6NativeBinaryPipelineQualificationTest {
 
         assertThat(retention)
                 .contains(
-                        "$manifest.source.flywayVersion.ToString() -cne '52'",
-                        "valid Flyway V52 raw-payload, J8, J7 and quiescent live ledger restore",
+                        "$manifest.source.flywayVersion.ToString() -cne '53'",
+                        "valid Flyway V53 raw-payload, J8, J7 and quiescent live ledger restore",
                         "'providerResilienceStateCount'", "'providerDepartureReservationCount'",
                         "'providerDepartureCompletionCount'", "'providerDepartureAccountingCount'", "'providerResilienceEventCount'",
                         "'liveAttemptTransportDiagnosticCount'", "'liveCampaignDiagnosticCount'",
@@ -102,8 +102,8 @@ class J6NativeBinaryPipelineQualificationTest {
                         "J6_DOCKER_EXECUTABLE_IDENTITY=AUTHENTICODE_DOCKER_INC",
                         "Get-AuthenticodeSignature",
                         "AggregateException",
-                        "if ($sourceFlywayVersion -cne '52')",
-                        "Flyway V52 must be applied before the J6 backup/restore qualification.",
+                        "if ($sourceFlywayVersion -cne '53')",
+                        "Flyway V53 must be applied before the J6 backup/restore qualification.",
                         "$liveLedgerFingerprintSql", "provider_campaign_guard", "$providerGuardState -cne 'FREE'",
                         "J6_POSTGRES_SESSION_CLEANUP_IDEMPOTENT_REUSE=PASS",
                         "dropdb --username \"$POSTGRES_USER\" --force --if-exists",

@@ -77,14 +77,14 @@ VPS       : aucune connexion
 | `adapter.persistence` | preuves brutes, occurrences, observations normalisées, historique, rétention, manifestes J7, preuves J8 et ledger live V33 |
 | `adapter.file` | publication J7 create-new par lien physique atomique, bornée à la racine locale |
 | `adapter.web` | tableau de bord, recherche, contrôle de lot et vues J4/J5/J6/J7/J8 locales |
-| `resources/db/migration` | schémas V1 à V40, migrations append-only et triggers d’immuabilité |
+| `resources/db/migration` | schémas V1 à V53, migrations append-only et triggers d’immuabilité |
 | `fixtures` | corpus synthétiques hors ligne J2, J4, J5 et J6 |
 
 Le connecteur général demeure bloqué. Le chemin manuel J3 borné délègue ses deux familles
 `SCHEDULED_EVENTS` et `TOURNAMENT_SCHEDULED_EVENTS` à un worker Playwright JVM enfant commun. Le
 worker ne reçoit qu’une requête de domaine validée et ne peut viser que l’origine
 `https://www.sofascore.com`, les deux routes allowlistées, une date ISO explicite et, pour la
-pagination, les pages `1` à `25`. Le profil Maven `provider-playwright-runtime` ajoute le runtime à
+pagination, les pages `1` à `35`. Le profil Maven `provider-playwright-runtime` ajoute le runtime à
 la compilation sans le démarrer ; `SOFASCORE_PLAYWRIGHT_ENABLED=false` maintient l’inertie par
 défaut. Il n’existe aucun fallback `RestClient` ou FlareSolverr.
 Après la confirmation, une action alternative accepte localement un lot complet de corps JSON
@@ -176,16 +176,16 @@ Contrôle opérateur              arrêt global + circuit + confirmation unique
           ▼
 Choix exclusif                  pagination directe OU lot JSON local complet
           │
-          ├── import            1..25, 5 Mio/page, 25 Mio/lot, scan sensible
+          ├── import            1..35, 5 Mio/page, 25 Mio/lot, scan sensible
           │                     parser + hasNextPage validés avant claim, zéro réseau/cache
           ▼ direct
-Requête de domaine              date ISO + pages 1..25 + chemin fermé
+Requête de domaine              date ISO + pages 1..35 + chemin fermé
           │
           ▼
 Transport J3                    sans proxy, redirection, cookie ni jeton
           │
           ▼
-Orchestrateur                   page 1, hasNextPage, délai >= 3 s, plafond 25
+Orchestrateur                   page 1, hasNextPage, délai >= 3 s, plafond 35
 ```
 
 La suppression d’une seule barrière ne permet donc pas un appel accidentel. Le bouton réel reste
@@ -194,6 +194,11 @@ action Web distincte est nécessaire. Le connecteur général, `ConnectorGate` e
 restent bloqués ; le transport loopback simulé conserve par ailleurs sa frontière propre.
 La voie locale n'est pas un retry d'une voie directe terminale : après un `HTTP_FORBIDDEN`, une
 nouvelle préparation et une nouvelle confirmation restent obligatoires.
+
+V53 associe cette borne active aux campagnes J8 : les nouvelles campagnes
+`J3_SCHEDULED_EVENTS` déclarent 35 unités, tandis que les campagnes historiques déclarées à 25
+restent lisibles et gardent leur plafond persistant. Cette compatibilité de lecture ne transforme
+aucune campagne historique en campagne à 35 unités.
 
 Pour la découverte tournoi, les opt-ins général, J3 et découverte doivent être vrais ensemble et
 l'allowlist doit être exactement
@@ -453,7 +458,7 @@ canoniques sont écrites dans une transaction unique ; un conflit d'identité ou
 - validation des métadonnées et des preuves brutes ;
 - orchestration et transport HTTP simulé sur boucle locale ;
 - validation du transport fournisseur avec `MockRestServiceServer`, sans connexion réseau ;
-- ordre dynamique depuis la page 1, terminaison par `hasNextPage=false`, plafond 25, délai minimal,
+- ordre dynamique depuis la page 1, terminaison par `hasNextPage=false`, plafond 35, délai minimal,
   persistance avant parsing et arrêt au premier incident ;
 - catalogue tournoi issu des snapshots exacts d'une collecte `COMPLETED`, sélection serveur,
   requête numérique, parser `tournament-scheduled-v1`, cache, projection Paris et atomicité ;

@@ -4,6 +4,22 @@ Les évolutions notables du SofaScore Local Lab sont consignées dans ce fichier
 
 ## [Non publié]
 
+### WO-059 — plafond local de pagination manuelle J3 à 35 pages
+
+- Porte les nouvelles collectes J3 `SCHEDULED_EVENTS`, directes ou importées localement, de 25 à
+  35 pages. Le terminal reste dicté par `hasNextPage=false` : une séquence peut donc se terminer
+  normalement en page 27.
+- Ferme la frontière à `1..35` dans les validations, la preuve, le contrôleur et le worker isolé.
+  Une page 35 qui annonce encore une suite produit `PAGINATION_LIMIT_REACHED` sans tentative de
+  page 36 ; une page 36 est refusée avant claim, persistance ou départ fournisseur.
+- Conserve la collecte manuelle séquentielle, le cache-first, le délai minimal de trois secondes,
+  l'absence de retry/polling, ainsi que les limites de 5 Mio par page et 25 Mio par lot.
+- Ajoute V53 append-only : les nouvelles campagnes J8 `J3_SCHEDULED_EVENTS` sont créées à 35,
+  tandis que les campagnes historiques à 25 restent lisibles et conservent leur borne persistée.
+- Cadre la réalisation par [ADR-SS-006](ADR-SS-006-j3-manual-pagination-cap-35.md) et
+  [WO-SS-20260912-059](docs/work_orders/active/WO-SS-20260912-059-j3-pagination-cap-35.md) ;
+  aucune validation de ce lot n'effectue d'appel fournisseur.
+
 ### WO-058 — règles J4/J5 `live-v9` et cartes joueurs enrichies par les incidents
 
 - Versionne une preuve V9 distincte, liée par SHA-256 au replay local de ses 16 scénarios

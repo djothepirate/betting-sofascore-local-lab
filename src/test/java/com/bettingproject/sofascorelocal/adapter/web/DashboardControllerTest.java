@@ -446,7 +446,7 @@ class DashboardControllerTest {
         J3ManualCallIntentSnapshot intent = new J3ManualCallIntentSnapshot(
                 UUID.fromString("3ccfd0a0-7825-4bfa-977b-358be086b1e2"),
                 LocalDate.parse("2026-08-13"),
-                "SCHEDULED_EVENTS|date=2026-08-13|pagination=has-next-page|max=25",
+                "SCHEDULED_EVENTS|date=2026-08-13|pagination=has-next-page|max=35",
                 1,
                 J3ManualCallIntentState.CONFIRMED_READY,
                 null,
@@ -478,7 +478,11 @@ class DashboardControllerTest {
                 .andExpect(content().string(containsString(
                         "COLLECTE MANUELLE DYNAMIQUE PRÊTE")))
                 .andExpect(content().string(containsString(
-                        "SCHEDULED_EVENTS|date=2026-08-13|pagination=has-next-page|max=25")))
+                        "SCHEDULED_EVENTS|date=2026-08-13|pagination=has-next-page|max=35")))
+                .andExpect(content().string(containsString(
+                        "Le plafond local est fixé à 35 pages.")))
+                .andExpect(content().string(containsString(
+                        "5 Mio maximum par page, 25 Mio pour le lot, 35 pages maximum.")))
                 .andExpect(content().string(containsString(
                         "Option A — Collecte fournisseur directe")))
                 .andExpect(content().string(containsString(

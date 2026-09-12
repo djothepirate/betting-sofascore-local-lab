@@ -45,7 +45,9 @@ public record J3MinimizedCollectionEvidence(
         }
         if (completedPages < 0
                 || completedPages > ScheduledEventsProviderPageRequest.MAXIMUM_COLLECTION_PAGE) {
-            throw new IllegalArgumentException("completedPages must be between 0 and 25");
+            throw new IllegalArgumentException(
+                    "completedPages must be between 0 and "
+                            + ScheduledEventsProviderPageRequest.MAXIMUM_COLLECTION_PAGE);
         }
         if (!globalStopActive || finalCircuitState != J3CircuitState.LOCKED) {
             throw new IllegalArgumentException("terminal evidence requires a locked global stop");
@@ -92,7 +94,9 @@ public record J3MinimizedCollectionEvidence(
                             || pageAttempts.stream().anyMatch(
                                     attempt -> !Boolean.TRUE.equals(attempt.hasNextPage())))) {
                 throw new IllegalArgumentException(
-                        "the pagination limit requires 25 continuing parsed pages");
+                        "the pagination limit requires "
+                                + ScheduledEventsProviderPageRequest.MAXIMUM_COLLECTION_PAGE
+                                + " continuing parsed pages");
             }
         }
     }

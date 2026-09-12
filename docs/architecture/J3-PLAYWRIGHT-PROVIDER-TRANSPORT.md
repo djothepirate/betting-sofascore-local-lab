@@ -162,8 +162,10 @@ dans la frame principale, vers l'URI exacte admise et avec un unique `requestId`
 incoherente invalident la preuve. Les URI restent confinees au worker et ne sont pas journalisees.
 
 Pour `SCHEDULED_EVENTS`, le service ouvre le worker au premier cache miss, le reutilise jusqu'au
-terminal `hasNextPage=false`, a la page 25 ou au premier incident, puis ferme campagne et lease en
-`finally`. Pour `TOURNAMENT_SCHEDULED_EVENTS`, une confirmation distincte autorise au plus un GET
+terminal `hasNextPage=false`, a la page 35 ou au premier incident, puis ferme campagne et lease en
+`finally`. La validation parent et le protocole du worker n'acceptent que les pages `1..35` ; une
+page 35 annonçant encore une suite ferme la campagne sans démarrer la page 36. Pour
+`TOURNAMENT_SCHEDULED_EVENTS`, une confirmation distincte autorise au plus un GET
 et une campagne distincte.
 
 ## 6. Persistance raw-first et HTTP 404

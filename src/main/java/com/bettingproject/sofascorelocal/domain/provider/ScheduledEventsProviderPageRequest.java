@@ -14,7 +14,7 @@ public record ScheduledEventsProviderPageRequest(
     /** Historical upper bound of the completed five-page J3 qualification. */
     public static final int LAST_PAGE = 5;
     /** Fail-safe bound for one explicit dynamic manual collection. */
-    public static final int MAXIMUM_COLLECTION_PAGE = 25;
+    public static final int MAXIMUM_COLLECTION_PAGE = 35;
     public static final String EXPECTED_ORIGIN = "https://www.sofascore.com";
     public static final LocalDate QUALIFICATION_DATE = LocalDate.parse("2026-08-13");
 
@@ -22,8 +22,10 @@ public record ScheduledEventsProviderPageRequest(
         Objects.requireNonNull(providerOrigin, "providerOrigin");
         Objects.requireNonNull(date, "date");
         requireExactProviderOrigin(providerOrigin);
-        if (page < FIRST_PAGE || page > MAXIMUM_COLLECTION_PAGE) {
-            throw new IllegalArgumentException("page must be between 1 and 25");
+        if (!isWithinCollectionPageRange(page)) {
+            throw new IllegalArgumentException(
+                    "page must be between " + FIRST_PAGE + " and "
+                            + MAXIMUM_COLLECTION_PAGE);
         }
     }
 
@@ -63,6 +65,10 @@ public record ScheduledEventsProviderPageRequest(
         }
         requireExactProviderOrigin(origin);
         return origin;
+    }
+
+    public static boolean isWithinCollectionPageRange(int page) {
+        return page >= FIRST_PAGE && page <= MAXIMUM_COLLECTION_PAGE;
     }
 
     private static void requireExactProviderOrigin(URI origin) {

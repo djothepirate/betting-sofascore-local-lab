@@ -97,7 +97,7 @@ s'applique aux occurrences distinctes deja parsees ; il ne relache pas ces invar
 La confirmation J3 expose deux actions terminales exclusives. La voie directe conserve le cache
 frais par page et les GET bornés existants. La voie locale reçoit en une fois les fichiers
 `page-1.json` à `page-N.json`, sans trou ni doublon. Avant de réclamer l'intention, le contrôleur et
-le service vérifient : nom et ordre, une à 25 pages, 5 Mio maximum par page, 25 Mio maximum pour le
+le service vérifient : nom et ordre, une à 35 pages, 5 Mio maximum par page, 25 Mio maximum pour le
 lot, absence de contenu sensible, parsing `scheduled-events-v1`, forme
 `SCHEDULED_TOURNAMENT_LIST` et chaîne `true…true,false` de `hasNextPage`.
 

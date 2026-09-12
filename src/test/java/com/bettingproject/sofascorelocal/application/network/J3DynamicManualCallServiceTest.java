@@ -207,7 +207,7 @@ class J3DynamicManualCallServiceTest {
                 .contains("CACHE_TTL_SECONDS=600")
                 .contains("PROVIDER_PAGES_REQUESTED=1,2,3,4,5")
                 .contains("CACHE_HIT_PAGES=NONE")
-                .contains("MAXIMUM_PAGE_LIMIT=25")
+                .contains("MAXIMUM_PAGE_LIMIT=35")
                 .contains("PAGE_1_HAS_NEXT_PAGE=true")
                 .contains("PAGE_5_HAS_NEXT_PAGE=false")
                 .contains("FINAL_GLOBAL_STOP=ACTIVE")
@@ -931,7 +931,7 @@ class J3DynamicManualCallServiceTest {
     }
 
     @Test
-    void stopsBeforePageTwentySixWhenProviderStillAnnouncesAnotherPage()
+    void stopsBeforePageThirtySixWhenProviderStillAnnouncesAnotherPage()
             throws Exception {
         MutableClock clock = new MutableClock(NOW);
         RecordingStore store = new RecordingStore();
@@ -954,16 +954,128 @@ class J3DynamicManualCallServiceTest {
         var result = service.execute(REQUEST_ID);
 
         assertThat(result.completed()).isFalse();
-        assertThat(result.completedPages()).isEqualTo(25);
-        assertThat(result.failedPage()).isEqualTo(26);
+        assertThat(result.completedPages()).isEqualTo(35);
+        assertThat(result.failedPage()).isEqualTo(36);
         assertThat(result.terminalCode()).isEqualTo("PAGINATION_LIMIT_REACHED");
         assertThat(pages).containsExactlyElementsOf(
-                java.util.stream.IntStream.rangeClosed(1, 25).boxed().toList());
+                java.util.stream.IntStream.rangeClosed(1, 35).boxed().toList());
         assertThat(evidenceService.latestDocument().orElseThrow().reportText())
-                .contains("MAXIMUM_PAGE_LIMIT=25")
-                .contains("FAILED_PAGE=26")
-                .contains("PAGE_25_HAS_NEXT_PAGE=true")
-                .doesNotContain("PAGE_26_REQUESTED_AT");
+                .contains("MAXIMUM_PAGE_LIMIT=35")
+                .contains("FAILED_PAGE=36")
+                .contains("PAGE_35_HAS_NEXT_PAGE=true")
+                .doesNotContain("PAGE_36_REQUESTED_AT");
+    }
+
+    @Test
+    void completesTwentySevenPagesWhenTheLastParsedPageEndsPagination()
+            throws Exception {
+        MutableClock clock = new MutableClock(NOW);
+        RecordingStore store = new RecordingStore();
+        List<Integer> pages = new ArrayList<>();
+        byte[] terminalBody = Files.readAllBytes(
+                Path.of("fixtures/scheduled-events/nominal.json"));
+        byte[] continuingBody = withHasNextPage(terminalBody, true);
+        ScheduledEventsProviderPageTransport transport = campaignTransport(request -> {
+            pages.add(request.page());
+            Instant requestedAt = clock.instant();
+            clock.advance(Duration.ofMillis(10));
+            byte[] body = request.page() < 27 ? continuingBody : terminalBody;
+            return response(request, requestedAt, clock.instant(), 200, body);
+        });
+        J3ManualCallControlService control = readyControl(clock);
+        J3ManualCollectionEvidenceService evidenceService =
+                new J3ManualCollectionEvidenceService();
+        var service = service(
+                control, transport, store, evidenceService, clock, clock::advance);
+
+        var result = service.execute(REQUEST_ID);
+
+        assertThat(result.completed()).isTrue();
+        assertThat(result.completedPages()).isEqualTo(27);
+        assertThat(pages).containsExactlyElementsOf(
+                java.util.stream.IntStream.rangeClosed(1, 27).boxed().toList());
+        assertThat(evidenceService.latestDocument().orElseThrow().reportText())
+                .contains("PAGE_27_HAS_NEXT_PAGE=false")
+                .doesNotContain("PAGE_28_REQUESTED_AT");
+    }
+
+    @Test
+    void completesAtPageThirtyFiveWhenTheBoundedLastPageEndsPagination()
+            throws Exception {
+        MutableClock clock = new MutableClock(NOW);
+        RecordingStore store = new RecordingStore();
+        List<Integer> pages = new ArrayList<>();
+        byte[] terminalBody = Files.readAllBytes(
+                Path.of("fixtures/scheduled-events/nominal.json"));
+        byte[] continuingBody = withHasNextPage(terminalBody, true);
+        ScheduledEventsProviderPageTransport transport = campaignTransport(request -> {
+            pages.add(request.page());
+            Instant requestedAt = clock.instant();
+            clock.advance(Duration.ofMillis(10));
+            byte[] body = request.page() < 35 ? continuingBody : terminalBody;
+            return response(request, requestedAt, clock.instant(), 200, body);
+        });
+        J3ManualCallControlService control = readyControl(clock);
+        J3ManualCollectionEvidenceService evidenceService =
+                new J3ManualCollectionEvidenceService();
+        var service = service(
+                control, transport, store, evidenceService, clock, clock::advance);
+
+        var result = service.execute(REQUEST_ID);
+
+        assertThat(result.completed()).isTrue();
+        assertThat(result.completedPages()).isEqualTo(35);
+        assertThat(pages).containsExactlyElementsOf(
+                java.util.stream.IntStream.rangeClosed(1, 35).boxed().toList());
+        assertThat(evidenceService.latestDocument().orElseThrow().reportText())
+                .contains("PAGE_35_HAS_NEXT_PAGE=false")
+                .doesNotContain("FAILED_PAGE=36")
+                .doesNotContain("PAGE_36_REQUESTED_AT");
+    }
+
+    @Test
+    void stopsBeforePageThirtySixFromFreshCacheWithoutOpeningProviderTransport()
+            throws Exception {
+        MutableClock clock = new MutableClock(NOW);
+        RecordingStore store = new RecordingStore();
+        RecordingCache cache = new RecordingCache();
+        byte[] continuingBody = withHasNextPage(Files.readAllBytes(
+                Path.of("fixtures/scheduled-events/nominal.json")), true);
+        for (int page = 1;
+                page <= ScheduledEventsProviderPageRequest.MAXIMUM_COLLECTION_PAGE;
+                page++) {
+            cache.put(cachedPage(page, continuingBody));
+        }
+        AtomicInteger openedCampaigns = new AtomicInteger();
+        ScheduledEventsProviderPageTransport transport = new ScheduledEventsProviderPageTransport() {
+
+            @Override
+            public Campaign openCampaign(UUID campaignId) {
+                openedCampaigns.incrementAndGet();
+                throw new AssertionError("a cache-only J3 run must not open a campaign");
+            }
+        };
+        J3ManualCallControlService control = readyControl(clock);
+        J3ManualCollectionEvidenceService evidenceService =
+                new J3ManualCollectionEvidenceService();
+        var service = service(
+                control, transport, store, cache, evidenceService, clock, ignored -> { });
+
+        var result = service.execute(REQUEST_ID);
+
+        assertThat(result.completed()).isFalse();
+        assertThat(result.completedPages()).isEqualTo(35);
+        assertThat(result.failedPage()).isEqualTo(36);
+        assertThat(result.terminalCode()).isEqualTo("PAGINATION_LIMIT_REACHED");
+        assertThat(result.providerRequests()).isZero();
+        assertThat(result.cacheHits()).isEqualTo(35);
+        assertThat(cache.lookups).containsExactlyElementsOf(
+                java.util.stream.IntStream.rangeClosed(1, 35).boxed().toList());
+        assertThat(openedCampaigns).hasValue(0);
+        assertThat(evidenceService.latestDocument().orElseThrow().reportText())
+                .contains("PAGE_35_RESOLUTION_SOURCE=CACHE")
+                .contains("PAGE_35_HAS_NEXT_PAGE=true")
+                .doesNotContain("PAGE_36_REQUESTED_AT");
     }
 
     private static ScheduledEventsProviderPageTransport campaignTransport(

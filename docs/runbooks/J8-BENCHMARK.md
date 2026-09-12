@@ -310,12 +310,14 @@ exclusive, le dossier, le manifeste, les plafonds et les arrêts.
 
 Après ce go seulement, exécuter exactement dans cet ordre :
 
-1. J3 `SCHEDULED_EVENTS`, pages 1 à N réellement atteintes, avec plafond 25 ;
+1. J3 `SCHEDULED_EVENTS`, pages 1 à N réellement atteintes, avec plafond 35 ;
 2. une découverte `TOURNAMENT_SCHEDULED_EVENTS` ;
 3. un rafraîchissement J4 phase 2 `EVENT_DETAILS` ;
 4. une campagne J5 ordonnée `STATISTICS`, `INCIDENTS`, `LINEUPS`.
 
-Le plafond absolu vaut 30 tentatives directes : `25 + 1 + 1 + 3`. Au premier incident terminal,
+Le plafond absolu vaut 40 tentatives directes : `35 + 1 + 1 + 3`. Les campagnes J3 historiques
+déclarées à 25 conservent leur plafond persistant ; ce protocole prospectif utilise la borne locale
+courante à 35 portée par V53. Au premier incident terminal,
 refus, incompatibilité, contenu inattendu ou arrêt opérateur, ne pas poursuivre manuellement les
 étapes suivantes. Chaque tentative admise à la frontière est écrite exactement une fois, même si
 aucun résultat terminal n'est ensuite observable.
