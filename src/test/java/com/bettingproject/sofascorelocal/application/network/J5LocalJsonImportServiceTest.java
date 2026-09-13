@@ -1,7 +1,7 @@
 package com.bettingproject.sofascorelocal.application.network;
 
-import com.bettingproject.sofascorelocal.adapter.sofascore.eventdata.EventIncidentsV15Parser;
-import com.bettingproject.sofascorelocal.adapter.sofascore.eventdata.EventLineupsV2Parser;
+import com.bettingproject.sofascorelocal.adapter.sofascore.eventdata.EventIncidentsV17Parser;
+import com.bettingproject.sofascorelocal.adapter.sofascore.eventdata.EventLineupsV4Parser;
 import com.bettingproject.sofascorelocal.adapter.sofascore.eventdata.EventStatisticsV2Parser;
 import com.bettingproject.sofascorelocal.domain.benchmark.J8BenchmarkOutcomeType;
 import com.bettingproject.sofascorelocal.domain.benchmark.J8BenchmarkResolutionSource;
@@ -122,8 +122,8 @@ class J5LocalJsonImportServiceTest {
                 canonicalStore,
                 dataStore,
                 new EventStatisticsV2Parser(),
-                new EventIncidentsV15Parser(),
-                new EventLineupsV2Parser(),
+                new EventIncidentsV17Parser(),
+                new EventLineupsV4Parser(),
                 Clock.fixed(NOW, ZoneOffset.UTC));
     }
 
@@ -243,8 +243,8 @@ class J5LocalJsonImportServiceTest {
                         canonicalStore,
                         dataStore,
                         new EventStatisticsV2Parser(),
-                        new EventIncidentsV15Parser(),
-                        new EventLineupsV2Parser(),
+                        new EventIncidentsV17Parser(),
+                        new EventLineupsV4Parser(),
                         Clock.fixed(NOW, ZoneOffset.UTC)),
                 new J8BenchmarkAuditService(
                         evidenceStore, Clock.fixed(NOW, ZoneOffset.UTC)));
@@ -286,8 +286,8 @@ class J5LocalJsonImportServiceTest {
                 canonicalStore,
                 dataStore,
                 new EventStatisticsV2Parser(),
-                new EventIncidentsV15Parser(),
-                new EventLineupsV2Parser(),
+                new EventIncidentsV17Parser(),
+                new EventLineupsV4Parser(),
                 Clock.fixed(NOW, ZoneOffset.UTC));
         J5LocalJsonImportService auditedService = new J5LocalJsonImportService(
                 control,
@@ -336,8 +336,8 @@ class J5LocalJsonImportServiceTest {
                         canonicalStore,
                         dataStore,
                         new EventStatisticsV2Parser(),
-                        new EventIncidentsV15Parser(),
-                        new EventLineupsV2Parser(),
+                        new EventIncidentsV17Parser(),
+                        new EventLineupsV4Parser(),
                         Clock.fixed(NOW, ZoneOffset.UTC)),
                 new J8BenchmarkAuditService(
                         evidenceStore, Clock.fixed(NOW, ZoneOffset.UTC)));

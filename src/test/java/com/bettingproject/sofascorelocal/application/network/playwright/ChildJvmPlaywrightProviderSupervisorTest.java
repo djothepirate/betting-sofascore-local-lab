@@ -4,6 +4,8 @@ import com.bettingproject.sofascorelocal.config.ProviderPlaywrightProperties;
 import com.bettingproject.sofascorelocal.domain.provider.SofascoreEndpointType;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.io.TempDir;
+import org.junit.jupiter.params.ParameterizedTest;
+import org.junit.jupiter.params.provider.ValueSource;
 
 import java.io.BufferedInputStream;
 import java.io.DataInputStream;
@@ -38,6 +40,7 @@ import java.util.function.LongSupplier;
 
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
+import static org.assertj.core.api.Assertions.catchThrowable;
 import static org.mockito.Mockito.atLeastOnce;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.never;
@@ -48,6 +51,213 @@ class ChildJvmPlaywrightProviderSupervisorTest {
 
     @TempDir
     private Path temporaryDirectory;
+
+    @ParameterizedTest @ValueSource(strings = {"finished", "aborted", "early", "future", "before-headers",
+            "unknown-reason", "without-progress", "forbidden", "rate-limited", "historical"})
+    void onlyAcceptsAuthenticatedTerminalTimeoutEvidenceForLiveV6(String mode) throws Exception {
+        verifyTerminalTimeoutAuthority(mode, false);
+    }
+
+    @ParameterizedTest @ValueSource(strings = {"finished", "forbidden"})
+    void v7UsesTheSameProvenTimeoutWireProtocolWithoutWeakeningRefusal(String mode) throws Exception {
+        verifyTerminalTimeoutAuthority(mode, true);
+    }
+
+    private void verifyTerminalTimeoutAuthority(String mode, boolean v7) throws Exception {
+        var properties = enabledProperties("terminal-" + mode + ".jar");
+        properties.setRequestTimeout(Duration.ofMillis(250));
+        Instant created = Instant.parse("2020-01-01T00:00:00Z");
+        var root = ownedHandle(2_140L, created, true, true);
+        var process = processWithStartInstant(root.handle(), created);
+        var thread = new AtomicReference<Thread>(); var workerFailure = new AtomicReference<Throwable>();
+        var starts = new AtomicInteger(); var gets = new AtomicInteger();
+        var supervisor = new ChildJvmPlaywrightProviderSupervisor(properties, Clock.systemUTC(), new SecureRandom(), builder -> {
+            starts.incrementAndGet();
+            thread.set(Thread.ofPlatform().start(() -> runTerminalTimeoutWorker(builder, mode, gets, workerFailure)));
+            return process;
+        }, new DelayGateProcessTreeAccess());
+        UUID id = UUID.randomUUID();
+        var endpoints = Set.of(SofascoreEndpointType.EVENT_DETAILS, SofascoreEndpointType.EVENT_INCIDENTS,
+                SofascoreEndpointType.EVENT_STATISTICS, SofascoreEndpointType.EVENT_LINEUPS);
+        boolean valid = mode.equals("finished") || mode.equals("aborted");
+        var campaign = mode.equals("historical") ? supervisor.openLiveGroupedV5(id, endpoints)
+                : v7 ? supervisor.openLiveGroupedV7(id, endpoints) : supervisor.openLiveGroupedV6(id, endpoints);
+        try {
+            var group = new LiveProviderDispatchGroup(id, UUID.randomUUID(), 16_386_245L,
+                    LiveProviderDispatchGroup.Phase.CHECK);
+            var failure = catchThrowable(() -> campaign.executeGrouped(PlaywrightProviderRequest.eventDetails(16_386_245L),
+                    group, PlaywrightDispatchAdmission.UNRESTRICTED));
+            assertThat(failure).isInstanceOfSatisfying(PlaywrightProviderException.class, problem -> {
+                assertThat(problem.failure()).isEqualTo(valid ? PlaywrightProviderFailure.TIMEOUT : PlaywrightProviderFailure.PROTOCOL_ERROR);
+                assertThat(problem.recoverableTimeout()).isEqualTo(valid);
+                if (valid) {
+                    assertThat(problem.diagnostic().contextReusable()).isTrue();
+                    assertThat(problem.diagnostic().responseComplete()).isFalse();
+                    assertThat(problem.diagnostic().exchangeEndReason()).isEqualTo(mode.equals("finished")
+                            ? PlaywrightTransportDiagnostic.ExchangeEndReason.FINISHED : PlaywrightTransportDiagnostic.ExchangeEndReason.ABORTED);
+                }
+                if (mode.equals("forbidden") || mode.equals("rate-limited"))
+                    assertThat(problem.diagnostic().httpStatus()).isEqualTo(mode.equals("forbidden") ? 403 : 429);
+            });
+            assertThat(gets).hasValue(1);
+            if (valid) {
+                assertThatThrownBy(() -> campaign.executeGrouped(PlaywrightProviderRequest.eventDetails(16_386_245L),
+                        group, PlaywrightDispatchAdmission.UNRESTRICTED)).isInstanceOfSatisfying(PlaywrightProviderException.class,
+                        problem -> assertThat(problem.failure()).isEqualTo(PlaywrightProviderFailure.INVALID_REQUEST));
+                var next = new LiveProviderDispatchGroup(id, UUID.randomUUID(), 16_421_052L, LiveProviderDispatchGroup.Phase.CHECK);
+                assertThat(campaign.executeGrouped(PlaywrightProviderRequest.eventDetails(16_421_052L), next,
+                        PlaywrightDispatchAdmission.UNRESTRICTED).httpStatus()).isEqualTo(200);
+                assertThat(starts).hasValue(1); assertThat(gets).hasValue(2);
+                campaign.close();
+            }
+        } finally {
+            supervisor.stopCampaign(id, endpoints); awaitNoActiveCampaign(supervisor); campaign.close();
+        }
+        thread.get().join(2_000);
+        assertThat(thread.get().isAlive()).isFalse(); assertThat(workerFailure.get()).isNull();
+    }
+
+    private static void runTerminalTimeoutWorker(ProcessBuilder builder, String mode, AtomicInteger gets,
+            AtomicReference<Throwable> failure) {
+        try (Socket socket = new Socket("127.0.0.1", Integer.parseInt(builder.environment().get("SOFASCORE_PLAYWRIGHT_IPC_PORT")))) {
+            var output = new DataOutputStream(socket.getOutputStream()); var input = new DataInputStream(socket.getInputStream());
+            output.writeInt(ChildJvmPlaywrightProviderSupervisor.MAGIC); output.writeInt(ChildJvmPlaywrightProviderSupervisor.VERSION);
+            output.writeUTF(builder.environment().get("SOFASCORE_PLAYWRIGHT_IPC_TOKEN")); output.flush();
+            assertThat(input.readUnsignedByte()).isEqualTo(ChildJvmPlaywrightProviderSupervisor.START);
+            output.writeByte(ChildJvmPlaywrightProviderSupervisor.READY); output.flush();
+            assertThat(input.readUnsignedByte()).isEqualTo(mode.equals("historical")
+                    ? ChildJvmPlaywrightProviderSupervisor.GET : ChildJvmPlaywrightProviderSupervisor.GET_LIVE_V6);
+            readProviderRequest(input); gets.incrementAndGet();
+            long started = Instant.parse("2020-01-01T00:00:00Z").toEpochMilli();
+            if (!mode.equals("without-progress")) for (int stage = 0; stage < 4; stage++) {
+                output.writeByte(ChildJvmPlaywrightProviderSupervisor.PROGRESS); output.writeByte(stage);
+                output.writeInt(250); output.writeLong(stage == 0 ? -1 : started); output.writeLong(stage < 2 ? -1 : started + 1);
+                output.writeInt(stage < 2 ? 0 : mode.equals("forbidden") ? 403 : mode.equals("rate-limited") ? 429 : 200);
+                output.writeLong(-1); output.flush();
+            }
+            if (!mode.equals("early")) Thread.sleep(300);
+            output.writeByte(ChildJvmPlaywrightProviderSupervisor.TIMEOUT_ENDED);
+            output.writeLong(mode.equals("future") ? Instant.now().plusSeconds(60).toEpochMilli()
+                    : mode.equals("before-headers") ? started : started + 2);
+            output.writeByte(mode.equals("unknown-reason") ? 3 : mode.equals("finished") ? 1 : 2); output.flush();
+            int command = input.read();
+            if (command == ChildJvmPlaywrightProviderSupervisor.GET_LIVE_V6) {
+                readProviderRequest(input); gets.incrementAndGet();
+                output.writeByte(ChildJvmPlaywrightProviderSupervisor.RESPONSE); output.writeLong(started + 10); output.writeLong(started + 11);
+                output.writeInt(200); output.writeUTF("application/json"); output.writeInt(2); output.write("{}".getBytes(StandardCharsets.UTF_8)); output.flush();
+                command = input.read();
+            }
+            if (command == ChildJvmPlaywrightProviderSupervisor.CLOSE) {
+                output.writeByte(ChildJvmPlaywrightProviderSupervisor.CLOSED); output.flush();
+                assertThat(input.read()).isEqualTo(-1);
+            } else assertThat(command).isEqualTo(-1);
+        } catch (java.net.SocketException ignored) { }
+        catch (Throwable problem) { failure.set(problem); }
+    }
+
+    @ParameterizedTest @ValueSource(strings = {"worker-timeout", "worker-crash", "ipc-timeout", "observer-failure", "malformed",
+            "contradictory-status", "contradictory-requested-at", "contradictory-received-at"})
+    void authenticatesPartialHeadersBeforeTerminalFailureAndPreservesThem(String mode) throws Exception {
+        ProviderPlaywrightProperties properties = enabledProperties("progress-" + mode + ".jar");
+        properties.setRequestTimeout(Duration.ofMillis(250));
+        Instant start = Instant.parse("2026-09-09T12:00:00Z");
+        OwnedHandle root = ownedHandle(2_130L, start, true, true);
+        Process process = processWithStartInstant(root.handle(), start);
+        AtomicReference<Thread> worker = new AtomicReference<>();
+        AtomicReference<Throwable> workerFailure = new AtomicReference<>();
+        List<PlaywrightTransportDiagnostic> observed = new ArrayList<>();
+        RuntimeException storageFailure = new IllegalStateException("local diagnostic publication failed");
+        var supervisor = new ChildJvmPlaywrightProviderSupervisor(properties, Clock.systemUTC(), new SecureRandom(), builder -> {
+            worker.set(Thread.ofPlatform().start(() -> runProgressWorker(builder, mode, workerFailure)));
+            return process;
+        }, new DelayGateProcessTreeAccess());
+        UUID campaignId = UUID.randomUUID();
+        Set<SofascoreEndpointType> allowlist = Set.of(SofascoreEndpointType.EVENT_DETAILS);
+        var campaign = supervisor.open(campaignId, allowlist);
+        try {
+            Throwable failure = catchThrowable(() -> campaign.execute(PlaywrightProviderRequest.eventDetails(16_386_245L),
+                    new PlaywrightDispatchAdmission() {
+                        public void check() { }
+                        public Permit acquireDispatchPermit() { return () -> { }; }
+                        public void onTransportProgress(PlaywrightTransportDiagnostic diagnostic) {
+                            observed.add(diagnostic);
+                            if (mode.equals("observer-failure") && diagnostic.httpStatus() != null) throw storageFailure;
+                        }
+                    }));
+            if (mode.equals("observer-failure")) assertThat(failure).isSameAs(storageFailure);
+            else {
+                assertThat(failure).isInstanceOf(PlaywrightProviderException.class);
+                var transportFailure = (PlaywrightProviderException) failure;
+                assertThat(transportFailure.failure()).isEqualTo(switch (mode) {
+                    case "worker-timeout" -> PlaywrightProviderFailure.TIMEOUT;
+                    case "ipc-timeout" -> PlaywrightProviderFailure.IPC_TIMEOUT;
+                    default -> PlaywrightProviderFailure.PROTOCOL_ERROR;
+                });
+                if (!mode.equals("malformed")) {
+                    assertThat(transportFailure.diagnostic().httpStatus()).isEqualTo(429);
+                    assertThat(transportFailure.diagnostic().responseComplete()).isFalse();
+                    assertThat(transportFailure.diagnostic().retryAfterNotBefore()).isEqualTo(start.plusSeconds(60));
+                    assertThat(transportFailure.diagnostic().phase()).isEqualTo(mode.equals("ipc-timeout")
+                            ? PlaywrightTransportDiagnostic.Phase.PARENT_IPC_WAIT
+                            : PlaywrightTransportDiagnostic.Phase.READING_BODY);
+                }
+            }
+            assertThat(observed.stream().filter(d -> d.httpStatus() != null).findFirst().isPresent())
+                    .isEqualTo(!mode.equals("malformed"));
+        } finally {
+            // A crashed peer or aborted observer has no authenticated terminal frame.
+            // Verify explicit process termination, rather than pretending graceful close succeeded.
+            supervisor.stopCampaign(campaignId, allowlist);
+            awaitNoActiveCampaign(supervisor);
+            campaign.close();
+        }
+        worker.get().join(2_000);
+        assertThat(worker.get().isAlive()).isFalse();
+        assertThat(workerFailure.get()).isNull();
+    }
+
+    private static void runProgressWorker(ProcessBuilder builder, String mode, AtomicReference<Throwable> failure) {
+        try (Socket socket = new Socket("127.0.0.1", Integer.parseInt(builder.environment().get("SOFASCORE_PLAYWRIGHT_IPC_PORT")))) {
+            var output = new DataOutputStream(socket.getOutputStream());
+            var input = new DataInputStream(socket.getInputStream());
+            output.writeInt(ChildJvmPlaywrightProviderSupervisor.MAGIC);
+            output.writeInt(ChildJvmPlaywrightProviderSupervisor.VERSION);
+            output.writeUTF(builder.environment().get("SOFASCORE_PLAYWRIGHT_IPC_TOKEN")); output.flush();
+            assertThat(input.readUnsignedByte()).isEqualTo(ChildJvmPlaywrightProviderSupervisor.START);
+            output.writeByte(ChildJvmPlaywrightProviderSupervisor.READY); output.flush();
+            assertThat(input.readUnsignedByte()).isEqualTo(ChildJvmPlaywrightProviderSupervisor.GET);
+            readProviderRequest(input);
+            long start = Instant.parse("2026-09-09T12:00:00Z").toEpochMilli();
+            for (int stage = 0; stage < 4; stage++) {
+                output.writeByte(ChildJvmPlaywrightProviderSupervisor.PROGRESS);
+                output.writeByte(mode.equals("malformed") ? 2 : stage);
+                output.writeInt(250); output.writeLong(stage == 0 ? -1 : start);
+                output.writeLong(stage < 2 ? -1 : start + 1);
+                output.writeInt(stage < 2 ? 0 : 429);
+                output.writeLong(stage < 2 ? -1 : start + 60_000); output.flush();
+                if (mode.equals("malformed")) break;
+            }
+            if (mode.equals("worker-crash")) return;
+            if (mode.equals("worker-timeout")) {
+                output.writeByte(ChildJvmPlaywrightProviderSupervisor.FAILURE);
+                output.writeUTF("TIMEOUT"); output.flush();
+            }
+            if (mode.startsWith("contradictory-")) {
+                output.writeByte(ChildJvmPlaywrightProviderSupervisor.RESPONSE);
+                output.writeLong(mode.equals("contradictory-requested-at") ? start + 1 : start);
+                output.writeLong(mode.equals("contradictory-received-at") ? start : start + 2);
+                output.writeInt(mode.equals("contradictory-status") ? 200 : 429);
+                // No body is sent: the conflicting terminal metadata must fail before reading it.
+                output.flush();
+            }
+            int command = input.read();
+            if (command == ChildJvmPlaywrightProviderSupervisor.CLOSE) {
+                output.writeByte(ChildJvmPlaywrightProviderSupervisor.CLOSED); output.flush();
+                assertThat(input.read()).isEqualTo(-1);
+            } else assertThat(command).isEqualTo(-1);
+        } catch (java.net.SocketException closed) { /* parent can abort after rejected progress */ }
+        catch (Throwable problem) { failure.set(problem); }
+    }
 
     @Test
     void parentDelayGateWaitsAt2999MillisecondsAndAdmitsAt3000() {
@@ -72,7 +282,7 @@ class ChildJvmPlaywrightProviderSupervisorTest {
         gate.awaitNextDispatch(() -> { });
 
         assertThat(pauses).isEmpty();
-        assertThat(ChildJvmPlaywrightProviderSupervisor.VERSION).isEqualTo(5);
+        assertThat(ChildJvmPlaywrightProviderSupervisor.VERSION).isEqualTo(9);
     }
 
     @Test
@@ -284,6 +494,233 @@ class ChildJvmPlaywrightProviderSupervisorTest {
         assertThat(workerFailures).allSatisfy(failure -> assertThat(failure.get()).isNull());
     }
 
+    @ParameterizedTest @ValueSource(booleans = {false, true})
+    void manualJ5GroupRemovesOnlyInnerFencesAcrossManualAndLiveWorkerTransitions(boolean v5) throws Exception {
+        var properties = enabledProperties("manual-j5-group-delay.jar");
+        var access = new DelayGateProcessTreeAccess();
+        List<Long> starts = Collections.synchronizedList(new ArrayList<>());
+        List<Thread> workers = Collections.synchronizedList(new ArrayList<>());
+        List<AtomicReference<Throwable>> failures = new ArrayList<>();
+        AtomicInteger gets = new AtomicInteger(), launches = new AtomicInteger();
+        var supervisor = new ChildJvmPlaywrightProviderSupervisor(properties, Clock.systemUTC(),
+                new SecureRandom(), builder -> {
+                    int index = launches.getAndIncrement();
+                    Instant started = Instant.parse("2026-09-08T10:00:00Z").plusSeconds(index);
+                    var root = ownedHandle(2_300L + index, started, true, true);
+                    var failure = new AtomicReference<Throwable>();
+                    failures.add(failure);
+                    workers.add(startRespondingWorker(builder, access::nanoTime,
+                            () -> access.advance(Duration.ofMillis(33)), false, gets, starts, failure));
+                    return processWithStartInstant(root.handle(), started);
+                }, access);
+        long event = 16_416_319L;
+        var manualEndpoints = Set.of(SofascoreEndpointType.EVENT_STATISTICS,
+                SofascoreEndpointType.EVENT_INCIDENTS, SofascoreEndpointType.EVENT_LINEUPS);
+        try (var j4 = supervisor.open(UUID.randomUUID(), Set.of(SofascoreEndpointType.EVENT_DETAILS))) {
+            j4.execute(PlaywrightProviderRequest.eventDetails(event));
+            j4.execute(PlaywrightProviderRequest.eventDetails(event + 1));
+        }
+        for (int index = 0; index < 2; index++) {
+            long closedAt = access.nanoTime();
+            UUID id = UUID.randomUUID();
+            var scope = new LiveProviderDispatchGroup(id, UUID.randomUUID(), event,
+                    LiveProviderDispatchGroup.Phase.MANUAL_J5);
+            try (var manual = supervisor.openManualJ5Grouped(id, manualEndpoints)) {
+                manual.executeGrouped(PlaywrightProviderRequest.eventStatistics(event), scope,
+                        PlaywrightDispatchAdmission.UNRESTRICTED);
+                assertThat(starts.getLast()).isGreaterThanOrEqualTo(closedAt + Duration.ofSeconds(3).toNanos());
+                long firstStart = starts.getLast();
+                manual.executeGrouped(PlaywrightProviderRequest.eventIncidents(event), scope,
+                        PlaywrightDispatchAdmission.UNRESTRICTED);
+                manual.executeGrouped(PlaywrightProviderRequest.eventLineups(event), scope,
+                        PlaywrightDispatchAdmission.UNRESTRICTED);
+                assertThat(starts.subList(starts.size() - 3, starts.size()))
+                        .containsExactly(firstStart, firstStart + 33_000_000L, firstStart + 66_000_000L);
+                assertThatThrownBy(() -> manual.execute(PlaywrightProviderRequest.eventStatistics(event)))
+                        .isInstanceOf(PlaywrightProviderException.class);
+            }
+        }
+        long closedAt = access.nanoTime();
+        UUID liveId = UUID.randomUUID();
+        var liveEndpoints = Set.of(SofascoreEndpointType.EVENT_DETAILS,
+                SofascoreEndpointType.EVENT_INCIDENTS, SofascoreEndpointType.EVENT_STATISTICS,
+                SofascoreEndpointType.EVENT_LINEUPS);
+        try (var live = v5 ? supervisor.openLiveGroupedV5(liveId, liveEndpoints)
+                : supervisor.openLiveGrouped(liveId, liveEndpoints)) {
+            live.executeGrouped(PlaywrightProviderRequest.eventDetails(event),
+                    new LiveProviderDispatchGroup(liveId, UUID.randomUUID(), event, LiveProviderDispatchGroup.Phase.CHECK),
+                    PlaywrightDispatchAdmission.UNRESTRICTED);
+            assertThat(starts.getLast()).isGreaterThanOrEqualTo(closedAt + Duration.ofSeconds(3).toNanos());
+        }
+        // Closing a live session ends its authority; the next live worker still waits three seconds.
+        closedAt = access.nanoTime();
+        UUID nextLiveId = UUID.randomUUID();
+        try (var live = v5 ? supervisor.openLiveGroupedV5(nextLiveId, liveEndpoints)
+                : supervisor.openLiveGrouped(nextLiveId, liveEndpoints)) {
+            live.executeGrouped(PlaywrightProviderRequest.eventDetails(event),
+                    new LiveProviderDispatchGroup(nextLiveId, UUID.randomUUID(), event, LiveProviderDispatchGroup.Phase.CHECK),
+                    PlaywrightDispatchAdmission.UNRESTRICTED);
+            assertThat(starts.getLast()).isGreaterThanOrEqualTo(closedAt + Duration.ofSeconds(3).toNanos());
+        }
+        closedAt = access.nanoTime();
+        UUID lastManualId = UUID.randomUUID();
+        try (var manual = supervisor.openManualJ5Grouped(lastManualId, manualEndpoints)) {
+            manual.executeGrouped(PlaywrightProviderRequest.eventStatistics(event),
+                    new LiveProviderDispatchGroup(lastManualId, UUID.randomUUID(), event, LiveProviderDispatchGroup.Phase.MANUAL_J5),
+                    PlaywrightDispatchAdmission.UNRESTRICTED);
+            assertThat(starts.getLast()).isGreaterThanOrEqualTo(closedAt + Duration.ofSeconds(3).toNanos());
+        }
+        assertThat(starts.get(1) - starts.getFirst()).isEqualTo(Duration.ofMillis(3_033).toNanos());
+        assertThat(gets).hasValue(11);
+        for (var worker : workers) { worker.join(2_000); assertThat(worker.isAlive()).isFalse(); }
+        assertThat(failures).allSatisfy(failure -> assertThat(failure.get()).isNull());
+    }
+
+    @ParameterizedTest @ValueSource(strings = {"live-v4", "live-v5", "live-v8", "live-v9", "live-v10"})
+    void groupedPoliciesKeepHistoricalContinuationsButV8V9AndV10FenceEveryFamilyExchange(String policy)
+            throws Exception {
+        ProviderPlaywrightProperties properties = enabledProperties("live-group-delay.jar");
+        Instant rootStartedAt = Instant.parse("2026-09-08T10:00:00Z");
+        OwnedHandle root = ownedHandle(2_106L, rootStartedAt, true, true);
+        Process process = processWithStartInstant(root.handle(), rootStartedAt);
+        var access = new DelayGateProcessTreeAccess();
+        List<Long> observedStarts = Collections.synchronizedList(new ArrayList<>());
+        AtomicInteger getCount = new AtomicInteger();
+        AtomicReference<Thread> workerThread = new AtomicReference<>();
+        AtomicReference<Throwable> workerFailure = new AtomicReference<>();
+        var supervisor = new ChildJvmPlaywrightProviderSupervisor(properties, Clock.systemUTC(),
+                new SecureRandom(), builder -> {
+                    workerThread.set(startRespondingWorker(builder, access::nanoTime,
+                            () -> access.advance(Duration.ofMillis(33)), false,
+                            getCount, observedStarts, workerFailure));
+                    return process;
+                }, access);
+        Set<SofascoreEndpointType> endpoints = Set.of(SofascoreEndpointType.EVENT_DETAILS,
+                SofascoreEndpointType.EVENT_INCIDENTS, SofascoreEndpointType.EVENT_STATISTICS,
+                SofascoreEndpointType.EVENT_LINEUPS);
+        UUID campaignId = UUID.randomUUID(), groupId = UUID.randomUUID();
+        long event = 16_416_319L;
+        PlaywrightProviderCampaign campaign = switch (policy) {
+            case "live-v10" -> supervisor.openLiveGroupedV10(campaignId, endpoints);
+            case "live-v9" -> supervisor.openLiveGroupedV9(campaignId, endpoints);
+            case "live-v5" -> supervisor.openLiveGroupedV5(campaignId, endpoints);
+            case "live-v8" -> supervisor.openLiveGroupedV8(campaignId, endpoints);
+            default -> supervisor.openLiveGrouped(campaignId, endpoints);
+        };
+        var check = new LiveProviderDispatchGroup(campaignId, groupId, event,
+                LiveProviderDispatchGroup.Phase.CHECK);
+        var playing = new LiveProviderDispatchGroup(campaignId, groupId, event,
+                LiveProviderDispatchGroup.Phase.IN_PLAY);
+
+        campaign.executeGrouped(PlaywrightProviderRequest.eventDetails(event), check,
+                PlaywrightDispatchAdmission.UNRESTRICTED);
+        campaign.executeGrouped(PlaywrightProviderRequest.eventIncidents(event), playing,
+                PlaywrightDispatchAdmission.UNRESTRICTED);
+        campaign.executeGrouped(PlaywrightProviderRequest.eventStatistics(event), playing,
+                PlaywrightDispatchAdmission.UNRESTRICTED);
+        campaign.executeGrouped(PlaywrightProviderRequest.eventLineups(event), playing,
+                PlaywrightDispatchAdmission.UNRESTRICTED);
+        boolean v8PressureProfile = "live-v8".equals(policy) || "live-v9".equals(policy)
+                || "live-v10".equals(policy);
+        long continuationFenceMillis = v8PressureProfile ? 500 : 0;
+        long groupFenceMillis = "live-v5".equals(policy) ? 1_000 : v8PressureProfile ? 500 : 3_000;
+        assertThat(observedStarts).containsExactly(0L,
+                Duration.ofMillis(33 + continuationFenceMillis).toNanos(),
+                Duration.ofMillis(66 + 2 * continuationFenceMillis).toNanos(),
+                Duration.ofMillis(99 + 3 * continuationFenceMillis).toNanos());
+        assertThat(access.gatePauseTotal()).isEqualTo(Duration.ofMillis(3 * continuationFenceMillis));
+
+        UUID nextGroup = UUID.randomUUID();
+        campaign.executeGrouped(PlaywrightProviderRequest.eventDetails(event),
+                new LiveProviderDispatchGroup(campaignId, nextGroup, event, LiveProviderDispatchGroup.Phase.CHECK),
+                PlaywrightDispatchAdmission.UNRESTRICTED);
+        long nextGroupStartMillis = 132 + 3 * continuationFenceMillis + groupFenceMillis;
+        assertThat(observedStarts.getLast()).isEqualTo(Duration.ofMillis(nextGroupStartMillis).toNanos());
+        assertThat(access.gatePauseTotal()).isEqualTo(Duration.ofMillis(3 * continuationFenceMillis + groupFenceMillis));
+        // A historical execute invocation cannot inherit the live group's exception.
+        campaign.execute(PlaywrightProviderRequest.eventDetails(event));
+        assertThat(observedStarts.getLast()).isEqualTo(Duration.ofMillis(nextGroupStartMillis + 3_033).toNanos());
+        assertThat(access.gatePauseTotal()).isEqualTo(Duration.ofMillis(3 * continuationFenceMillis + groupFenceMillis + 3_000));
+        assertThatThrownBy(() -> campaign.executeGrouped(PlaywrightProviderRequest.eventIncidents(event),
+                new LiveProviderDispatchGroup(campaignId, nextGroup, event, LiveProviderDispatchGroup.Phase.IN_PLAY),
+                PlaywrightDispatchAdmission.UNRESTRICTED))
+                .isInstanceOf(PlaywrightProviderException.class).extracting("failure")
+                .isEqualTo(PlaywrightProviderFailure.INVALID_REQUEST);
+        assertThat(getCount).hasValue(6);
+
+        campaign.close();
+        workerThread.get().join(2_000);
+        assertThat(workerThread.get().isAlive()).isFalse();
+        assertThat(workerFailure.get()).isNull();
+    }
+
+    @ParameterizedTest
+    @ValueSource(strings = {"live-v9", "live-v10"})
+    void liveV9AndV10TransmitOnlyTheOpaqueConditionalValidatorAndAcceptAnEmpty304Response(String policy)
+            throws Exception {
+        ProviderPlaywrightProperties properties = enabledProperties(policy + "-conditional.jar");
+        Instant rootStartedAt = Instant.parse("2026-09-11T12:00:00Z");
+        OwnedHandle root = ownedHandle(2_109L, rootStartedAt, true, true);
+        Process process = processWithStartInstant(root.handle(), rootStartedAt);
+        var access = new DelayGateProcessTreeAccess();
+        AtomicReference<Thread> workerThread = new AtomicReference<>();
+        AtomicReference<Throwable> workerFailure = new AtomicReference<>();
+        String requestTag = "W/\"request-validator\"";
+        String responseTag = "W/\"response-validator\"";
+        var supervisor = new ChildJvmPlaywrightProviderSupervisor(properties, Clock.systemUTC(),
+                new SecureRandom(), builder -> {
+                    workerThread.set(startLiveV9ConditionalWorker(
+                            builder, requestTag, responseTag, workerFailure));
+                    return process;
+                }, access);
+        Set<SofascoreEndpointType> endpoints = Set.of(SofascoreEndpointType.EVENT_DETAILS,
+                SofascoreEndpointType.EVENT_INCIDENTS, SofascoreEndpointType.EVENT_STATISTICS,
+                SofascoreEndpointType.EVENT_LINEUPS);
+        UUID campaignId = UUID.randomUUID();
+        long eventId = 16_416_319L;
+        try (PlaywrightProviderCampaign campaign = "live-v10".equals(policy)
+                ? supervisor.openLiveGroupedV10(campaignId, endpoints)
+                : supervisor.openLiveGroupedV9(campaignId, endpoints)) {
+            PlaywrightProviderResponse response = campaign.executeGrouped(
+                    PlaywrightProviderRequest.eventDetails(
+                            eventId, PlaywrightProviderEntityTag.of(requestTag)),
+                    new LiveProviderDispatchGroup(
+                            campaignId,
+                            UUID.randomUUID(),
+                            eventId,
+                            LiveProviderDispatchGroup.Phase.CHECK),
+                    PlaywrightDispatchAdmission.UNRESTRICTED);
+
+            assertThat(response.httpStatus()).isEqualTo(304);
+            assertThat(response.payload().sizeBytes()).isZero();
+            assertThat(response.entityTag()).contains(PlaywrightProviderEntityTag.of(responseTag));
+            assertThat(response.entityTag().orElseThrow().toString()).doesNotContain(responseTag);
+        }
+        workerThread.get().join(2_000);
+        assertThat(workerThread.get().isAlive()).isFalse();
+        assertThat(workerFailure.get()).isNull();
+    }
+
+    @Test
+    void groupedContinuationStillChecksCancellationAndMonotonicEvidence() {
+        AtomicLong nanoTime = new AtomicLong();
+        AtomicInteger pauses = new AtomicInteger();
+        var gate = new ProviderNetworkStartDelayGate(Duration.ofSeconds(3), nanoTime::get,
+                duration -> pauses.incrementAndGet());
+        gate.recordDispatchFinished(true);
+        assertThatThrownBy(() -> gate.admitGroupContinuation(() -> {
+            throw new PlaywrightDispatchCancelledException();
+        })).isInstanceOf(PlaywrightDispatchCancelledException.class);
+        gate.admitGroupContinuation(() -> { });
+        assertThat(pauses).hasValue(0);
+        nanoTime.set(-1);
+        assertThatThrownBy(() -> gate.admitGroupContinuation(() -> { }))
+                .isInstanceOf(ProviderNetworkStartDelayGate.TimingEvidenceException.class);
+        assertThat(gate.timingEvidenceLost()).isTrue();
+        assertThatThrownBy(() -> gate.awaitNextDispatch(() -> { }))
+                .isInstanceOf(ProviderNetworkStartDelayGate.TimingEvidenceException.class);
+    }
+
     @Test
     void unusableResponseTimestampPoisonsEveryLaterParentDispatch() throws Exception {
         ProviderPlaywrightProperties properties = enabledProperties("unusable-time.jar");
@@ -334,8 +771,8 @@ class ChildJvmPlaywrightProviderSupervisorTest {
         assertThat(workerFailure.get()).isNull();
     }
 
-    @Test
-    void operatorStopDuringDelayCannotRaceIntoAnotherGet() throws Exception {
+    @ParameterizedTest @ValueSource(booleans = {false, true})
+    void operatorStopDuringDelayCannotRaceIntoAnotherGet(boolean v5) throws Exception {
         ProviderPlaywrightProperties properties = enabledProperties("stop-during-delay.jar");
         Instant rootStartedAt = Instant.parse("2026-08-31T07:03:00Z");
         OwnedHandle root = ownedHandle(2_105L, rootStartedAt, true, true);
@@ -365,12 +802,22 @@ class ChildJvmPlaywrightProviderSupervisorTest {
                 },
                 access);
         UUID campaignId = UUID.randomUUID();
-        Set<SofascoreEndpointType> allowlist = Set.of(SofascoreEndpointType.EVENT_DETAILS);
-        PlaywrightProviderCampaign campaign = supervisor.open(campaignId, allowlist);
-        campaign.execute(PlaywrightProviderRequest.eventDetails(16_386_245L));
+        Set<SofascoreEndpointType> allowlist = v5
+                ? Set.of(SofascoreEndpointType.EVENT_DETAILS, SofascoreEndpointType.EVENT_INCIDENTS,
+                        SofascoreEndpointType.EVENT_STATISTICS, SofascoreEndpointType.EVENT_LINEUPS)
+                : Set.of(SofascoreEndpointType.EVENT_DETAILS);
+        PlaywrightProviderCampaign campaign = v5 ? supervisor.openLiveGroupedV5(campaignId, allowlist)
+                : supervisor.open(campaignId, allowlist);
+        Runnable execute = () -> {
+            if (v5) campaign.executeGrouped(PlaywrightProviderRequest.eventDetails(16_386_245L),
+                    new LiveProviderDispatchGroup(campaignId, UUID.randomUUID(), 16_386_245L,
+                            LiveProviderDispatchGroup.Phase.CHECK), PlaywrightDispatchAdmission.UNRESTRICTED);
+            else campaign.execute(PlaywrightProviderRequest.eventDetails(16_386_245L));
+        };
+        execute.run();
         CompletableFuture<Throwable> delayedExecution = CompletableFuture.supplyAsync(() -> {
             try {
-                campaign.execute(PlaywrightProviderRequest.eventDetails(16_386_245L));
+                execute.run();
                 return null;
             }
             catch (Throwable failure) {
@@ -1728,6 +2175,62 @@ class ChildJvmPlaywrightProviderSupervisorTest {
                         failure));
     }
 
+    private static Thread startLiveV9ConditionalWorker(
+            ProcessBuilder builder,
+            String expectedRequestTag,
+            String responseTag,
+            AtomicReference<Throwable> failure) {
+        int port = Integer.parseInt(builder.environment().get(
+                "SOFASCORE_PLAYWRIGHT_IPC_PORT"));
+        String token = builder.environment().get("SOFASCORE_PLAYWRIGHT_IPC_TOKEN");
+        return Thread.ofPlatform()
+                .name("fake-playwright-live-v9-conditional-" + port)
+                .start(() -> {
+                    try (Socket socket = new Socket()) {
+                        socket.connect(new InetSocketAddress(
+                                InetAddress.getByName("127.0.0.1"), port), 1_000);
+                        DataOutputStream output = new DataOutputStream(socket.getOutputStream());
+                        output.writeInt(ChildJvmPlaywrightProviderSupervisor.MAGIC);
+                        output.writeInt(ChildJvmPlaywrightProviderSupervisor.VERSION);
+                        output.writeUTF(token);
+                        output.flush();
+                        try (DataInputStream input = new DataInputStream(
+                                new BufferedInputStream(socket.getInputStream()))) {
+                            assertThat(input.readUnsignedByte())
+                                    .isEqualTo(ChildJvmPlaywrightProviderSupervisor.START);
+                            output.writeByte(ChildJvmPlaywrightProviderSupervisor.READY);
+                            output.flush();
+                            assertThat(input.readUnsignedByte())
+                                    .isEqualTo(ChildJvmPlaywrightProviderSupervisor.GET_LIVE_V9);
+                            assertThat(input.readUTF()).isEqualTo(
+                                    SofascoreEndpointType.EVENT_DETAILS.name());
+                            assertThat(input.readLong()).isEqualTo(16_416_319L);
+                            assertThat(input.readUnsignedByte()).isEqualTo(1);
+                            assertThat(input.readUTF()).isEqualTo(expectedRequestTag);
+                            assertThat(input.readInt()).isEqualTo(2_000);
+                            long requestedAt = Instant.parse("2026-09-11T12:00:01Z").toEpochMilli();
+                            output.writeByte(ChildJvmPlaywrightProviderSupervisor.RESPONSE_V9);
+                            output.writeLong(requestedAt);
+                            output.writeLong(requestedAt + 1);
+                            output.writeInt(304);
+                            output.writeUTF("");
+                            output.writeBoolean(true);
+                            output.writeUTF(responseTag);
+                            output.writeInt(0);
+                            output.flush();
+                            assertThat(input.readUnsignedByte())
+                                    .isEqualTo(ChildJvmPlaywrightProviderSupervisor.CLOSE);
+                            output.writeByte(ChildJvmPlaywrightProviderSupervisor.CLOSED);
+                            output.flush();
+                            assertThat(input.read()).isEqualTo(-1);
+                        }
+                    }
+                    catch (Throwable exception) {
+                        failure.set(exception);
+                    }
+                });
+    }
+
     private static void runRespondingWorker(
             int port,
             String token,
@@ -1763,8 +2266,11 @@ class ChildJvmPlaywrightProviderSupervisorTest {
                         assertThat(input.read()).isEqualTo(-1);
                         return;
                     }
-                    assertThat(command).isEqualTo(ChildJvmPlaywrightProviderSupervisor.GET);
-                    readProviderRequest(input);
+                    assertThat(command).isIn(
+                            Byte.toUnsignedInt(ChildJvmPlaywrightProviderSupervisor.GET),
+                            Byte.toUnsignedInt(ChildJvmPlaywrightProviderSupervisor.GET_LIVE_V6),
+                            Byte.toUnsignedInt(ChildJvmPlaywrightProviderSupervisor.GET_LIVE_V9));
+                    readProviderRequest(input, command);
                     observedStarts.add(nanoTime.getAsLong());
                     int requestIndex = getCount.incrementAndGet();
                     afterGet.run();
@@ -1775,13 +2281,18 @@ class ChildJvmPlaywrightProviderSupervisorTest {
                             ? requestedAt - 1
                             : requestedAt + 10;
                     byte[] body = "{\"ok\":true}".getBytes(StandardCharsets.UTF_8);
-                    output.writeByte(ChildJvmPlaywrightProviderSupervisor.RESPONSE);
+                    output.writeByte(command == ChildJvmPlaywrightProviderSupervisor.GET_LIVE_V9
+                            ? ChildJvmPlaywrightProviderSupervisor.RESPONSE_V9
+                            : ChildJvmPlaywrightProviderSupervisor.RESPONSE);
                     output.writeLong(requestedAt);
                     output.writeLong(receivedAt);
                     malformedResponseTimestampWritten =
                             malformedFirstTimestamp && requestIndex == 1;
                     output.writeInt(200);
                     output.writeUTF("application/json");
+                    if (command == ChildJvmPlaywrightProviderSupervisor.GET_LIVE_V9) {
+                        output.writeBoolean(false);
+                    }
                     output.writeInt(body.length);
                     output.write(body);
                     output.flush();
@@ -1799,6 +2310,10 @@ class ChildJvmPlaywrightProviderSupervisorTest {
     }
 
     private static void readProviderRequest(DataInputStream input) throws IOException {
+        readProviderRequest(input, ChildJvmPlaywrightProviderSupervisor.GET);
+    }
+
+    private static void readProviderRequest(DataInputStream input, int command) throws IOException {
         SofascoreEndpointType endpoint = SofascoreEndpointType.valueOf(input.readUTF());
         switch (endpoint) {
             case SCHEDULED_EVENTS -> {
@@ -1812,6 +2327,15 @@ class ChildJvmPlaywrightProviderSupervisorTest {
             case EVENT_DETAILS, EVENT_STATISTICS, EVENT_INCIDENTS, EVENT_LINEUPS ->
                     input.readLong();
             default -> throw new AssertionError("unexpected endpoint: " + endpoint);
+        }
+        if (command == ChildJvmPlaywrightProviderSupervisor.GET_LIVE_V9) {
+            int conditionalValidatorPresent = input.readUnsignedByte();
+            if (conditionalValidatorPresent == 1) {
+                input.readUTF();
+            }
+            else if (conditionalValidatorPresent != 0) {
+                throw new AssertionError("unexpected conditional validator marker");
+            }
         }
         input.readInt();
     }

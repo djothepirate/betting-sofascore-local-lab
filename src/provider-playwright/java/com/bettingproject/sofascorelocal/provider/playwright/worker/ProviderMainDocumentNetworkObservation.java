@@ -25,6 +25,12 @@ final class ProviderMainDocumentNetworkObservation {
     private boolean responseObserved;
     private boolean cachedOrSynthetic;
     private boolean invalid;
+    private double requestTimestamp;
+    private boolean cancellationRequested;
+    private boolean terminalObserved;
+    private TerminalProof terminalProof;
+
+    record TerminalProof(Instant endedAt, int reason) { }
 
     ProviderMainDocumentNetworkObservation(String exactUri, String mainFrameId) {
         this(exactUri, mainFrameId, Clock.systemUTC());
@@ -77,6 +83,7 @@ final class ProviderMainDocumentNetworkObservation {
         }
         requestId = observedRequestId;
         requestedAt = observedAt;
+        requestTimestamp = event.get("timestamp").getAsDouble();
     }
 
     synchronized void onRequestServedFromCache(JsonObject event) {
@@ -114,6 +121,36 @@ final class ProviderMainDocumentNetworkObservation {
         cachedOrSynthetic = true;
     }
 
+    synchronized void beginCancellation() { cancellationRequested = true; }
+
+    synchronized void onLoadingFinished(JsonObject event) {
+        observeTerminal(event, 1, responseObserved);
+    }
+
+    synchronized void onLoadingFailed(JsonObject event) {
+        observeTerminal(event, 2, cancellationRequested && booleanFlag(event, "canceled")
+                && DOCUMENT_RESOURCE_TYPE.equals(string(event, "type")));
+    }
+
+    private void observeTerminal(JsonObject event, int reason, boolean usable) {
+        if (!matchesObservedRequest(event)) return;
+        if (terminalObserved || !finiteNonNegativeNumber(event, "timestamp")
+                || event.get("timestamp").getAsDouble() < requestTimestamp) {
+            invalid = true;
+            return;
+        }
+        terminalObserved = true;
+        Instant endedAt = clock.instant();
+        if (usable && endedAt != null && !endedAt.isBefore(requestedAt))
+            terminalProof = new TerminalProof(endedAt, reason);
+    }
+
+    synchronized boolean terminalObserved() { return terminalObserved; }
+
+    synchronized TerminalProof terminalProofIfObserved() {
+        return invalid || cachedOrSynthetic ? null : terminalProof;
+    }
+
     synchronized Instant requireNetworkStartedAt() {
         if (invalid
                 || cachedOrSynthetic
@@ -123,6 +160,16 @@ final class ProviderMainDocumentNetworkObservation {
             throw new IllegalStateException(
                     "exact provider document network observation is incomplete");
         }
+        return requestedAt;
+    }
+
+    synchronized Instant requestStartedAtIfObserved() {
+        return invalid || cachedOrSynthetic ? null : requestedAt;
+    }
+
+    synchronized Instant requireRequestStartedAt(String networkId) {
+        if (invalid || cachedOrSynthetic || requestedAt == null || requestId == null || !requestId.equals(networkId))
+            throw new IllegalStateException("exact network request correlation unavailable");
         return requestedAt;
     }
 

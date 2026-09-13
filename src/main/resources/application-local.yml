@@ -5,6 +5,10 @@ spring:
   thymeleaf:
     cache: false
 
+sofascore:
+  playwright:
+    request-timeout: ${SOFASCORE_PLAYWRIGHT_REQUEST_TIMEOUT:20s}
+
 logging:
   level:
     org.flywaydb: INFO

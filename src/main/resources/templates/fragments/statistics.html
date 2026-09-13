@@ -1,0 +1,50 @@
+<!DOCTYPE html>
+<html lang="fr" xmlns:th="http://www.thymeleaf.org">
+<body>
+<div th:fragment="view(stats)" class="statistics-view" data-statistics
+     th:attr="data-stat-default=${stats.defaultPeriod}">
+  <label class="statistics-selector" data-stat-control hidden>
+    Période des statistiques
+    <select data-stat-select>
+      <option th:each="period : ${stats.periods}" th:value="${period.code}" th:text="${period.label}">Période</option>
+    </select>
+  </label>
+  <p class="statistics-note">Seules les périodes présentes dans cette observation sont proposées. ALL n’est pas additionné aux autres périodes.</p>
+  <p class="statistics-announcement" data-stat-announcement role="status" aria-live="polite"></p>
+  <div data-stat-periods>
+    <p th:if="${stats.periods.isEmpty()}">Collection normalisée vide : aucune statistique disponible.</p>
+    <details th:each="period : ${stats.periods}" class="statistics-period" open
+             th:attr="data-stat-period=${period.code}" th:aria-label="${period.label}">
+      <summary><h4 th:text="${period.label}">Période</h4></summary>
+      <div class="statistics-teams"><span>Domicile</span><span>Extérieur</span></div>
+      <details th:each="group : ${period.groups}" class="statistics-group" open
+               th:attr="data-stat-group=${group.name}">
+        <summary><h5 th:text="${group.label}">Groupe</h5></summary>
+        <article th:each="metric : ${group.metrics}" class="statistics-metric">
+          <h6 th:text="${metric.label}">Statistique</h6>
+          <div class="statistics-values">
+            <div class="statistics-value statistics-home" th:attr="data-stat-value-state=${metric.home.state}">
+              <span class="statistics-side">Domicile</span>
+              <strong th:text="${metric.home.text}">—</strong>
+              <meter th:if="${metric.home.ratio and metric.home.percentage != null}" class="statistics-track"
+                     min="0" max="100" th:value="${metric.home.percentage}" aria-hidden="true"></meter>
+              <small th:if="${!metric.home.note.isEmpty()}" th:text="${metric.home.note}">Précision</small>
+            </div>
+            <div class="statistics-value statistics-away" th:attr="data-stat-value-state=${metric.away.state}">
+              <span class="statistics-side">Extérieur</span>
+              <strong th:text="${metric.away.text}">—</strong>
+              <meter th:if="${metric.away.ratio and metric.away.percentage != null}" class="statistics-track"
+                     min="0" max="100" th:value="${metric.away.percentage}" aria-hidden="true"></meter>
+              <small th:if="${!metric.away.note.isEmpty()}" th:text="${metric.away.note}">Précision</small>
+            </div>
+          </div>
+          <meter th:if="${metric.possessionHome != null}" class="statistics-possession"
+                 min="0" max="100" th:value="${metric.possessionHome}" aria-hidden="true"></meter>
+          <p th:if="${!metric.note.isEmpty()}" class="statistics-note" th:text="${metric.note}">Précision</p>
+        </article>
+      </details>
+    </details>
+  </div>
+</div>
+</body>
+</html>

@@ -1,0 +1,390 @@
+{
+  "measuredRuntime": "live-v4 sustained qualification started 2026-09-08T10:47Z",
+  "capturedAt": "2026-09-08T10:55:52.6297000Z",
+  "files": [
+    {
+      "path": "target/betting-sofascore-local-lab-0.1.0-rc.1-SNAPSHOT-provider-playwright-worker.jar",
+      "sha256": "7fc7c139edabe1fcc2b4cd4e19eb6379fe134e8b65252d8c1e9cda9faef28bbf"
+    },
+    {
+      "path": "target/provider-playwright-runtime/classes/com/bettingproject/sofascorelocal/adapter/persistence/live/JdbcLiveCampaignStore.class",
+      "sha256": "4c74e86bd41a0c8f50cf6cb2848582c3d21f2dc43e4a1835197aab03a5a96348"
+    },
+    {
+      "path": "target/provider-playwright-runtime/classes/com/bettingproject/sofascorelocal/adapter/persistence/live/JdbcProviderCampaignGuardStore.class",
+      "sha256": "615b33ac532054d612322c073870f6fb9d16702597a7d262da86cd94f1d45b17"
+    },
+    {
+      "path": "target/provider-playwright-runtime/classes/com/bettingproject/sofascorelocal/application/live/DockerLiveStorageCapacityProbe.class",
+      "sha256": "e7f1a1151e98a5fff785eeb301e480e90e2c1fc7b2fe20b57187222eff958362"
+    },
+    {
+      "path": "target/provider-playwright-runtime/classes/com/bettingproject/sofascorelocal/application/live/GroupedLiveAdmissionSimulation.class",
+      "sha256": "dd36d06d88d9b118c5072387617943268bd7f48e060f339a7ae2d0dc0e7ce243"
+    },
+    {
+      "path": "target/provider-playwright-runtime/classes/com/bettingproject/sofascorelocal/application/live/GroupedLiveAdmissionSimulation$Key.class",
+      "sha256": "ba9be17974085e93109620c9dd4ef22845b110d6d61f03ac2f347cc6a07944d8"
+    },
+    {
+      "path": "target/provider-playwright-runtime/classes/com/bettingproject/sofascorelocal/application/live/GroupedLiveScheduleV4.class",
+      "sha256": "208d4476164ba8be407f7789aab3b9b80a21c66587bdd9270b7cb7c8bc3007d5"
+    },
+    {
+      "path": "target/provider-playwright-runtime/classes/com/bettingproject/sofascorelocal/application/live/GroupedLiveScheduleV4$Event.class",
+      "sha256": "565a25ca3044281109bd7b599ddd2a9c23f7e3922420d57b7c5988c90ee2ee9f"
+    },
+    {
+      "path": "target/provider-playwright-runtime/classes/com/bettingproject/sofascorelocal/application/live/LiveAdmissionPolicy.class",
+      "sha256": "aa73e0c877a9b4742e3ff5877583866e51924d8d4d847fba3f72dccd51d117ce"
+    },
+    {
+      "path": "target/provider-playwright-runtime/classes/com/bettingproject/sofascorelocal/application/live/LiveCampaignService.class",
+      "sha256": "26842f8dcc49c1347d6ad49bfce526c343501688d0944a5e27d8a2dac98c3d8a"
+    },
+    {
+      "path": "target/provider-playwright-runtime/classes/com/bettingproject/sofascorelocal/application/live/LiveCampaignService$1.class",
+      "sha256": "db946c8f2d20037e909a93b8eb5d26c3eaac42450be5e64544c386aebb399086"
+    },
+    {
+      "path": "target/provider-playwright-runtime/classes/com/bettingproject/sofascorelocal/application/live/LiveCampaignService$Preparation.class",
+      "sha256": "84783e1c1947c12fb947a85a5d364235d6e3a42df601b9af91ad9f1a2e1f6e6a"
+    },
+    {
+      "path": "target/provider-playwright-runtime/classes/com/bettingproject/sofascorelocal/application/live/LiveCampaignService$RuntimeStatus.class",
+      "sha256": "62f1e9d718fb163484bb9d348a68c7ac1e42af1fc018b8582b9177ef7cb95841"
+    },
+    {
+      "path": "target/provider-playwright-runtime/classes/com/bettingproject/sofascorelocal/application/live/LiveCampaignService$Session.class",
+      "sha256": "e362b783026f1e84e0268da3fe4d7ed62af25b58e0899ab7a706c15b0b39bb7b"
+    },
+    {
+      "path": "target/provider-playwright-runtime/classes/com/bettingproject/sofascorelocal/application/live/LiveProcessedResponse.class",
+      "sha256": "792b3d00ae5003c29cb85765ea16b2b50cc56124b19a74fe64049af0a61f2565"
+    },
+    {
+      "path": "target/provider-playwright-runtime/classes/com/bettingproject/sofascorelocal/application/live/LiveProcessedResponse$FailureScope.class",
+      "sha256": "520a3a1d95b02b67b6dd33a793562ecaf28d8581847b135002afcfac75876316"
+    },
+    {
+      "path": "target/provider-playwright-runtime/classes/com/bettingproject/sofascorelocal/application/live/LiveProcessedResponse$Outcome.class",
+      "sha256": "71d161f5a3d7a1f51e4c6e0a3470d5bf6adbf881590f00b5173b685b8894ff14"
+    },
+    {
+      "path": "target/provider-playwright-runtime/classes/com/bettingproject/sofascorelocal/application/live/LiveProviderSession.class",
+      "sha256": "84fc4b0558b5079dab25345ceaff4747124137d13c9c5ede55e49f695ba9a507"
+    },
+    {
+      "path": "target/provider-playwright-runtime/classes/com/bettingproject/sofascorelocal/application/live/LiveReplayRunner.class",
+      "sha256": "08aecf86d82f5de6bc73fe2bc07ee02630df8a38243eb51642d5a31c2c715ce0"
+    },
+    {
+      "path": "target/provider-playwright-runtime/classes/com/bettingproject/sofascorelocal/application/live/LiveReplayRunner$OperatorStop.class",
+      "sha256": "0c0d679d09160ad99f3f33f6894bd3ae5c687b83fdfba968f96792723bd46d2f"
+    },
+    {
+      "path": "target/provider-playwright-runtime/classes/com/bettingproject/sofascorelocal/application/live/LiveReplayRunner$ReplayInput.class",
+      "sha256": "782a9d01de606623745849cb6c4b75812e9a9fa39957704140ebeae550c5141e"
+    },
+    {
+      "path": "target/provider-playwright-runtime/classes/com/bettingproject/sofascorelocal/application/live/LiveReplayRunner$ReplayResult.class",
+      "sha256": "af582401d2ee7e0c0f6fe69dd143a7fca1584bc92ab016be69d99798ffbd53ea"
+    },
+    {
+      "path": "target/provider-playwright-runtime/classes/com/bettingproject/sofascorelocal/application/live/LiveReplayRunner$Reply.class",
+      "sha256": "eea1efdb05378aca50ee680d40f742795d1262df7f72fff0bbf3eda797db67c8"
+    },
+    {
+      "path": "target/provider-playwright-runtime/classes/com/bettingproject/sofascorelocal/application/live/LiveReplayRunner$Trace.class",
+      "sha256": "80458eb8124d21ea4e32938f5bd82e65e39b0bdf36943fbadecdd0c1502f03be"
+    },
+    {
+      "path": "target/provider-playwright-runtime/classes/com/bettingproject/sofascorelocal/application/live/LiveResponseProcessor.class",
+      "sha256": "8abc170874ede697ebf6b5ebf3c89341729333594fa82665c9f595e57bdb108b"
+    },
+    {
+      "path": "target/provider-playwright-runtime/classes/com/bettingproject/sofascorelocal/application/live/LiveResponseProcessor$1.class",
+      "sha256": "84c256456804c00825132c877e8f5d63107f28a94d5dfd0b41f85b636d679547"
+    },
+    {
+      "path": "target/provider-playwright-runtime/classes/com/bettingproject/sofascorelocal/application/live/LiveSchedule.class",
+      "sha256": "88c66a8528ba8baf5f88208f7a3aebfd140e8f7d8a42e201b5ccd6f1061bc566"
+    },
+    {
+      "path": "target/provider-playwright-runtime/classes/com/bettingproject/sofascorelocal/application/live/LiveSchedule$Due.class",
+      "sha256": "12f4e243de10be86e6edc0e5dfb7d1142eb55f9e1000e77d9222bdbacbc970bc"
+    },
+    {
+      "path": "target/provider-playwright-runtime/classes/com/bettingproject/sofascorelocal/application/live/LiveSchedule$Event.class",
+      "sha256": "914b23bcdb2b84652ebbb196ba0344fa715dc3dcff23c4bbd9c8d43a0191674b"
+    },
+    {
+      "path": "target/provider-playwright-runtime/classes/com/bettingproject/sofascorelocal/application/live/LiveSchedule$EventState.class",
+      "sha256": "38bf441824cf54524ab40ac7e649d9dfa884d202f761a004cd22221d345977e6"
+    },
+    {
+      "path": "target/provider-playwright-runtime/classes/com/bettingproject/sofascorelocal/application/live/LiveStorageCapacityProbe.class",
+      "sha256": "2f7060bbfb24927698106849f8406c1d67c4d3796401cd3abb623c073569e2c5"
+    },
+    {
+      "path": "target/provider-playwright-runtime/classes/com/bettingproject/sofascorelocal/application/network/playwright/ChildJvmPlaywrightProviderSupervisor.class",
+      "sha256": "64ce83f4373eebf0a582949d24cec8417b014a881cf91a52178c82f70e12a378"
+    },
+    {
+      "path": "target/provider-playwright-runtime/classes/com/bettingproject/sofascorelocal/application/network/playwright/ChildJvmPlaywrightProviderSupervisor$1.class",
+      "sha256": "4f40dbd1a5feacef0d600ab83d41a600fe48d21017c6eb3653cf4ed4fe6d7448"
+    },
+    {
+      "path": "target/provider-playwright-runtime/classes/com/bettingproject/sofascorelocal/application/network/playwright/ChildJvmPlaywrightProviderSupervisor$Campaign.class",
+      "sha256": "3525a6f6dd6ddeb21c7c76e2eec144b2022b738afc37932a50090eaa6fda5499"
+    },
+    {
+      "path": "target/provider-playwright-runtime/classes/com/bettingproject/sofascorelocal/application/network/playwright/ChildJvmPlaywrightProviderSupervisor$CampaignPhase.class",
+      "sha256": "6da3343e44791e4cfb773652922649d7c1936a12168b506b38eb39445f81b27e"
+    },
+    {
+      "path": "target/provider-playwright-runtime/classes/com/bettingproject/sofascorelocal/application/network/playwright/ChildJvmPlaywrightProviderSupervisor$CampaignState.class",
+      "sha256": "7b610d0185bbe169709a05898849ae6d412bfc5a16bde23e95248fd251f5e774"
+    },
+    {
+      "path": "target/provider-playwright-runtime/classes/com/bettingproject/sofascorelocal/application/network/playwright/ChildJvmPlaywrightProviderSupervisor$CampaignTarget.class",
+      "sha256": "529bfe182334f377e8d552d23e66d72ba412787bac9fa02e5ff18c5fbd28a99e"
+    },
+    {
+      "path": "target/provider-playwright-runtime/classes/com/bettingproject/sofascorelocal/application/network/playwright/ChildJvmPlaywrightProviderSupervisor$OwnedProcess.class",
+      "sha256": "819f186e2632388cd93d8eb47286b6a0724df0a9fa139905ef1596b00597fce4"
+    },
+    {
+      "path": "target/provider-playwright-runtime/classes/com/bettingproject/sofascorelocal/application/network/playwright/ChildJvmPlaywrightProviderSupervisor$OwnedProcessIdentity.class",
+      "sha256": "e221cd12bb2922617affffec4ecaa1d831f1ea616eb433e9ac722ffacfd0c7fe"
+    },
+    {
+      "path": "target/provider-playwright-runtime/classes/com/bettingproject/sofascorelocal/application/network/playwright/ChildJvmPlaywrightProviderSupervisor$ProcessRegistration.class",
+      "sha256": "a5ec85b8cbca84b210bcffcea892bfe46aa0bcbb10b6e075d33c347a3c6861be"
+    },
+    {
+      "path": "target/provider-playwright-runtime/classes/com/bettingproject/sofascorelocal/application/network/playwright/ChildJvmPlaywrightProviderSupervisor$ProcessStarter.class",
+      "sha256": "5f8e93cbab41497047dcb866348f024faa781dbfcf7cb4380d444f6c892f8363"
+    },
+    {
+      "path": "target/provider-playwright-runtime/classes/com/bettingproject/sofascorelocal/application/network/playwright/ChildJvmPlaywrightProviderSupervisor$ProcessTreeAccess.class",
+      "sha256": "8781a31153e252c0fd7197400f1142df7c26fac9e307c94fa12b84f1363d3956"
+    },
+    {
+      "path": "target/provider-playwright-runtime/classes/com/bettingproject/sofascorelocal/application/network/playwright/ChildJvmPlaywrightProviderSupervisor$ProcessTreeCleanupOutcome.class",
+      "sha256": "a83227ab0106a020d1a027a90741c7879182363965e20467a07c1d8ef007edd4"
+    },
+    {
+      "path": "target/provider-playwright-runtime/classes/com/bettingproject/sofascorelocal/application/network/playwright/ChildJvmPlaywrightProviderSupervisor$ProcessTreeSnapshot.class",
+      "sha256": "a58d49487497da028ecfcd68c3e9a243257544bf48e458c56f781fe9c442ee8d"
+    },
+    {
+      "path": "target/provider-playwright-runtime/classes/com/bettingproject/sofascorelocal/application/network/playwright/ChildJvmPlaywrightProviderSupervisor$StopTombstones.class",
+      "sha256": "ee7086ddd7444bc44519f2f40d3a66278defc587573f9959ded71e3982497b9a"
+    },
+    {
+      "path": "target/provider-playwright-runtime/classes/com/bettingproject/sofascorelocal/application/network/playwright/ChildJvmPlaywrightProviderSupervisor$SupervisorLifecycle.class",
+      "sha256": "53c2402e72b180a4f9e65c2e8696970b72880483292e8feb1cd6d96d6904db0b"
+    },
+    {
+      "path": "target/provider-playwright-runtime/classes/com/bettingproject/sofascorelocal/application/network/playwright/ChildJvmPlaywrightProviderSupervisor$SystemProcessTreeAccess.class",
+      "sha256": "b23f94b7a56152ad25e934786db3cb63f3a4377b9af4927aef6ffe4cd031a1e0"
+    },
+    {
+      "path": "target/provider-playwright-runtime/classes/com/bettingproject/sofascorelocal/application/network/playwright/LiveProviderDispatchGroup.class",
+      "sha256": "73a985227b5a2c8139e381e839305ffb41b191af184f2345c261be18c5b61368"
+    },
+    {
+      "path": "target/provider-playwright-runtime/classes/com/bettingproject/sofascorelocal/application/network/playwright/LiveProviderDispatchGroup$Phase.class",
+      "sha256": "5c9fc27fec88dd4cf89178babc350891e0aa18a6a34a13d947de69b1d8dcdf8c"
+    },
+    {
+      "path": "target/provider-playwright-runtime/classes/com/bettingproject/sofascorelocal/application/network/playwright/LiveProviderGroupTracker.class",
+      "sha256": "6a2bc1b2ed67410f1a97dabf5a4fefc9d42246dfda6b7bc7b20887b0cd3c9058"
+    },
+    {
+      "path": "target/provider-playwright-runtime/classes/com/bettingproject/sofascorelocal/application/network/playwright/LiveProviderGroupTracker$1.class",
+      "sha256": "4416cf73ad6f3c1cce9c04b14bce90bf897cb6c28b60090c38942168e42bf04b"
+    },
+    {
+      "path": "target/provider-playwright-runtime/classes/com/bettingproject/sofascorelocal/application/network/playwright/ProviderNetworkStartDelayGate.class",
+      "sha256": "7eb7d2b0237591e50b69e6c648e4c7520ba0e23b7347ccbcb80334cc60e1d49f"
+    },
+    {
+      "path": "target/provider-playwright-runtime/classes/com/bettingproject/sofascorelocal/application/network/playwright/ProviderNetworkStartDelayGate$Pause.class",
+      "sha256": "c37672e6950de42a9360b4aa4acac19b80720b4c57c783785cb9e7b763a3e671"
+    },
+    {
+      "path": "target/provider-playwright-runtime/classes/com/bettingproject/sofascorelocal/application/network/playwright/ProviderNetworkStartDelayGate$TimingEvidenceException.class",
+      "sha256": "16622447dab027452d29377145f1a3eda81084a4ca12aba91363b7bd11d5d7b8"
+    },
+    {
+      "path": "target/provider-playwright-runtime/test-classes/com/bettingproject/sofascorelocal/application/live/DockerLiveStorageCapacityProbeTest.class",
+      "sha256": "a299b8edfecbdb78ad1ba920d5ce2c59cf43cd8039d8304aa05d8f4247875ce4"
+    },
+    {
+      "path": "target/provider-playwright-runtime/test-classes/com/bettingproject/sofascorelocal/application/live/GroupedLiveAdmissionPolicyV4Test.class",
+      "sha256": "a9d4ffdb8facbebffcc53a881dfeff563d1128d8416de8281388d0d6abc1ab17"
+    },
+    {
+      "path": "target/provider-playwright-runtime/test-classes/com/bettingproject/sofascorelocal/application/live/GroupedLiveScheduleV4Test.class",
+      "sha256": "7cf5d6856aa852a140d42c9647b679c6afb197587cb5a714afaee43edd298345"
+    },
+    {
+      "path": "target/provider-playwright-runtime/test-classes/com/bettingproject/sofascorelocal/application/live/LiveAdmissionPolicyTest.class",
+      "sha256": "2d5ced4ba1f221d1c4559d427433155be373e11f4d0f664f951810424ba68c17"
+    },
+    {
+      "path": "target/provider-playwright-runtime/test-classes/com/bettingproject/sofascorelocal/application/live/LiveCampaignCleanupTest.class",
+      "sha256": "28635b336df4c2817b4d9fe5058d7cbc534f114a39029e2bd1837257a7b4ca90"
+    },
+    {
+      "path": "target/provider-playwright-runtime/test-classes/com/bettingproject/sofascorelocal/application/live/LiveCampaignCleanupTest$Harness.class",
+      "sha256": "e1171a462b923f02f0d1a83576ed904f349e67baeeede1713fc55a120a73e2aa"
+    },
+    {
+      "path": "target/provider-playwright-runtime/test-classes/com/bettingproject/sofascorelocal/application/live/LiveCampaignServiceTest.class",
+      "sha256": "6b85b9cecc034966e66e56c23c333f1cd0694333d4e93add06bfffe98e508172"
+    },
+    {
+      "path": "target/provider-playwright-runtime/test-classes/com/bettingproject/sofascorelocal/application/live/LiveCampaignServiceTest$1.class",
+      "sha256": "cc5d5c886617917c9a73f649f1d2775973b88a379ba65f5f760af09af5bb079c"
+    },
+    {
+      "path": "target/provider-playwright-runtime/test-classes/com/bettingproject/sofascorelocal/application/live/LiveCampaignServiceTest$Harness.class",
+      "sha256": "6c06e8d40fe493822df427564cad577ddb30c8383cbc93b17a97ea83e260f524"
+    },
+    {
+      "path": "target/provider-playwright-runtime/test-classes/com/bettingproject/sofascorelocal/application/live/LiveMultiMatchCapacityTest.class",
+      "sha256": "798e62d7d30160b2ada59119ba1e771f91dee30e68bb373f85ba2278df8d9a13"
+    },
+    {
+      "path": "target/provider-playwright-runtime/test-classes/com/bettingproject/sofascorelocal/application/live/LivePrematchLineupsScheduleTest.class",
+      "sha256": "369177ca4e124a7ef78f7db8c3df39c73d7af35fa8937cf8fcab1250f7c0b2ea"
+    },
+    {
+      "path": "target/provider-playwright-runtime/test-classes/com/bettingproject/sofascorelocal/application/live/LivePreparationAdmissionTest.class",
+      "sha256": "873eb24ca9433a89e4344ea140c8fb74f7a4f710916013fd44d4111ebff0f1fd"
+    },
+    {
+      "path": "target/provider-playwright-runtime/test-classes/com/bettingproject/sofascorelocal/application/live/LivePreparationAdmissionTest$Harness.class",
+      "sha256": "f523459934b3049ddf0bc4084379cd60081dee0becfe1930e9129a62778891ed"
+    },
+    {
+      "path": "target/provider-playwright-runtime/test-classes/com/bettingproject/sofascorelocal/application/live/LiveReplayRunnerTest.class",
+      "sha256": "3fe4cc8aca7ef27b48cfc4f571795e012c7d8fe16d1f4137ec217c8489f61f04"
+    },
+    {
+      "path": "target/provider-playwright-runtime/test-classes/com/bettingproject/sofascorelocal/application/live/LiveResponseProcessorTest.class",
+      "sha256": "a0efc45d9b1aa8d9d495658d10a75ef26c251dbcc28c1cbb5cfc43d86698c8c8"
+    },
+    {
+      "path": "target/provider-playwright-runtime/test-classes/com/bettingproject/sofascorelocal/application/live/LiveScheduleTest.class",
+      "sha256": "8f81028022687b2cbce65a243783652b858d7708ee0ef282a9fb8b4d6ba507e0"
+    },
+    {
+      "path": "target/provider-playwright-runtime/test-classes/com/bettingproject/sofascorelocal/application/network/playwright/ChildJvmPlaywrightProviderSupervisorSpringContextTest.class",
+      "sha256": "417c8a735ed410b8c53bb46c773161b36fed7aa4c5160d1b3afc8fdc037aa4b1"
+    },
+    {
+      "path": "target/provider-playwright-runtime/test-classes/com/bettingproject/sofascorelocal/application/network/playwright/ChildJvmPlaywrightProviderSupervisorSpringContextTest$SupervisorConfiguration.class",
+      "sha256": "9d5c16f143c29ae6f7bcab8d43d343135980d2ff7aed501a75bc679005edd9f9"
+    },
+    {
+      "path": "target/provider-playwright-runtime/test-classes/com/bettingproject/sofascorelocal/application/network/playwright/ChildJvmPlaywrightProviderSupervisorTest.class",
+      "sha256": "9e5e90b8f2c3feeb3636b9da6f3d8d986e4b70ec36b140344c22385e37944720"
+    },
+    {
+      "path": "target/provider-playwright-runtime/test-classes/com/bettingproject/sofascorelocal/application/network/playwright/ChildJvmPlaywrightProviderSupervisorTest$1.class",
+      "sha256": "e4c4483023b073536f6afb8075453e83b763d89acbe0e4050e6357263e5b485a"
+    },
+    {
+      "path": "target/provider-playwright-runtime/test-classes/com/bettingproject/sofascorelocal/application/network/playwright/ChildJvmPlaywrightProviderSupervisorTest$AdvancingTerminationCaptureAccess.class",
+      "sha256": "944c1b93301ec370190cc445ae41a980a05b890a5cf3494f99a71fa6e5ab3226"
+    },
+    {
+      "path": "target/provider-playwright-runtime/test-classes/com/bettingproject/sofascorelocal/application/network/playwright/ChildJvmPlaywrightProviderSupervisorTest$DelayGateProcessTreeAccess.class",
+      "sha256": "f3e78c3f91de19f868d2c225f9d9a461992e94beaa7c5bed658e1b221e024dcf"
+    },
+    {
+      "path": "target/provider-playwright-runtime/test-classes/com/bettingproject/sofascorelocal/application/network/playwright/ChildJvmPlaywrightProviderSupervisorTest$DelayGateProcessTreeAccess$PauseBlock.class",
+      "sha256": "72e824e030abfb1c309bc3a7491e78a930f077b4845eefae1b4db43f54fb744d"
+    },
+    {
+      "path": "target/provider-playwright-runtime/test-classes/com/bettingproject/sofascorelocal/application/network/playwright/ChildJvmPlaywrightProviderSupervisorTest$FailingProcessTreeAccess.class",
+      "sha256": "2a47eea0b0bae11d9a87b1f8b5cc21e843b5c5bd4ac6bc056fe859a4d3c4a28d"
+    },
+    {
+      "path": "target/provider-playwright-runtime/test-classes/com/bettingproject/sofascorelocal/application/network/playwright/ChildJvmPlaywrightProviderSupervisorTest$LateChildProcessTreeAccess.class",
+      "sha256": "6a7a4bcd0bdbacb937139b2be5deb430e0485052733b54cd8e3ccf8d4150c517"
+    },
+    {
+      "path": "target/provider-playwright-runtime/test-classes/com/bettingproject/sofascorelocal/application/network/playwright/ChildJvmPlaywrightProviderSupervisorTest$OwnedHandle.class",
+      "sha256": "1cd3ed35bce8ca2e3a0fec7c1c3c1d790d6ad3c39602e48ce2baf4c62f36c8e6"
+    },
+    {
+      "path": "target/provider-playwright-runtime/test-classes/com/bettingproject/sofascorelocal/application/network/playwright/ChildJvmPlaywrightProviderSupervisorTest$RealTimeProcessTreeAccess.class",
+      "sha256": "0a63d34d78cbb1e9721d7af94cf23b1f4719682503f7f7162558b0c1c79c8e4c"
+    },
+    {
+      "path": "target/provider-playwright-runtime/test-classes/com/bettingproject/sofascorelocal/application/network/playwright/ChildJvmPlaywrightProviderSupervisorTest$RootAwareProcessTreeAccess.class",
+      "sha256": "4d5d7e92d693d3cfc2721cd375e98ea7e6e8ce9c5eafec1adbea46eed08d94d9"
+    },
+    {
+      "path": "target/provider-playwright-runtime/test-classes/com/bettingproject/sofascorelocal/application/network/playwright/ChildJvmPlaywrightProviderSupervisorTest$RootGoneProcessTreeAccess.class",
+      "sha256": "a521f5ef7d7637786fd86933b2d1f3b4b7ee2dc864746354a722693378ab78a2"
+    },
+    {
+      "path": "target/provider-playwright-runtime/test-classes/com/bettingproject/sofascorelocal/application/network/playwright/ChildJvmPlaywrightProviderSupervisorTest$ShutdownAwareProcessTreeAccess.class",
+      "sha256": "2927ff9e4a4497c0bd872bd8cf3ccdd8eb218cb0432bb5d52e65ea537b5baad4"
+    },
+    {
+      "path": "target/provider-playwright-runtime/test-classes/com/bettingproject/sofascorelocal/application/network/playwright/ChildJvmPlaywrightProviderSupervisorTest$SimulatedProcessTreeAccess.class",
+      "sha256": "b4fe08e21ed9b06d6b9afe17e9f8dcb02e4b6b7b10d09514bfd29c2c795fb126"
+    },
+    {
+      "path": "target/provider-playwright-runtime/test-classes/com/bettingproject/sofascorelocal/application/network/playwright/ChildJvmPlaywrightProviderSupervisorTest$UnverifiedProcessTreeAccess.class",
+      "sha256": "f8b48adebee0b530fa8d26eafea7e078af8061b2f728e17e7681b0038172c15c"
+    },
+    {
+      "path": "target/provider-playwright-runtime/test-classes/com/bettingproject/sofascorelocal/application/network/playwright/LiveGroupedCampaignLocalQualificationIT.class",
+      "sha256": "d75d5350e68c6f3eb0eeb7b624179fbf3c48ea729d598cd539cc2047c15fa1ce"
+    },
+    {
+      "path": "target/provider-playwright-runtime/test-classes/com/bettingproject/sofascorelocal/application/network/playwright/LiveGroupedCampaignLocalQualificationIT$1.class",
+      "sha256": "3975c6d46c9f87f3b64ad766880da6111da8d07599f8f4e864608693e8439fb5"
+    },
+    {
+      "path": "target/provider-playwright-runtime/test-classes/com/bettingproject/sofascorelocal/application/network/playwright/LiveGroupedCampaignLocalQualificationIT$Database.class",
+      "sha256": "abeb5747f14890b798643d93e909570835880f939ee5bd5513992b51ece80de3"
+    },
+    {
+      "path": "target/provider-playwright-runtime/test-classes/com/bettingproject/sofascorelocal/application/network/playwright/LiveGroupedCampaignLocalQualificationIT$Sample.class",
+      "sha256": "cb77f913264fcd00f00873f353249331908edbf84126470aaca89f56dd40c289"
+    },
+    {
+      "path": "target/provider-playwright-runtime/test-classes/com/bettingproject/sofascorelocal/application/network/playwright/LiveProviderGroupTrackerTest.class",
+      "sha256": "e7dfdb8ab36fd9a48e689bec58317302ca2571600ae90c7ff713a609a79a3604"
+    },
+    {
+      "path": "target/provider-playwright-runtime/test-classes/com/bettingproject/sofascorelocal/application/network/playwright/LiveProviderSessionQualificationIT.class",
+      "sha256": "3b365026951c48177ced3ef3b2901c2958e5921f212c9cd2a5d3dcfa09974e23"
+    },
+    {
+      "path": "target/provider-playwright-runtime/test-classes/com/bettingproject/sofascorelocal/application/network/playwright/LiveProviderSessionQualificationIT$1.class",
+      "sha256": "08a6ca07cb17ba9bdb438c693d9e3f53578dd5697f1c792917d7dae30498ef72"
+    },
+    {
+      "path": "target/provider-playwright-runtime/test-classes/com/bettingproject/sofascorelocal/application/network/playwright/LiveProviderSessionQualificationIT$2.class",
+      "sha256": "0ac203eb0a87961e2b2c330f8fce8cc55d91981e5ef278dcb9bcec4ccb139554"
+    },
+    {
+      "path": "target/provider-playwright-runtime/test-classes/com/bettingproject/sofascorelocal/application/network/playwright/LiveProviderSessionQualificationIT$3.class",
+      "sha256": "44d3f734e099d2226a8f7edf6aa2662754818521e7f9a4fd8d3e2636421bb0f1"
+    },
+    {
+      "path": "target/provider-playwright-runtime/test-classes/com/bettingproject/sofascorelocal/application/network/playwright/LiveProviderSessionQualificationIT$Fixture.class",
+      "sha256": "3b4d494feeed5919a48532018f9af25140e8f029e62f314ecc1b4e9daec1152d"
+    }
+  ]
+}

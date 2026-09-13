@@ -5,6 +5,8 @@ import com.bettingproject.sofascorelocal.application.network.J3ManualCollectionE
 import com.bettingproject.sofascorelocal.application.network.J3TournamentCatalogService;
 import com.bettingproject.sofascorelocal.application.network.TournamentEventDiscoveryControlService;
 import com.bettingproject.sofascorelocal.application.retention.J6RawPayloadRetentionService;
+import com.bettingproject.sofascorelocal.application.retention.J6RetentionError;
+import com.bettingproject.sofascorelocal.application.retention.J6RetentionException;
 import com.bettingproject.sofascorelocal.application.snapshot.RawSnapshotJsonInspectionService;
 import com.bettingproject.sofascorelocal.security.LocalFormTokenService;
 import jakarta.servlet.http.HttpSession;
@@ -72,7 +74,12 @@ public class DashboardController {
                     "retentionPreviewCandidates",
                     retentionPreview.candidates().stream().limit(25).toList());
         }
-        catch (DataAccessException | IllegalArgumentException | IllegalStateException exception) {
+        catch (J6RetentionException exception) {
+            if (exception.error() != J6RetentionError.PROVIDER_CAMPAIGN_ACTIVE) throw exception;
+            model.addAttribute("retentionPreviewUnavailable", true);
+            model.addAttribute("retentionPreviewProviderBusy", true);
+        }
+        catch (DataAccessException exception) {
             model.addAttribute("retentionPreviewUnavailable", true);
         }
         model.addAttribute("localFormToken", formTokenService.issue(session));

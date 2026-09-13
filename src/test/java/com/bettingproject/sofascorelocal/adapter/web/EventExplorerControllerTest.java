@@ -4,11 +4,13 @@ import com.bettingproject.sofascorelocal.adapter.sofascore.scheduledevents.Sched
 import com.bettingproject.sofascorelocal.application.event.J4EventDetailResult;
 import com.bettingproject.sofascorelocal.application.event.J4EventQueryService;
 import com.bettingproject.sofascorelocal.application.event.J4EventSearchItem;
+import com.bettingproject.sofascorelocal.application.event.J4EventResult;
 import com.bettingproject.sofascorelocal.application.event.J4EventSearchResult;
 import com.bettingproject.sofascorelocal.application.event.J4OfflineFixtureImportResult;
 import com.bettingproject.sofascorelocal.application.event.J4OfflineFixtureImportService;
 import com.bettingproject.sofascorelocal.application.event.J4ScheduledEventsSnapshotNormalizationService;
 import com.bettingproject.sofascorelocal.application.event.J4SnapshotNormalizationResult;
+import com.bettingproject.sofascorelocal.application.live.LiveCampaignService;
 import com.bettingproject.sofascorelocal.application.network.J4ProviderCampaignStopException;
 import com.bettingproject.sofascorelocal.application.network.J4ProviderCampaignStopService;
 import com.bettingproject.sofascorelocal.application.network.J4RealEventDetailsPhase1Service;
@@ -39,6 +41,9 @@ import com.bettingproject.sofascorelocal.security.LocalFormTokenService;
 import jakarta.servlet.http.HttpSession;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
+import org.junit.jupiter.params.ParameterizedTest;
+import org.junit.jupiter.params.provider.CsvSource;
+import org.junit.jupiter.params.provider.ValueSource;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.webmvc.test.autoconfigure.WebMvcTest;
 import org.springframework.cache.CacheManager;
@@ -52,8 +57,11 @@ import java.time.LocalDate;
 import java.time.ZoneId;
 import java.util.List;
 import java.util.Optional;
+import java.util.Set;
 import java.util.UUID;
+import java.util.regex.Pattern;
 
+import static org.assertj.core.api.Assertions.assertThat;
 import static org.hamcrest.Matchers.containsString;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.Mockito.doThrow;
@@ -104,6 +112,9 @@ class EventExplorerControllerTest {
 
     @MockitoBean
     private CacheManager cacheManager;
+
+    @MockitoBean
+    private LiveCampaignService liveCampaigns;
 
     @BeforeEach
     void exposeLockedRealPhaseOneControl() {
@@ -163,11 +174,65 @@ class EventExplorerControllerTest {
                 .andExpect(content().string(containsString("16386245")))
                 .andExpect(content().string(containsString(
                         "Une identité canonique, un appel confirmé")))
-                .andExpect(content().string(org.hamcrest.Matchers.not(
-                        containsString("name=\"eventId\""))))
+                .andExpect(result -> {
+                    String html = result.getResponse().getContentAsString();
+                    var searchForm = Pattern.compile(
+                            "(?s)<form\\b[^>]*class=\"event-search-form\"[^>]*>.*?</form>").matcher(html);
+                    assertThat(searchForm.find()).as("local date search form").isTrue();
+                    assertThat(searchForm.group()).contains("method=\"get\"", "action=\"/events\"",
+                                    "name=\"date\"", "name=\"zone\"")
+                            .doesNotContain("name=\"eventId\"", "name=\"providerEventId\"",
+                                    "name=\"canonicalEventId\"");
+
+                    var liveForm = Pattern.compile(
+                            "(?s)<form\\b[^>]*id=\"live-selection\"[^>]*>.*?</form>").matcher(html);
+                    assertThat(liveForm.find()).as("dedicated live preparation form").isTrue();
+                    assertThat(liveForm.group()).contains("method=\"post\"",
+                            "action=\"/live-campaigns/prepare\"", "name=\"localFormToken\"");
+                    var liveSelection = Pattern.compile(
+                            "(?s)<input\\b[^>]*name=\"eventId\"[^>]*>").matcher(html);
+                    assertThat(liveSelection.find()).as("canonical UUID selection for live preparation").isTrue();
+                    assertThat(liveSelection.group()).contains("type=\"checkbox\"", "form=\"live-selection\"",
+                                    "value=\"" + event.identity().value() + "\"", "disabled=\"disabled\"")
+                            .doesNotContain("value=\"" + event.identity().providerEventId() + "\"");
+                    assertThat(liveSelection.find()).as("one live control for the one fixture event").isFalse();
+                })
                 .andExpect(content().string(containsString("name=\"canonicalEventId\"")))
                 .andExpect(content().string(containsString(
                         "J4_EVENT_DETAILS_PHASE_2_DISABLED")));
+    }
+
+    @ParameterizedTest
+    @CsvSource({"true, 7", "false, 7", "true, 0", "false, 0"})
+    void providerSelectionReflectsCampaignLockAndCapacityInTheInitialHtml(boolean blocked, int capacity) throws Exception {
+        var event = providerEvent();
+        var date = event.startsAt().atZone(ZoneId.of("Europe/Paris")).toLocalDate();
+        var search = new J4EventSearchResult(date, ZoneId.of("Europe/Paris"),
+                date.atStartOfDay(ZoneId.of("Europe/Paris")).toInstant(),
+                date.plusDays(1).atStartOfDay(ZoneId.of("Europe/Paris")).toInstant(),
+                List.of(new J4EventSearchItem(event, event.startsAt().atZone(ZoneId.of("Europe/Paris")))));
+        when(queryService.search(date, "Europe/Paris")).thenReturn(search);
+        when(liveCampaigns.selectionMaximum()).thenReturn(capacity);
+        when(liveCampaigns.selectionBlockedEvents(List.of(event.identity().value())))
+                .thenReturn(blocked ? Set.of(event.identity().value()) : Set.of());
+        var response = mockMvc.perform(get("/events").param("date", date.toString()))
+                .andExpect(status().isOk()).andReturn().getResponse();
+        var input = Pattern.compile("<input\\b[^>]*name=\"eventId\"[^>]*>").matcher(response.getContentAsString());
+        assertThat(input.find()).isTrue();
+        assertThat(input.group()).contains("data-live-provider-eligible=\"true\"");
+        assertThat(input.group().contains("disabled=\"disabled\"")).isEqualTo(blocked || capacity == 0);
+        String html = response.getContentAsString();
+        assertThat(html).doesNotContain("La politique live-v5 attend");
+        if (capacity == 0) {
+            assertThat(html).contains("La préparation des campagnes est indisponible",
+                    "profil local live-v10 qualifié", "Show-LiveGroupedV10LauncherConfiguration.ps1",
+                    "SOFASCORE_LIVE_QUALIFIED_MATCH_CAPACITY=8", "n’active pas le live");
+            var prepare = Pattern.compile("<button\\b[^>]*data-live-prepare[^>]*>").matcher(html);
+            assertThat(prepare.find()).isTrue();
+            assertThat(prepare.group()).contains("disabled=\"disabled\"");
+        } else {
+            assertThat(html).doesNotContain("La préparation des campagnes est indisponible");
+        }
     }
 
     @Test
@@ -209,6 +274,59 @@ class EventExplorerControllerTest {
                         "Cet endpoint ne fournit aucune rencontre programm")))
                 .andExpect(content().string(containsString(
                         "aucune observation J4 n")));
+    }
+
+    @ParameterizedTest
+    @CsvSource({"1st half,1st half", "Halftime,Halftime", "2nd half,2nd half",
+            ",inprogress", "<b>Halftime</b>,&lt;b&gt;Halftime&lt;/b&gt;"})
+    void eventListAndDetailShowObservedPeriodWithEscapingAndMissingDescriptionFallback(
+            String description, String expected) throws Exception {
+        var base = providerEvent();
+        var event = new CanonicalEventObservationView(base.observationId(), base.identity(), base.startsAt(),
+                base.homeTeam(), base.awayTeam(), new ScheduledEventStatus("inprogress", Optional.ofNullable(description)),
+                base.tournament(), base.source(), base.normalizedSha256(), base.observationCount());
+        var zone = ZoneId.of("Europe/Paris");
+        var date = event.startsAt().atZone(zone).toLocalDate();
+        var item = new J4EventSearchItem(event, event.startsAt().atZone(zone));
+        when(queryService.search(date, "Europe/Paris")).thenReturn(new J4EventSearchResult(date, zone,
+                date.atStartOfDay(zone).toInstant(), date.plusDays(1).atStartOfDay(zone).toInstant(), List.of(item)));
+        when(queryService.findDetail(event.identity().value(), "Europe/Paris"))
+                .thenReturn(Optional.of(new J4EventDetailResult(zone, item, List.of(item), Optional.empty())));
+
+        for (String path : List.of("/events", "/events/" + event.identity().value())) {
+            String html = mockMvc.perform(get(path).param("date", date.toString()))
+                    .andExpect(status().isOk()).andReturn().getResponse().getContentAsString();
+            var badge = Pattern.compile("<span\\b[^>]*data-live-sport-status[^>]*>(.*?)</span>").matcher(html);
+            assertThat(badge.find()).isTrue();
+            assertThat(badge.group(1)).isEqualTo(expected);
+            assertThat(html).doesNotContain("<b>Halftime</b>");
+            if (path.equals("/events")) assertThat(html).contains("data-live-finished=\"false\"");
+        }
+    }
+
+    @ParameterizedTest
+    @CsvSource({"finished,true,Victoire sur tapis vert,true", "postponed,false,postponed,true",
+            "canceled,false,canceled,false"})
+    void tableAndDetailRenderAwardAndDisplayPairAndExcludePostponedFromLiveCount(
+            String type, boolean awarded, String label, boolean ineligible) throws Exception {
+        var base = providerEvent();
+        var event = new CanonicalEventObservationView(base.observationId(), base.identity(), base.startsAt(),
+                base.homeTeam(), base.awayTeam(), new ScheduledEventStatus(type, Optional.empty()),
+                base.tournament(), base.source(), base.normalizedSha256(), base.observationCount());
+        var zone = ZoneId.of("Europe/Paris");
+        var date = event.startsAt().atZone(zone).toLocalDate();
+        var item = new J4EventSearchItem(event, event.startsAt().atZone(zone),
+                new J4EventResult(awarded, Optional.of(3), Optional.of(0)));
+        when(queryService.search(date, "Europe/Paris")).thenReturn(new J4EventSearchResult(date, zone,
+                date.atStartOfDay(zone).toInstant(), date.plusDays(1).atStartOfDay(zone).toInstant(), List.of(item)));
+        when(queryService.findDetail(event.identity().value(), "Europe/Paris"))
+                .thenReturn(Optional.of(new J4EventDetailResult(zone, item, List.of(item), Optional.empty())));
+        for (String path : List.of("/events", "/events/" + event.identity().value())) {
+            String html = mockMvc.perform(get(path).param("date", date.toString()))
+                    .andExpect(status().isOk()).andReturn().getResponse().getContentAsString();
+            assertThat(html).contains(label, "3 – 0");
+            if (path.equals("/events")) assertThat(html).contains("data-live-finished=\"" + ineligible + "\"");
+        }
     }
 
     @Test

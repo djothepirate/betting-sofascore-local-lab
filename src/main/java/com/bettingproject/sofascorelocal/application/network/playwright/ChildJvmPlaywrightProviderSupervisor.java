@@ -57,14 +57,19 @@ public final class ChildJvmPlaywrightProviderSupervisor
         implements PlaywrightProviderCampaignFactory, PlaywrightProviderSupervisor {
 
     static final int MAGIC = 0x53335057;
-    static final int VERSION = 5;
+    static final int VERSION = 9;
     static final byte GET = 1;
+    static final byte GET_LIVE_V6 = 4;
+    static final byte GET_LIVE_V9 = 5;
     static final byte CLOSE = 2;
     static final byte START = 3;
     static final byte RESPONSE = 10;
     static final byte FAILURE = 11;
     static final byte CLOSED = 12;
     static final byte READY = 13;
+    static final byte PROGRESS = 14;
+    static final byte TIMEOUT_ENDED = 15;
+    static final byte RESPONSE_V9 = 16;
     static final int MAXIMUM_CONTENT_TYPE_BYTES = 160;
     static final int MAXIMUM_FAILURE_CODE_LENGTH = 64;
     static final Duration STOP_ACKNOWLEDGEMENT_MAX = Duration.ofMillis(500);
@@ -186,6 +191,82 @@ public final class ChildJvmPlaywrightProviderSupervisor
     public PlaywrightProviderCampaign open(
             UUID campaignId,
             Set<SofascoreEndpointType> allowedEndpoints) {
+        return open(campaignId, allowedEndpoints, null);
+    }
+
+    @Override
+    public PlaywrightProviderCampaign openLiveGrouped(
+            UUID campaignId, Set<SofascoreEndpointType> allowedEndpoints) {
+        if (!Set.of(SofascoreEndpointType.EVENT_DETAILS, SofascoreEndpointType.EVENT_INCIDENTS,
+                SofascoreEndpointType.EVENT_STATISTICS, SofascoreEndpointType.EVENT_LINEUPS)
+                .equals(allowedEndpoints))
+            throw new PlaywrightProviderException(PlaywrightProviderFailure.INVALID_ENDPOINT);
+        return open(campaignId, allowedEndpoints, LiveProviderGroupTracker.Authority.LIVE_V4);
+    }
+
+    @Override
+    public PlaywrightProviderCampaign openLiveGroupedV5(
+            UUID campaignId, Set<SofascoreEndpointType> allowedEndpoints) {
+        if (!Set.of(SofascoreEndpointType.EVENT_DETAILS, SofascoreEndpointType.EVENT_INCIDENTS,
+                SofascoreEndpointType.EVENT_STATISTICS, SofascoreEndpointType.EVENT_LINEUPS)
+                .equals(allowedEndpoints))
+            throw new PlaywrightProviderException(PlaywrightProviderFailure.INVALID_ENDPOINT);
+        return open(campaignId, allowedEndpoints, LiveProviderGroupTracker.Authority.LIVE_V5);
+    }
+
+    @Override
+    public PlaywrightProviderCampaign openLiveGroupedV6(
+            UUID campaignId, Set<SofascoreEndpointType> allowedEndpoints) {
+        if (!Set.of(SofascoreEndpointType.EVENT_DETAILS, SofascoreEndpointType.EVENT_INCIDENTS,
+                SofascoreEndpointType.EVENT_STATISTICS, SofascoreEndpointType.EVENT_LINEUPS)
+                .equals(allowedEndpoints))
+            throw new PlaywrightProviderException(PlaywrightProviderFailure.INVALID_ENDPOINT);
+        return open(campaignId, allowedEndpoints, LiveProviderGroupTracker.Authority.LIVE_V6);
+    }
+
+    @Override
+    public PlaywrightProviderCampaign openLiveGroupedV7(UUID campaignId, Set<SofascoreEndpointType> allowedEndpoints) {
+        if (!Set.of(SofascoreEndpointType.EVENT_DETAILS, SofascoreEndpointType.EVENT_INCIDENTS,
+                SofascoreEndpointType.EVENT_STATISTICS, SofascoreEndpointType.EVENT_LINEUPS).equals(allowedEndpoints))
+            throw new PlaywrightProviderException(PlaywrightProviderFailure.INVALID_ENDPOINT);
+        return open(campaignId, allowedEndpoints, LiveProviderGroupTracker.Authority.LIVE_V7);
+    }
+
+    @Override
+    public PlaywrightProviderCampaign openLiveGroupedV8(UUID campaignId, Set<SofascoreEndpointType> allowedEndpoints) {
+        if (!Set.of(SofascoreEndpointType.EVENT_DETAILS, SofascoreEndpointType.EVENT_INCIDENTS,
+                SofascoreEndpointType.EVENT_STATISTICS, SofascoreEndpointType.EVENT_LINEUPS).equals(allowedEndpoints))
+            throw new PlaywrightProviderException(PlaywrightProviderFailure.INVALID_ENDPOINT);
+        return open(campaignId, allowedEndpoints, LiveProviderGroupTracker.Authority.LIVE_V8);
+    }
+
+    @Override
+    public PlaywrightProviderCampaign openLiveGroupedV9(UUID campaignId, Set<SofascoreEndpointType> allowedEndpoints) {
+        if (!Set.of(SofascoreEndpointType.EVENT_DETAILS, SofascoreEndpointType.EVENT_INCIDENTS,
+                SofascoreEndpointType.EVENT_STATISTICS, SofascoreEndpointType.EVENT_LINEUPS).equals(allowedEndpoints))
+            throw new PlaywrightProviderException(PlaywrightProviderFailure.INVALID_ENDPOINT);
+        return open(campaignId, allowedEndpoints, LiveProviderGroupTracker.Authority.LIVE_V9);
+    }
+
+    @Override
+    public PlaywrightProviderCampaign openLiveGroupedV10(UUID campaignId, Set<SofascoreEndpointType> allowedEndpoints) {
+        if (!Set.of(SofascoreEndpointType.EVENT_DETAILS, SofascoreEndpointType.EVENT_INCIDENTS,
+                SofascoreEndpointType.EVENT_STATISTICS, SofascoreEndpointType.EVENT_LINEUPS).equals(allowedEndpoints))
+            throw new PlaywrightProviderException(PlaywrightProviderFailure.INVALID_ENDPOINT);
+        return open(campaignId, allowedEndpoints, LiveProviderGroupTracker.Authority.LIVE_V10);
+    }
+
+    @Override
+    public PlaywrightProviderCampaign openManualJ5Grouped(
+            UUID campaignId, Set<SofascoreEndpointType> allowedEndpoints) {
+        if (!Set.of(SofascoreEndpointType.EVENT_STATISTICS, SofascoreEndpointType.EVENT_INCIDENTS,
+                SofascoreEndpointType.EVENT_LINEUPS).equals(allowedEndpoints))
+            throw new PlaywrightProviderException(PlaywrightProviderFailure.INVALID_ENDPOINT);
+        return open(campaignId, allowedEndpoints, LiveProviderGroupTracker.Authority.MANUAL_J5);
+    }
+
+    private PlaywrightProviderCampaign open(UUID campaignId,
+            Set<SofascoreEndpointType> allowedEndpoints, LiveProviderGroupTracker.Authority groupAuthority) {
         Objects.requireNonNull(campaignId, "campaignId");
         Set<SofascoreEndpointType> allowlist = Set.copyOf(
                 Objects.requireNonNull(allowedEndpoints, "allowedEndpoints"));
@@ -206,7 +287,7 @@ public final class ChildJvmPlaywrightProviderSupervisor
             throw new PlaywrightProviderException(PlaywrightProviderFailure.OPERATOR_STOP);
         }
         Path workerJar = requireWorkerJar();
-        CampaignState state = new CampaignState(campaignId, allowlist);
+        CampaignState state = new CampaignState(campaignId, allowlist, groupAuthority);
         if (!active.compareAndSet(null, state)) {
             throw new PlaywrightProviderException(
                     PlaywrightProviderFailure.CAMPAIGN_ALREADY_ACTIVE);
@@ -398,27 +479,57 @@ public final class ChildJvmPlaywrightProviderSupervisor
 
     private PlaywrightProviderResponse execute(
             CampaignState state,
-            PlaywrightProviderRequest request) {
+            PlaywrightProviderRequest request,
+            PlaywrightDispatchAdmission admission, LiveProviderDispatchGroup group) {
         Objects.requireNonNull(request, "request");
         requireActive(state);
         if (!state.allowedEndpoints.contains(request.endpoint())) {
             throw new PlaywrightProviderException(PlaywrightProviderFailure.INVALID_ENDPOINT);
         }
+        if (request.ifNoneMatch().isPresent()
+                && (state.liveGroups == null || !state.liveGroups.usesConditionalRevalidation())) {
+            throw new PlaywrightProviderException(PlaywrightProviderFailure.INVALID_REQUEST);
+        }
+        if (group != null && state.liveGroups == null)
+            throw new PlaywrightProviderException(PlaywrightProviderFailure.INVALID_REQUEST);
         state.ioLock.lock();
         boolean dispatchStarted = false;
         boolean usableResponseEvidence = false;
+        boolean recoverableTimeoutEvidence = false;
+        PlaywrightTransportDiagnostic diagnostic = null;
         try {
             requireActive(state);
             try {
                 DataOutputStream output = Objects.requireNonNull(state.output, "output");
-                DataInputStream input = Objects.requireNonNull(state.input, "input");
-                providerNetworkStartDelayGate.awaitNextDispatch(() -> requireActive(state));
-                state.dispatchLock.lock();
-                try {
+                DataInputStream sourceInput = Objects.requireNonNull(state.input, "input");
+                int timeoutMillis = toMillis(properties.getRequestTimeout());
+                long responseDeadline;
+                long requestDeadline;
+                boolean conditionalWire = state.liveGroups != null && state.liveGroups.usesConditionalRevalidation();
+                boolean continuation = state.liveGroups != null && state.liveGroups.isContinuation(request, group);
+                Runnable continuationGuard = () -> { requireActive(state); admission.check(); };
+                // Historical grouped continuations retain their no-pause protocol. V8, V9 and V10
+                // deliberately share the qualified 500 ms local-pressure fence after every
+                // family exchange, including J5 continuations.
+                if (continuation && !state.liveGroups.requiresPostExchangeFenceForContinuation())
+                    providerNetworkStartDelayGate.admitGroupContinuation(continuationGuard);
+                else providerNetworkStartDelayGate.awaitNextGroupDispatch(
+                        group == null ? null : state.liveGroups, continuationGuard);
+                try (PlaywrightDispatchAdmission.Permit permit = admission.acquireDispatchPermit()) {
+                    // Admission may perform durable checks. Never hold the supervisor stop lock during SQL.
+                    state.dispatchLock.lock();
+                    try {
                     requireActive(state);
+                    if (state.liveGroups != null) state.liveGroups.dispatched(request, group);
                     state.providerDispatchStarted.set(true);
                     dispatchStarted = true;
-                    output.writeByte(GET);
+                    boolean supportsProvenTimeoutRecovery = state.liveGroups != null
+                            && state.liveGroups.supportsProvenTimeoutRecovery();
+                    requestDeadline = System.nanoTime() + properties.getRequestTimeout().toNanos();
+                    responseDeadline = requestDeadline + Duration.ofSeconds(
+                            supportsProvenTimeoutRecovery ? 3 : 1).toNanos();
+                    output.writeByte(conditionalWire ? GET_LIVE_V9
+                            : supportsProvenTimeoutRecovery ? GET_LIVE_V6 : GET);
                     output.writeUTF(request.endpoint().name());
                     switch (request.endpoint()) {
                         case SCHEDULED_EVENTS -> {
@@ -434,19 +545,72 @@ public final class ChildJvmPlaywrightProviderSupervisor
                         default -> throw new PlaywrightProviderException(
                                 PlaywrightProviderFailure.INVALID_ENDPOINT);
                     }
-                    output.writeInt(toMillis(properties.getRequestTimeout()));
+                    if (conditionalWire) {
+                        output.writeBoolean(request.ifNoneMatch().isPresent());
+                        if (request.ifNoneMatch().isPresent()) {
+                            output.writeUTF(request.ifNoneMatch().orElseThrow().value());
+                        }
+                    }
+                    output.writeInt(timeoutMillis);
                     output.flush();
+                    } finally {
+                        state.dispatchLock.unlock();
+                    }
                 }
-                finally {
-                    state.dispatchLock.unlock();
-                }
+                DataInputStream input = deadlineInput(sourceInput, state.socket, responseDeadline);
                 int frame = input.readUnsignedByte();
+                int progressStage = -1;
+                while (frame == PROGRESS) {
+                    int nextStage = input.readUnsignedByte();
+                    int effectiveTimeout = input.readInt();
+                    long requested = input.readLong(), headers = input.readLong();
+                    int status = input.readInt();
+                    long retryAfter = input.readLong();
+                    if (nextStage != progressStage + 1 || nextStage > 3 || effectiveTimeout != timeoutMillis)
+                        throw new PlaywrightProviderException(PlaywrightProviderFailure.PROTOCOL_ERROR);
+                    PlaywrightTransportDiagnostic next = new PlaywrightTransportDiagnostic(
+                            switch (nextStage) {
+                                case 0 -> PlaywrightTransportDiagnostic.Phase.NAVIGATION;
+                                case 1 -> PlaywrightTransportDiagnostic.Phase.REQUEST_SENT;
+                                case 2 -> PlaywrightTransportDiagnostic.Phase.HEADERS_RECEIVED;
+                                case 3 -> PlaywrightTransportDiagnostic.Phase.READING_BODY;
+                                default -> throw new PlaywrightProviderException(PlaywrightProviderFailure.PROTOCOL_ERROR);
+                            }, effectiveTimeout,
+                            diagnosticInstant(requested), diagnosticInstant(headers), status == 0 ? null : status,
+                            diagnosticInstant(retryAfter), false);
+                    if (diagnostic != null && (diagnostic.requestedAt() != null
+                            && !diagnostic.requestedAt().equals(next.requestedAt())
+                            || diagnostic.headersReceivedAt() != null
+                            && (!diagnostic.headersReceivedAt().equals(next.headersReceivedAt())
+                            || !Objects.equals(diagnostic.httpStatus(), next.httpStatus())
+                            || !Objects.equals(diagnostic.retryAfterNotBefore(), next.retryAfterNotBefore()))))
+                        throw new PlaywrightProviderException(PlaywrightProviderFailure.PROTOCOL_ERROR);
+                    diagnostic = next;
+                    progressStage = nextStage;
+                    try { admission.onTransportProgress(next); }
+                    catch (RuntimeException persistenceFailure) { throw new ProgressObserverFailure(persistenceFailure); }
+                    frame = input.readUnsignedByte();
+                }
                 if (frame == FAILURE) {
                     PlaywrightProviderException failure = workerFailure(input.readUTF());
                     state.authenticatedTerminalFrameReceived.set(true);
-                    throw failure;
+                    throw new PlaywrightProviderException(failure.failure(), failure, diagnostic);
                 }
-                if (frame != RESPONSE) {
+                if (frame == TIMEOUT_ENDED) {
+                    Instant endedAt = diagnosticInstant(input.readLong());
+                    int endReason = input.readUnsignedByte();
+                    if (state.liveGroups == null || !state.liveGroups.supportsProvenTimeoutRecovery() || diagnostic == null
+                            || diagnostic.requestedAt() == null || endedAt == null
+                            || endReason < 1 || endReason > 2 || state.terminationRequested.get()
+                            || System.nanoTime() < requestDeadline || endedAt.isAfter(clock.instant()))
+                        throw new PlaywrightProviderException(PlaywrightProviderFailure.PROTOCOL_ERROR);
+                    diagnostic = diagnostic.withExchangeEnd(endedAt,
+                            endReason == 1 ? PlaywrightTransportDiagnostic.ExchangeEndReason.FINISHED
+                                    : PlaywrightTransportDiagnostic.ExchangeEndReason.ABORTED, true);
+                    recoverableTimeoutEvidence = true;
+                    throw new PlaywrightProviderException(PlaywrightProviderFailure.TIMEOUT, diagnostic);
+                }
+                if (frame != (conditionalWire ? RESPONSE_V9 : RESPONSE)) {
                     throw new PlaywrightProviderException(
                             PlaywrightProviderFailure.PROTOCOL_ERROR);
                 }
@@ -460,12 +624,38 @@ public final class ChildJvmPlaywrightProviderSupervisor
                 Instant requestedAt = Instant.ofEpochMilli(requestedAtEpochMillis);
                 Instant receivedAt = Instant.ofEpochMilli(receivedAtEpochMillis);
                 int status = input.readInt();
+                if (diagnostic != null && (diagnostic.requestedAt() != null
+                        && !diagnostic.requestedAt().equals(requestedAt)
+                        || diagnostic.headersReceivedAt() != null
+                        && (diagnostic.httpStatus() != status || receivedAt.isBefore(diagnostic.headersReceivedAt()))))
+                    throw new PlaywrightProviderException(PlaywrightProviderFailure.PROTOCOL_ERROR);
                 String contentType = input.readUTF();
                 requireContentType(contentType);
+                Optional<PlaywrightProviderEntityTag> entityTag = Optional.empty();
+                if (conditionalWire) {
+                    int entityTagPresent = input.readUnsignedByte();
+                    if (entityTagPresent != 0 && entityTagPresent != 1) {
+                        throw new PlaywrightProviderException(
+                                PlaywrightProviderFailure.PROTOCOL_ERROR);
+                    }
+                    if (entityTagPresent == 1) {
+                        try {
+                            entityTag = Optional.of(PlaywrightProviderEntityTag.of(input.readUTF()));
+                        }
+                        catch (IllegalArgumentException exception) {
+                            throw new PlaywrightProviderException(
+                                    PlaywrightProviderFailure.PROTOCOL_ERROR, exception);
+                        }
+                    }
+                }
                 int length = input.readInt();
                 if (length < 0 || length > RawPayloadEvidence.MAXIMUM_BYTES) {
                     throw new PlaywrightProviderException(
                             PlaywrightProviderFailure.PAYLOAD_TOO_LARGE);
+                }
+                if (conditionalWire && status == 304 && length != 0) {
+                    throw new PlaywrightProviderException(
+                            PlaywrightProviderFailure.PROTOCOL_ERROR);
                 }
                 byte[] body = input.readNBytes(length);
                 if (body.length != length) {
@@ -489,7 +679,10 @@ public final class ChildJvmPlaywrightProviderSupervisor
                             status,
                             contentType,
                             latency,
-                            payload);
+                            payload,
+                            entityTag,
+                            diagnostic != null && diagnostic.httpStatus() != null
+                                    ? diagnostic.at(PlaywrightTransportDiagnostic.Phase.COMPLETE) : null);
                     usableResponseEvidence = true;
                     return response;
                 }
@@ -497,8 +690,24 @@ public final class ChildJvmPlaywrightProviderSupervisor
                     Arrays.fill(body, (byte) 0);
                 }
             }
-            catch (PlaywrightProviderException exception) {
+            catch (PlaywrightDispatchCancelledException exception) {
                 throw exception;
+            }
+            catch (PlaywrightProviderException exception) {
+                throw exception.diagnostic() != null || diagnostic == null ? exception
+                        : new PlaywrightProviderException(exception.failure(), exception, diagnostic);
+            }
+            catch (SocketTimeoutException exception) {
+                PlaywrightTransportDiagnostic timeoutDiagnostic = diagnostic == null
+                        ? new PlaywrightTransportDiagnostic(PlaywrightTransportDiagnostic.Phase.PARENT_IPC_WAIT,
+                                toMillis(properties.getRequestTimeout()), null, null, null, null, false)
+                        : diagnostic.at(PlaywrightTransportDiagnostic.Phase.PARENT_IPC_WAIT);
+                throw new PlaywrightProviderException(state.terminationRequested.get()
+                        ? PlaywrightProviderFailure.OPERATOR_STOP : PlaywrightProviderFailure.IPC_TIMEOUT,
+                        exception, timeoutDiagnostic);
+            }
+            catch (ProgressObserverFailure exception) {
+                throw exception.original;
             }
             catch (ProviderNetworkStartDelayGate.TimingEvidenceException exception) {
                 throw new PlaywrightProviderException(
@@ -509,16 +718,52 @@ public final class ChildJvmPlaywrightProviderSupervisor
                 PlaywrightProviderFailure failure = state.terminationRequested.get()
                         ? PlaywrightProviderFailure.OPERATOR_STOP
                         : PlaywrightProviderFailure.PROTOCOL_ERROR;
-                throw new PlaywrightProviderException(failure, exception);
+                throw new PlaywrightProviderException(failure, exception, diagnostic);
             }
         }
         finally {
-            if (dispatchStarted) {
-                providerNetworkStartDelayGate.recordDispatchFinished(
-                        usableResponseEvidence);
+            try {
+                if (dispatchStarted) {
+                    if (recoverableTimeoutEvidence) {
+                        providerNetworkStartDelayGate.recordRecoverableTimeoutFinished(state.liveGroups);
+                        state.liveGroups.finishedRecoverableTimeout();
+                    } else {
+                        providerNetworkStartDelayGate.recordDispatchFinished(
+                                usableResponseEvidence, group == null ? null : state.liveGroups);
+                        if (state.liveGroups != null) state.liveGroups.finished(usableResponseEvidence);
+                    }
+                }
+            } finally {
+                state.ioLock.unlock();
             }
-            state.ioLock.unlock();
         }
+    }
+
+    private static Instant diagnosticInstant(long value) {
+        if (value == -1) return null;
+        if (value < 1 || value > 253_402_300_799_999L)
+            throw new PlaywrightProviderException(PlaywrightProviderFailure.PROTOCOL_ERROR);
+        return Instant.ofEpochMilli(value);
+    }
+
+    /** Progress frames cannot restart the configured whole-request deadline. */
+    private static DataInputStream deadlineInput(DataInputStream input, Socket socket, long deadline) {
+        return new DataInputStream(new java.io.InputStream() {
+            private void boundWait() throws IOException {
+                long remaining = deadline - System.nanoTime();
+                if (remaining <= 0) throw new SocketTimeoutException("bounded IPC deadline expired");
+                socket.setSoTimeout((int) Math.max(1, TimeUnit.NANOSECONDS.toMillis(remaining)));
+            }
+            @Override public int read() throws IOException { boundWait(); return input.read(); }
+            @Override public int read(byte[] bytes, int offset, int length) throws IOException {
+                boundWait(); return input.read(bytes, offset, length);
+            }
+        });
+    }
+
+    private static final class ProgressObserverFailure extends RuntimeException {
+        private final RuntimeException original;
+        private ProgressObserverFailure(RuntimeException original) { this.original = original; }
     }
 
     private void closeCampaign(CampaignState state) {
@@ -1047,7 +1292,7 @@ public final class ChildJvmPlaywrightProviderSupervisor
             case "CONTENT_TYPE_TOO_LONG" -> PlaywrightProviderFailure.UNEXPECTED_CONTENT;
             case "INVALID_ENDPOINT" -> PlaywrightProviderFailure.INVALID_ENDPOINT;
             case "INVALID_DATE", "INVALID_PAGE", "INVALID_TOURNAMENT_ID", "INVALID_EVENT_ID",
-                    "INVALID_TIMEOUT" ->
+                    "INVALID_TIMEOUT", "INVALID_VALIDATOR" ->
                     PlaywrightProviderFailure.INVALID_REQUEST;
             case "INVALID_CONFIGURATION", "RUNTIME_START_FAILED", "IPC_CONNECT_FAILED",
                     "RESPONSE_READ_FAILED", "PLAYWRIGHT_FAILURE" ->
@@ -1457,12 +1702,27 @@ public final class ChildJvmPlaywrightProviderSupervisor
 
         @Override
         public PlaywrightProviderResponse execute(PlaywrightProviderRequest request) {
+            return execute(request, PlaywrightDispatchAdmission.UNRESTRICTED);
+        }
+
+        @Override
+        public PlaywrightProviderResponse execute(PlaywrightProviderRequest request, PlaywrightDispatchAdmission admission) {
             ChildJvmPlaywrightProviderSupervisor current = owner;
             if (current == null || closeRequested) {
                 throw new PlaywrightProviderException(
                         PlaywrightProviderFailure.OPERATOR_STOP);
             }
-            return current.execute(state, request);
+            return current.execute(state, request, Objects.requireNonNull(admission), null);
+        }
+
+        @Override
+        public PlaywrightProviderResponse executeGrouped(PlaywrightProviderRequest request,
+                LiveProviderDispatchGroup group, PlaywrightDispatchAdmission admission) {
+            ChildJvmPlaywrightProviderSupervisor current = owner;
+            if (current == null || closeRequested)
+                throw new PlaywrightProviderException(PlaywrightProviderFailure.OPERATOR_STOP);
+            return current.execute(state, request, Objects.requireNonNull(admission),
+                    Objects.requireNonNull(group));
         }
 
         @Override
@@ -1480,6 +1740,7 @@ public final class ChildJvmPlaywrightProviderSupervisor
 
         private final UUID campaignId;
         private final Set<SofascoreEndpointType> allowedEndpoints;
+        private final LiveProviderGroupTracker liveGroups;
         private final ReentrantLock ioLock = new ReentrantLock();
         private final ReentrantLock dispatchLock = new ReentrantLock();
         private final Object processInventoryLock = new Object();
@@ -1505,9 +1766,10 @@ public final class ChildJvmPlaywrightProviderSupervisor
 
         private CampaignState(
                 UUID campaignId,
-                Set<SofascoreEndpointType> allowedEndpoints) {
+                Set<SofascoreEndpointType> allowedEndpoints, LiveProviderGroupTracker.Authority groupAuthority) {
             this.campaignId = campaignId;
             this.allowedEndpoints = allowedEndpoints;
+            this.liveGroups = groupAuthority == null ? null : new LiveProviderGroupTracker(campaignId, groupAuthority);
         }
 
         private void publishProcess(Process process, Instant processStartedAt) {

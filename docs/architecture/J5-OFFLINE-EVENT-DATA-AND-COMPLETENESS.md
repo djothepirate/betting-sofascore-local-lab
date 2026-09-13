@@ -4,6 +4,9 @@
 > les Work Orders de qualification réelle et d'import local ultérieurs. Ses statuts initiaux sont
 > conservés comme preuve et ne décrivent pas à eux seuls l'état courant de toutes les voies J5.
 
+Le complément fournisseur [compositions V3](J5-LINEUPS-V3-PLAYER-DETAILS.md) conserve désormais
+les capitaines, statistiques individuelles et indisponibles. Il préserve ce contrat V1 et ses empreintes.
+
 ```text
 HISTORICAL_SCOPE=J5_V1_SYNTHETIC_BASELINE
 CURRENT_GUARDED_REAL_PATH=SEE_J5-GUARDED-REAL-EVENT-DATA

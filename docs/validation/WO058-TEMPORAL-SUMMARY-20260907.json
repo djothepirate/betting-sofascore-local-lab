@@ -1,0 +1,928 @@
+{
+  "contract": "wo058-temporal-summary-v1",
+  "statuses": [
+    "EXPERIMENTAL",
+    "LOCAL_ONLY",
+    "NOT_PRODUCTION_APPROVED",
+    "NO_CRITICAL_DEPENDENCY"
+  ],
+  "provider": "SOFASCORE",
+  "captured_at": "2026-09-07T20:02:42.61169+00:00",
+  "sources": [
+    {
+      "path": ".tmp/wo058-temporal-ledger-20260907.json",
+      "sha256": "838bab698d7d82a5176ac7be8a2dddea018987bb4856c1960222131e6cf49d80",
+      "contract": "wo058-temporal-metadata-v1",
+      "attempt_count": 937
+    },
+    {
+      "path": ".tmp/wo058-temporal-analysis-20260907.json",
+      "sha256": "c76d01cd579029329885852d055da40599fface3840866d1dc0016c6ad39927a",
+      "contract": "wo058-temporal-analysis-v1",
+      "checkpoint_count": 5
+    }
+  ],
+  "selected_checkpoint_observations": [
+    {
+      "evaluated_at": "2026-09-07T19:19:00Z",
+      "campaign_id": "11a22482-5997-4590-9058-3a89d55e8973",
+      "matches": [
+        {
+          "provider_event_id": 16416319,
+          "title": "Elche — Real Sociedad",
+          "lifecycle": {
+            "state": "WAITING_START",
+            "changed_at": "2026-09-07T17:30:22.082407+00:00",
+            "reason": "WAITING_START"
+          },
+          "families": [
+            {
+              "family": "EVENT_DETAILS",
+              "latest_attempt_status": "PARSED",
+              "readable_data_received_at": "2026-09-07T19:17:13.567+00:00",
+              "readable_data_age_seconds": 106.433,
+              "readable_content": {
+                "sport_status": "notstarted",
+                "status_description": "Not started",
+                "home_score": null,
+                "away_score": null
+              },
+              "completeness_status": null,
+              "completeness_score": null,
+              "snapshot_id": 1868,
+              "occurrence_id": 2146,
+              "last_changed_at": "2026-09-07T17:31:11.8+00:00",
+              "consecutive_identical_successes": 15
+            },
+            {
+              "family": "EVENT_STATISTICS",
+              "latest_attempt_status": "NOT_REQUESTED",
+              "readable_data_received_at": null,
+              "readable_data_age_seconds": null,
+              "completeness_status": null,
+              "completeness_score": null,
+              "snapshot_id": null,
+              "occurrence_id": null,
+              "last_changed_at": null,
+              "consecutive_identical_successes": null
+            },
+            {
+              "family": "EVENT_INCIDENTS",
+              "latest_attempt_status": "NOT_REQUESTED",
+              "readable_data_received_at": null,
+              "readable_data_age_seconds": null,
+              "completeness_status": null,
+              "completeness_score": null,
+              "snapshot_id": null,
+              "occurrence_id": null,
+              "last_changed_at": null,
+              "consecutive_identical_successes": null
+            },
+            {
+              "family": "EVENT_LINEUPS",
+              "latest_attempt_status": "NOT_REQUESTED",
+              "readable_data_received_at": null,
+              "readable_data_age_seconds": null,
+              "completeness_status": null,
+              "completeness_score": null,
+              "snapshot_id": null,
+              "occurrence_id": null,
+              "last_changed_at": null,
+              "consecutive_identical_successes": null
+            }
+          ],
+          "temporal_spread_dynamic": {
+            "seconds": null,
+            "available_family_count": 1,
+            "expected_family_count": 3
+          },
+          "temporal_spread_all_four": {
+            "seconds": null,
+            "available_family_count": 1,
+            "expected_family_count": 4
+          }
+        }
+      ]
+    },
+    {
+      "evaluated_at": "2026-09-07T19:39:00Z",
+      "campaign_id": "11a22482-5997-4590-9058-3a89d55e8973",
+      "matches": [
+        {
+          "provider_event_id": 16416319,
+          "title": "Elche — Real Sociedad",
+          "lifecycle": {
+            "state": "COLLECTING",
+            "changed_at": "2026-09-07T19:32:24.245103+00:00",
+            "reason": "COLLECTING"
+          },
+          "families": [
+            {
+              "family": "EVENT_DETAILS",
+              "latest_attempt_status": "PARSED",
+              "readable_data_received_at": "2026-09-07T19:32:24.192+00:00",
+              "readable_data_age_seconds": 395.808,
+              "readable_content": {
+                "sport_status": "inprogress",
+                "status_description": "1st half",
+                "home_score": "0",
+                "away_score": "0"
+              },
+              "completeness_status": null,
+              "completeness_score": null,
+              "snapshot_id": 2233,
+              "occurrence_id": 2200,
+              "last_changed_at": "2026-09-07T19:32:24.192+00:00",
+              "consecutive_identical_successes": 1
+            },
+            {
+              "family": "EVENT_STATISTICS",
+              "latest_attempt_status": "PARSED",
+              "readable_data_received_at": "2026-09-07T19:32:27.311+00:00",
+              "readable_data_age_seconds": 392.689,
+              "completeness_status": "COMPLETE",
+              "completeness_score": 100,
+              "snapshot_id": 2234,
+              "occurrence_id": 2201,
+              "last_changed_at": "2026-09-07T19:32:27.311+00:00",
+              "consecutive_identical_successes": 1
+            },
+            {
+              "family": "EVENT_INCIDENTS",
+              "latest_attempt_status": "PARSED",
+              "readable_data_received_at": "2026-09-07T19:32:30.456+00:00",
+              "readable_data_age_seconds": 389.544,
+              "completeness_status": "COMPLETE",
+              "completeness_score": 100,
+              "snapshot_id": 2235,
+              "occurrence_id": 2202,
+              "last_changed_at": "2026-09-07T19:32:30.456+00:00",
+              "consecutive_identical_successes": 1
+            },
+            {
+              "family": "EVENT_LINEUPS",
+              "latest_attempt_status": "PARSED",
+              "readable_data_received_at": "2026-09-07T19:32:33.598+00:00",
+              "readable_data_age_seconds": 386.402,
+              "readable_content": {
+                "lineups_confirmed": true,
+                "home_starters": 11,
+                "away_starters": 11
+              },
+              "completeness_status": "COMPLETE",
+              "completeness_score": 100,
+              "snapshot_id": 2236,
+              "occurrence_id": 2203,
+              "last_changed_at": "2026-09-07T19:32:33.598+00:00",
+              "consecutive_identical_successes": 1
+            }
+          ],
+          "temporal_spread_dynamic": {
+            "seconds": 6.264,
+            "available_family_count": 3,
+            "expected_family_count": 3
+          },
+          "temporal_spread_all_four": {
+            "seconds": 9.406,
+            "available_family_count": 4,
+            "expected_family_count": 4
+          }
+        },
+        {
+          "provider_event_id": 16473662,
+          "title": "Nantes — Nancy",
+          "lifecycle": {
+            "state": "COLLECTING",
+            "changed_at": "2026-09-07T18:46:47.009527+00:00",
+            "reason": "COLLECTING"
+          },
+          "families": [
+            {
+              "family": "EVENT_DETAILS",
+              "latest_attempt_status": "PARSED",
+              "readable_data_received_at": "2026-09-07T19:31:49.804+00:00",
+              "readable_data_age_seconds": 430.196,
+              "readable_content": {
+                "sport_status": "inprogress",
+                "status_description": "Halftime",
+                "home_score": "0",
+                "away_score": "0"
+              },
+              "completeness_status": null,
+              "completeness_score": null,
+              "snapshot_id": 2222,
+              "occurrence_id": 2189,
+              "last_changed_at": "2026-09-07T19:31:49.804+00:00",
+              "consecutive_identical_successes": 1
+            },
+            {
+              "family": "EVENT_STATISTICS",
+              "latest_attempt_status": "PARSED",
+              "readable_data_received_at": "2026-09-07T19:32:14.819+00:00",
+              "readable_data_age_seconds": 405.181,
+              "completeness_status": "COMPLETE",
+              "completeness_score": 100,
+              "snapshot_id": 2230,
+              "occurrence_id": 2197,
+              "last_changed_at": "2026-09-07T19:32:14.819+00:00",
+              "consecutive_identical_successes": 1
+            },
+            {
+              "family": "EVENT_INCIDENTS",
+              "latest_attempt_status": "PARSED",
+              "readable_data_received_at": "2026-09-07T19:32:17.94+00:00",
+              "readable_data_age_seconds": 402.06,
+              "completeness_status": "COMPLETE",
+              "completeness_score": 100,
+              "snapshot_id": 2231,
+              "occurrence_id": 2198,
+              "last_changed_at": "2026-09-07T19:32:17.94+00:00",
+              "consecutive_identical_successes": 1
+            },
+            {
+              "family": "EVENT_LINEUPS",
+              "latest_attempt_status": "PARSED",
+              "readable_data_received_at": "2026-09-07T19:32:21.064+00:00",
+              "readable_data_age_seconds": 398.936,
+              "readable_content": {
+                "lineups_confirmed": true,
+                "home_starters": 11,
+                "away_starters": 11
+              },
+              "completeness_status": "COMPLETE",
+              "completeness_score": 100,
+              "snapshot_id": 2232,
+              "occurrence_id": 2199,
+              "last_changed_at": "2026-09-07T19:24:50.565+00:00",
+              "consecutive_identical_successes": 2
+            }
+          ],
+          "temporal_spread_dynamic": {
+            "seconds": 28.136,
+            "available_family_count": 3,
+            "expected_family_count": 3
+          },
+          "temporal_spread_all_four": {
+            "seconds": 31.26,
+            "available_family_count": 4,
+            "expected_family_count": 4
+          }
+        }
+      ]
+    },
+    {
+      "evaluated_at": "2026-09-07T19:46:00Z",
+      "campaign_id": "11a22482-5997-4590-9058-3a89d55e8973",
+      "matches": [
+        {
+          "provider_event_id": 16473662,
+          "title": "Nantes — Nancy",
+          "lifecycle": {
+            "state": "COLLECTING",
+            "changed_at": "2026-09-07T18:46:47.009527+00:00",
+            "reason": "COLLECTING"
+          },
+          "families": [
+            {
+              "family": "EVENT_DETAILS",
+              "latest_attempt_status": "PARSED",
+              "readable_data_received_at": "2026-09-07T19:39:20.378+00:00",
+              "readable_data_age_seconds": 399.622,
+              "readable_content": {
+                "sport_status": "inprogress",
+                "status_description": "Halftime",
+                "home_score": "0",
+                "away_score": "0"
+              },
+              "completeness_status": null,
+              "completeness_score": null,
+              "snapshot_id": 2222,
+              "occurrence_id": 2217,
+              "last_changed_at": "2026-09-07T19:31:49.804+00:00",
+              "consecutive_identical_successes": 2
+            },
+            {
+              "family": "EVENT_STATISTICS",
+              "latest_attempt_status": "PARSED",
+              "readable_data_received_at": "2026-09-07T19:39:45.348+00:00",
+              "readable_data_age_seconds": 374.652,
+              "completeness_status": "COMPLETE",
+              "completeness_score": 100,
+              "snapshot_id": 2258,
+              "occurrence_id": 2225,
+              "last_changed_at": "2026-09-07T19:39:45.348+00:00",
+              "consecutive_identical_successes": 1
+            },
+            {
+              "family": "EVENT_INCIDENTS",
+              "latest_attempt_status": "PARSED",
+              "readable_data_received_at": "2026-09-07T19:39:48.455+00:00",
+              "readable_data_age_seconds": 371.545,
+              "completeness_status": "COMPLETE",
+              "completeness_score": 100,
+              "snapshot_id": 2231,
+              "occurrence_id": 2226,
+              "last_changed_at": "2026-09-07T19:32:17.94+00:00",
+              "consecutive_identical_successes": 2
+            },
+            {
+              "family": "EVENT_LINEUPS",
+              "latest_attempt_status": "PARSED",
+              "readable_data_received_at": "2026-09-07T19:39:51.619+00:00",
+              "readable_data_age_seconds": 368.381,
+              "readable_content": {
+                "lineups_confirmed": true,
+                "home_starters": 11,
+                "away_starters": 11
+              },
+              "completeness_status": "COMPLETE",
+              "completeness_score": 100,
+              "snapshot_id": 2260,
+              "occurrence_id": 2227,
+              "last_changed_at": "2026-09-07T19:24:50.565+00:00",
+              "consecutive_identical_successes": 3
+            }
+          ],
+          "temporal_spread_dynamic": {
+            "seconds": 28.077,
+            "available_family_count": 3,
+            "expected_family_count": 3
+          },
+          "temporal_spread_all_four": {
+            "seconds": 31.241,
+            "available_family_count": 4,
+            "expected_family_count": 4
+          }
+        }
+      ]
+    },
+    {
+      "evaluated_at": "2026-09-07T19:47:00Z",
+      "campaign_id": "11a22482-5997-4590-9058-3a89d55e8973",
+      "matches": [
+        {
+          "provider_event_id": 16473662,
+          "title": "Nantes — Nancy",
+          "lifecycle": {
+            "state": "COLLECTING",
+            "changed_at": "2026-09-07T18:46:47.009527+00:00",
+            "reason": "COLLECTING"
+          },
+          "families": [
+            {
+              "family": "EVENT_DETAILS",
+              "latest_attempt_status": "PARSED",
+              "readable_data_received_at": "2026-09-07T19:46:53.425+00:00",
+              "readable_data_age_seconds": 6.575,
+              "readable_content": {
+                "sport_status": "inprogress",
+                "status_description": "2nd half",
+                "home_score": "1",
+                "away_score": "0"
+              },
+              "completeness_status": null,
+              "completeness_score": null,
+              "snapshot_id": 2278,
+              "occurrence_id": 2245,
+              "last_changed_at": "2026-09-07T19:46:53.425+00:00",
+              "consecutive_identical_successes": 1
+            },
+            {
+              "family": "EVENT_STATISTICS",
+              "latest_attempt_status": "PARSED",
+              "readable_data_received_at": "2026-09-07T19:39:45.348+00:00",
+              "readable_data_age_seconds": 434.652,
+              "completeness_status": "COMPLETE",
+              "completeness_score": 100,
+              "snapshot_id": 2258,
+              "occurrence_id": 2225,
+              "last_changed_at": "2026-09-07T19:39:45.348+00:00",
+              "consecutive_identical_successes": 1
+            },
+            {
+              "family": "EVENT_INCIDENTS",
+              "latest_attempt_status": "PARSED",
+              "readable_data_received_at": "2026-09-07T19:39:48.455+00:00",
+              "readable_data_age_seconds": 431.545,
+              "completeness_status": "COMPLETE",
+              "completeness_score": 100,
+              "snapshot_id": 2231,
+              "occurrence_id": 2226,
+              "last_changed_at": "2026-09-07T19:32:17.94+00:00",
+              "consecutive_identical_successes": 2
+            },
+            {
+              "family": "EVENT_LINEUPS",
+              "latest_attempt_status": "PARSED",
+              "readable_data_received_at": "2026-09-07T19:39:51.619+00:00",
+              "readable_data_age_seconds": 428.381,
+              "readable_content": {
+                "lineups_confirmed": true,
+                "home_starters": 11,
+                "away_starters": 11
+              },
+              "completeness_status": "COMPLETE",
+              "completeness_score": 100,
+              "snapshot_id": 2260,
+              "occurrence_id": 2227,
+              "last_changed_at": "2026-09-07T19:24:50.565+00:00",
+              "consecutive_identical_successes": 3
+            }
+          ],
+          "temporal_spread_dynamic": {
+            "seconds": 428.077,
+            "available_family_count": 3,
+            "expected_family_count": 3
+          },
+          "temporal_spread_all_four": {
+            "seconds": 428.077,
+            "available_family_count": 4,
+            "expected_family_count": 4
+          }
+        }
+      ]
+    },
+    {
+      "evaluated_at": "2026-09-07T20:02:42.611690Z",
+      "campaign_id": "11a22482-5997-4590-9058-3a89d55e8973",
+      "matches": [
+        {
+          "provider_event_id": 16473662,
+          "title": "Nantes — Nancy",
+          "lifecycle": {
+            "state": "COLLECTING",
+            "changed_at": "2026-09-07T18:46:47.009527+00:00",
+            "reason": "COLLECTING"
+          },
+          "families": [
+            {
+              "family": "EVENT_DETAILS",
+              "latest_attempt_status": "PARSED",
+              "readable_data_received_at": "2026-09-07T19:54:24.109+00:00",
+              "readable_data_age_seconds": 498.50269,
+              "readable_content": {
+                "sport_status": "inprogress",
+                "status_description": "2nd half",
+                "home_score": "1",
+                "away_score": "0"
+              },
+              "completeness_status": null,
+              "completeness_score": null,
+              "snapshot_id": 2306,
+              "occurrence_id": 2273,
+              "last_changed_at": "2026-09-07T19:54:24.109+00:00",
+              "consecutive_identical_successes": 1
+            },
+            {
+              "family": "EVENT_STATISTICS",
+              "latest_attempt_status": "PARSED",
+              "readable_data_received_at": "2026-09-07T19:47:18.481+00:00",
+              "readable_data_age_seconds": 924.13069,
+              "completeness_status": "COMPLETE",
+              "completeness_score": 100,
+              "snapshot_id": 2286,
+              "occurrence_id": 2253,
+              "last_changed_at": "2026-09-07T19:47:18.481+00:00",
+              "consecutive_identical_successes": 1
+            },
+            {
+              "family": "EVENT_INCIDENTS",
+              "latest_attempt_status": "PARSED",
+              "readable_data_received_at": "2026-09-07T19:47:21.609+00:00",
+              "readable_data_age_seconds": 921.00269,
+              "completeness_status": "COMPLETE",
+              "completeness_score": 100,
+              "snapshot_id": 2287,
+              "occurrence_id": 2254,
+              "last_changed_at": "2026-09-07T19:47:21.609+00:00",
+              "consecutive_identical_successes": 1
+            },
+            {
+              "family": "EVENT_LINEUPS",
+              "latest_attempt_status": "PARSED",
+              "readable_data_received_at": "2026-09-07T19:47:24.731+00:00",
+              "readable_data_age_seconds": 917.88069,
+              "readable_content": {
+                "lineups_confirmed": true,
+                "home_starters": 11,
+                "away_starters": 11
+              },
+              "completeness_status": "COMPLETE",
+              "completeness_score": 100,
+              "snapshot_id": 2288,
+              "occurrence_id": 2255,
+              "last_changed_at": "2026-09-07T19:47:24.731+00:00",
+              "consecutive_identical_successes": 1
+            }
+          ],
+          "temporal_spread_dynamic": {
+            "seconds": 425.628,
+            "available_family_count": 3,
+            "expected_family_count": 3
+          },
+          "temporal_spread_all_four": {
+            "seconds": 425.628,
+            "available_family_count": 4,
+            "expected_family_count": 4
+          }
+        }
+      ]
+    }
+  ],
+  "elche_first_lineups": {
+    "provider_event_id": 16416319,
+    "scheduled_start_at": "2026-09-07T19:30:00+00:00",
+    "status_at_2119_paris": "NOT_REQUESTED",
+    "last_notstarted_j4": {
+      "attempt_id": "a9b43f10-7aeb-473d-a621-56ebdcaad789",
+      "ordinal": 939,
+      "endpoint": "EVENT_DETAILS",
+      "kind": "J4_WAIT",
+      "reserved_at": "2026-09-07T19:24:50.913664+00:00",
+      "received_at": "2026-09-07T19:24:53.696+00:00",
+      "resolved_at": "2026-09-07T19:24:53.727965+00:00",
+      "snapshot_id": 1868,
+      "occurrence_id": 2175,
+      "payload_sha256": "6717877b0bb65d24bb6773316eec3c37cbd33c8f908116d2ab4d67338659f7de",
+      "parser_version": "event-details-v2",
+      "normalized_sha256": "38e7cdf985e79ad97b4475fcdee0b5c67f794c43fecdd7c9630c6d1213617d73",
+      "projection_version": "j4-live-score-v1",
+      "projection_sha256": "f0e4cd81eb0f7f68d232bfa8cabc746ac83db6832d30af3c2005a96306d3c624",
+      "outcome": "PARSED",
+      "code": "PARSED",
+      "completeness_status": null,
+      "completeness_score": null,
+      "canonical_event_id": "b0b93245-84ca-32b5-8e98-3cad7bb7d02a",
+      "provider_event_id": 16416319,
+      "title": "Elche — Real Sociedad"
+    },
+    "first_inprogress_j4": {
+      "attempt_id": "aa3d0fb4-df12-48c3-b6d0-c307569a51b5",
+      "ordinal": 964,
+      "endpoint": "EVENT_DETAILS",
+      "kind": "J4_WAIT",
+      "reserved_at": "2026-09-07T19:32:23.838956+00:00",
+      "received_at": "2026-09-07T19:32:24.192+00:00",
+      "resolved_at": "2026-09-07T19:32:24.221656+00:00",
+      "snapshot_id": 2233,
+      "occurrence_id": 2200,
+      "payload_sha256": "94594dcc1a4cf29d19d481baa527e601deb6ec4f56f83e4a1c22f59d9724e1f6",
+      "parser_version": "event-details-v2",
+      "normalized_sha256": "01560980d282e75bf4c1b45038a6a99ef606245eef866d697efd1ac0cc47ac84",
+      "projection_version": "j4-live-score-v1",
+      "projection_sha256": "b1c207a189c4377ff2e61378bf7fa7177d73b0d682f8c547fdb08d6a97b0df8e",
+      "outcome": "PARSED",
+      "code": "PARSED",
+      "completeness_status": null,
+      "completeness_score": null,
+      "canonical_event_id": "b0b93245-84ca-32b5-8e98-3cad7bb7d02a",
+      "provider_event_id": 16416319,
+      "title": "Elche — Real Sociedad"
+    },
+    "first_lineups": {
+      "attempt_id": "a983f768-b60f-45ce-a43f-83b9cc16f611",
+      "ordinal": 967,
+      "endpoint": "EVENT_LINEUPS",
+      "kind": "J5_NORMAL",
+      "reserved_at": "2026-09-07T19:32:30.868014+00:00",
+      "received_at": "2026-09-07T19:32:33.598+00:00",
+      "resolved_at": "2026-09-07T19:32:33.63282+00:00",
+      "snapshot_id": 2236,
+      "occurrence_id": 2203,
+      "payload_sha256": "02c3f4fc961a2c6e09cadf67993d8a10952d33e462e9e03e663809593342f73a",
+      "parser_version": "event-lineups-v2",
+      "normalized_sha256": "ff3f3bbaaf4a2fbbd08cde4b164de4aea5592b5ffe7ceb8622c718961aab95d5",
+      "projection_version": "live-family-v1",
+      "projection_sha256": "7f12abae77ba1850404f495010843c2ef9282c229c147691beb2a07dce92174e",
+      "outcome": "PARSED",
+      "code": "PARSED",
+      "completeness_status": "COMPLETE",
+      "completeness_score": 100,
+      "canonical_event_id": "b0b93245-84ca-32b5-8e98-3cad7bb7d02a",
+      "provider_event_id": 16416319,
+      "title": "Elche — Real Sociedad"
+    },
+    "lineups_confirmed": true,
+    "home_starters": 11,
+    "away_starters": 11,
+    "seconds_after_first_inprogress_j4_receipt": 9.406,
+    "seconds_after_scheduled_start": 153.598,
+    "lineups_attempt_count_before_first_inprogress_j4_publication": 0,
+    "interpretation": "The live-v2 campaign had not requested lineups while waiting for the start. This is not a provider unavailability observation."
+  },
+  "campaign_two_at_capture": {
+    "campaign_id": "11a22482-5997-4590-9058-3a89d55e8973",
+    "lifecycle": {
+      "state": "RUNNING",
+      "changed_at": "2026-09-07T17:30:21.855846+00:00",
+      "reason": "OPERATOR_LAUNCH"
+    },
+    "match_lifecycle_counts": {
+      "FINISHED_CONFIRMED": 9,
+      "COLLECTING": 6,
+      "CHECKING_FINISH": 1
+    },
+    "latest_reserved_attempt": {
+      "attempt_id": "c46e2806-51eb-4409-b72b-1b973e6dea26",
+      "ordinal": 1038,
+      "reserved_at": "2026-09-07T19:54:26.939601+00:00",
+      "resolved_at": "2026-09-07T19:54:27.579025+00:00"
+    },
+    "latest_receipt": {
+      "attempt_id": "c46e2806-51eb-4409-b72b-1b973e6dea26",
+      "ordinal": 1038,
+      "endpoint": "EVENT_DETAILS",
+      "kind": "J4_FALLBACK",
+      "reserved_at": "2026-09-07T19:54:26.939601+00:00",
+      "received_at": "2026-09-07T19:54:27.534+00:00",
+      "resolved_at": "2026-09-07T19:54:27.579025+00:00",
+      "snapshot_id": 2198,
+      "occurrence_id": 2274,
+      "payload_sha256": "e24d5ee76261bca281189fdca37354e3b33602c56e76602cc30464c741d2fd6f",
+      "parser_version": "event-details-v2",
+      "normalized_sha256": "8838427c5b504a0a8f3188761eba293c4553b7bab9a9b8ce4cc6a4ab13131f9c",
+      "projection_version": "j4-live-score-v1",
+      "projection_sha256": "b1c207a189c4377ff2e61378bf7fa7177d73b0d682f8c547fdb08d6a97b0df8e",
+      "outcome": "PARSED",
+      "code": "PARSED",
+      "completeness_status": null,
+      "completeness_score": null,
+      "canonical_event_id": "e97238e6-589c-3cbe-9cce-1b086d73378d",
+      "provider_event_id": 16450882,
+      "title": "Estoril Praia — FC Arouca"
+    },
+    "latest_resolved_attempt": {
+      "attempt_id": "c46e2806-51eb-4409-b72b-1b973e6dea26",
+      "ordinal": 1038,
+      "reserved_at": "2026-09-07T19:54:26.939601+00:00",
+      "resolved_at": "2026-09-07T19:54:27.579025+00:00"
+    },
+    "seconds_since_latest_receipt": 495.07769,
+    "pending_attempt_count": 0,
+    "active_readable_age_by_family": [
+      {
+        "family": "EVENT_DETAILS",
+        "available_active_match_count": 7,
+        "minimum_age_seconds": 495.07769,
+        "median_age_seconds": 514.20769,
+        "maximum_age_seconds": 914.77269
+      },
+      {
+        "family": "EVENT_STATISTICS",
+        "available_active_match_count": 7,
+        "minimum_age_seconds": 507.92869,
+        "median_age_seconds": 911.64769,
+        "maximum_age_seconds": 942.93469
+      },
+      {
+        "family": "EVENT_INCIDENTS",
+        "available_active_match_count": 7,
+        "minimum_age_seconds": 504.80069,
+        "median_age_seconds": 908.53569,
+        "maximum_age_seconds": 939.80969
+      },
+      {
+        "family": "EVENT_LINEUPS",
+        "available_active_match_count": 7,
+        "minimum_age_seconds": 501.65969,
+        "median_age_seconds": 905.42169,
+        "maximum_age_seconds": 936.67869
+      }
+    ]
+  },
+  "observed_reception_intervals": {
+    "definition": "Consecutive receipts within the same campaign, canonical event and endpoint, ordered by ledger ordinal. Never an interval between different matches or families. All receipts include successful and unavailable responses.",
+    "same_periodic_kind_definition": "Both adjacent receipts have the same kind among J4_WAIT, J4_FALLBACK, J4_FINISH, J5_NORMAL, and neither has final_cycle=true.",
+    "terminal_and_boundary_exceptions": "Final-cycle pairs and phase/kind changes are reported separately. A target with only one receipt produces no interval. No gap from the last receipt to capture is included in these completed-pair statistics; active ages at capture expose that right-censored tail.",
+    "campaigns": [
+      {
+        "campaign_id": "eeffbed1-c589-485c-94fe-f09ebc51ec2d",
+        "manifest_cycle_interval_seconds": 210,
+        "target_count": 8,
+        "attempt_count": 181,
+        "outcomes": {
+          "PARSED": 180,
+          "ENDPOINT_UNAVAILABLE": 1
+        },
+        "first_received_at": "2026-09-07T16:54:18.734+00:00",
+        "last_received_at": "2026-09-07T17:28:11.298+00:00",
+        "families": [
+          {
+            "family": "EVENT_DETAILS",
+            "all_consecutive_receipts": {
+              "pair_count": 35,
+              "minimum_seconds": 210.159,
+              "median_seconds": 300.326,
+              "maximum_seconds": 305.589
+            },
+            "same_periodic_kind_nonfinal_receipts": {
+              "pair_count": 23,
+              "minimum_seconds": 210.181,
+              "median_seconds": 300.351,
+              "maximum_seconds": 305.589
+            },
+            "final_cycle_pairs": {
+              "pair_count": 0,
+              "minimum_seconds": null,
+              "median_seconds": null,
+              "maximum_seconds": null
+            },
+            "remaining_phase_boundary_pair_count": 12
+          },
+          {
+            "family": "EVENT_STATISTICS",
+            "all_consecutive_receipts": {
+              "pair_count": 38,
+              "minimum_seconds": 209.655,
+              "median_seconds": 210.266,
+              "maximum_seconds": 216.411
+            },
+            "same_periodic_kind_nonfinal_receipts": {
+              "pair_count": 37,
+              "minimum_seconds": 209.655,
+              "median_seconds": 210.266,
+              "maximum_seconds": 216.411
+            },
+            "final_cycle_pairs": {
+              "pair_count": 1,
+              "minimum_seconds": 210.284,
+              "median_seconds": 210.284,
+              "maximum_seconds": 210.284
+            },
+            "remaining_phase_boundary_pair_count": 0
+          },
+          {
+            "family": "EVENT_INCIDENTS",
+            "all_consecutive_receipts": {
+              "pair_count": 38,
+              "minimum_seconds": 210.186,
+              "median_seconds": 210.261,
+              "maximum_seconds": 216.415
+            },
+            "same_periodic_kind_nonfinal_receipts": {
+              "pair_count": 37,
+              "minimum_seconds": 210.186,
+              "median_seconds": 210.262,
+              "maximum_seconds": 216.415
+            },
+            "final_cycle_pairs": {
+              "pair_count": 1,
+              "minimum_seconds": 210.26,
+              "median_seconds": 210.26,
+              "maximum_seconds": 210.26
+            },
+            "remaining_phase_boundary_pair_count": 0
+          },
+          {
+            "family": "EVENT_LINEUPS",
+            "all_consecutive_receipts": {
+              "pair_count": 38,
+              "minimum_seconds": 210.187,
+              "median_seconds": 210.2695,
+              "maximum_seconds": 216.416
+            },
+            "same_periodic_kind_nonfinal_receipts": {
+              "pair_count": 37,
+              "minimum_seconds": 210.187,
+              "median_seconds": 210.27,
+              "maximum_seconds": 216.416
+            },
+            "final_cycle_pairs": {
+              "pair_count": 1,
+              "minimum_seconds": 210.26,
+              "median_seconds": 210.26,
+              "maximum_seconds": 210.26
+            },
+            "remaining_phase_boundary_pair_count": 0
+          }
+        ]
+      },
+      {
+        "campaign_id": "11a22482-5997-4590-9058-3a89d55e8973",
+        "manifest_cycle_interval_seconds": 450,
+        "target_count": 16,
+        "attempt_count": 756,
+        "outcomes": {
+          "PARSED": 755,
+          "ENDPOINT_UNAVAILABLE": 1
+        },
+        "first_received_at": "2026-09-07T17:30:24.947+00:00",
+        "last_received_at": "2026-09-07T19:54:27.534+00:00",
+        "families": [
+          {
+            "family": "EVENT_DETAILS",
+            "all_consecutive_receipts": {
+              "pair_count": 230,
+              "minimum_seconds": 450.148,
+              "median_seconds": 450.404,
+              "maximum_seconds": 469.312
+            },
+            "same_periodic_kind_nonfinal_receipts": {
+              "pair_count": 171,
+              "minimum_seconds": 450.27,
+              "median_seconds": 450.405,
+              "maximum_seconds": 469.312
+            },
+            "final_cycle_pairs": {
+              "pair_count": 0,
+              "minimum_seconds": null,
+              "median_seconds": null,
+              "maximum_seconds": null
+            },
+            "remaining_phase_boundary_pair_count": 59
+          },
+          {
+            "family": "EVENT_STATISTICS",
+            "all_consecutive_receipts": {
+              "pair_count": 154,
+              "minimum_seconds": 450.192,
+              "median_seconds": 450.4265,
+              "maximum_seconds": 469.195
+            },
+            "same_periodic_kind_nonfinal_receipts": {
+              "pair_count": 145,
+              "minimum_seconds": 450.192,
+              "median_seconds": 450.424,
+              "maximum_seconds": 469.195
+            },
+            "final_cycle_pairs": {
+              "pair_count": 9,
+              "minimum_seconds": 450.262,
+              "median_seconds": 450.46,
+              "maximum_seconds": 469.107
+            },
+            "remaining_phase_boundary_pair_count": 0
+          },
+          {
+            "family": "EVENT_INCIDENTS",
+            "all_consecutive_receipts": {
+              "pair_count": 154,
+              "minimum_seconds": 450.222,
+              "median_seconds": 450.4275,
+              "maximum_seconds": 469.169
+            },
+            "same_periodic_kind_nonfinal_receipts": {
+              "pair_count": 145,
+              "minimum_seconds": 450.222,
+              "median_seconds": 450.427,
+              "maximum_seconds": 469.169
+            },
+            "final_cycle_pairs": {
+              "pair_count": 9,
+              "minimum_seconds": 450.258,
+              "median_seconds": 450.486,
+              "maximum_seconds": 469.11
+            },
+            "remaining_phase_boundary_pair_count": 0
+          },
+          {
+            "family": "EVENT_LINEUPS",
+            "all_consecutive_receipts": {
+              "pair_count": 154,
+              "minimum_seconds": 450.213,
+              "median_seconds": 450.429,
+              "maximum_seconds": 469.186
+            },
+            "same_periodic_kind_nonfinal_receipts": {
+              "pair_count": 145,
+              "minimum_seconds": 450.213,
+              "median_seconds": 450.428,
+              "maximum_seconds": 469.186
+            },
+            "final_cycle_pairs": {
+              "pair_count": 9,
+              "minimum_seconds": 450.28,
+              "median_seconds": 450.5,
+              "maximum_seconds": 469.119
+            },
+            "remaining_phase_boundary_pair_count": 0
+          }
+        ]
+      }
+    ]
+  },
+  "verification": {
+    "offline_python_tests": 15,
+    "result": "PASS",
+    "cursor_comparison": "normalized_sha256 + projection_version + projection_sha256 matches the existing cursor comparison of normalized hash + projection version + projection JSON; parser_version additionally splits identical-success streaks.",
+    "publication_visibility": "Only successful results with resolved_at<=evaluated_at supply readable content. Later receipt data is never silently used as successful content.",
+    "independent_cursor_comparisons_at_capture": {
+      "family_count": 96,
+      "fields": [
+        "last_changed_at",
+        "last_successful_received_at",
+        "last_successful_occurrence_id"
+      ],
+      "result": "PASS"
+    }
+  },
+  "limits": [
+    "Selected local live campaign ledger only; manual J4/J5 observations and other campaigns are outside this extraction.",
+    "No claim is made about uninterrupted source immutability between identical observations.",
+    "Provider changes can occur between requests; receipt age is not a measured source publication delay.",
+    "The supplied Highlightly 21:19 observation remains an operator report without comparable timestamped provider evidence in this extraction.",
+    "No universal freshness or coherence threshold is assigned; classes require a usage-specific policy.",
+    "Current lifecycle RUNNING and historical successful intervals do not prove continuous acquisition after the latest recorded receipt.",
+    "SQL source timestamps approximate historical availability and do not recover exact database commit visibility."
+  ]
+}

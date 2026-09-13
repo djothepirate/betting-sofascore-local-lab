@@ -1,0 +1,128 @@
+{
+  "schema": "wo058-grouped-live-v10-capacity-evidence-v2",
+  "status": "QUALIFIED_LOCAL_REPLAY_WITH_STATED_SCOPE",
+  "labStatus": [
+    "EXPERIMENTAL",
+    "LOCAL_ONLY",
+    "NOT_PRODUCTION_APPROVED",
+    "NO_CRITICAL_DEPENDENCY"
+  ],
+  "preparedAt": "2026-09-12",
+  "policyVersion": "live-v10",
+  "flywayVersion": 54,
+  "qualifiedCapacity": 8,
+  "candidateConfiguration": {
+    "maximumSelectedMatches": 8,
+    "maximumEndpointsPerMatchPerMinute": 4,
+    "nominalEndpointsPerMinute": 32,
+    "maximumDurableDeparturesPer60Seconds": 35,
+    "maximumDurableDeparturesPerHour": 2100,
+    "perMinuteHeadroomAtNominalCapacity": 3,
+    "hourlyCallsPerMatchIncludingInitialAndFinalReservation": 248,
+    "hourlyCallsAtMaximumSelection": 1984,
+    "hourlyHeadroomAtMaximumSelection": 116
+  },
+  "qualification": {
+    "independentV10BindingRequired": true,
+    "method": "V10_OFFLINE_ADMISSION_AND_V9_SCHEDULER_REPLAY_WITH_LOCAL_DURABLE_35_PER_60S_AND_2100_PER_HOUR_GUARDS",
+    "assertion": "V10 binds its own compiled admission, replay and adapter classes. Its eight-match capacity is proved offline with 32 nominal endpoint departures per minute, a local durable limit of 35 per rolling 60 seconds and 2100 per rolling hour.",
+    "profileAppliedAutomatically": false,
+    "localReplayOnly": true
+  },
+  "historicalV9SchedulerReference": {
+    "policyVersion": "live-v9",
+    "evidenceTest": "GroupedLiveAdmissionPolicyV9EvidenceTest",
+    "assertion": "V10GroupedScheduleProfile deliberately supplies the immutable V9 scheduler contract. V9 source and compiled-class hashes remain separately bound by the committed V9 evidence and are not copied into this V10 binding."
+  },
+  "endpointEnvelopes": {
+    "EVENT_DETAILS": {
+      "requestMillis": 300,
+      "processingMillis": 500
+    },
+    "EVENT_INCIDENTS": {
+      "requestMillis": 300,
+      "processingMillis": 400
+    },
+    "EVENT_STATISTICS": {
+      "requestMillis": 350,
+      "processingMillis": 400
+    },
+    "EVENT_LINEUPS": {
+      "requestMillis": 300,
+      "processingMillis": 450
+    }
+  },
+  "cadence": {
+    "criticalSeconds": 60,
+    "lineupSeconds": 60,
+    "intraGroupDelayMillis": 0,
+    "interGroupDelayMillis": 500,
+    "interGroupSlotReserveMillis": 1000,
+    "requestEmissionHeadStartMillis": 500,
+    "strictGroupPhaseReservationMillis": 6000,
+    "maximumEndpointsPerGroup": 4,
+    "maximumTemporalUtilization": 1.000,
+    "minimumPostCompletionDelayMillis": 500,
+    "nominalEndpointsPerMinuteAtMaximumSelection": 32,
+    "maximumDeparturesPer60Seconds": 35,
+    "maximumDeparturesPerHour": 2100,
+    "strictNormalPathDepartureTimestamp": "requestedNanos",
+    "strictNormalPathDepartureCadenceScope": "per-event-family",
+    "strictNormalPathMaximumDepartureIntervalSeconds": 60
+  },
+  "admission": {
+    "calculatedCapacity": 8,
+    "productionSchedulerScenarioCount": 16,
+    "productionSchedulerScenariosExecutedForThisProfile": true,
+    "profileAppliedAutomatically": false,
+    "localReplayOnly": true,
+    "weightedMinuteMillisPerMatch": 6000,
+    "weightedMinuteMillisAtQualifiedCapacity": 48000,
+    "availableMinuteMillis": 60000,
+    "hourlyCallsPerMatch": 248,
+    "hourlyCallsAtQualifiedCapacity": 1984,
+    "hourlyHeadroomCallsAtQualifiedCapacity": 116,
+    "calculation": "Eight selected matches times four J4/J5 endpoint families equals 32 nominal departures per minute. The V10 replay admits eight and refuses nine. Its V9 scheduler reference executes the historical 16-scenario local replay; its V10 durable profile separately records 35 departures per rolling 60 seconds and 2100 per rolling hour."
+  },
+  "budgets": {
+    "maximumCallsPerEvent": 2500,
+    "maximumCallsPerCampaign": 20000,
+    "maximumDurationMinutes": 240,
+    "maximumRawBytes": 15728640000,
+    "reservedFinalCallsPerActiveEvent": 4
+  },
+  "v10SchedulingControls": {
+    "finalResultOnlyStopsBeforeJ5": true,
+    "statisticsAndIncidentsSuppressedBeforeEligibleStatus": true,
+    "lineupsSuppressedWhenPlayerStatisticsExplicitlyFalse": true,
+    "halftimeQuietPeriodMinutes": 15,
+    "terminalStatistics404RecheckMaximum": 1,
+    "suspendedJ4OnlyRecheckSeconds": 60,
+    "suspendedSuppressesAllJ5Families": true,
+    "suspendedStatusReasonProjected": true,
+    "conditionalNotModifiedUsesLocalCacheOnly": true
+  },
+  "productionClassHashBinding": {
+    "status": "QUALIFIED_V10_COMPILED_CLASS_BINDING",
+    "requiredClasses": [
+      "com.bettingproject.sofascorelocal.application.live.LiveAdmissionPolicyV10",
+      "com.bettingproject.sofascorelocal.application.live.GroupedLiveAdmissionSimulationV10",
+      "com.bettingproject.sofascorelocal.application.live.V10GroupedScheduleProfile",
+      "com.bettingproject.sofascorelocal.domain.provider.ProviderResilienceData$DepartureProfile"
+    ],
+    "completionCriteria": "The listed V10 compiled admission, replay, adapter and durable-departure profile classes are bound below and the independent V10 evidence test replays eight and nine selected matches without a provider transport. The immutable V9 scheduler remains covered by its historical V9 evidence."
+  },
+  "productionClassSha256": {
+    "com.bettingproject.sofascorelocal.application.live.LiveAdmissionPolicyV10": "ea3e6517916e055904b50afc2d1ae92a2fa217efbe47e896f8e8b2792d5eea7f",
+    "com.bettingproject.sofascorelocal.application.live.GroupedLiveAdmissionSimulationV10": "a8038e642ef8248558a85ae93c0ccea14c04bd9935ff7fef0066967863fb2d8f",
+    "com.bettingproject.sofascorelocal.application.live.V10GroupedScheduleProfile": "99b5c95a1a75e126c487a9924e91fac6de7f8a1022875eeaf8093262ab527433",
+    "com.bettingproject.sofascorelocal.domain.provider.ProviderResilienceData$DepartureProfile": "f3d353dbb3558fc3566fad20fc06f0acc420d93cb5770582f578ce8920b4526d"
+  },
+  "limitations": [
+    "This V10 profile qualifies only the stated local offline admission and scheduler replay. It does not establish a provider acceptance threshold, IP threshold or provider quota.",
+    "No provider endpoint, browser, operator database or live campaign was started to create this profile.",
+    "The 35-per-60-second and 2100-per-hour values are local durable safety guards. A physical HTTP 304 departure remains auditable for cadence while its correlated local-cache result is excluded from functional collection accounting.",
+    "The launcher is display-only. It does not write an Eclipse configuration, change process/user/machine environment variables, start a transport or make a network call.",
+    "V8 and V9 evidence remains historical. V10 does not copy V9 compiled-class hashes; its immutable V9 scheduler reference is separately covered by the committed V9 evidence."
+  ]
+}

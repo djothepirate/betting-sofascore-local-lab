@@ -14,11 +14,100 @@ import java.util.concurrent.atomic.AtomicLong;
 import java.util.concurrent.atomic.AtomicReference;
 
 import static org.assertj.core.api.Assertions.assertThat;
+import static org.assertj.core.api.Assertions.assertThatThrownBy;
+import com.bettingproject.sofascorelocal.domain.provider.J5EventDataProviderRequest;
+import com.bettingproject.sofascorelocal.domain.provider.SofascoreEndpointType;
 
 class ManualProviderRequestCoordinatorTest {
 
+    @Test
+    void localRecoveryExcludesAnotherThreadAndNeverResetsTheRequestDelay() throws Exception {
+        MutableTicker ticker = new MutableTicker();
+        List<Duration> pauses = new ArrayList<>();
+        var coordinator = new ManualProviderRequestCoordinator(ticker::read, Duration.ofSeconds(3),
+                delay -> { pauses.add(delay); ticker.advance(delay); });
+        try (var lease = coordinator.acquireCampaign(UUID.randomUUID())) { lease.beginRequest(); }
+        AtomicReference<Throwable> rejection = new AtomicReference<>();
+        coordinator.withExclusiveLocalCleanup(() -> {
+            Thread contender = Thread.ofPlatform().start(() -> {
+                try (var ignored = coordinator.acquireLiveCampaign(UUID.randomUUID())) { }
+                catch (Throwable failure) { rejection.set(failure); }
+            });
+            try { contender.join(2000); }
+            catch (InterruptedException failure) { Thread.currentThread().interrupt(); throw new AssertionError(failure); }
+            assertThat(contender.isAlive()).isFalse();
+        });
+        assertThat(rejection.get()).isInstanceOf(ManualProviderRequestCoordinator.CoordinationException.class);
+        assertThatThrownBy(() -> coordinator.withExclusiveLocalCleanup(() -> { throw new IllegalStateException("probe"); }))
+                .hasMessage("probe");
+        try (var lease = coordinator.acquireCampaign(UUID.randomUUID())) { lease.beginRequest(); }
+        assertThat(pauses).containsExactly(Duration.ofSeconds(3));
+    }
+
     private static final UUID CAMPAIGN_ID = UUID.fromString(
             "c2925098-6f3b-4b19-8d0d-59cc5ef62a2a");
+
+    @Test
+    void singleEventManualJ5SkipsOnlyItsTwoInnerPausesAndPreservesEveryTransition() {
+        MutableTicker ticker = new MutableTicker();
+        List<Duration> pauses = new ArrayList<>();
+        var coordinator = new ManualProviderRequestCoordinator(ticker::read, Duration.ofSeconds(3),
+                delay -> { pauses.add(delay); ticker.advance(delay); });
+        try (var j4 = coordinator.acquireCampaign(UUID.randomUUID())) {
+            j4.beginRequest();
+            j4.beginRequest();
+        }
+        try (var j5 = coordinator.acquireManualJ5Campaign(CAMPAIGN_ID, 17000001)) {
+            for (var endpoint : List.of(SofascoreEndpointType.EVENT_STATISTICS,
+                    SofascoreEndpointType.EVENT_INCIDENTS, SofascoreEndpointType.EVENT_LINEUPS)) {
+                var request = manualRequest(endpoint, 17000001);
+                j5.beginManualJ5Request(request);
+                j5.checkManualJ5Request(request);
+            }
+            assertThat(pauses).containsExactly(Duration.ofSeconds(3), Duration.ofSeconds(3));
+        }
+        try (var next = coordinator.acquireManualJ5Campaign(UUID.randomUUID(), 17000001)) {
+            next.beginManualJ5Request(manualRequest(SofascoreEndpointType.EVENT_STATISTICS, 17000001));
+        }
+        try (var j4 = coordinator.acquire()) { }
+        assertThat(pauses).containsExactly(Duration.ofSeconds(3), Duration.ofSeconds(3),
+                Duration.ofSeconds(3), Duration.ofSeconds(3));
+    }
+
+    @Test
+    void manualJ5LeaseRejectsUnclaimedWrongEventSkippedRepeatedAndInterruptedCalls() {
+        MutableTicker ticker = new MutableTicker();
+        var coordinator = new ManualProviderRequestCoordinator(ticker::read, Duration.ofSeconds(3), ticker::advance);
+        var statistics = manualRequest(SofascoreEndpointType.EVENT_STATISTICS, 17000001);
+        try (var ordinary = coordinator.acquireCampaign(UUID.randomUUID())) {
+            assertThatThrownBy(() -> ordinary.beginManualJ5Request(statistics))
+                    .isInstanceOf(ManualProviderRequestCoordinator.CoordinationException.class);
+        }
+        var j5 = coordinator.acquireManualJ5Campaign(CAMPAIGN_ID, 17000001);
+        try (j5) {
+            assertThatThrownBy(j5::beginRequest).isInstanceOf(ManualProviderRequestCoordinator.CoordinationException.class);
+            assertThatThrownBy(() -> j5.checkManualJ5Request(statistics))
+                    .isInstanceOf(ManualProviderRequestCoordinator.CoordinationException.class);
+            assertThatThrownBy(() -> j5.beginManualJ5Request(manualRequest(SofascoreEndpointType.EVENT_STATISTICS, 17000002)))
+                    .isInstanceOf(ManualProviderRequestCoordinator.CoordinationException.class);
+            j5.beginManualJ5Request(statistics);
+            assertThatThrownBy(() -> j5.beginManualJ5Request(statistics))
+                    .isInstanceOf(ManualProviderRequestCoordinator.CoordinationException.class);
+            assertThatThrownBy(() -> j5.beginManualJ5Request(manualRequest(SofascoreEndpointType.EVENT_LINEUPS, 17000001)))
+                    .isInstanceOf(ManualProviderRequestCoordinator.CoordinationException.class);
+            Thread.currentThread().interrupt();
+            try {
+                assertThatThrownBy(() -> j5.checkManualJ5Request(statistics))
+                        .isInstanceOf(ManualProviderRequestCoordinator.CoordinationException.class);
+            } finally { Thread.interrupted(); }
+        }
+        assertThatThrownBy(() -> j5.checkManualJ5Request(statistics))
+                .isInstanceOf(ManualProviderRequestCoordinator.CoordinationException.class);
+    }
+
+    private static J5EventDataProviderRequest manualRequest(SofascoreEndpointType endpoint, long event) {
+        return new J5EventDataProviderRequest(java.net.URI.create("https://www.sofascore.com"), event, endpoint);
+    }
 
     @Test
     void sharesTheMinimumDelayAcrossSuccessiveJ3J4AndJ5RequestLeases() {

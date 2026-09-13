@@ -36,12 +36,53 @@ class SecurityHeadersFilterTest {
     }
 
     @Test
-    void keepsAllScriptsDisabledOutsideTheOfflineBatchRoute() throws Exception {
-        MockHttpServletResponse response = filter("/events");
+    void keepsAllScriptsDisabledOutsideTheExplicitLocalInteractiveRoutes() throws Exception {
+        MockHttpServletResponse response = filter("/events/event-id/exports");
 
         assertThat(response.getHeader("Content-Security-Policy"))
                 .contains("script-src 'none'")
                 .doesNotContain("script-src 'self'");
+    }
+
+    @ParameterizedTest
+    @ValueSource(strings = {"/events", "/events/12345678-1234-1234-1234-123456789012",
+            "/events/12345678-1234-1234-1234-123456789012/statistics",
+            "/events/12345678-1234-1234-1234-123456789012/statistics;jsessionid=LOCAL_TEST_SESSION",
+            "/live-campaigns/12345678-1234-1234-1234-123456789012"})
+    void permitsOnlyLocalExternalScriptsForLiveObservationPages(String path) throws Exception {
+        MockHttpServletResponse response = filter(path);
+        assertThat(response.getHeader("Content-Security-Policy"))
+                .contains("script-src 'self'", "frame-ancestors 'none'", "form-action 'self'")
+                .doesNotContain("'unsafe-inline'", "'unsafe-eval'");
+        assertThat(response.getHeader("Cache-Control")).contains("no-store", "no-cache");
+        assertThat(response.getHeader("Referrer-Policy")).isEqualTo("same-origin");
+    }
+
+    @ParameterizedTest
+    @ValueSource(strings = {
+        "/events;jsessionid=LOCAL_TEST_SESSION",
+        "/live-campaigns/12345678-1234-1234-1234-123456789012;jsessionid=LOCAL_TEST_SESSION",
+        "/live-campaigns/prepare"
+    })
+    void keepsAnExactOriginWhenLiveFormsAreRenderedAfterSessionRewritingOrAnError(String path)
+            throws Exception {
+        assertThat(filter(path).getHeader("Referrer-Policy")).isEqualTo("same-origin");
+    }
+
+    @ParameterizedTest
+    @ValueSource(strings = {
+        "/provider-access",
+        "/provider-access;jsessionid=LOCAL_TEST_SESSION"
+    })
+    void keepsAnExactOriginWhenTheProviderAccessRearmFormIsRendered(String path)
+            throws Exception {
+        MockHttpServletResponse response = filter(path);
+
+        assertThat(response.getHeader("Referrer-Policy")).isEqualTo("same-origin");
+        assertThat(response.getHeader("Cache-Control"))
+                .isEqualTo("no-store, no-cache, must-revalidate, max-age=0");
+        assertThat(response.getHeader("Content-Security-Policy"))
+                .contains("script-src 'none'", "form-action 'self'");
     }
 
     @Test
@@ -103,15 +144,19 @@ class SecurityHeadersFilterTest {
 
     @ParameterizedTest
     @ValueSource(strings = {
-        "/events",
         "/events/event-id/statistics",
         "/events/event-id/export",
         "/events/event-id/exports-adjacent",
         "/prefix/events/event-id/exports",
         "/j5-import-batches",
-        "/benchmark"
+        "/benchmark",
+        "/events/state",
+        "/events/12345678-1234-1234-1234-123456789012/state",
+        "/live-campaigns/12345678-1234-1234-1234-123456789012/state",
+        "/live-campaigns-adjacent",
+        "/prefix/live-campaigns/12345678-1234-1234-1234-123456789012"
     })
-    void keepsNoReferrerOutsideTheJ7ExportSubtree(String path) throws Exception {
+    void keepsNoReferrerOutsideJ7ExportsAndExplicitLivePages(String path) throws Exception {
         MockHttpServletResponse response = filter(path);
 
         assertThat(response.getHeader("Referrer-Policy"))

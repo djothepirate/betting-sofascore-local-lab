@@ -525,6 +525,11 @@ dl div {
   border-bottom: 1px solid #e7edef;
 }
 
+/* Keep semantic hidden detail rows out of the layout despite the shared flex rule above. */
+dl div[hidden] {
+  display: none !important;
+}
+
 dl div:last-child {
   border-bottom: 0;
 }
@@ -758,6 +763,106 @@ button:disabled {
   min-height: 65vh;
 }
 
+.incidents-view {
+  margin: 16px 0;
+  min-width: 0;
+}
+
+.incidents-view [hidden] {
+  display: none !important;
+}
+
+.incidents-list {
+  display: grid;
+  gap: 7px;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.incidents-item {
+  display: grid;
+  grid-template-columns: 3.5rem 1.8rem minmax(0, 1fr) auto;
+  align-items: start;
+  gap: 10px;
+  padding: 11px 13px;
+  border: 1px solid var(--line);
+  border-left: 3px solid #aab9bf;
+  border-radius: 9px;
+  background: var(--paper);
+  min-width: 0;
+  font-size: 0.9rem;
+}
+
+.incidents-item[data-incident-team-side="HOME"] { border-left-color: var(--teal); }
+.incidents-item[data-incident-team-side="AWAY"] { border-left-color: #7454b5; }
+.incidents-item[data-incident-tone="period"] {
+  background: #edf2f4;
+  border-left-color: #aab9bf;
+}
+
+.incidents-minute {
+  padding-top: 1px;
+  font-weight: 800;
+  font-variant-numeric: tabular-nums;
+  overflow-wrap: anywhere;
+}
+
+.incidents-icon {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-height: 25px;
+  font-size: 1.2rem;
+  line-height: 1.2;
+}
+
+.incidents-content { min-width: 0; overflow-wrap: anywhere; }
+.incidents-heading { display: flex; align-items: baseline; flex-wrap: wrap; gap: 3px 10px; }
+.incidents-heading strong { font-size: 0.9rem; }
+.incidents-side { color: var(--muted); font-size: 0.78rem; }
+.incidents-item[data-incident-team-side="HOME"] .incidents-side { color: #007b79; }
+.incidents-item[data-incident-team-side="AWAY"] .incidents-side { color: #6946aa; }
+.incidents-item[data-incident-tone="red"] .incidents-heading strong { color: #a02c2c; }
+.incidents-item[data-incident-tone="var"] .incidents-heading strong {
+  border-radius: 4px;
+  padding: 1px 5px;
+  background: #eeedf7;
+  color: #584a8c;
+}
+
+.incidents-player-line { margin: 3px 0 0; font-weight: 650; }
+.incidents-change { display: flex; align-items: baseline; flex-wrap: wrap; gap: 3px 8px; margin-top: 3px; }
+.incidents-change-label { min-width: 4rem; font-size: 0.78rem; font-weight: 750; }
+[data-incident-in] .incidents-change-label { color: #147a58; }
+[data-incident-out] .incidents-change-label { color: #a83838; }
+.incidents-note { margin: 3px 0 0; color: var(--muted); font-size: 0.82rem; }
+.incidents-empty { color: var(--muted); font-size: 0.9rem; }
+
+.incidents-score {
+  display: inline-flex;
+  justify-content: center;
+  min-width: 3.4rem;
+  max-width: 100%;
+  padding: 3px 8px;
+  border: 1px solid #bddcda;
+  border-radius: 7px;
+  background: var(--teal-soft);
+  font-weight: 800;
+  font-variant-numeric: tabular-nums;
+  white-space: nowrap;
+}
+
+[data-incidents-technical] { margin-top: 12px; min-width: 0; }
+[data-incidents-technical] > summary { cursor: pointer; color: var(--muted); font-size: 0.86rem; }
+[data-incidents-technical] > .table-scroll { margin-top: 10px; }
+
+@media (max-width: 660px) {
+  .incidents-item { grid-template-columns: 2.7rem 1.4rem minmax(0, 1fr); gap: 7px; padding: 9px 8px; }
+  .incidents-score { grid-column: 3; justify-self: start; min-width: 3rem; font-size: 0.84rem; }
+  .incidents-icon { font-size: 1.1rem; }
+}
+
 .page-links {
   margin-bottom: 22px;
 }
@@ -875,6 +980,37 @@ button:disabled {
   justify-content: space-between;
 }
 
+.live-pagination {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  margin: 18px 0;
+  padding: 14px 18px;
+  border: 1px solid var(--line);
+  border-radius: 12px;
+  background: white;
+}
+
+.live-pagination p { margin: 0; }
+.live-pagination-links { display: flex; flex-wrap: wrap; gap: 6px; }
+.live-pagination-links a,
+.live-pagination-links span {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-width: 44px;
+  min-height: 44px;
+  padding: 8px 12px;
+  border-radius: 8px;
+}
+.live-pagination-links a { color: var(--ink-strong); background: var(--teal-soft); }
+.live-pagination-links a:focus-visible { outline: 3px solid var(--ink); outline-offset: 2px; }
+.live-pagination-links [aria-current="page"] { color: white; background: var(--ink); font-weight: 700; }
+.live-pagination-links [aria-disabled="true"] { color: var(--muted); }
+#campaign-events, [id^="live-event-"] { scroll-margin-top: 18px; }
+
 .table-link {
   display: inline-flex;
   padding: 7px 10px;
@@ -889,6 +1025,10 @@ button:disabled {
   display: grid;
   grid-template-columns: repeat(2, minmax(0, 1fr));
   gap: 0 24px;
+}
+
+[data-live-timeout-proof][hidden] {
+  display: none !important;
 }
 
 .hash-value {
@@ -1028,5 +1168,52 @@ footer {
   .batch-evidence-state {
     grid-column: 2;
     justify-self: start;
+  }
+}
+
+.incidents-disclosure > summary, .incidents-period > summary { cursor: pointer; padding: .7rem; font-weight: 700; overflow-wrap: anywhere; }
+.incidents-disclosure > summary { background: var(--canvas, #f4f8f9); border-radius: .5rem; }
+.incidents-period > summary { border-bottom: 1px solid var(--line, #c7dce2); }
+.incidents-disclosure > summary:focus-visible, .incidents-period > summary:focus-visible { outline: 3px solid var(--accent, #008b8b); outline-offset: -3px; }
+.incidents-count { display: inline-block; margin-left: .4rem; font-size: .85em; color: var(--muted, #607e8c); }
+.event-information dd { overflow-wrap: anywhere; }
+.event-information [data-event-person-country]:not([hidden]) { display: inline-flex; align-items: center; gap: .35rem; margin-left: .35rem; font-weight: 400; }
+.event-information [data-event-person-flag] { flex: 0 0 24px; object-fit: contain; vertical-align: middle; }
+.country-accessible-prefix {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  padding: 0;
+  margin: -1px;
+  overflow: hidden;
+  clip: rect(0, 0, 0, 0);
+  clip-path: inset(50%);
+  white-space: nowrap;
+}
+/* The country text remains in the accessibility tree. It is only visually hidden after the
+   local SVG has loaded, so a failed image, disabled JavaScript, or a compatibility mode keeps
+   an explicit French label on screen. */
+[data-country-flag-state="ready"] .country-fallback-label {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  padding: 0;
+  margin: -1px;
+  overflow: hidden;
+  clip: rect(0, 0, 0, 0);
+  clip-path: inset(50%);
+  white-space: nowrap;
+}
+@media (forced-colors: active), (prefers-contrast: more) {
+  [data-country-flag-state="ready"] .country-fallback-label {
+    position: static;
+    width: auto;
+    height: auto;
+    padding: 0;
+    margin: 0;
+    overflow: visible;
+    clip: auto;
+    clip-path: none;
+    white-space: normal;
   }
 }

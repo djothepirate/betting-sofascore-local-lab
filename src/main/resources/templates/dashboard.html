@@ -127,7 +127,7 @@
             th:text="${manualCall.globalStopActive ? 'ARRÊT GLOBAL ACTIF' : 'ARRÊT GLOBAL LEVÉ'}">ARRÊT GLOBAL ACTIF</span>
     </div>
 
-    <p class="control-intro">Une confirmation ne déclenche rien à elle seule. Chaque collecte repart de la page 1 et continue strictement tant que le JSON parsé indique <span class="mono">hasNextPage=true</span>, dans l’ordre, sans cookie, jeton, compte, session ni retry. Le plafond local est fixé à 25 pages. Après confirmation, l’opérateur choisit une seule voie : transport direct ou import local de toutes les pages JSON 1 à N.</p>
+    <p class="control-intro">Une confirmation ne déclenche rien à elle seule. Chaque collecte repart de la page 1 et continue strictement tant que le JSON parsé indique <span class="mono">hasNextPage=true</span>, dans l’ordre, sans cookie, jeton, compte, session ni retry. Le plafond local est fixé à 35 pages. Après confirmation, l’opérateur choisit une seule voie : transport direct ou import local de toutes les pages JSON 1 à N.</p>
 
     <div th:if="${manualCallMessage != null}"
          class="notice"
@@ -211,12 +211,12 @@
             <input type="hidden" name="localFormToken" th:value="${localFormToken}">
             <input type="hidden" name="requestId" th:value="${manualCall.intent.requestId}">
             <p>Recopiez exactement cette phrase à usage unique avant son expiration :</p>
-            <code class="confirmation-phrase" th:text="${manualCall.intent.confirmationPhrase}">CONFIRMER SCHEDULED_EVENTS 2026-08-14 PAGINATION DYNAMIQUE MAX 25 000042</code>
+            <code class="confirmation-phrase" th:text="${manualCall.intent.confirmationPhrase}">CONFIRMER SCHEDULED_EVENTS 2026-08-14 PAGINATION DYNAMIQUE MAX 35 000042</code>
             <label for="confirmation-text">Phrase de confirmation</label>
             <input id="confirmation-text" type="text" name="confirmationText" maxlength="128" autocomplete="off" required>
             <label class="acknowledgement" for="acknowledged">
               <input id="acknowledged" type="checkbox" name="acknowledged" value="true" required>
-              Je confirme la date, le départ obligatoire en page 1, la pagination pilotée par hasNextPage, le plafond de 25 pages, l’absence de données de session et comprends que le déclenchement reste une action séparée.
+              Je confirme la date, le départ obligatoire en page 1, la pagination pilotée par hasNextPage, le plafond de 35 pages, l’absence de données de session et comprends que le déclenchement reste une action séparée.
             </label>
             <button class="button-primary" type="submit">4. Confirmer l’intention locale</button>
           </form>
@@ -226,7 +226,7 @@
           </div>
 
           <div th:if="${manualCall.intent.confirmedReady}" class="notice notice-warning">
-            Collecte confirmée. Vérifiez une dernière fois la date puis choisissez une seule action : une séquence fournisseur <span th:text="${manualCall.intent.pageRange}">1-N (max 25)</span>, ou l’import hors réseau des corps JSON de toutes les pages 1 à N.
+            Collecte confirmée. Vérifiez une dernière fois la date puis choisissez une seule action : une séquence fournisseur <span th:text="${manualCall.intent.pageRange}">1-N (max 35)</span>, ou l’import hors réseau des corps JSON de toutes les pages 1 à N.
           </div>
 
           <div th:if="${manualCall.intent.executing}" class="notice notice-warning">
@@ -286,7 +286,7 @@
             <label for="j3-page-files">Pages JSON contiguës 1 à N</label>
             <input id="j3-page-files" type="file" name="pageFiles"
                    accept="application/json,.json" multiple required>
-            <p class="fixture-note">5 Mio maximum par page, 25 Mio pour le lot, 25 pages maximum. La dernière page doit annoncer <code>hasNextPage=false</code>.</p>
+            <p class="fixture-note">5 Mio maximum par page, 25 Mio pour le lot, 35 pages maximum. La dernière page doit annoncer <code>hasNextPage=false</code>.</p>
             <button type="submit" class="button-primary">5B. Importer et valider J3 — ZÉRO APPEL</button>
           </form>
         </div>
@@ -589,7 +589,11 @@
       peuvent entrer dans un plan. L’exécution reste réservée au script opérateur, après sauvegarde
       chiffrée et restauration qualifiée.</p>
 
-    <p class="notice notice-danger" th:if="${retentionPreviewUnavailable}">
+    <p class="notice notice-warning" th:if="${retentionPreviewProviderBusy == true}">
+      L’aperçu de rétention est indisponible : une session fournisseur est active ou sa clôture reste à finaliser.
+      Actualisez le tableau de bord une fois la session clôturée. Aucun plan de rétention n’a été calculé.
+    </p>
+    <p class="notice notice-danger" th:if="${retentionPreviewUnavailable == true and retentionPreviewProviderBusy != true}">
       L’aperçu de rétention est indisponible ; aucune action n’est possible.
     </p>
 

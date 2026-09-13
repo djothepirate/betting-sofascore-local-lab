@@ -1,8 +1,8 @@
 package com.bettingproject.sofascorelocal.application.network;
 
-import com.bettingproject.sofascorelocal.adapter.sofascore.eventdata.EventIncidentsV15Parser;
+import com.bettingproject.sofascorelocal.adapter.sofascore.eventdata.EventIncidentsV17Parser;
 import com.bettingproject.sofascorelocal.adapter.sofascore.eventdata.EventIncidentsV6Parser;
-import com.bettingproject.sofascorelocal.adapter.sofascore.eventdata.EventLineupsV2Parser;
+import com.bettingproject.sofascorelocal.adapter.sofascore.eventdata.EventLineupsV4Parser;
 import com.bettingproject.sofascorelocal.adapter.sofascore.eventdata.EventStatisticsV2Parser;
 import com.bettingproject.sofascorelocal.adapter.sofascore.eventdata.J5ParseResult;
 import com.bettingproject.sofascorelocal.adapter.sofascore.eventdata.J5ParseStatus;
@@ -68,7 +68,7 @@ public class J5LocalJsonImportProcessor {
     private final J5EventDataStore eventDataStore;
     private final EventStatisticsV2Parser statisticsParser;
     private final EventIncidentsV6Parser incidentsParser;
-    private final EventLineupsV2Parser lineupsParser;
+    private final EventLineupsV4Parser lineupsParser;
     private final Clock clock;
 
     @Autowired
@@ -81,8 +81,8 @@ public class J5LocalJsonImportProcessor {
                 canonicalEventStore,
                 eventDataStore,
                 new EventStatisticsV2Parser(),
-                new EventIncidentsV15Parser(),
-                new EventLineupsV2Parser(),
+                new EventIncidentsV17Parser(),
+                new EventLineupsV4Parser(),
                 Clock.systemUTC());
     }
 
@@ -92,7 +92,7 @@ public class J5LocalJsonImportProcessor {
             J5EventDataStore eventDataStore,
             EventStatisticsV2Parser statisticsParser,
             EventIncidentsV6Parser incidentsParser,
-            EventLineupsV2Parser lineupsParser,
+            EventLineupsV4Parser lineupsParser,
             Clock clock) {
         this.rawSnapshotStore = Objects.requireNonNull(rawSnapshotStore, "rawSnapshotStore");
         this.canonicalEventStore = Objects.requireNonNull(
@@ -528,8 +528,8 @@ public class J5LocalJsonImportProcessor {
     static String parserVersion(SofascoreEndpointType endpoint) {
         return switch (endpoint) {
             case EVENT_STATISTICS -> EventStatisticsV2Parser.PARSER_VERSION;
-            case EVENT_INCIDENTS -> EventIncidentsV15Parser.PARSER_VERSION;
-            case EVENT_LINEUPS -> EventLineupsV2Parser.PARSER_VERSION;
+            case EVENT_INCIDENTS -> EventIncidentsV17Parser.PARSER_VERSION;
+            case EVENT_LINEUPS -> EventLineupsV4Parser.PARSER_VERSION;
             default -> throw new IllegalArgumentException("unsupported J5 endpoint");
         };
     }

@@ -5,6 +5,8 @@ import com.bettingproject.sofascorelocal.application.network.playwright.Playwrig
 import com.bettingproject.sofascorelocal.application.network.playwright.PlaywrightProviderException;
 import com.bettingproject.sofascorelocal.application.network.playwright.PlaywrightProviderRequest;
 import com.bettingproject.sofascorelocal.application.network.playwright.PlaywrightProviderResponse;
+import com.bettingproject.sofascorelocal.application.network.playwright.LiveProviderDispatchGroup;
+import com.bettingproject.sofascorelocal.application.network.playwright.PlaywrightDispatchAdmission;
 import com.bettingproject.sofascorelocal.domain.provider.J5EventDataProviderRequest;
 import com.bettingproject.sofascorelocal.domain.provider.J5EventDataTransportResponse;
 import com.bettingproject.sofascorelocal.domain.provider.SofascoreEndpointType;
@@ -40,7 +42,7 @@ public final class ProviderJ5EventDataPlaywrightTransport
     public Campaign openCampaign(UUID campaignId) {
         Objects.requireNonNull(campaignId, "campaignId");
         try {
-            PlaywrightProviderCampaign delegate = campaignFactory.open(
+            PlaywrightProviderCampaign delegate = campaignFactory.openManualJ5Grouped(
                     campaignId, ALLOWED_ENDPOINTS);
             return new Campaign() {
 
@@ -48,11 +50,19 @@ public final class ProviderJ5EventDataPlaywrightTransport
                 private boolean cleanupCompleted;
                 private long eventId;
                 private int nextEndpointIndex;
+                private final UUID groupId = UUID.randomUUID();
 
                 @Override
                 public J5EventDataTransportResponse execute(
                         J5EventDataProviderRequest request) {
+                    return execute(request, () -> { });
+                }
+
+                @Override
+                public J5EventDataTransportResponse execute(
+                        J5EventDataProviderRequest request, Runnable dispatchGuard) {
                     Objects.requireNonNull(request, "request");
+                    Objects.requireNonNull(dispatchGuard, "dispatchGuard");
                     if (closeRequested) {
                         throw new J5EventDataTransportException(
                                 J5EventDataTransportFailure.OPERATOR_STOP);
@@ -68,8 +78,17 @@ public final class ProviderJ5EventDataPlaywrightTransport
                         eventId = request.eventId();
                     }
                     try {
-                        PlaywrightProviderResponse response = delegate.execute(
-                                toPlaywrightRequest(request));
+                        PlaywrightProviderResponse response = delegate.executeGrouped(
+                                toPlaywrightRequest(request),
+                                new LiveProviderDispatchGroup(campaignId, groupId, eventId,
+                                        LiveProviderDispatchGroup.Phase.MANUAL_J5),
+                                new PlaywrightDispatchAdmission() {
+                                    @Override public void check() { dispatchGuard.run(); }
+                                    @Override public Permit acquireDispatchPermit() {
+                                        dispatchGuard.run();
+                                        return () -> { };
+                                    }
+                                });
                         nextEndpointIndex++;
                         return new J5EventDataTransportResponse(
                                 request.endpointType(),
@@ -127,7 +146,7 @@ public final class ProviderJ5EventDataPlaywrightTransport
     static J5EventDataTransportException translate(
             PlaywrightProviderException exception) {
         J5EventDataTransportFailure failure = switch (exception.failure()) {
-            case TIMEOUT -> J5EventDataTransportFailure.TIMEOUT;
+            case TIMEOUT, IPC_TIMEOUT -> J5EventDataTransportFailure.TIMEOUT;
             case PAYLOAD_TOO_LARGE -> J5EventDataTransportFailure.PAYLOAD_TOO_LARGE;
             case SENSITIVE_CONTENT_REJECTED ->
                     J5EventDataTransportFailure.SENSITIVE_CONTENT_REJECTED;

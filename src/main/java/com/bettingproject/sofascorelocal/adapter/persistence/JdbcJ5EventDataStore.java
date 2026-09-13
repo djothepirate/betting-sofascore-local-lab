@@ -1,12 +1,15 @@
 package com.bettingproject.sofascorelocal.adapter.persistence;
 
 import com.bettingproject.sofascorelocal.domain.event.CanonicalEventIdentity;
+import com.bettingproject.sofascorelocal.domain.event.ProviderCountry;
 import com.bettingproject.sofascorelocal.domain.event.EventSourceKind;
 import com.bettingproject.sofascorelocal.domain.event.EventSourceTrace;
 import com.bettingproject.sofascorelocal.domain.eventdata.EventIncident;
 import com.bettingproject.sofascorelocal.domain.eventdata.EventIncidents;
 import com.bettingproject.sofascorelocal.domain.eventdata.EventLineupPlayer;
 import com.bettingproject.sofascorelocal.domain.eventdata.EventLineups;
+import com.bettingproject.sofascorelocal.domain.eventdata.MissingLineupPlayer;
+import com.bettingproject.sofascorelocal.domain.eventdata.PlayerMatchStatistics;
 import com.bettingproject.sofascorelocal.domain.eventdata.EventStatisticMetric;
 import com.bettingproject.sofascorelocal.domain.eventdata.EventStatistics;
 import com.bettingproject.sofascorelocal.domain.eventdata.J5CompletenessReport;
@@ -27,18 +30,24 @@ import org.springframework.jdbc.core.RowCallbackHandler;
 import org.springframework.stereotype.Repository;
 import org.springframework.transaction.annotation.Transactional;
 import tools.jackson.core.JacksonException;
+import tools.jackson.core.StreamWriteFeature;
 import tools.jackson.databind.ObjectMapper;
+import tools.jackson.databind.DeserializationFeature;
+import tools.jackson.databind.JsonNode;
 import tools.jackson.databind.json.JsonMapper;
 
 import java.sql.ResultSet;
 import java.sql.SQLException;
 import java.sql.Types;
+import java.math.BigDecimal;
 import java.time.OffsetDateTime;
 import java.time.ZoneOffset;
 import java.util.ArrayList;
 import java.util.EnumMap;
 import java.util.List;
 import java.util.Map;
+import java.util.LinkedHashMap;
+import java.util.TreeMap;
 import java.util.Objects;
 import java.util.Optional;
 import java.util.UUID;
@@ -46,7 +55,9 @@ import java.util.UUID;
 @Repository
 public class JdbcJ5EventDataStore implements J5EventDataStore {
 
-    private static final ObjectMapper JSON_MAPPER = JsonMapper.builder().build();
+    private static final ObjectMapper JSON_MAPPER = JsonMapper.builder()
+            .enable(StreamWriteFeature.WRITE_BIGDECIMAL_AS_PLAIN)
+            .enable(DeserializationFeature.USE_BIG_DECIMAL_FOR_FLOATS).build();
 
     private static final String INSERT_OBSERVATION_SQL = """
             insert into j5_event_data_observation (
@@ -324,17 +335,19 @@ public class JdbcJ5EventDataStore implements J5EventDataStore {
                 observation_id,
                 endpoint_type,
                 side,
-                formation
+                formation,
+                missing_players
             ) values (
                 :observationId,
                 'EVENT_LINEUPS',
                 :side,
-                :formation
+                :formation,
+                cast(:missingPlayers as jsonb)
             )
             """;
 
     private static final String FIND_LINEUP_SIDES_SQL = """
-            select side, formation
+            select side, formation, missing_players::text as missing_players
             from j5_event_lineup_side
             where observation_id = :observationId
             """;
@@ -349,7 +362,11 @@ public class JdbcJ5EventDataStore implements J5EventDataStore {
                 player_name,
                 shirt_number,
                 position,
-                starter
+                starter,
+                captain,
+                statistics,
+                country_name,
+                country_alpha2
             ) values (
                 :observationId,
                 'EVENT_LINEUPS',
@@ -359,7 +376,11 @@ public class JdbcJ5EventDataStore implements J5EventDataStore {
                 :playerName,
                 :shirtNumber,
                 :position,
-                :starter
+                :starter,
+                :captain,
+                cast(:statistics as jsonb),
+                :countryName,
+                :countryAlpha2
             )
             """;
 
@@ -371,7 +392,11 @@ public class JdbcJ5EventDataStore implements J5EventDataStore {
                 player_name,
                 shirt_number,
                 position,
-                starter
+                starter,
+                captain,
+                statistics::text as statistics,
+                country_name,
+                country_alpha2
             from j5_event_lineup_player
             where observation_id = :observationId
             order by side, player_order
@@ -609,7 +634,8 @@ public class JdbcJ5EventDataStore implements J5EventDataStore {
             sideBatches[sideIndex] = new MapSqlParameterSource()
                     .addValue("observationId", observationId)
                     .addValue("side", side.side().name())
-                    .addValue("formation", side.formation().orElse(null), Types.VARCHAR);
+                    .addValue("formation", side.formation().orElse(null), Types.VARCHAR)
+                    .addValue("missingPlayers", writeMissingPlayers(side.missingPlayers()), Types.VARCHAR);
             for (int playerIndex = 0; playerIndex < side.players().size(); playerIndex++) {
                 EventLineupPlayer player = side.players().get(playerIndex);
                 playerBatches.add(new MapSqlParameterSource()
@@ -623,7 +649,11 @@ public class JdbcJ5EventDataStore implements J5EventDataStore {
                                 player.shirtNumber().orElse(null),
                                 Types.SMALLINT)
                         .addValue("position", player.position().orElse(null), Types.VARCHAR)
-                        .addValue("starter", player.starter()));
+                        .addValue("starter", player.starter())
+                        .addValue("captain", player.captain().orElse(null), Types.BOOLEAN)
+                        .addValue("statistics", writePlayerStatistics(player.statistics()), Types.VARCHAR)
+                        .addValue("countryName", player.country().flatMap(ProviderCountry::name).orElse(null), Types.VARCHAR)
+                        .addValue("countryAlpha2", player.country().flatMap(ProviderCountry::alpha2).orElse(null), Types.VARCHAR));
             }
         }
         jdbcTemplate.batchUpdate(INSERT_LINEUP_SIDE_SQL, sideBatches);
@@ -748,12 +778,15 @@ public class JdbcJ5EventDataStore implements J5EventDataStore {
 
     private EventLineups readLineups(StoredParent parent) {
         Map<LineupSide, Optional<String>> formations = new EnumMap<>(LineupSide.class);
+        Map<LineupSide, Optional<List<MissingLineupPlayer>>> missing = new EnumMap<>(LineupSide.class);
         jdbcTemplate.query(
                 FIND_LINEUP_SIDES_SQL,
                 new MapSqlParameterSource("observationId", parent.observationId()),
-                (RowCallbackHandler) resultSet -> formations.put(
-                        LineupSide.valueOf(resultSet.getString("side")),
-                        Optional.ofNullable(resultSet.getString("formation"))));
+                (RowCallbackHandler) resultSet -> {
+                    LineupSide side = LineupSide.valueOf(resultSet.getString("side"));
+                    formations.put(side, Optional.ofNullable(resultSet.getString("formation")));
+                    missing.put(side, readMissingPlayers(resultSet.getString("missing_players")));
+                });
         Map<LineupSide, List<EventLineupPlayer>> players = new EnumMap<>(LineupSide.class);
         players.put(LineupSide.HOME, new ArrayList<>());
         players.put(LineupSide.AWAY, new ArrayList<>());
@@ -767,20 +800,126 @@ public class JdbcJ5EventDataStore implements J5EventDataStore {
                                 resultSet.getString("player_name"),
                                 optionalInteger(resultSet, "shirt_number"),
                                 Optional.ofNullable(resultSet.getString("position")),
-                                resultSet.getBoolean("starter"))));
+                                resultSet.getBoolean("starter"),
+                                Optional.ofNullable(resultSet.getObject("captain", Boolean.class)),
+                                readPlayerStatistics(resultSet.getString("statistics")), readCountry(resultSet))));
         TeamLineup home = new TeamLineup(
                 LineupSide.HOME,
                 requireFormationSlot(formations, LineupSide.HOME),
-                players.get(LineupSide.HOME));
+                players.get(LineupSide.HOME), missing.get(LineupSide.HOME));
         TeamLineup away = new TeamLineup(
                 LineupSide.AWAY,
                 requireFormationSlot(formations, LineupSide.AWAY),
-                players.get(LineupSide.AWAY));
+                players.get(LineupSide.AWAY), missing.get(LineupSide.AWAY));
         return new EventLineups(
                 parent.identity().providerEventId(),
                 Objects.requireNonNull(parent.lineupsConfirmed(), "lineupsConfirmed"),
                 home,
                 away);
+    }
+
+    private static Optional<ProviderCountry> readCountry(ResultSet result) throws SQLException {
+        String name = result.getString("country_name"), alpha2 = result.getString("country_alpha2");
+        return name == null && alpha2 == null ? Optional.empty()
+                : Optional.of(new ProviderCountry(Optional.ofNullable(name), Optional.ofNullable(alpha2)));
+    }
+
+    private static String writePlayerStatistics(Optional<PlayerMatchStatistics> statistics) {
+        if (statistics.isEmpty()) return null;
+        PlayerMatchStatistics value = statistics.orElseThrow();
+        Map<String, Object> object = new LinkedHashMap<>();
+        object.put("values", new TreeMap<>(value.values()));
+        object.put("ratingVersions", new TreeMap<>(value.ratingVersions()));
+        return JSON_MAPPER.writeValueAsString(object);
+    }
+
+    private static Optional<PlayerMatchStatistics> readPlayerStatistics(String json) {
+        if (json == null) return Optional.empty();
+        try {
+            JsonNode object = JSON_MAPPER.readTree(json);
+            return Optional.of(new PlayerMatchStatistics(
+                    decimalMap(object.required("values")), decimalMap(object.required("ratingVersions"))));
+        }
+        catch (RuntimeException exception) {
+            throw new IllegalStateException("invalid persisted player statistics", exception);
+        }
+    }
+
+    private static Map<String, BigDecimal> decimalMap(JsonNode object) {
+        if (!object.isObject()) throw new IllegalStateException("persisted statistics map must be an object");
+        Map<String, BigDecimal> values = new TreeMap<>();
+        object.properties().forEach(entry -> {
+            if (!entry.getValue().isNumber()) throw new IllegalStateException("persisted statistic must be numeric");
+            values.put(entry.getKey(), entry.getValue().decimalValue());
+        });
+        return values;
+    }
+
+    private static String writeMissingPlayers(Optional<List<MissingLineupPlayer>> missing) {
+        if (missing.isEmpty()) return null;
+        List<Map<String, Object>> values = new ArrayList<>();
+        for (MissingLineupPlayer player : missing.orElseThrow()) {
+            Map<String, Object> value = new LinkedHashMap<>();
+            value.put("providerPlayerId", player.providerPlayerId());
+            value.put("name", player.name());
+            value.put("shirtNumber", player.shirtNumber().orElse(null));
+            value.put("position", player.position().orElse(null));
+            value.put("type", player.type().orElse(null));
+            value.put("reason", player.reason().orElse(null));
+            value.put("description", player.description().orElse(null));
+            value.put("externalType", player.externalType().orElse(null));
+            value.put("expectedEndDate", player.expectedEndDate().map(OffsetDateTime::toString).orElse(null));
+            // Preserve the historical V3 JSON shape when the optional V4 country is absent.
+            player.country().ifPresent(country -> {
+                Map<String, Object> serialized = new LinkedHashMap<>();
+                serialized.put("name", country.name().orElse(null));
+                serialized.put("alpha2", country.alpha2().orElse(null));
+                value.put("country", serialized);
+            });
+            values.add(value);
+        }
+        return JSON_MAPPER.writeValueAsString(values);
+    }
+
+    private static Optional<List<MissingLineupPlayer>> readMissingPlayers(String json) {
+        if (json == null) return Optional.empty();
+        try {
+            JsonNode array = JSON_MAPPER.readTree(json);
+            if (!array.isArray()) throw new IllegalStateException("persisted missing players must be an array");
+            List<MissingLineupPlayer> values = new ArrayList<>();
+            for (JsonNode player : array) {
+                values.add(new MissingLineupPlayer(
+                        player.required("providerPlayerId").decimalValue().longValueExact(),
+                        player.required("name").stringValue(),
+                        optionalJsonInteger(player, "shirtNumber"),
+                        optionalJsonText(player, "position"),
+                        optionalJsonText(player, "type"),
+                        optionalJsonInteger(player, "reason"),
+                        optionalJsonText(player, "description"),
+                        optionalJsonInteger(player, "externalType"),
+                        optionalJsonText(player, "expectedEndDate").map(OffsetDateTime::parse), readJsonCountry(player)));
+            }
+            return Optional.of(List.copyOf(values));
+        }
+        catch (RuntimeException exception) {
+            throw new IllegalStateException("invalid persisted missing players", exception);
+        }
+    }
+
+    private static Optional<ProviderCountry> readJsonCountry(JsonNode player) {
+        JsonNode country = player.get("country");
+        if (country == null) return Optional.empty();
+        return Optional.of(new ProviderCountry(optionalJsonText(country, "name"), optionalJsonText(country, "alpha2")));
+    }
+
+    private static Optional<Integer> optionalJsonInteger(JsonNode object, String name) {
+        JsonNode value = object.required(name);
+        return value.isNull() ? Optional.empty() : Optional.of(value.decimalValue().intValueExact());
+    }
+
+    private static Optional<String> optionalJsonText(JsonNode object, String name) {
+        JsonNode value = object.required(name);
+        return value.isNull() ? Optional.empty() : Optional.of(value.stringValue());
     }
 
     private static Optional<String> requireFormationSlot(

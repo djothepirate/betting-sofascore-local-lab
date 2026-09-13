@@ -10,6 +10,42 @@
 - **Document associé :** `Betting_Project_SofaScore_Local_Lab_Cadrage_v0.1.0.pdf`
 - **Décision de référence qualifiée :** document de cadrage du Betting Project v0.5.1, sections 2.3, 8.8 et 15.1
 
+**Renvoi documentaire — 8 septembre 2026 :** [ADR-SS-005 v0.6](ADR-SS-005-bounded-local-live-j4-j5-campaigns.md),
+issue de la v0.1 formellement acceptée puis des évolutions de capacité et de compositions prématch demandées par le propriétaire,
+définit l'exception limitée aux campagnes live J4/J5 de WO-058. Sa table
+de portée précise les adaptations des §§3.4, 3.5, 3.6.1, 3.6.1.1 et du critère live du §8 ;
+toutes les autres dispositions du présent ADR restent applicables. Le lancement Playwright
+demeure manuel et les cycles automatiques restent confinés à la session bornée. Les §§3.10 et 9
+restent les règles de réexamen des extensions futures. La version historique 1.4 et ses décisions
+ci-dessous sont conservées ; ce renvoi n'active aucun parcours ni campagne.
+
+Le §0 de cette v0.4, explicitement demandé par le propriétaire, ajoute une exception au délai
+interne du §3.5 : uniquement dans un groupe serveur `live-v4` campagne/événement/séquence,
+au plus quatre appels distincts restent séquentiels sans pause artificielle entre eux. Trois
+secondes restent exigées entre groupes et aux transitions vers les parcours historiques/manuels,
+avec mise à jour du repère après chaque échange. Aucun paramètre HTTP libre ne désactive ce
+délai. Cette exception exige son profil de qualification propre, la cible fixe d’une minute et
+les réservations/contrôles séparés avant chaque appel ; les autres parcours restent inchangés.
+
+Le complément v0.5, explicitement demandé le même jour, étend l’exception au groupe d’une
+collecte **J5 manuelle** confirmée pour un événement : statistiques, incidents et compositions
+s’enchaînent séquentiellement sans pause ajoutée. Une autorité serveur distincte borne ce
+groupe, avec contrôles avant chaque dispatch et absence de réutilisation. Le §3.5 continue
+d’imposer trois secondes entre groupes et aux frontières avec J3, J4 manuel et les campagnes
+historiques. La fin de chaque échange reste enregistrée, y compris après interruption.
+Cette adaptation ciblée ne modifie ni les endpoints autorisés ni les opt-ins et ne crée
+aucun rafraîchissement automatique du parcours manuel.
+
+Le complément v0.6, demandé explicitement pour privilégier quinze à vingt rencontres avec
+une cadence qualifiée, autorise **une seconde entre groupes d’une même session live-v5**.
+Les autres frontières conservent trois secondes et les continuations valides restent
+séquentielles sans pause ajoutée. Cette autorité de session est créée côté serveur, avec un
+profil v5 séparé ; elle ne provient pas d’un paramètre HTTP. La cible candidate est 100 secondes
+pour les familles critiques et 300 secondes pour les compositions en jeu, avec 2 500 appels
+par rencontre et 20 000 par campagne, plafond brut indépendant et fenêtre de quatre heures.
+La qualification et la traçabilité requises sont précisées dans ADR-SS-005 ; aucune nouvelle
+famille ni campagne fournisseur n’est ouverte par cette décision.
+
 ## 1. Contexte
 
 Le document de cadrage du Betting Project v0.5.1 retient une règle de prudence : le coeur du projet et les composants exécutés sur le VPS ne doivent pas appeler directement des endpoints privés SofaScore. SofaScore y est traité comme une source visuelle facultative, exploitée au moyen d'observations validées, et son indisponibilité ne doit bloquer aucune fonction permanente.

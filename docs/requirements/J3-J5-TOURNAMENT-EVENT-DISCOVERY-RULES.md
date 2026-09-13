@@ -100,7 +100,8 @@ Règles :
 - chaque page suivante est appelée uniquement si la page courante, persistée puis parsée,
   contient `hasNextPage=true` ;
 - la collecte est complète uniquement après une page compatible portant `hasNextPage=false` ;
-- le plafond local de 25 pages reste bloquant ;
+- le plafond local de 35 pages reste bloquant ; une page 27 avec `hasNextPage=false` reste une
+  terminaison normale et une page 35 avec `hasNextPage=true` s'arrête avant la page 36 ;
 - aucune collecte partielle, interrompue ou incompatible ne publie de catalogue de sélection.
 
 ### 3.1 bis Acquisition directe ou import local du lot J3
@@ -119,7 +120,7 @@ chemins successifs
 des noms qui permettent d'établir sans ambiguïté la suite `page-1.json`, `page-2.json`, …,
 `page-N.json`. Les règles sont fail-closed :
 
-- une à 25 pages, contiguës depuis 1, sans doublon ni trou ;
+- une à 35 pages, contiguës depuis 1, sans doublon ni trou ;
 - chaque page non vide et limitée à 5 Mio, lot entier limité à 25 Mio ;
 - scanner sensible avant consommation du claim : HAR, `Cookie`, `Authorization`, en-tête, jeton,
   clé privée ou donnée de session refusés ;
@@ -558,7 +559,7 @@ La voie locale demande les seuls corps JSON obtenus manuellement aux chemins exa
 
 Elle n'accepte ni HAR, ni en-tête, ni cookie, ni jeton, ni donnée de session. Chaque fichier est
 non vide et borné à 5 Mio. Les trois fichiers sont scannés et prévalidés avec les parseurs courants
-`event-statistics-v2`, `event-incidents-v15` et `event-lineups-v2` **avant** que la confirmation ne
+`event-statistics-v2`, `event-incidents-v17` et `event-lineups-v3` **avant** que la confirmation ne
 soit réclamée. Un fichier incompatible refuse donc atomiquement le lot, ne crée aucun snapshot et
 laisse l'intention en attente pour correction.
 
@@ -629,7 +630,7 @@ document et ne doit pas être appliquée au contrôle multi-match de WO-010.
 - J3 complet multi-pages : toutes les pages exactes sont agrégées ;
 - J3 importé avec pages 1 à N valides : zéro transport, zéro cache, provenance
   `MANUAL_LOCAL_JSON_IMPORT`, preuve v5 et même catalogue ;
-- lot J3 troué, mal nommé, non terminal, > 25 pages, > 5 Mio par page, > 25 Mio au total ou
+- lot J3 troué, mal nommé, non terminal, > 35 pages, > 5 Mio par page, > 25 Mio au total ou
   sensible : refus avant consommation du claim et zéro snapshot ;
 - J3 direct terminal sur 403 : aucun basculement implicite ; nouvelle intention requise pour
   choisir l'import ;

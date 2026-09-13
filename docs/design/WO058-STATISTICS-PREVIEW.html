@@ -1,0 +1,277 @@
+<!doctype html>
+<html lang="fr">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="color-scheme" content="light">
+  <title>Aperçu des statistiques par période — SofaScore Local Lab</title>
+  <style>
+    :root { --ink:#123d4a; --deep:#0b2d38; --teal:#008f8c; --soft:#e7f6f5; --line:#c9d9dd; --paper:#fff; --canvas:#f4f8f9; --muted:#60757c; --amber:#7b5100; }
+    * { box-sizing:border-box; }
+    body { margin:0; background:var(--canvas); color:var(--deep); font:16px/1.5 "Segoe UI",Arial,sans-serif; }
+    button { font:inherit; cursor:pointer; }
+    button:focus-visible,summary:focus-visible { outline:3px solid #bd7500; outline-offset:4px; }
+    .shell { width:min(1080px,calc(100% - 40px)); margin:auto; }
+    .topbar { padding:35px 0 32px; color:white; background:linear-gradient(120deg,#0c3946,#145768); border-bottom:6px solid var(--teal); }
+    .eyebrow { margin:0 0 8px; font-size:.74rem; font-weight:800; letter-spacing:.12em; text-transform:uppercase; color:#9df0ea; }
+    h1 { margin:0 0 8px; font-size:clamp(1.8rem,4vw,2.8rem); letter-spacing:-.035em; line-height:1.15; }
+    .subtitle { color:#d5e7eb; margin:0; max-width:70ch; }
+    main { padding:24px 0 42px; }
+    .proposal { display:flex; gap:14px; align-items:flex-start; background:#fff7e4; border:1px solid #e1ca95; border-radius:12px; padding:15px 18px; margin-bottom:24px; color:#604400; }
+    .proposal strong { flex-shrink:0; }
+    .proposal p { margin:0; font-size:.9rem; }
+    .panel { background:var(--paper); border:1px solid var(--line); border-radius:16px; box-shadow:0 8px 28px #0c303b08; overflow:hidden; }
+    .panel-head { padding:24px 26px 18px; display:flex; justify-content:space-between; align-items:flex-start; gap:16px; }
+    h2 { font-size:1.3rem; line-height:1.25; margin:0 0 7px; }
+    .label { color:var(--teal); font-size:.72rem; font-weight:800; letter-spacing:.1em; text-transform:uppercase; margin:0 0 6px; }
+    .muted { color:var(--muted); }
+    .panel-head p:last-child { margin:0; font-size:.88rem; }
+    .chip { border-radius:99px; padding:6px 10px; background:var(--soft); color:#096663; font-weight:700; font-size:.73rem; white-space:nowrap; }
+    .tabs { display:flex; gap:6px; border-bottom:1px solid var(--line); padding:0 26px 15px; }
+    .tabs button { padding:10px 16px; border:1px solid transparent; color:var(--muted); background:transparent; border-radius:8px; font-size:.88rem; font-weight:650; }
+    .tabs button:hover { background:var(--soft); color:var(--ink); }
+    .tabs button[aria-selected="true"] { background:var(--ink); color:#fff; }
+    .tabs small { font-size:.68rem; margin-left:5px; }
+    #period-panel { padding:20px 26px 26px; }
+    .source { margin:0 0 20px; padding:11px 13px; border-radius:8px; background:#f0f8f7; color:#285c5e; font-size:.84rem; }
+    .source.synthetic { background:#fff5dd; color:var(--amber); }
+    .teams { display:flex; justify-content:space-between; gap:16px; font-weight:700; font-size:.88rem; }
+    .team { display:flex; align-items:center; gap:8px; }
+    .swatch { display:inline-block; width:10px; height:10px; border-radius:50%; background:var(--teal); }
+    .away .swatch { background:var(--ink); }
+    .possession { margin:18px 0 26px; padding:17px 20px 18px; background:var(--canvas); border:1px solid #e0ebee; border-radius:12px; }
+    .possession-values { display:grid; grid-template-columns:1fr auto 1fr; align-items:center; gap:12px; margin-bottom:12px; }
+    .possession-values strong { font-size:1.9rem; font-variant-numeric:tabular-nums; letter-spacing:-.04em; }
+    .possession-values strong:first-child { color:#007370; }
+    .possession-values strong:last-child { text-align:right; color:var(--ink); }
+    .possession-values span { font-size:.88rem; font-weight:650; }
+    .split { display:flex; height:10px; gap:3px; overflow:hidden; border-radius:99px; background:#dfe8eb; }
+    .split .home { background:var(--teal); }
+    .split .away { background:var(--ink); }
+    .split > span { height:100%; transition:width .18s ease; }
+    .stat-groups { display:grid; grid-template-columns:1fr 1fr; gap:26px; }
+    .group-title { color:var(--muted); font-size:.76rem; text-transform:uppercase; letter-spacing:.08em; font-weight:750; margin:0; padding-bottom:8px; border-bottom:1px solid var(--line); }
+    .stat { padding:12px 0 13px; border-bottom:1px solid #e8eff1; }
+    .stat-values { display:grid; grid-template-columns:60px 1fr 60px; align-items:center; gap:7px; margin-bottom:8px; }
+    .stat-values strong { font-size:1.06rem; font-variant-numeric:tabular-nums; }
+    .stat-values strong:last-child { text-align:right; }
+    .stat-values span { text-align:center; font-size:.87rem; }
+    .stat .split { height:5px; }
+    .period-note { margin:20px 0 0; font-size:.81rem; color:var(--muted); }
+    .demo { margin-top:24px; }
+    .demo .panel-head { padding-bottom:8px; }
+    .demo-body { padding:8px 26px 24px; }
+    .fractions { display:grid; grid-template-columns:1fr 1fr; gap:28px; margin-bottom:21px; }
+    .fraction-heading { display:flex; justify-content:space-between; gap:12px; align-items:baseline; margin-bottom:8px; }
+    .fraction-heading span { font-size:.87rem; }
+    .fraction-heading strong { font-size:1.35rem; font-variant-numeric:tabular-nums; }
+    .fraction-heading small { color:var(--muted); font-size:.82rem; font-weight:500; }
+    .track { height:8px; overflow:hidden; background:#e4edef; border-radius:20px; }
+    .track > span { display:block; height:100%; background:var(--teal); border-radius:20px; }
+    .fraction-away .track > span { background:var(--ink); }
+    .caption { font-size:.84rem; color:var(--muted); margin:10px 0 0; }
+    .ratio-play { background:var(--canvas); padding:16px; border-radius:10px; }
+    .ratio-play h3 { margin:0 0 9px; font-size:.88rem; }
+    .presets { display:flex; gap:7px; flex-wrap:wrap; }
+    .presets button { border:1px solid var(--line); border-radius:7px; padding:6px 11px; color:var(--ink); background:#fff; font-size:.85rem; }
+    .presets button[aria-pressed="true"] { border-color:var(--teal); color:#00635f; background:var(--soft); }
+    .ratio-result { margin-top:12px; display:flex; gap:18px; align-items:center; }
+    .ratio-result output { font-size:1.3rem; min-width:105px; font-weight:750; font-variant-numeric:tabular-nums; }
+    .ratio-result p { margin:0; font-size:.82rem; color:var(--muted); }
+    details { margin-top:18px; color:var(--muted); font-size:.84rem; }
+    summary { cursor:pointer; color:var(--ink); font-weight:650; }
+    details p { max-width:85ch; margin:10px 0 0; }
+    footer { margin-top:22px; font-size:.69rem; letter-spacing:.045em; color:var(--muted); }
+    .sr-only { position:absolute; width:1px; height:1px; padding:0; margin:-1px; overflow:hidden; clip:rect(0,0,0,0); white-space:nowrap; border:0; }
+    @media (max-width:620px) {
+      .shell { width:calc(100% - 24px); }
+      .topbar { padding:28px 0; }
+      .proposal { display:block; }
+      .proposal strong { display:block; margin-bottom:5px; }
+      .panel-head { padding:20px 17px 16px; }
+      .panel-head .chip { white-space:normal; text-align:center; max-width:115px; }
+      .tabs { padding:0 12px 13px; gap:3px; }
+      .tabs button { flex:1; padding:10px 5px; font-size:.8rem; }
+      .tabs small { display:block; margin-left:0; }
+      #period-panel { padding:17px; }
+      .stat-groups,.fractions { grid-template-columns:1fr; gap:22px; }
+      .possession { padding:14px 12px; }
+      .possession-values strong { font-size:1.7rem; }
+      .possession-values span { font-size:.8rem; }
+      .demo-body { padding:8px 17px 20px; }
+      .ratio-result { align-items:flex-start; gap:8px; }
+    }
+    @media (prefers-reduced-motion:reduce) { .split > span { transition:none; } }
+  </style>
+</head>
+<body>
+  <header class="topbar">
+    <div class="shell">
+      <p class="eyebrow">SofaScore Local Lab · WO-058</p>
+      <h1>Lire le match, période par période</h1>
+      <p class="subtitle">Des valeurs exactes, une comparaison visuelle et une provenance visible.</p>
+    </div>
+  </header>
+  <main class="shell">
+    <aside class="proposal" aria-label="Statut de cette proposition">
+      <strong>Aperçu · Proposition</strong>
+      <p>Le jeu ALL reprend les valeurs de la capture opérateur. Les périodes 1ST et 2ND, ainsi que les fractions, sont des exemples synthétiques. Cet aperçu ne réalise aucune collecte.</p>
+    </aside>
+
+    <section class="panel" aria-labelledby="statistics-title">
+      <div class="panel-head">
+        <div><p class="label">Statistiques</p><h2 id="statistics-title">Comparer les deux équipes</h2><p class="muted">Choisir une période pour lire ses seules valeurs.</p></div>
+        <span class="chip" id="source-chip">Capture opérateur</span>
+      </div>
+      <div class="tabs" role="tablist" aria-label="Période des statistiques">
+        <button type="button" role="tab" id="tab-all" aria-selected="true" aria-controls="period-panel" data-period="ALL">ALL · Ensemble</button>
+        <button type="button" role="tab" id="tab-first" aria-selected="false" aria-controls="period-panel" tabindex="-1" data-period="1ST">1ST · Première <small>Démo</small></button>
+        <button type="button" role="tab" id="tab-second" aria-selected="false" aria-controls="period-panel" tabindex="-1" data-period="2ND">2ND · Seconde <small>Démo</small></button>
+      </div>
+      <div id="period-panel" role="tabpanel" aria-labelledby="tab-all" tabindex="0">
+        <p class="source" id="source-note"></p>
+        <div class="teams"><span class="team"><i class="swatch" aria-hidden="true"></i>Domicile</span><span class="team away">Extérieur<i class="swatch" aria-hidden="true"></i></span></div>
+        <div class="possession">
+          <div class="possession-values"><strong id="possession-home"></strong><span>Possession du ballon</span><strong id="possession-away"></strong></div>
+          <div class="split" aria-hidden="true"><span class="home" id="possession-home-bar"></span><span class="away" id="possession-away-bar"></span></div>
+        </div>
+        <div class="stat-groups" id="stat-groups"></div>
+        <p class="period-note" id="period-note"></p>
+      </div>
+      <p class="sr-only" role="status" aria-live="polite" id="period-announcement"></p>
+    </section>
+
+    <section class="panel demo" aria-labelledby="fractions-title">
+      <div class="panel-head">
+        <div><p class="label">Composant X / Y</p><h2 id="fractions-title">Réussites et tentatives restent visibles</h2><p class="muted">Exemple illustratif de dribbles réussis, indépendant du match.</p></div>
+        <span class="chip">Synthétique</span>
+      </div>
+      <div class="demo-body">
+        <div class="fractions">
+          <div><div class="fraction-heading"><span>Domicile</span><strong>4 / 9 <small>(44 %)</small></strong></div><div class="track" aria-hidden="true"><span style="width:44.444444%"></span></div><p class="caption">4 réussites sur 9 tentatives.</p></div>
+          <div class="fraction-away"><div class="fraction-heading"><span>Extérieur</span><strong>3 / 4 <small>(75 %)</small></strong></div><div class="track" aria-hidden="true"><span style="width:75%"></span></div><p class="caption">3 réussites sur 4 tentatives.</p></div>
+        </div>
+        <div class="ratio-play">
+          <h3>Essayer les cas de lecture</h3>
+          <div class="presets" aria-label="Exemples synthétiques de fractions">
+            <button type="button" aria-pressed="true" data-ratio="normal">4 / 9</button>
+            <button type="button" aria-pressed="false" data-ratio="zero">0 / 9</button>
+            <button type="button" aria-pressed="false" data-ratio="undefined">4 / 0</button>
+            <button type="button" aria-pressed="false" data-ratio="missing">Absente</button>
+          </div>
+          <div class="ratio-result" aria-live="polite"><output id="ratio-value">4 / 9 · 44 %</output><p id="ratio-note">Le pourcentage est arrondi ; la fraction conserve les deux valeurs exactes.</p></div>
+        </div>
+        <details>
+          <summary>Comment lire les barres</summary>
+          <p>Pour une statistique simple, la barre compare les deux valeurs au sein de la même ligne. Elle ne mesure pas une probabilité. Pour X / Y, chaque barre représente X divisé par son propre Y : les volumes restent affichés. Une valeur manquante ou un dénominateur nul donne « — » ; un zéro effectivement reçu reste « 0 ».</p>
+          <p>Les séries synthétiques 1ST et 2ND servent à montrer la navigation. Elles ne constituent pas une décomposition des valeurs ALL de la capture. Aucun seuil de fraîcheur ni jugement sportif n’est attribué à cet aperçu.</p>
+        </details>
+      </div>
+    </section>
+    <footer>EXPERIMENTAL · LOCAL_ONLY · NOT_PRODUCTION_APPROVED · NO_CRITICAL_DEPENDENCY</footer>
+  </main>
+  <noscript><p class="shell">Cet aperçu interactif utilise JavaScript pour afficher les valeurs et changer de période.</p></noscript>
+  <script>
+    "use strict";
+    const catalog = [
+      { title:"Occasions et tirs", items:[
+        ["xg","Buts attendus (xG)",2], ["bigChances","Grosses occasions"], ["shots","Tirs"],
+        ["saves","Arrêts du gardien"], ["corners","Corners"]
+      ] },
+      { title:"Jeu et discipline", items:[
+        ["passes","Passes"], ["tackles","Tacles"], ["freeKicks","Coups francs"],
+        ["fouls","Fautes"], ["yellow","Cartons jaunes"]
+      ] }
+    ];
+    const periods = {
+      ALL: { synthetic:false, possession:[50,50], xg:[0.00,0.16], bigChances:[0,1], shots:[0,5], saves:[1,0], corners:[0,2], fouls:[1,3], passes:[78,73], tackles:[1,5], freeKicks:[3,1], yellow:[0,1] },
+      "1ST": { synthetic:true, possession:[54,46], xg:[0.42,0.19], bigChances:[1,0], shots:[5,3], saves:[1,2], corners:[2,1], fouls:[6,4], passes:[201,176], tackles:[7,9], freeKicks:[4,6], yellow:[1,0] },
+      "2ND": { synthetic:true, possession:[47,53], xg:[0.18,0.53], bigChances:[0,1], shots:[2,6], saves:[3,0], corners:[1,3], fouls:[3,5], passes:[89,104], tackles:[null,4], freeKicks:[5,3], yellow:[0,1] }
+    };
+    const tabs = Array.from(document.querySelectorAll('[role="tab"]'));
+    const finite = value => typeof value === "number" && Number.isFinite(value) && value >= 0;
+    const format = (value, digits) => finite(value) ? (digits === undefined ? String(value) : value.toFixed(digits)) : "—";
+    const shares = values => values.every(finite) && values[0] + values[1] > 0
+      ? values.map(value => 100 * value / (values[0] + values[1])) : [0,0];
+    function element(tag, className, text) {
+      const node = document.createElement(tag);
+      if (className) node.className = className;
+      if (text !== undefined) node.textContent = text;
+      return node;
+    }
+    function renderPeriod(key, announce = true) {
+      const data = periods[key];
+      const selected = tabs.find(tab => tab.dataset.period === key);
+      tabs.forEach(tab => { const active = tab === selected; tab.setAttribute("aria-selected",String(active)); tab.tabIndex = active ? 0 : -1; });
+      document.getElementById("period-panel").setAttribute("aria-labelledby",selected.id);
+      document.getElementById("source-chip").textContent = data.synthetic ? "Données synthétiques" : "Capture opérateur";
+      const note = document.getElementById("source-note");
+      note.className = "source" + (data.synthetic ? " synthetic" : "");
+      note.textContent = data.synthetic
+        ? key + " · Démonstration synthétique. Ces valeurs illustrent cette période et ne proviennent pas de la capture."
+        : "ALL · Valeurs retranscrites depuis la capture opérateur. L’heure de réception n’est pas renseignée dans cet aperçu.";
+      ["home","away"].forEach((side,index) => {
+        const value = data.possession[index];
+        document.getElementById("possession-" + side).textContent = finite(value) ? value + " %" : "—";
+        document.getElementById("possession-" + side + "-bar").style.width = shares(data.possession)[index] + "%";
+      });
+      const groups = document.getElementById("stat-groups");
+      groups.replaceChildren();
+      catalog.forEach(group => {
+        const section = element("section");
+        section.append(element("h3","group-title",group.title));
+        group.items.forEach(([id,label,digits]) => {
+          const values = data[id];
+          const row = element("div","stat");
+          const text = element("div","stat-values");
+          const home = element("strong","",format(values[0],digits));
+          home.setAttribute("aria-label","Domicile : " + format(values[0],digits));
+          const away = element("strong","",format(values[1],digits));
+          away.setAttribute("aria-label","Extérieur : " + format(values[1],digits));
+          text.append(home,element("span","",label),away);
+          const bar = element("div","split");
+          bar.setAttribute("aria-hidden","true");
+          shares(values).forEach((width,index) => { const part = element("span",index === 0 ? "home" : "away"); part.style.width = width + "%"; bar.append(part); });
+          row.append(text,bar);
+          section.append(row);
+        });
+        groups.append(section);
+      });
+      document.getElementById("period-note").textContent = key === "2ND"
+        ? "Exemple synthétique : les tacles domicile sont absents. Le tiret exprime cette absence ; aucune barre comparative n’est calculée pour cette ligne."
+        : "Les nombres sont les valeurs de la période sélectionnée. Une barre vide accompagnée de 0 indique un zéro effectivement présent.";
+      if (announce) document.getElementById("period-announcement").textContent = selected.textContent.trim() + " sélectionnée. " + (data.synthetic ? "Démonstration synthétique." : "Capture opérateur.");
+    }
+    tabs.forEach((tab,index) => {
+      tab.addEventListener("click",() => renderPeriod(tab.dataset.period));
+      tab.addEventListener("keydown",event => {
+        let next;
+        if (event.key === "ArrowRight") next = (index + 1) % tabs.length;
+        if (event.key === "ArrowLeft") next = (index + tabs.length - 1) % tabs.length;
+        if (event.key === "Home") next = 0;
+        if (event.key === "End") next = tabs.length - 1;
+        if (next === undefined) return;
+        event.preventDefault(); tabs[next].focus(); renderPeriod(tabs[next].dataset.period);
+      });
+    });
+    function ratio(numerator, denominator) {
+      return finite(numerator) && finite(denominator) && denominator > 0 && numerator <= denominator
+        ? Math.round(100 * numerator / denominator) : null;
+    }
+    const ratioCases = {
+      normal:[4,9,"Le pourcentage est arrondi ; la fraction conserve les deux valeurs exactes."],
+      zero:[0,9,"Zéro réussite sur neuf tentatives : 0 % est une valeur calculable."],
+      undefined:[4,0,"Un dénominateur nul rend ce ratio non calculable. Il n’est pas remplacé par 0 %."],
+      missing:[null,null,"Les valeurs sont absentes. Aucun nombre ni pourcentage n’est inventé."]
+    };
+    document.querySelectorAll("[data-ratio]").forEach(button => button.addEventListener("click",() => {
+      document.querySelectorAll("[data-ratio]").forEach(other => other.setAttribute("aria-pressed",String(other === button)));
+      const [numerator,denominator,note] = ratioCases[button.dataset.ratio];
+      const percentage = ratio(numerator,denominator);
+      document.getElementById("ratio-value").textContent = percentage === null ? "—" : numerator + " / " + denominator + " · " + percentage + " %";
+      document.getElementById("ratio-note").textContent = note;
+    }));
+    renderPeriod("ALL",false);
+  </script>
+</body>
+</html>

@@ -8,6 +8,7 @@ import java.io.DataInputStream;
 import java.io.DataOutputStream;
 import java.time.LocalDate;
 import java.util.HashMap;
+import java.util.List;
 import java.util.Map;
 
 import static org.assertj.core.api.Assertions.assertThat;
@@ -17,8 +18,12 @@ class ProviderPlaywrightWorkerProtocolTest {
 
     @Test
     void readsTheSixExactGetShapesWithoutStartingChromium() throws Exception {
+        assertThat(ProviderPlaywrightWorkerProtocol.MAXIMUM_SCHEDULED_EVENTS_PAGE).isEqualTo(35);
         ProviderPlaywrightWorkerProtocol.GetCommand scheduled = readScheduled(
-                "SCHEDULED_EVENTS", "2026-08-27", 25, 10_000);
+                "SCHEDULED_EVENTS",
+                "2026-08-27",
+                ProviderPlaywrightWorkerProtocol.MAXIMUM_SCHEDULED_EVENTS_PAGE,
+                10_000);
         ProviderPlaywrightWorkerProtocol.GetCommand tournament = readTournament(
                 "TOURNAMENT_SCHEDULED_EVENTS", "2026-08-27", 17, 10_000);
         ProviderPlaywrightWorkerProtocol.GetCommand eventDetails = readEvent(
@@ -34,7 +39,11 @@ class ProviderPlaywrightWorkerProtocolTest {
 
         assertThat(scheduled).isEqualTo(new ProviderPlaywrightWorkerProtocol.GetCommand(
                 ProviderPlaywrightWorkerProtocol.Endpoint.SCHEDULED_EVENTS,
-                LocalDate.of(2026, 8, 27), 25, 0, 0, 10_000));
+                LocalDate.of(2026, 8, 27),
+                ProviderPlaywrightWorkerProtocol.MAXIMUM_SCHEDULED_EVENTS_PAGE,
+                0,
+                0,
+                10_000));
         assertThat(tournament).isEqualTo(new ProviderPlaywrightWorkerProtocol.GetCommand(
                 ProviderPlaywrightWorkerProtocol.Endpoint.TOURNAMENT_SCHEDULED_EVENTS,
                 LocalDate.of(2026, 8, 27), 0, 17, 0, 10_000));
@@ -55,8 +64,69 @@ class ProviderPlaywrightWorkerProtocolTest {
     }
 
     @Test
-    void identifiesTheSixEndpointContractAsProtocolVersionFive() {
-        assertThat(ProviderPlaywrightWorkerProtocol.VERSION).isEqualTo(5);
+    void identifiesTheExplicitV9ConditionalTransportProtocol() {
+        assertThat(ProviderPlaywrightWorkerProtocol.VERSION).isEqualTo(9);
+        assertThat(ProviderPlaywrightWorkerProtocol.GET_LIVE_V9).isNotEqualTo(
+                ProviderPlaywrightWorkerProtocol.GET);
+        assertThat(ProviderPlaywrightWorkerProtocol.RESPONSE_V9).isNotEqualTo(
+                ProviderPlaywrightWorkerProtocol.RESPONSE);
+    }
+
+    @Test
+    void readsTheV9ConditionalShapeOnlyForTheFourEventEndpoints() throws Exception {
+        ProviderPlaywrightWorkerProtocol.EntityTag validator =
+                new ProviderPlaywrightWorkerProtocol.EntityTag("W/\"opaque-v9\"");
+        for (ProviderPlaywrightWorkerProtocol.Endpoint endpoint : List.of(
+                ProviderPlaywrightWorkerProtocol.Endpoint.EVENT_DETAILS,
+                ProviderPlaywrightWorkerProtocol.Endpoint.EVENT_STATISTICS,
+                ProviderPlaywrightWorkerProtocol.Endpoint.EVENT_INCIDENTS,
+                ProviderPlaywrightWorkerProtocol.Endpoint.EVENT_LINEUPS)) {
+            ProviderPlaywrightWorkerProtocol.GetCommand command = readV9Event(
+                    endpoint.name(), 16_386_245L, validator.value(), 10_000);
+            assertThat(command).isEqualTo(new ProviderPlaywrightWorkerProtocol.GetCommand(
+                    endpoint, null, 0, 0, 16_386_245L, 10_000, validator));
+            assertThat(command.ifNoneMatch().toString()).doesNotContain("opaque-v9");
+        }
+        assertThat(readV9Event("EVENT_DETAILS", 16_386_245L, null, 10_000).ifNoneMatch())
+                .isNull();
+        assertThatThrownBy(() -> readV9Event(
+                "EVENT_DETAILS", 16_386_245L, "W/\"bad\rvalue\"", 10_000))
+                .isInstanceOf(ProviderPlaywrightWorkerProtocol.ProtocolValidationException.class)
+                .hasMessage("INVALID_VALIDATOR");
+        assertThatThrownBy(() -> readV9Event(
+                "EVENT_DETAILS",
+                16_386_245L,
+                "x".repeat(ProviderPlaywrightWorkerProtocol.MAX_ENTITY_TAG_BYTES + 1),
+                10_000))
+                .isInstanceOf(ProviderPlaywrightWorkerProtocol.ProtocolValidationException.class)
+                .hasMessage("INVALID_VALIDATOR");
+        assertThatThrownBy(() -> new ProviderPlaywrightWorkerProtocol.GetCommand(
+                ProviderPlaywrightWorkerProtocol.Endpoint.SCHEDULED_EVENTS,
+                LocalDate.of(2026, 8, 27),
+                1,
+                0,
+                0,
+                10_000,
+                validator))
+                .isInstanceOf(IllegalArgumentException.class)
+                .hasMessage("INVALID_VALIDATOR");
+    }
+
+    @Test
+    void timeoutCompletionFrameContainsOnlyBoundedEndTimeAndReason() throws Exception {
+        var bytes = new ByteArrayOutputStream();
+        ProviderPlaywrightWorkerProtocol.writeTimeoutEnded(new DataOutputStream(bytes),
+                new ProviderPlaywrightWorkerProtocol.TimeoutEndedFrame(1_788_173_200_123L, 2));
+        var input = new DataInputStream(new ByteArrayInputStream(bytes.toByteArray()));
+        assertThat(input.readUnsignedByte()).isEqualTo(ProviderPlaywrightWorkerProtocol.TIMEOUT_ENDED);
+        assertThat(input.readLong()).isEqualTo(1_788_173_200_123L);
+        assertThat(input.readUnsignedByte()).isEqualTo(2);
+        assertThat(input.read()).isEqualTo(-1);
+        for (int reason : new int[]{-1, 0, 3, 255}) assertThatThrownBy(() ->
+                new ProviderPlaywrightWorkerProtocol.TimeoutEndedFrame(1_788_173_200_123L, reason))
+                .isInstanceOf(IllegalArgumentException.class);
+        assertThatThrownBy(() -> new ProviderPlaywrightWorkerProtocol.TimeoutEndedFrame(-1, 1))
+                .isInstanceOf(IllegalArgumentException.class);
     }
 
     @Test
@@ -69,7 +139,10 @@ class ProviderPlaywrightWorkerProtocolTest {
                 .isInstanceOf(ProviderPlaywrightWorkerProtocol.ProtocolValidationException.class)
                 .hasMessage("INVALID_DATE");
         assertThatThrownBy(() -> readScheduled(
-                "SCHEDULED_EVENTS", "2026-08-27", 26, 1_000))
+                "SCHEDULED_EVENTS",
+                "2026-08-27",
+                ProviderPlaywrightWorkerProtocol.MAXIMUM_SCHEDULED_EVENTS_PAGE + 1,
+                1_000))
                 .isInstanceOf(ProviderPlaywrightWorkerProtocol.ProtocolValidationException.class)
                 .hasMessage("INVALID_PAGE");
         assertThatThrownBy(() -> readTournament(
@@ -218,6 +291,59 @@ class ProviderPlaywrightWorkerProtocolTest {
     }
 
     @Test
+    void writesTheV9ResponseWithAnOpaqueEntityTagAndAcceptsAnEmpty304Body() throws Exception {
+        ByteArrayOutputStream bytes = new ByteArrayOutputStream();
+        ProviderPlaywrightWorkerProtocol.EntityTag tag =
+                new ProviderPlaywrightWorkerProtocol.EntityTag("W/\"response-v9\"");
+        try (DataOutputStream output = new DataOutputStream(bytes)) {
+            ProviderPlaywrightWorkerProtocol.writeLiveV9Response(output,
+                    new ProviderPlaywrightWorkerProtocol.ResponseFrame(100, 110, 304, "", new byte[0]),
+                    tag);
+        }
+
+        try (DataInputStream input = new DataInputStream(new ByteArrayInputStream(bytes.toByteArray()))) {
+            assertThat(input.readUnsignedByte()).isEqualTo(ProviderPlaywrightWorkerProtocol.RESPONSE_V9);
+            assertThat(input.readLong()).isEqualTo(100);
+            assertThat(input.readLong()).isEqualTo(110);
+            assertThat(input.readInt()).isEqualTo(304);
+            assertThat(input.readUTF()).isEmpty();
+            assertThat(input.readBoolean()).isTrue();
+            assertThat(input.readUTF()).isEqualTo(tag.value());
+            assertThat(input.readInt()).isZero();
+            assertThat(input.available()).isZero();
+        }
+        assertThatThrownBy(() -> ProviderPlaywrightWorkerProtocol.writeLiveV9Response(
+                new DataOutputStream(new ByteArrayOutputStream()),
+                new ProviderPlaywrightWorkerProtocol.ResponseFrame(100, 110, 304, "", new byte[]{1}),
+                null))
+                .isInstanceOf(IllegalArgumentException.class)
+                .hasMessage("invalid V9 304 body");
+    }
+
+    @Test
+    void partialHeadersFrameContainsOnlyBoundedNumbersAndNoResponseBody() throws Exception {
+        ByteArrayOutputStream bytes = new ByteArrayOutputStream();
+        try (DataOutputStream output = new DataOutputStream(bytes)) {
+            ProviderPlaywrightWorkerProtocol.writeProgress(output,
+                    new ProviderPlaywrightWorkerProtocol.ProgressFrame(2, 30_000, 100, 110, 429, 60_110));
+        }
+        try (DataInputStream input = new DataInputStream(new ByteArrayInputStream(bytes.toByteArray()))) {
+            assertThat(input.readUnsignedByte()).isEqualTo(ProviderPlaywrightWorkerProtocol.PROGRESS);
+            assertThat(input.readUnsignedByte()).isEqualTo(2);
+            assertThat(input.readInt()).isEqualTo(30_000);
+            assertThat(input.readLong()).isEqualTo(100);
+            assertThat(input.readLong()).isEqualTo(110);
+            assertThat(input.readInt()).isEqualTo(429);
+            assertThat(input.readLong()).isEqualTo(60_110);
+            assertThat(input.available()).isZero();
+        }
+        assertThatThrownBy(() -> new ProviderPlaywrightWorkerProtocol.ProgressFrame(1, 30_000, 100, -1, 403, -1))
+                .isInstanceOf(IllegalArgumentException.class);
+        assertThatThrownBy(() -> new ProviderPlaywrightWorkerProtocol.ProgressFrame(2, 30_000, 100, 90, 403, -1))
+                .isInstanceOf(IllegalArgumentException.class);
+    }
+
+    @Test
     void requiresAnExplicitStartFrameAndWritesTheReadyAcknowledgement() throws Exception {
         try (DataInputStream input = new DataInputStream(
                 new ByteArrayInputStream(new byte[]{ProviderPlaywrightWorkerProtocol.START}))) {
@@ -299,6 +425,29 @@ class ProviderPlaywrightWorkerProtocolTest {
             output.writeInt(timeoutMillis);
         }
         return read(bytes);
+    }
+
+    private static ProviderPlaywrightWorkerProtocol.GetCommand readV9Event(
+            String endpoint,
+            long eventId,
+            String validator,
+            int timeoutMillis) throws Exception {
+        ByteArrayOutputStream bytes = new ByteArrayOutputStream();
+        try (DataOutputStream output = new DataOutputStream(bytes)) {
+            output.writeUTF(endpoint);
+            output.writeLong(eventId);
+            output.writeBoolean(validator != null);
+            if (validator != null) {
+                output.writeUTF(validator);
+            }
+            output.writeInt(timeoutMillis);
+        }
+        try (DataInputStream input = new DataInputStream(new ByteArrayInputStream(bytes.toByteArray()))) {
+            ProviderPlaywrightWorkerProtocol.GetCommand command =
+                    ProviderPlaywrightWorkerProtocol.readLiveV9GetCommand(input);
+            assertThat(input.available()).isZero();
+            return command;
+        }
     }
 
     private static ProviderPlaywrightWorkerProtocol.GetCommand readUnknownEndpoint(String endpoint)

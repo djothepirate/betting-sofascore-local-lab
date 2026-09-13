@@ -14,7 +14,7 @@ class ScheduledEventsProviderPageRequestTest {
 
     @Test
     void buildsTheQualifiedProviderPathForAnyDateWithinTheLocalPageLimit() {
-        for (int page : new int[] {1, 5, 25}) {
+        for (int page : new int[] {1, 5, 35}) {
             ScheduledEventsProviderPageRequest request =
                     new ScheduledEventsProviderPageRequest(
                             URI.create("https://www.sofascore.com"), DATE, page);
@@ -39,10 +39,10 @@ class ScheduledEventsProviderPageRequestTest {
 
         assertThatThrownBy(() -> request(0))
                 .isInstanceOf(IllegalArgumentException.class)
-                .hasMessageContaining("between 1 and 25");
-        assertThatThrownBy(() -> request(26))
+                .hasMessageContaining("between 1 and 35");
+        assertThatThrownBy(() -> request(36))
                 .isInstanceOf(IllegalArgumentException.class)
-                .hasMessageContaining("between 1 and 25");
+                .hasMessageContaining("between 1 and 35");
 
         var anotherDate = new ScheduledEventsProviderPageRequest(
                 URI.create("https://www.sofascore.com"),

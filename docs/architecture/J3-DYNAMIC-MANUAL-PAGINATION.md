@@ -32,10 +32,10 @@ Chaque collecte est une nouvelle séquence opérateur explicite :
 L’intention porte la clé suivante :
 
 ```text
-SCHEDULED_EVENTS|date=<date>|pagination=has-next-page|max=25
+SCHEDULED_EVENTS|date=<date>|pagination=has-next-page|max=35
 ```
 
-La phrase confirme le départ en page 1, la pagination dynamique et le plafond de 25 pages. Une
+La phrase confirme le départ en page 1, la pagination dynamique et le plafond de 35 pages. Une
 confirmation ne produit aucun transport. Une intention ne peut être exécutée qu’une fois. Après
 un succès ou un incident, l’arrêt global est réappliqué ; sa levée efface l’intention terminale et
 permet de préparer une nouvelle séquence, y compris pour une autre date.
@@ -46,7 +46,7 @@ Une collecte suit exclusivement cet ordre :
 
 ```text
 page = 1
-tant que page <= 25 :
+tant que page <= 35 :
     vérifier arrêt global, circuit et garde de concurrence
     construire la clé exacte SCHEDULED_EVENTS|date=<date>|page=<page>
     rechercher un snapshot HTTP 2xx, PARSED, intègre, produit par le parseur courant
@@ -60,13 +60,15 @@ tant que page <= 25 :
         parser et classer le même snapshot
     si transport, persistance ou parsing est en incident : arrêt sans retry
     si hasNextPage == false : succès terminal
-    si page == 25 et hasNextPage == true : arrêt PAGINATION_LIMIT_REACHED
+    si page == 35 et hasNextPage == true : arrêt PAGINATION_LIMIT_REACHED
     page = page + 1
 ```
 
 Le parseur reste strict : une valeur `hasNextPage` absente, nulle ou non booléenne est une rupture
-de schéma, pas une invitation à deviner la pagination. Aucune page 26 n’est demandée. Le plafond
-local de 25 est une barrière de sécurité ; il ne prétend pas décrire le maximum fournisseur.
+de schéma, pas une invitation à deviner la pagination. Aucune page 36 n’est demandée. Le plafond
+local de 35 est une barrière de sécurité ; il ne prétend pas décrire le maximum fournisseur. Une
+page 27 portant `hasNextPage=false` reste un terminal normal : la collecte ne doit jamais être
+prolongée artificiellement jusqu'à la page 35.
 
 Le TTL provient de la définition `SCHEDULED_EVENTS` du catalogue et vaut `PT10M`. Sa borne est
 stricte : un checkpoint `cached_at` exactement dix minutes avant l’évaluation est expiré. La
@@ -91,8 +93,9 @@ transport précédent.
 Après la même confirmation, l'opérateur peut sélectionner en une fois les seuls corps JSON des
 pages J3 obtenus hors de l'application. Les fichiers nommés `page-1.json` à `page-N.json` sont
 triés par leur numéro et le lot entier est validé avant que l'intention soit réclamée : une à
-25 pages contiguës, 5 Mio maximum par page, 25 Mio maximum au total, forme
+35 pages contiguës, 5 Mio maximum par page, 25 Mio maximum au total, forme
 `SCHEDULED_TOURNAMENT_LIST`, `hasNextPage=true` avant N puis `false` à N, et aucun motif sensible.
+Un lot qui contient une page 36 est refusé avant claim, persistance ou mutation locale.
 
 Une fois le lot accepté, chaque page est persistée sous la clé date/page habituelle avec le mode
 `MANUAL_LOCAL_JSON_IMPORT`, puis classée par `scheduled-events-v1`. Cette variante ne consulte ni
@@ -135,7 +138,7 @@ PAGINATION_MODE=HAS_NEXT_PAGE
 CACHE_POLICY=FRESH_PARSED_SNAPSHOT_FIRST
 CACHE_TTL_SECONDS=600
 PROVIDER_FIRST_PAGE=1
-MAXIMUM_PAGE_LIMIT=25
+MAXIMUM_PAGE_LIMIT=35
 PAGES_RESOLVED=<liste ordonnée>
 PROVIDER_PAGES_REQUESTED=<liste ou NONE>
 CACHE_HIT_PAGES=<liste ou NONE>
@@ -160,8 +163,8 @@ preuve distingue sans ambiguïté les transports, cache hits et imports ; une te
 le frame `READY` reste une résolution fournisseur mais porte `PROVIDER_REQUEST_EXECUTED=NO` et ne
 rejoint pas `PROVIDER_PAGES_REQUESTED` ni `PROVIDER_REQUEST_COUNT`. Les compteurs de résultat ne
 peuvent ni mélanger les voies ni présenter un import comme un appel fournisseur. Un
-arrêt `PAGINATION_LIMIT_REACHED` exige 25 pages parsées annonçant toutes une suite, sans tentative
-de page 26. La preuve exclut le payload, l’URI, les en-têtes et l’identifiant de confirmation.
+arrêt `PAGINATION_LIMIT_REACHED` exige 35 pages parsées annonçant toutes une suite, sans tentative
+de page 36. La preuve exclut le payload, l’URI, les en-têtes et l’identifiant de confirmation.
 
 ## 6. Hors périmètre
 

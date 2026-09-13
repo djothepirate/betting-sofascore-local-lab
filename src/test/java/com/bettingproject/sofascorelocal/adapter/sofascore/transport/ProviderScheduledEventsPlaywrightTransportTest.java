@@ -95,6 +95,7 @@ class ProviderScheduledEventsPlaywrightTransportTest {
 
     private static Stream<Arguments> failureMappings() {
         return Stream.of(
+                Arguments.of(PlaywrightProviderFailure.IPC_TIMEOUT, ScheduledEventsTransportFailure.TIMEOUT),
                 Arguments.of(
                         PlaywrightProviderFailure.TIMEOUT,
                         ScheduledEventsTransportFailure.TIMEOUT),

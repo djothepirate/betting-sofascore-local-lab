@@ -51,6 +51,12 @@ tronqué.
 La sérialisation est UTF-8, compacte, déterministe, terminée par un seul LF et limitée à 5 Mio.
 Les tableaux métier conservent l'ordre déjà persisté.
 
+Le complément [compositions V3](J5-LINEUPS-V3-PLAYER-DETAILS.md) n'étend pas ce schéma v1 :
+les capitaines, statistiques individuelles et indisponibles restent consultables dans le Lab.
+Les joueurs exportés conservent leurs cinq champs historiques. Le manifeste conserve toutefois
+la version V3 et l'empreinte complète de l'observation normalisée source, vérifiée avant export ;
+une modification de ces attributs change donc le jeu de sources soumis à la décision.
+
 ## 3. Les cinq emplacements de composants
 
 Le tableau `manifest.sources` contient exactement cinq entrées, toujours dans cet ordre :

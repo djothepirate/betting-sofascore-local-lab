@@ -18,7 +18,37 @@ public record EventDetails(
         Optional<ScheduledTournament> tournament,
         Optional<EventVenue> venue,
         Optional<EventSeason> season,
-        Optional<String> round) {
+        Optional<String> round,
+        Optional<Boolean> isAwarded,
+        Optional<Integer> homeDisplayScore,
+        Optional<Integer> awayDisplayScore,
+        Optional<EventPerson> homeManager,
+        Optional<EventPerson> awayManager,
+        Optional<EventPerson> referee) {
+
+    /** Historical V3 observations do not identify officials. */
+    public EventDetails(long providerEventId, Instant startsAt, ScheduledTeam homeTeam, ScheduledTeam awayTeam,
+            ScheduledEventStatus status, Optional<ScheduledTournament> tournament, Optional<EventVenue> venue,
+            Optional<EventSeason> season, Optional<String> round, Optional<Boolean> isAwarded,
+            Optional<Integer> homeDisplayScore, Optional<Integer> awayDisplayScore) {
+        this(providerEventId, startsAt, homeTeam, awayTeam, status, tournament, venue, season, round,
+                isAwarded, homeDisplayScore, awayDisplayScore, Optional.empty(), Optional.empty(), Optional.empty());
+    }
+
+    /** Historical V1/V2 contract: no award flag or displayed score was normalized. */
+    public EventDetails(
+            long providerEventId,
+            Instant startsAt,
+            ScheduledTeam homeTeam,
+            ScheduledTeam awayTeam,
+            ScheduledEventStatus status,
+            Optional<ScheduledTournament> tournament,
+            Optional<EventVenue> venue,
+            Optional<EventSeason> season,
+            Optional<String> round) {
+        this(providerEventId, startsAt, homeTeam, awayTeam, status, tournament, venue,
+                season, round, Optional.empty(), Optional.empty(), Optional.empty());
+    }
 
     public EventDetails {
         if (providerEventId < 1) {
@@ -31,6 +61,12 @@ public record EventDetails(
         tournament = Objects.requireNonNull(tournament, "tournament");
         venue = Objects.requireNonNull(venue, "venue");
         season = Objects.requireNonNull(season, "season");
+        isAwarded = Objects.requireNonNull(isAwarded, "isAwarded");
+        homeDisplayScore = requireDisplayScore(homeDisplayScore, "homeDisplayScore");
+        awayDisplayScore = requireDisplayScore(awayDisplayScore, "awayDisplayScore");
+        homeManager = Objects.requireNonNull(homeManager, "homeManager");
+        awayManager = Objects.requireNonNull(awayManager, "awayManager");
+        referee = Objects.requireNonNull(referee, "referee");
         round = Objects.requireNonNull(round, "round").map(value -> {
             String normalized = value.trim();
             if (normalized.isEmpty() || normalized.length() > 64) {
@@ -48,5 +84,15 @@ public record EventDetails(
                 awayTeam,
                 status,
                 tournament);
+    }
+
+    private static Optional<Integer> requireDisplayScore(Optional<Integer> score, String field) {
+        Objects.requireNonNull(score, field);
+        score.ifPresent(value -> {
+            if (value < 0 || value > 999) {
+                throw new IllegalArgumentException(field + " must be between 0 and 999");
+            }
+        });
+        return score;
     }
 }

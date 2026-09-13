@@ -3,6 +3,7 @@ package com.bettingproject.sofascorelocal.application.history;
 import com.bettingproject.sofascorelocal.domain.event.CanonicalEventIdentity;
 import com.bettingproject.sofascorelocal.domain.event.CanonicalEventObservationView;
 import com.bettingproject.sofascorelocal.domain.event.EventSourceTrace;
+import com.bettingproject.sofascorelocal.domain.event.ProviderCountry;
 import com.bettingproject.sofascorelocal.domain.eventdata.EventIncident;
 import com.bettingproject.sofascorelocal.domain.eventdata.EventIncidents;
 import com.bettingproject.sofascorelocal.domain.eventdata.EventLineupPlayer;
@@ -12,9 +13,13 @@ import com.bettingproject.sofascorelocal.domain.eventdata.EventStatistics;
 import com.bettingproject.sofascorelocal.domain.eventdata.J5CompletenessReport;
 import com.bettingproject.sofascorelocal.domain.eventdata.J5EventDataObservationView;
 import com.bettingproject.sofascorelocal.domain.eventdata.LineupSide;
+import com.bettingproject.sofascorelocal.domain.eventdata.MissingLineupPlayer;
+import com.bettingproject.sofascorelocal.domain.eventdata.PlayerMatchStatistics;
 import com.bettingproject.sofascorelocal.domain.eventdata.TeamLineup;
 import com.bettingproject.sofascorelocal.domain.eventdetails.EventDetailObservationView;
+import com.bettingproject.sofascorelocal.domain.eventdetails.EventDetailObservation;
 import com.bettingproject.sofascorelocal.domain.eventdetails.EventDetails;
+import com.bettingproject.sofascorelocal.domain.eventdetails.EventPerson;
 import com.bettingproject.sofascorelocal.domain.eventdetails.EventSeason;
 import com.bettingproject.sofascorelocal.domain.eventdetails.EventVenue;
 import com.bettingproject.sofascorelocal.domain.history.J6ChangeKind;
@@ -24,11 +29,15 @@ import com.bettingproject.sofascorelocal.domain.scheduledevents.ScheduledTournam
 import org.junit.jupiter.api.Test;
 
 import java.time.Instant;
+import java.time.OffsetDateTime;
+import java.math.BigDecimal;
 import java.util.List;
+import java.util.Map;
 import java.util.Optional;
 import java.util.OptionalLong;
 
 import static org.assertj.core.api.Assertions.assertThat;
+import static org.assertj.core.api.Assertions.tuple;
 
 class J6SemanticDiffServiceTest {
 
@@ -66,7 +75,7 @@ class J6SemanticDiffServiceTest {
     }
 
     @Test
-    void keepsEventDetailsFocusedOnVenueSeasonAndRound() {
+    void preservesLegacyDetailChangesWithoutInventingAbsentAwardedFields() {
         EventDetailObservationView before = details(
                 10,
                 Optional.of(new EventVenue(10, "Old stadium", Optional.empty())),
@@ -90,6 +99,109 @@ class J6SemanticDiffServiceTest {
                         "season.name",
                         "round")
                 .doesNotContain("startsAt", "status.type", "homeTeam.name");
+    }
+
+    @Test
+    void distinguishesAbsentAwardedFieldsFromExplicitFalseAndZeroScores() {
+        var before = awardedDetails(12, null, null, null);
+        var after = awardedDetails(13, false, 0, 0);
+
+        assertThat(SERVICE.compareDetails(before, after))
+                .extracting(change -> change.field(), change -> change.beforeValue(),
+                        change -> change.afterValue(), change -> change.kind())
+                .containsExactly(
+                        tuple("isAwarded", Optional.empty(), Optional.of("false"), J6ChangeKind.ADDED),
+                        tuple("homeScore.display", Optional.empty(), Optional.of("0"), J6ChangeKind.ADDED),
+                        tuple("awayScore.display", Optional.empty(), Optional.of("0"), J6ChangeKind.ADDED));
+    }
+
+    @Test
+    void reportsAnAwardAndItsDisplayScoreCorrectionWithoutChangingTheUnchangedSide() {
+        var before = awardedDetails(14, false, 0, 0);
+        var after = awardedDetails(15, true, 3, 0);
+
+        assertThat(SERVICE.compareDetails(before, after))
+                .extracting(change -> change.field(), change -> change.beforeValue(),
+                        change -> change.afterValue(), change -> change.kind())
+                .containsExactly(
+                        tuple("isAwarded", Optional.of("false"), Optional.of("true"), J6ChangeKind.CHANGED),
+                        tuple("homeScore.display", Optional.of("0"), Optional.of("3"), J6ChangeKind.CHANGED));
+    }
+
+    @Test
+    void reportsRemovedAwardedFieldsWithoutReplacingThemWithFalseOrZero() {
+        var before = awardedDetails(16, true, 0, 3);
+        var after = awardedDetails(17, null, null, null);
+
+        assertThat(SERVICE.compareDetails(before, after))
+                .extracting(change -> change.field(), change -> change.beforeValue(),
+                        change -> change.afterValue(), change -> change.kind())
+                .containsExactly(
+                        tuple("isAwarded", Optional.of("true"), Optional.empty(), J6ChangeKind.REMOVED),
+                        tuple("homeScore.display", Optional.of("0"), Optional.empty(), J6ChangeKind.REMOVED),
+                        tuple("awayScore.display", Optional.of("3"), Optional.empty(), J6ChangeKind.REMOVED));
+    }
+
+    @Test
+    void doesNotReportUnchangedAwardedValuesAsSemanticChanges() {
+        assertThat(SERVICE.compareDetails(
+                awardedDetails(18, true, 3, 0),
+                awardedDetails(19, true, 3, 0))).isEmpty();
+    }
+
+    @Test
+    void reportsV4OfficialNameAndCountryCorrections() {
+        var before = v4Details(20,
+                Optional.of(person("Home manager before", "France", "FR")),
+                Optional.of(person("Away manager before", "Spain", "ES")),
+                Optional.of(person("Referee before", "Italy", "IT")));
+        var after = v4Details(21,
+                Optional.of(person("Home manager after", "Germany", "DE")),
+                Optional.of(person("Away manager after", "Portugal", "PT")),
+                Optional.of(person("Referee after", "Belgium", "BE")));
+
+        assertThat(SERVICE.compareDetails(before, after))
+                .extracting(change -> change.field(), change -> change.beforeValue(),
+                        change -> change.afterValue(), change -> change.kind())
+                .containsExactly(
+                        tuple("homeManager.name", Optional.of("Home manager before"), Optional.of("Home manager after"), J6ChangeKind.CHANGED),
+                        tuple("homeManager.country.name", Optional.of("France"), Optional.of("Germany"), J6ChangeKind.CHANGED),
+                        tuple("homeManager.country.alpha2", Optional.of("FR"), Optional.of("DE"), J6ChangeKind.CHANGED),
+                        tuple("awayManager.name", Optional.of("Away manager before"), Optional.of("Away manager after"), J6ChangeKind.CHANGED),
+                        tuple("awayManager.country.name", Optional.of("Spain"), Optional.of("Portugal"), J6ChangeKind.CHANGED),
+                        tuple("awayManager.country.alpha2", Optional.of("ES"), Optional.of("PT"), J6ChangeKind.CHANGED),
+                        tuple("referee.name", Optional.of("Referee before"), Optional.of("Referee after"), J6ChangeKind.CHANGED),
+                        tuple("referee.country.name", Optional.of("Italy"), Optional.of("Belgium"), J6ChangeKind.CHANGED),
+                        tuple("referee.country.alpha2", Optional.of("IT"), Optional.of("BE"), J6ChangeKind.CHANGED));
+    }
+
+    @Test
+    void preservesUnknownV4OfficialCountriesWithoutInventingFallbacks() {
+        var before = v4Details(22,
+                Optional.of(person("Home manager", null, null)),
+                Optional.of(person("Away manager", "Spain", "ES")),
+                Optional.empty());
+        var after = v4Details(23,
+                Optional.of(person("Home manager", "France", "FR")),
+                Optional.empty(),
+                Optional.of(person("Referee", "Italy", "IT")));
+
+        assertThat(SERVICE.compareDetails(before, after))
+                .extracting(change -> change.field(), change -> change.beforeValue(),
+                        change -> change.afterValue(), change -> change.kind())
+                .containsExactly(
+                        tuple("homeManager.country.name", Optional.empty(), Optional.of("France"), J6ChangeKind.ADDED),
+                        tuple("homeManager.country.alpha2", Optional.empty(), Optional.of("FR"), J6ChangeKind.ADDED),
+                        tuple("awayManager.name", Optional.of("Away manager"), Optional.empty(), J6ChangeKind.REMOVED),
+                        tuple("awayManager.country.name", Optional.of("Spain"), Optional.empty(), J6ChangeKind.REMOVED),
+                        tuple("awayManager.country.alpha2", Optional.of("ES"), Optional.empty(), J6ChangeKind.REMOVED),
+                        tuple("referee.name", Optional.empty(), Optional.of("Referee"), J6ChangeKind.ADDED),
+                        tuple("referee.country.name", Optional.empty(), Optional.of("Italy"), J6ChangeKind.ADDED),
+                        tuple("referee.country.alpha2", Optional.empty(), Optional.of("IT"), J6ChangeKind.ADDED));
+        assertThat(SERVICE.compareDetails(after, v4Details(24,
+                Optional.of(person("Home manager", "France", "FR")),
+                Optional.empty(),
+                Optional.of(person("Referee", "Italy", "IT"))))).isEmpty();
     }
 
     @Test
@@ -140,6 +252,122 @@ class J6SemanticDiffServiceTest {
         assertThat(lineupChanges.stream()
                 .filter(change -> change.field().equals("lineups[HOME,playerId=101]"))
                 .findFirst().orElseThrow().kind()).isEqualTo(J6ChangeKind.ADDED);
+    }
+
+    @Test
+    void reportsCaptainAndEachIndividualStatisticWithoutTurningAbsenceIntoZero() {
+        EventLineups before = lineups(true, "4-3-3", List.of(
+                new EventLineupPlayer(100, "Alice", Optional.of(9), Optional.of("F"), true,
+                        Optional.of(false), Optional.of(new PlayerMatchStatistics(
+                                Map.of("totalPass", new BigDecimal("69"), "goals", BigDecimal.ZERO),
+                                Map.of("alternative", new BigDecimal("7.6")))))));
+        EventLineups after = lineups(true, "4-3-3", List.of(
+                new EventLineupPlayer(100, "Alice", Optional.of(9), Optional.of("F"), true,
+                        Optional.of(true), Optional.of(new PlayerMatchStatistics(
+                                Map.of("totalPass", new BigDecimal("70"), "totalShots", BigDecimal.ZERO),
+                                Map.of("alternative", new BigDecimal("7.8")))))));
+
+        assertThat(SERVICE.compareEventData(enrichedView(30, before), enrichedView(31, after)))
+                .extracting(change -> change.field(), change -> change.beforeValue(),
+                        change -> change.afterValue(), change -> change.kind())
+                .containsExactly(
+                        tuple("lineups[HOME,playerId=100].captain", Optional.of("false"), Optional.of("true"), J6ChangeKind.CHANGED),
+                        tuple("lineups[HOME,playerId=100].statistics[goals]", Optional.of("0"), Optional.empty(), J6ChangeKind.REMOVED),
+                        tuple("lineups[HOME,playerId=100].statistics[totalPass]", Optional.of("69"), Optional.of("70"), J6ChangeKind.CHANGED),
+                        tuple("lineups[HOME,playerId=100].statistics[totalShots]", Optional.empty(), Optional.of("0"), J6ChangeKind.ADDED),
+                        tuple("lineups[HOME,playerId=100].statistics.ratingVersions[alternative]", Optional.of("7.6"), Optional.of("7.8"), J6ChangeKind.CHANGED));
+    }
+
+    @Test
+    void distinguishesAbsentAndExplicitlyEmptyOptionalLineupBlocks() {
+        EventLineups before = lineups(true, "4-3-3", List.of(player(100, "Alice", 9, "F", true)));
+        EventLineups after = new EventLineups(PROVIDER_EVENT_ID, true,
+                new TeamLineup(LineupSide.HOME, Optional.of("4-3-3"), List.of(
+                        new EventLineupPlayer(100, "Alice", Optional.of(9), Optional.of("F"), true,
+                                Optional.empty(), Optional.of(new PlayerMatchStatistics(Map.of(), Map.of())))),
+                        Optional.of(List.of())), before.away());
+
+        assertThat(SERVICE.compareEventData(enrichedView(32, before), enrichedView(33, after)))
+                .extracting(change -> change.field(), change -> change.beforeValue(), change -> change.afterValue())
+                .containsExactly(
+                        tuple("lineups[HOME].missingPlayers.present", Optional.empty(), Optional.of("true")),
+                        tuple("lineups[HOME,playerId=100].statistics.present", Optional.empty(), Optional.of("true")));
+    }
+
+    @Test
+    void tracksMissingPlayersByIdentityAndReportsReturnEstimateCorrections() {
+        EventLineups empty = lineups(true, "4-3-3", List.of());
+        MissingLineupPlayer original = missing(500, "2026-09-20T00:00:00Z");
+        MissingLineupPlayer corrected = missing(500, "2026-09-30T00:00:00Z");
+        MissingLineupPlayer unchanged = missing(501, "2026-09-20T00:00:00Z");
+        EventLineups before = new EventLineups(PROVIDER_EVENT_ID, true,
+                new TeamLineup(LineupSide.HOME, Optional.of("4-3-3"), List.of(),
+                        Optional.of(List.of(original, unchanged))), empty.away());
+        EventLineups after = new EventLineups(PROVIDER_EVENT_ID, true,
+                new TeamLineup(LineupSide.HOME, Optional.of("4-3-3"), List.of(),
+                        Optional.of(List.of(unchanged, corrected))), empty.away());
+
+        assertThat(SERVICE.compareEventData(enrichedView(34, before), enrichedView(35, after)))
+                .singleElement().satisfies(change -> {
+                    assertThat(change.field()).isEqualTo("lineups[HOME].missingPlayers[playerId=500].expectedEndDate");
+                    assertThat(change.beforeValue()).contains("2026-09-20T00:00Z");
+                    assertThat(change.afterValue()).contains("2026-09-30T00:00Z");
+                });
+        assertThat(SERVICE.compareEventData(enrichedView(35, after), enrichedView(36, after))).isEmpty();
+    }
+
+    @Test
+    void tracksV4LineupCountriesForMatchedPlayersAndMissingPlayers() {
+        EventLineups before = v4Lineups("France", "FR");
+        EventLineups after = v4Lineups("Belgium", "BE");
+
+        assertThat(SERVICE.compareEventData(enrichedV4View(37, before), enrichedV4View(38, after)))
+                .extracting(change -> change.field(), change -> change.beforeValue(),
+                        change -> change.afterValue(), change -> change.kind())
+                .containsExactly(
+                        tuple("lineups[HOME].missingPlayers[playerId=500].country.name", Optional.of("France"), Optional.of("Belgium"), J6ChangeKind.CHANGED),
+                        tuple("lineups[HOME].missingPlayers[playerId=500].country.alpha2", Optional.of("FR"), Optional.of("BE"), J6ChangeKind.CHANGED),
+                        tuple("lineups[HOME,playerId=100].country.name", Optional.of("France"), Optional.of("Belgium"), J6ChangeKind.CHANGED),
+                        tuple("lineups[HOME,playerId=100].country.alpha2", Optional.of("FR"), Optional.of("BE"), J6ChangeKind.CHANGED));
+    }
+
+    @Test
+    void reportsNewlyAvailableV4PlayerCountriesWithoutInventingValues() {
+        EventLineups before = v4Lineups(null, null);
+        EventLineups after = v4Lineups("France", "FR");
+
+        assertThat(SERVICE.compareEventData(enrichedV4View(39, before), enrichedV4View(40, after)))
+                .extracting(change -> change.field(), change -> change.beforeValue(),
+                        change -> change.afterValue(), change -> change.kind())
+                .containsExactly(
+                        tuple("lineups[HOME].missingPlayers[playerId=500].country.name", Optional.empty(), Optional.of("France"), J6ChangeKind.ADDED),
+                        tuple("lineups[HOME].missingPlayers[playerId=500].country.alpha2", Optional.empty(), Optional.of("FR"), J6ChangeKind.ADDED),
+                        tuple("lineups[HOME,playerId=100].country.name", Optional.empty(), Optional.of("France"), J6ChangeKind.ADDED),
+                        tuple("lineups[HOME,playerId=100].country.alpha2", Optional.empty(), Optional.of("FR"), J6ChangeKind.ADDED));
+    }
+
+    private static MissingLineupPlayer missing(long id, String expectedEndDate) {
+        return new MissingLineupPlayer(id, "Absent " + id, Optional.of(42), Optional.of("D"),
+                Optional.of("missing"), Optional.of(1), Optional.of("Achilles Tendon Injury"),
+                Optional.of(5), Optional.of(OffsetDateTime.parse(expectedEndDate)));
+    }
+
+    private static J5EventDataObservationView enrichedView(long id, EventLineups lineups) {
+        return enrichedView(id, lineups, "event-lineups-v3");
+    }
+
+    private static J5EventDataObservationView enrichedV4View(long id, EventLineups lineups) {
+        return enrichedView(id, lineups, "event-lineups-v4");
+    }
+
+    private static J5EventDataObservationView enrichedView(
+            long id, EventLineups lineups, String parserVersion) {
+        EventSourceTrace trace = EventSourceTrace.providerSnapshot(
+                id, hash('a'), parserVersion, Instant.parse("2026-09-09T00:00:00Z"));
+        var observation = com.bettingproject.sofascorelocal.domain.eventdata.J5EventDataObservation.from(
+                IDENTITY, lineups, trace, J5CompletenessReport.measured(1, 1, List.of()));
+        return new J5EventDataObservationView(id, IDENTITY, lineups, trace,
+                observation.completeness(), observation.normalizedSha256());
     }
 
     @Test
@@ -244,6 +472,63 @@ class J6SemanticDiffServiceTest {
                 hash('d'));
     }
 
+    private static EventDetailObservationView v4Details(
+            long observationId,
+            Optional<EventPerson> homeManager,
+            Optional<EventPerson> awayManager,
+            Optional<EventPerson> referee) {
+        EventDetails details = new EventDetails(
+                PROVIDER_EVENT_ID,
+                Instant.parse("2026-08-20T18:00:00Z"),
+                new ScheduledTeam(1, "Home"),
+                new ScheduledTeam(2, "Away"),
+                new ScheduledEventStatus("notstarted", Optional.empty()),
+                Optional.empty(),
+                Optional.empty(),
+                Optional.empty(),
+                Optional.empty(),
+                Optional.empty(),
+                Optional.empty(),
+                Optional.empty(),
+                homeManager,
+                awayManager,
+                referee);
+        EventSourceTrace trace = EventSourceTrace.providerSnapshot(
+                observationId, hash('e'), "event-details-v4",
+                Instant.parse("2026-09-13T00:00:00Z").plusSeconds(observationId));
+        EventDetailObservation observation = EventDetailObservation.from(IDENTITY, details, trace);
+        return new EventDetailObservationView(
+                observationId, IDENTITY, details, trace, observation.normalizedSha256());
+    }
+
+    private static EventPerson person(String name, String countryName, String alpha2) {
+        return new EventPerson(name, country(countryName, alpha2));
+    }
+
+    private static Optional<ProviderCountry> country(String name, String alpha2) {
+        if (name == null && alpha2 == null) {
+            return Optional.empty();
+        }
+        return Optional.of(new ProviderCountry(Optional.ofNullable(name), Optional.ofNullable(alpha2)));
+    }
+
+    private static EventDetailObservationView awardedDetails(
+            long observationId, Boolean awarded, Integer homeDisplay, Integer awayDisplay) {
+        EventDetails details = new EventDetails(
+                PROVIDER_EVENT_ID,
+                Instant.parse("2026-08-20T18:00:00Z"),
+                new ScheduledTeam(1, "Home"),
+                new ScheduledTeam(2, "Away"),
+                new ScheduledEventStatus("finished", Optional.empty()),
+                Optional.empty(), Optional.empty(), Optional.empty(), Optional.empty(),
+                Optional.ofNullable(awarded), Optional.ofNullable(homeDisplay), Optional.ofNullable(awayDisplay));
+        var provenance = source("awarded-details-" + observationId,
+                "event-details-v3", 'a', observationId);
+        var observation = EventDetailObservation.from(IDENTITY, details, provenance);
+        return new EventDetailObservationView(observationId, IDENTITY, details,
+                provenance, observation.normalizedSha256());
+    }
+
     private static EventStatisticMetric metric(
             String period,
             String group,
@@ -282,6 +567,37 @@ class J6SemanticDiffServiceTest {
                 PROVIDER_EVENT_ID,
                 confirmed,
                 new TeamLineup(LineupSide.HOME, Optional.of(homeFormation), homePlayers),
+                new TeamLineup(LineupSide.AWAY, Optional.empty(), List.of()));
+    }
+
+    private static EventLineups v4Lineups(String countryName, String alpha2) {
+        Optional<ProviderCountry> country = country(countryName, alpha2);
+        return new EventLineups(
+                PROVIDER_EVENT_ID,
+                true,
+                new TeamLineup(
+                        LineupSide.HOME,
+                        Optional.of("4-3-3"),
+                        List.of(new EventLineupPlayer(
+                                100,
+                                "Alice",
+                                Optional.of(9),
+                                Optional.of("F"),
+                                true,
+                                Optional.empty(),
+                                Optional.empty(),
+                                country)),
+                        Optional.of(List.of(new MissingLineupPlayer(
+                                500,
+                                "Unavailable 500",
+                                Optional.of(42),
+                                Optional.of("D"),
+                                Optional.of("missing"),
+                                Optional.of(1),
+                                Optional.of("Synthetic injury"),
+                                Optional.of(5),
+                                Optional.of(OffsetDateTime.parse("2026-09-20T00:00:00Z")),
+                                country)))),
                 new TeamLineup(LineupSide.AWAY, Optional.empty(), List.of()));
     }
 

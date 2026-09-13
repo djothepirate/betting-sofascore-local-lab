@@ -1,0 +1,212 @@
+{
+  "schema": "wo058-grouped-live-capacity-evidence-v1",
+  "status": "PENDING_ADMISSION_REVIEW",
+  "labStatus": [
+    "EXPERIMENTAL",
+    "LOCAL_ONLY",
+    "NOT_PRODUCTION_APPROVED",
+    "NO_CRITICAL_DEPENDENCY"
+  ],
+  "completedAt": "2026-09-08T17:32:42.522658300Z",
+  "baseCommit": "06c7e3d272e8f96873eca822e4bdaa8302cf1b01",
+  "policyVersion": "live-v5",
+  "flywayVersion": 40,
+  "qualifiedCapacity": 0,
+  "envelopeScope": "STEADY_64_KIB_ONLY",
+  "nativeEvidence": {
+    "path": "WO058-GROUPED-LIVE-V5-CANDIDATE-75-NATIVE-20260908.json",
+    "sha256": "b9b44c3116eb45eb113cc31d51f120ff88458bed0e35037fd2d0b34a163ff5e9"
+  },
+  "perEventEvidence": "WO058-GROUPED-LIVE-V5-CANDIDATE-75-PER-EVENT-20260908.json",
+  "measuredRuntimeEvidence": "WO058-GROUPED-LIVE-V5-CANDIDATE-75-MEASURED-RUNTIME-20260908.json",
+  "measuredRuntimeSha256": "809e549ff33fc8fb7517a2998e7a9cb9725f8b2940a1f677a866b94e6cf62adb",
+  "endpointEnvelopes": {
+    "EVENT_DETAILS": {
+      "requestMillis": 400,
+      "processingMillis": 600
+    },
+    "EVENT_INCIDENTS": {
+      "requestMillis": 400,
+      "processingMillis": 500
+    },
+    "EVENT_STATISTICS": {
+      "requestMillis": 350,
+      "processingMillis": 500
+    },
+    "EVENT_LINEUPS": {
+      "requestMillis": 300,
+      "processingMillis": 400
+    }
+  },
+  "cadence": {
+    "criticalSeconds": 75,
+    "lineupSeconds": 300,
+    "intraGroupDelayMillis": 0,
+    "interGroupDelayMillis": 1000,
+    "maximumEndpointsPerGroup": 4,
+    "maximumUtilization": 0.9
+  },
+  "admission": {
+    "weightedFiveMinuteSecondsPerMatch": 15.7,
+    "weightedFiveMinuteSecondsAtTwentyMatches": 314.0,
+    "availableFiveMinuteSeconds": 270,
+    "calculatedCapacity": 17,
+    "uncappedMeanBoundCapacity": 17,
+    "calculation": "floor(270000 / (4 * (J4_ms + incidents_ms + statistics_ms + 1000) + lineups_ms)), then capped at twenty; endpoint costs include request plus processing",
+    "productionSchedulerScenarioCount": 32,
+    "productionSchedulerScenarios": "initial in-play wave, prematch, simultaneous kickoff, staggered and simultaneous finalization, four lineup phases and variable costs",
+    "productionSchedulerScenariosExecutedForThisProfile": false,
+    "javaAdmissionReview": "PENDING",
+    "profileAppliedAutomatically": false
+  },
+  "budgets": {
+    "maximumCallsPerEvent": 2500,
+    "maximumCallsPerCampaign": 20000,
+    "maximumDurationMinutes": 240,
+    "reservedFinalCallsPerActiveEvent": 4,
+    "maximumRawBytes": 15728640000
+  },
+  "measurement": {
+    "warmupSeconds": 300,
+    "steadyElapsedSeconds": 1800.0241384,
+    "totalElapsedSeconds": 2100.0241384,
+    "totalCalls": 1835,
+    "steadyCalls": 1560,
+    "initialCalls": 275,
+    "missedCycles": 0,
+    "pairsChecked": 80,
+    "criticalReceiptIntervalMaximumSeconds": 75.508,
+    "criticalReceiptIntervalP95Seconds": 75.18,
+    "criticalPublicationIntervalMaximumSeconds": 75.5262528,
+    "criticalPublicationIntervalP95Seconds": 75.1838437,
+    "lineupNominalLatenessP95Seconds": 2.1651504,
+    "lineupNominalLatenessMaximumSeconds": 2.3181504,
+    "minimumBetweenGroupGapSeconds": 1.0689156,
+    "criticalPublicationQueueDebtSeconds": {
+      "count": 1440,
+      "p95": 1.5776011,
+      "maximum": 2.0060585
+    },
+    "queueDebtFirstQuarterP95Seconds": 1.6706805,
+    "queueDebtLastQuarterP95Seconds": 1.5572933,
+    "endpointEstablishedMetrics": {
+      "EVENT_DETAILS": {
+        "samples": 480,
+        "requestSeconds": {
+          "count": 480,
+          "p95": 0.2614124,
+          "maximum": 0.3573111
+        },
+        "processingIncludingSqlSeconds": {
+          "count": 480,
+          "p95": 0.3596898,
+          "maximum": 0.5785635
+        },
+        "maximumRequestNanos": 357311100,
+        "maximumProcessingNanos": 578563500
+      },
+      "EVENT_INCIDENTS": {
+        "samples": 480,
+        "requestSeconds": {
+          "count": 480,
+          "p95": 0.259743,
+          "maximum": 0.3649925
+        },
+        "processingIncludingSqlSeconds": {
+          "count": 480,
+          "p95": 0.3516487,
+          "maximum": 0.4597457
+        },
+        "maximumRequestNanos": 364992500,
+        "maximumProcessingNanos": 459745700
+      },
+      "EVENT_STATISTICS": {
+        "samples": 480,
+        "requestSeconds": {
+          "count": 480,
+          "p95": 0.260266,
+          "maximum": 0.3284106
+        },
+        "processingIncludingSqlSeconds": {
+          "count": 480,
+          "p95": 0.3591097,
+          "maximum": 0.4688748
+        },
+        "maximumRequestNanos": 328410600,
+        "maximumProcessingNanos": 468874800
+      },
+      "EVENT_LINEUPS": {
+        "samples": 120,
+        "requestSeconds": {
+          "count": 120,
+          "p95": 0.259426,
+          "maximum": 0.2775631
+        },
+        "processingIncludingSqlSeconds": {
+          "count": 120,
+          "p95": 0.3570091,
+          "maximum": 0.394559
+        },
+        "maximumRequestNanos": 277563100,
+        "maximumProcessingNanos": 394559000
+      }
+    },
+    "receivedBytes": 534446080,
+    "durableAttempts": 1835,
+    "immutableObservations": 420,
+    "familyScheduleRevisions": 1971,
+    "workerAndChildrenClosed": true,
+    "productionDockerDfProbePerRequest": true,
+    "localJdbcReadSeconds": {
+      "maximum": 0.1164873,
+      "p95": 0.085505,
+      "count": 420
+    },
+    "realProviderCalls": 0,
+    "offScopeRequests": 0,
+    "operatorDatabaseUsed": false
+  },
+  "corpus": {
+    "steadyResponseBytes": 65536,
+    "initialResponseBytes": 5242880,
+    "initialMaximumBodyCalls": 80,
+    "serverDelayPatternMillis": [
+      0,
+      30,
+      80,
+      150
+    ],
+    "statisticMetrics": 135,
+    "statisticSignals": 270,
+    "incidents": 30,
+    "lineupPlayers": 44,
+    "changingAndRepeatedPayloads": true,
+    "statisticsAndLineupsRevisitTwoNormalizedStates": true
+  },
+  "initialWave": {
+    "separatelyMeasured": true,
+    "coveredBySteadyEnvelopes": false,
+    "maximumBodyCalls": 80,
+    "maximumReceiptLatenessSeconds": 48.0061504,
+    "maximumPublicationLatenessSeconds": 48.4002848,
+    "maximumBodyRequestSeconds": {
+      "count": 80,
+      "p95": 0.9838786,
+      "maximum": 1.0345331
+    },
+    "maximumBodyProcessingSeconds": {
+      "count": 80,
+      "p95": 0.5455295,
+      "maximum": 1.6723248
+    }
+  },
+  "limitations": [
+    "This pending profile has not passed independent Java admission or the thirty-two production-scheduler scenarios. qualifiedCapacity intentionally remains zero.",
+    "Calculated capacity is only the rounded-envelope mean-work bound, capped at twenty, and is not an authorization to collect.",
+    "Request and processing envelopes cover measured established maxima rounded up separately to 50 ms; they are assumptions, not future latency guarantees.",
+    "The eighty first 5 MiB responses are a separate initial wave, outside the constant STEADY_64_KIB_ONLY envelopes.",
+    "Recurring 5 MiB responses, continuously novel normalized states, Internet latency, SofaScore quotas and provider-to-screen freshness are not established.",
+    "JDBC reads in this native report are not browser rendering; separate UI20/UI100 evidence describes that different scope.",
+    "No profile is lowered, qualified or applied to Eclipse automatically by this script."
+  ]
+}

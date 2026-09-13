@@ -21,6 +21,52 @@ futur Work Order explicitement autorisé ; elles ne doivent pas être lancées p
 WO-047. Seuls les contrôles statiques ciblés des scripts et les migrations Testcontainers sur un
 PostgreSQL isolé relèvent de son périmètre.
 
+WO-058 ajoute le ledger des campagnes live et le garde fournisseur commun en V33, puis le plafond paramétrable et la cadence immuable en V34. V35 applique la contrainte de cadence aux nouveaux manifestes `live-v3` avec LINEUPS prématch, sans modifier les lignes historiques ni la portée de purge. V36 autorise le parseur incidents V16 pour le penalty accordé. V37 ajoute le motif de carton exact `Professional handball` via V17, sans réécrire les observations précédentes. V38 ajoute les trois champs J4 optionnels d'attribution et de score affiché, en conservant les hashes et lignes historiques. Les références
+V31/V32 ci-dessus décrivent les décisions et preuves historiques J7 ; elles ne désignent plus le
+schéma courant exigé par les scripts J6. La qualification WO-058 utilise des bases PostgreSQL
+éphémères et des données synthétiques. Elle n'autorise ni sauvegarde ni purge de la base primaire.
+
+V39 ajoute la politique groupée immuable, les groupes de requêtes et les échéances par famille.
+V40 ajoute les contraintes propres à `live-v5` : cadence de 100 secondes, pause d'une seconde entre
+groupes de cette politique, plafonds de 2 500 appels par rencontre et 20 000 par campagne, budget
+brut indépendant de 15 728 640 000 octets maximum. Aucune ligne ni empreinte historique n'est
+réécrite ; `live-v4` conserve ses paramètres. Sous V40, le format du manifeste et
+l'algorithme `normalizedProvenanceSha256` conservaient la provenance et les hashes normalisés,
+sans comparer directement chaque colonne métier.
+Le test PostgreSQL de roundtrip vérifie séparément la conservation matérielle des trois
+nouvelles valeurs J4 (`is_awarded=true`, `home_display_score=0`, `away_display_score=3`),
+avec leurs identifiants et leur provenance, après restauration dans une base de test distincte.
+Le fingerprint live couvre également les quatre tables groupées introduites en V39 ; les cas de
+roundtrip du ledger restaurent `live-v4` sous V39 et `live-v5` sous V40 avec leur profil, groupes,
+projection et révisions des échéances, sans réarmer la collecte. La montée V39 préremplie vers V40
+compare aussi matériellement les manifestes, appels, observations et anciennes empreintes. Le
+format des champs du manifeste J6 reste inchangé ; une preuve V39 ne qualifie pas les nouvelles
+bornes ni la restauration d'une campagne `live-v5`.
+
+V41 ajoute les [détails des compositions](../architecture/J5-LINEUPS-V3-PLAYER-DETAILS.md).
+Les gardes de cette révision exigeaient V41 ; ces preuves restent historiques.
+Le champ `normalizedProvenanceSha256` conserve son nom dans le manifeste, mais son calcul V41
+couvre aussi les lignes complètes de `j5_event_lineup_side` et `j5_event_lineup_player`, afin de
+vérifier les capitaines, statistiques individuelles et indisponibles après restauration. Une
+preuve de sauvegarde/restauration V41 était donc nécessaire pour cette révision.
+Le complément est qualifié sur PostgreSQL isolé, sans sauvegarde ou purge de la base opérateur.
+
+Le premier lot de résilience V42–V44 est qualifié fonctionnellement hors fournisseur,
+y compris l'upgrade prérempli et `pg_dump`/`pg_restore` en PostgreSQL isolé :
+[rapport](../validation/WO-058-provider-resilience-qualification-20260909.md). Les scripts courants
+exigent désormais **V54** et incluent dans le SHA live les lignes complètes des sept tables :
+`provider_resilience_state`, `provider_departure_reservation`, `provider_departure_completion`,
+`provider_departure_accounting`, `provider_resilience_event`,
+`live_attempt_transport_diagnostic`, `live_campaign_diagnostic`.
+Leurs sept compteurs source/restauré sont comparés et requis par la rétention ; le singleton
+doit être présent. `provider_departure_accounting` conserve l'horodatage
+`AUTHENTICATED_WORKER_REQUEST` lorsqu'il est prouvé, sinon le repli
+`COMPLETION_FALLBACK`, et son compteur ne peut pas être inférieur à celui des complétions.
+La suspension et les budgets ne sont ni effacés ni réarmés pour sauvegarder. Les anciens
+manifestes de sauvegarde ne sont pas modifiés pour franchir la garde V54.
+La purge reste limitée aux octets bruts éligibles : ces tables ne deviennent pas supprimables.
+Aucune sauvegarde, restauration ou purge de la base opérateur n'est autorisée par cette mise à jour.
+
 ```text
 PROVIDER_CALL_REQUIRED=NO
 POLLING_OR_SCHEDULING=NO
@@ -34,7 +80,7 @@ NORMALIZED_OBSERVATION_DELETION=IMPOSSIBLE_BY_DESIGN
 - PowerShell 7.4 ou plus récent pour préserver les pipelines binaires natifs ;
 - exécutable `age` disponible dans `PATH` ou fourni avec `-AgePath` ;
 - PostgreSQL local démarré et sain ;
-- Flyway V32 appliqué ; la rétention reste définie par V22, V23 étend seulement
+- Flyway V54 appliqué ; la rétention reste définie par V22, V23 étend seulement
   `export_manifest` pour J7, V24 élargit la portée du cache de découverte tournoi, V25 ajoute
   uniquement la provenance de l'import JSON local, V26 autorise `event-incidents-v14`, V27 ajoute
   le ledger J8 sans étendre le périmètre de purge et V28 autorise uniquement
@@ -45,10 +91,16 @@ NORMALIZED_OBSERVATION_DELETION=IMPOSSIBLE_BY_DESIGN
   les preuves append-only de grant, révocation et consommation du go propriétaire provider-derived,
   dont les trois comptes et les lignes canoniques participent à la même empreinte J7 ; V32 ajoute
   de façon append-only le discriminant V1/V2 et les champs d'audit/gouvernance V2, sans modifier
-  V31 ni la fonction canonique V1. L'empreinte `to_jsonb(owner_go)` couvre donc les colonnes V32 ;
+  V31 ni la fonction canonique V1. L'empreinte `to_jsonb(owner_go)` couvre donc les colonnes V32.
+  V33 ajoute les preuves live et le garde fournisseur commun ; elle n'étend pas les données
+  supprimables et ne réécrit aucune preuve V32. V34 ajoute la cadence au manifeste live ; son empreinte complète est couverte par le même to_jsonb, sans étendre la purge. V35 à V49 étendent les politiques live sans réécrire les preuves ; V50 ajoute le ledger append-only de départs authentifiés et son repli de complétion à la même preuve de sauvegarde/restauration ; V51 ajoute la réserve statique V8 entre les groupes de collecte et remplace uniquement la validation de politique groupée, sans étendre les tables ni réécrire les preuves ;
+- V52 admet le profil `live-v9`, V53 borne la pagination manuelle J3 à 35 pages, et V54 ajoute le
+  profil de sécurité `live-v10` sans convertir ni réécrire les preuves de sauvegarde historiques ;
 - application liée uniquement à `127.0.0.1` ;
 - toutes les voies J3/J4/J5, y compris la découverte tournoi, désactivées et
   `connector_control` à `LOCKED` ;
+- `SOFASCORE_LIVE_ENABLED=false`, `SOFASCORE_PLAYWRIGHT_ENABLED=false`, garde
+  `provider_campaign_guard.state=FREE` et aucune campagne live `RUNNING` ou `CLEANUP_REQUIRED` ;
 - destination de sauvegarde absolue, existante et située hors du dépôt ;
 - espace disque suffisant pour la sauvegarde chiffrée et la restauration temporaire.
 
@@ -107,6 +159,9 @@ rétention.
 
 L'application Web doit être arrêtée. Le script force les opt-ins réseau à `false`, démarre une
 commande Spring non Web, vérifie le verrou persistant puis s'arrête.
+Cela inclut les opt-ins live et Playwright. L'aperçu refuse aussi un garde fournisseur occupé ou
+un nettoyage incertain avec `PROVIDER_CAMPAIGN_ACTIVE` ; aucune purge ne doit servir à libérer ce
+garde.
 
 ```powershell
 pwsh -NoProfile -File .\scripts\Invoke-J6Retention.ps1 -Mode Preview
@@ -172,7 +227,8 @@ PostgreSQL possédée. Elles ne constituent ni une boucle indéfinie ni un budge
 Le script :
 
 1. refuse une application encore à l'écoute sur le port 8087 ;
-2. vérifie Compose, le verrou réseau et la version courante Flyway V32 ;
+2. vérifie Compose, le verrou réseau, la version courante Flyway V54, le garde fournisseur `FREE`
+   et l'absence de campagne live `RUNNING` ou `CLEANUP_REQUIRED` ;
 3. vérifie le SHA-256 réel de chaque payload retenu ;
 4. vérifie l'exécutable Docker exact ; sous Windows, il doit être un fichier absolu sans reparse
    point, signé validement et attribué au produit Docker Inc. ;
@@ -195,8 +251,10 @@ Le script :
 11. crée un manifeste initial non qualifié ;
 12. restaure le flux déchiffré directement dans une base temporaire ;
 13. compare version Flyway, comptes, couverture et empreintes source/restauration, y compris les
-   cinq comptes et le fingerprint déterministe du ledger J8, les trois comptes du ledger J7 et les
-   trois comptes des preuves owner-go append-only intégrées à son empreinte ;
+    cinq comptes et le fingerprint déterministe du ledger J8, les trois comptes du ledger J7 et les
+    trois comptes des preuves owner-go append-only intégrées à son empreinte, puis les sept
+    comptes live, les sept comptes de résilience/départ/diagnostic, l'état du garde, le nombre de
+    campagnes actives et l'empreinte live ;
 14. inscrit `restoreQualified=true` uniquement après égalité et nettoyage prouvé ;
 15. supprime la base temporaire et tout fichier partiel dans tous les cas ; une preuve de nettoyage
     incomplète rend l'exécution terminalement invalide.
@@ -214,6 +272,48 @@ J6_BACKUP_COVERAGE_RECEIVED_AT=<instant UTC>
 Deux fichiers restent dans le répertoire externe : le fichier `.age` et
 `<fichier>.age.manifest.json`. Conserver les deux ensemble. Si la qualification échoue, ils ne
 constituent pas une preuve valide et le mode `Execute` doit rester interdit.
+
+### 5.1 Preuve live V50 incluse dans le manifeste, sous garde courante V54
+
+Les blocs `source` et `restored` doivent être identiques pour les champs suivants, même lorsqu'il
+n'existe encore aucune campagne live :
+
+| Champ | Contenu couvert |
+|---|---|
+| `liveCampaignCount` | lignes de `live_campaign` |
+| `liveEventCount` | lignes de `live_event` |
+| `liveCallCount` | réservations de `live_call` |
+| `liveDispatchCount` | autorisations de départ de `live_call_dispatch` |
+| `liveReceiptCount` | réceptions liées dans `live_call_receipt` |
+| `liveResultCount` | résultats de `live_call_result` |
+| `liveTransitionCount` | transitions de `live_transition` |
+| `providerResilienceStateCount` | singleton de `provider_resilience_state` |
+| `providerDepartureReservationCount` | réservations de départ de `provider_departure_reservation` |
+| `providerDepartureCompletionCount` | complétions de `provider_departure_completion` |
+| `providerDepartureAccountingCount` | départs comptabilisés de `provider_departure_accounting` |
+| `providerResilienceEventCount` | événements de `provider_resilience_event` |
+| `liveAttemptTransportDiagnosticCount` | diagnostics de transport de `live_attempt_transport_diagnostic` |
+| `liveCampaignDiagnosticCount` | diagnostics de campagne de `live_campaign_diagnostic` |
+| `providerGuardState` | état `FREE` de la ligne unique `provider_campaign_guard` |
+| `activeLiveCount` | nombre nul de campagnes `RUNNING` ou `CLEANUP_REQUIRED` |
+| `liveLedgerSha256` | SHA-256 déterministe des sept tables live, des quatre tables de politique groupée, du garde et des sept tables de résilience/départ/diagnostic, soit dix-neuf tables |
+
+L'empreinte utilise toutes les colonnes de chaque ligne sous forme `to_jsonb`, avec un préfixe
+identifiant la table et un tri déterministe avant calcul du SHA-256. Elle couvre donc le manifeste
+préparé, les cibles et leur provenance, les bornes, compteurs, générations et états, les tentatives,
+les liens snapshot/occurrence, les résultats, les projections métier et les transitions. Les
+octets bruts restent couverts séparément par les preuves de snapshots ; ils ne sont pas copiés
+dans le ledger live. Aucun payload ni contenu complet du ledger n'est imprimé par le script.
+Lorsqu'un départ V8 authentifié est observé, son instant `AUTHENTICATED_WORKER_REQUEST` est
+retenu ; une complétion sans cette preuve reçoit `COMPLETION_FALLBACK`. Le nombre de lignes
+comptables doit être au moins égal au nombre de complétions.
+
+Un manifeste historique V32 reste une preuve de sa qualification historique. Il ne satisfait pas
+la porte de rétention courante V54, car il ne démontre pas la restauration de ces tables, politiques,
+détails joueurs et du ledger de départs.
+Restaurer les preuves live ne déclenche aucun worker ni reprise de campagne : les opt-ins restent
+désactivés et tout nouveau lancement exige une action opérateur. Un garde `OWNED` ou
+`CLEANUP_REQUIRED` ne peut pas être considéré libre du seul fait d'un redémarrage ou d'un délai.
 
 Pour qualifier le superviseur lui-même en développement, sans phrase réelle et sans fournisseur :
 
@@ -274,6 +374,8 @@ Avant toute purge de la base locale primaire, réunir explicitement :
 APPLICATION_STOPPED=YES
 CONNECTOR_CONTROL=LOCKED
 ALL_NETWORK_OPT_INS=FALSE
+PROVIDER_CAMPAIGN_GUARD=FREE
+ACTIVE_LIVE_CAMPAIGNS=0
 BACKUP_ENCRYPTED=YES
 BACKUP_RESTORE_QUALIFIED=YES
 BACKUP_AND_MANIFEST_STORED_OUTSIDE_REPOSITORY=YES
@@ -281,7 +383,7 @@ FINAL_PREVIEW_REVIEWED=YES
 PRIMARY_PURGE_AUTHORIZED_BY_OPERATOR=YES
 ```
 
-Sans ces huit confirmations, s'arrêter. Une sauvegarde qualifiée n'autorise pas à elle seule la
+Sans ces confirmations, s'arrêter. Une sauvegarde qualifiée n'autorise pas à elle seule la
 purge.
 
 ## 8. Exécuter un lot autorisé
@@ -297,12 +399,18 @@ pwsh -NoProfile -File .\scripts\Invoke-J6Retention.ps1 `
   -ConfirmationPhrase 'PURGER <N> PAYLOADS J6 <J6_RETENTION_PLAN_SHA256>'
 ```
 
-Le script revérifie le nom du fichier chiffré, son hash, Flyway V32, l'égalité complète des preuves
+Le script revérifie le nom du fichier chiffré, son hash, Flyway V54, l'égalité complète des preuves
 source/restauration, les six compteurs et l'empreinte metadata-only du ledger J7 — incluant grant,
-révocation et consommation owner-go — ainsi que la couverture. Le service recalcule ensuite le
-plan, la phrase et la couverture avant que l'adaptateur ne les revérifie sous verrou transactionnel.
+révocation et consommation owner-go — puis les sept compteurs live, les sept compteurs de
+résilience/départ/diagnostic — dont `providerDepartureAccountingCount >=
+providerDepartureCompletionCount` — le garde libre, l'absence de campagne active et
+`liveLedgerSha256`, ainsi que la couverture. Le service recalcule ensuite le plan, la phrase et la
+couverture avant que l'adaptateur ne les revérifie sous verrou transactionnel.
 La purge primaire reste limitée aux octets bruts J6 : elle ne supprime ni livraison, ni tentative,
-ni résultat J7, ni preuve owner-go.
+ni résultat J7, ni preuve owner-go, ni preuve live, ni référence snapshot/occurrence ou normalisée.
+L'adaptateur verrouille également le garde fournisseur pendant sa courte transaction de purge ;
+une acquisition concurrente attend sa fin. Le trigger V33 revérifie cette exclusion pour toute
+suppression d'octets, en complément de l'audit V22.
 
 Une réussite affiche uniquement un bilan minimisé :
 
@@ -334,6 +442,14 @@ Redémarrer ensuite l'application seulement pour un contrôle en lecture :
 - aucune ligne historique n'a disparu ;
 - les contrôles réseau restent verrouillés.
 
+Les résultats live déjà publiés restent lisibles avec leur provenance après purge. Si une future
+acquisition live reçoit exactement les octets d'un snapshot dont le brut a été purgé, la
+déduplication retrouve cette ancienne preuve privée de ses octets. Le stockage refuse alors la
+nouvelle réception avec `LIVE_RAW_PREVIOUSLY_PURGED` : la nouvelle occurrence et le lien live sont
+annulés dans la même transaction, aucune publication normalisée de cette réception n'est faite,
+et la campagne doit s'arrêter. L'ancien audit et les observations restent intacts. WO-058 ne
+réhydrate pas un brut purgé ; une évolution de cette règle relève de la gouvernance J6.
+
 Arrêter proprement l'application après vérification.
 
 ## 10. Refus et incidents attendus
@@ -345,6 +461,8 @@ Arrêter proprement l'application après vérification.
 | `INVALID_CONFIRMATION` | phrase différente | ne pas corriger approximativement ; recopier l'aperçu |
 | `BACKUP_NOT_QUALIFIED` | restauration absente ou date invalide | refaire sauvegarde et restauration |
 | `BACKUP_COVERAGE_INSUFFICIENT` | preuve antérieure à un candidat | créer une nouvelle sauvegarde |
+| `PROVIDER_CAMPAIGN_ACTIVE` | garde fournisseur occupé, nettoyage incertain ou campagne live active | arrêter les campagnes et établir le nettoyage exact ; ne pas forcer le garde à `FREE` |
+| `LIVE_RAW_PREVIOUSLY_PURGED` | une nouvelle réception live déduplique vers un ancien brut purgé | conserver les preuves et arrêter la campagne ; ne pas réhydrater ou effacer l'audit J6 |
 | `DATABASE_MUTATION_MISMATCH` | nombre de lignes inattendu | transaction annulée ; diagnostiquer avant tout nouvel essai |
 | `LOCAL_EXECUTION_FAILURE` | configuration, manifeste ou base invalide | conserver les preuves et diagnostiquer localement |
 | échec ou timeout d'un côté de la pipeline native | producteur ou consommateur invalide | arrêter le pair et son Job Object ; ne publier aucun fichier ni résultat qualifié |

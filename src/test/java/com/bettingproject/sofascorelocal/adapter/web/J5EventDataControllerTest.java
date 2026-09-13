@@ -25,6 +25,7 @@ import com.bettingproject.sofascorelocal.domain.eventdata.EventIncident;
 import com.bettingproject.sofascorelocal.domain.eventdata.EventIncidents;
 import com.bettingproject.sofascorelocal.domain.eventdata.EventLineupPlayer;
 import com.bettingproject.sofascorelocal.domain.eventdata.EventLineups;
+import com.bettingproject.sofascorelocal.domain.eventdata.PlayerMatchStatistics;
 import com.bettingproject.sofascorelocal.domain.eventdata.EventStatisticMetric;
 import com.bettingproject.sofascorelocal.domain.eventdata.EventStatistics;
 import com.bettingproject.sofascorelocal.domain.eventdata.J5CompletenessReport;
@@ -50,12 +51,15 @@ import org.springframework.test.context.bean.override.mockito.MockitoBean;
 import org.springframework.test.web.servlet.MockMvc;
 
 import java.net.URI;
+import java.math.BigDecimal;
 import java.time.Instant;
 import java.time.ZoneId;
 import java.util.List;
+import java.util.Map;
 import java.util.Optional;
 import java.util.UUID;
 
+import static org.assertj.core.api.Assertions.assertThat;
 import static org.hamcrest.Matchers.containsString;
 import static org.hamcrest.Matchers.not;
 import static org.mockito.ArgumentMatchers.any;
@@ -103,6 +107,9 @@ class J5EventDataControllerTest {
     LocalFormTokenService formTokenService;
 
     @MockitoBean
+    LineupCountryOverlayResolver lineupCountries;
+
+    @MockitoBean
     CacheManager cacheManager;
 
     @BeforeEach
@@ -138,8 +145,15 @@ class J5EventDataControllerTest {
                 .andExpect(status().isOk())
                 .andExpect(view().name("event-statistics"))
                 .andExpect(model().attribute("page", page))
+                .andExpect(model().attribute("incidentsView", IncidentPresentation.from(
+                        (EventIncidents) page.data().incidents().orElseThrow().data(),
+                        page.current().event().homeTeam().name(), page.current().event().awayTeam().name())))
                 .andExpect(header().string(HttpHeaders.CACHE_CONTROL, containsString("no-store")))
-                .andExpect(content().string(containsString("Ball possession")))
+                .andExpect(content().string(containsString("Possession du ballon")))
+                .andExpect(content().string(containsString("data-statistics")))
+                .andExpect(content().string(containsString("data-stat-period=\"ALL\"")))
+                .andExpect(content().string(containsString("class=\"statistics-possession\"")))
+                .andExpect(content().string(containsString("/js/statistics.js")))
                 .andExpect(content().string(containsString("Synthetic Home Striker")))
                 .andExpect(content().string(containsString("Synthetic Incoming Player")))
                 .andExpect(content().string(containsString("Synthetic Outgoing Player")))
@@ -160,6 +174,15 @@ class J5EventDataControllerTest {
                 .andExpect(content().string(containsString("4-3-3")))
                 .andExpect(content().string(containsString("4-4-2")))
                 .andExpect(content().string(containsString("Synthetic Away Defender")))
+                .andExpect(model().attributeExists("lineupsView"))
+                .andExpect(content().string(containsString("data-lineups-team=\"HOME\"")))
+                .andExpect(content().string(containsString("data-lineups-team=\"AWAY\"")))
+                .andExpect(content().string(containsString("data-lineups-section=\"starters\"")))
+                .andExpect(content().string(containsString("data-lineups-section=\"substitutes\"")))
+                .andExpect(content().string(containsString("lineups-player-position-accessible")))
+                .andExpect(content().string(containsString("lineups-position-heading")))
+                .andExpect(content().string(containsString("/css/lineups.css")))
+                .andExpect(content().string(containsString("/js/lineups.js")))
                 .andExpect(content().string(containsString("PROVIDER_SCHEMA_VALIDATED=NO")))
                 .andExpect(content().string(containsString("Trois familles, une confirmation, aucun retry")))
                 .andExpect(content().string(containsString("J5_EVENT_DATA_QUALIFICATION_DISABLED")))
@@ -170,6 +193,115 @@ class J5EventDataControllerTest {
                 .andExpect(content().string(containsString("b".repeat(64))))
                 .andExpect(content().string(containsString("c".repeat(64))))
                 .andExpect(content().string(containsString("d".repeat(64))));
+    }
+
+    @Test
+    void rendersAVerifiedHistoricalLineupCountryOverlayWithoutChangingTheStoredLineup() throws Exception {
+        J5EventDataPage page = pageWithData();
+        var lineups = page.data().lineups().orElseThrow();
+        var france = new com.bettingproject.sofascorelocal.domain.event.ProviderCountry(
+                Optional.of("France"), Optional.of("FR"));
+        var overlay = LineupCountryOverlay.of(java.util.Map.of(
+                LineupCountryOverlay.PlayerKey.roster(LineupSide.HOME, 9701L), france));
+        when(formTokenService.issue(any(HttpSession.class))).thenReturn("one-use-token");
+        when(queryService.find(page.current().event().identity().value(), "Europe/Paris"))
+                .thenReturn(Optional.of(page));
+        when(lineupCountries.resolve(lineups)).thenReturn(overlay);
+
+        mockMvc.perform(get("/events/{id}/statistics", page.current().event().identity().value())
+                        .param("zone", "Europe/Paris"))
+                .andExpect(status().isOk())
+                .andExpect(content().string(containsString("Synthetic Home Striker")))
+                .andExpect(content().string(containsString("France")))
+                .andExpect(content().string(containsString("/images/flags/4x3/fr.svg")))
+                .andExpect(content().string(containsString("country-fallback-label")))
+                .andExpect(content().string(containsString("country-accessible-prefix")))
+                .andExpect(content().string(containsString("data-lineups-country-label-text")));
+
+        assertThat(((EventLineups) lineups.data()).home().players().getFirst().country()).isEmpty();
+        verify(lineupCountries).resolve(lineups);
+    }
+
+    @Test
+    void usesReadableIncidentsToCompleteCardsWhenStatisticsAndLineupMetricsArePresent() throws Exception {
+        J4EventSearchItem current = currentEvent();
+        var statistics = new J5EventDataObservationView(41L, current.event().identity(),
+                new EventStatistics(900001L, List.of()),
+                source("statistics-readable", "event-statistics-v1"), J5CompletenessReport.measured(1, 1, List.of()),
+                "a".repeat(64));
+        var incidents = new J5EventDataObservationView(42L, current.event().identity(), new EventIncidents(900001L,
+                List.of(new EventIncident(0, "goal", 18, Optional.empty(), Optional.of(true), Optional.empty(),
+                        Optional.of(9701L), Optional.of("Observed scorer"), Optional.empty(), Optional.empty(),
+                        Optional.empty(), Optional.empty(), Optional.empty(), Optional.empty(), Optional.of("regular"),
+                        Optional.empty(), Optional.empty(), Optional.empty(), Optional.of(9702L),
+                        Optional.of("Observed assistant"), Optional.empty(), Optional.empty(), Optional.empty(),
+                        Optional.empty(), Optional.empty(), Optional.empty()),
+                        new EventIncident(1, "substitution", 83, Optional.empty(), Optional.of(true), Optional.empty(),
+                                Optional.empty(), Optional.empty(), Optional.of(9704L), Optional.of("Observed incoming"),
+                                Optional.of(9703L), Optional.of("Observed outgoing"), Optional.empty(), Optional.empty(),
+                                Optional.empty(), Optional.empty(), Optional.empty(), Optional.of(true),
+                                Optional.empty(), Optional.empty(), Optional.empty(), Optional.empty(), Optional.empty(),
+                                Optional.empty(), Optional.empty(), Optional.empty()),
+                        new EventIncident(2, "card", 58, Optional.empty(), Optional.of(true), Optional.empty(),
+                                Optional.of(9701L), Optional.of("Observed scorer"), Optional.empty(), Optional.empty(),
+                                Optional.empty(), Optional.empty(), Optional.empty(), Optional.empty(), Optional.of("yellow"),
+                                Optional.empty()),
+                        new EventIncident(3, "card", 59, Optional.empty(), Optional.of(false), Optional.empty(),
+                                Optional.of(9705L), Optional.of("Observed away defender"), Optional.empty(), Optional.empty(),
+                                Optional.empty(), Optional.empty(), Optional.empty(), Optional.empty(), Optional.of("red"),
+                                Optional.empty()))),
+                source("incidents-readable", "event-incidents-v1"), J5CompletenessReport.measured(1, 1, List.of()),
+                "b".repeat(64));
+        var lineups = new J5EventDataObservationView(43L, current.event().identity(), new EventLineups(900001L, true,
+                new TeamLineup(LineupSide.HOME, Optional.of("4-3-3"), List.of(
+                        new EventLineupPlayer(9701L, "Observed scorer", Optional.empty(), Optional.of("F"), true,
+                                Optional.empty(), Optional.of(new PlayerMatchStatistics(
+                                        Map.of("rating", new BigDecimal("7.1")), Map.of()))),
+                        new EventLineupPlayer(9702L, "Observed assistant", Optional.empty(), Optional.of("F"), true),
+                        new EventLineupPlayer(9703L, "Observed outgoing", Optional.empty(), Optional.of("M"), true,
+                                Optional.empty(), Optional.of(new PlayerMatchStatistics(
+                                        Map.of("rating", new BigDecimal("6.8")), Map.of()))),
+                        new EventLineupPlayer(9704L, "Observed incoming", Optional.empty(), Optional.of("M"), false,
+                                Optional.empty(), Optional.of(new PlayerMatchStatistics(
+                                        Map.of("minutesPlayed", BigDecimal.ZERO), Map.of()))))),
+                new TeamLineup(LineupSide.AWAY, Optional.empty(), List.of(
+                        new EventLineupPlayer(9705L, "Observed away defender", Optional.empty(), Optional.of("D"), true,
+                                Optional.empty(), Optional.of(new PlayerMatchStatistics(
+                                        Map.of("rating", new BigDecimal("6.3")), Map.of())))))),
+                source("lineups-readable", "event-lineups-v1"), J5CompletenessReport.measured(1, 1, List.of()),
+                "c".repeat(64));
+        var page = new J5EventDataPage(ZoneId.of("Europe/Paris"), current,
+                new J5EventDataBundle(Optional.of(statistics), Optional.of(incidents), Optional.of(lineups)));
+        when(formTokenService.issue(any(HttpSession.class))).thenReturn("one-use-token");
+        when(queryService.find(current.event().identity().value(), "Europe/Paris")).thenReturn(Optional.of(page));
+
+        mockMvc.perform(get("/events/{id}/statistics", current.event().identity().value())
+                        .param("zone", "Europe/Paris"))
+                .andExpect(status().isOk())
+                .andExpect(model().attributeExists("lineupsView"))
+                .andExpect(content().string(containsString("But · 18′")))
+                .andExpect(content().string(containsString("Passe décisive · 18′")))
+                .andExpect(content().string(not(containsString("Carton jaune · 58′"))))
+                .andExpect(content().string(not(containsString("Carton rouge · 59′"))))
+                .andExpect(content().string(not(containsString("Sortie observée · 83′"))))
+                .andExpect(content().string(not(containsString("Entrée observée · 83′"))))
+                .andExpect(content().string(containsString("data-lineups-incident-decoration=\"yellow-card\"")))
+                .andExpect(content().string(containsString("data-lineups-incident-decoration=\"red-card\"")))
+                .andExpect(content().string(containsString("data-lineups-incident-decoration=\"substitution-out\"")))
+                .andExpect(content().string(containsString("data-lineups-incident-decoration=\"substitution-in\"")))
+                .andExpect(content().string(containsString("lineups-incident-card-icon")))
+                .andExpect(content().string(containsString("lineups-substitution-arrow\">↑")))
+                .andExpect(content().string(containsString("lineups-substitution-arrow\">↓")))
+                .andExpect(content().string(containsString("lineups-substitution-injury")))
+                .andExpect(content().string(containsString("lineups-substitution-counterparty")))
+                .andExpect(content().string(containsString("Observed outgoing")))
+                .andExpect(content().string(containsString("Observed incoming")))
+                .andExpect(content().string(containsString("· 83′")))
+                .andExpect(content().string(not(containsString("class=\"lineups-incident-source\""))))
+                .andExpect(content().string(containsString("data-lineups-incident-source=\"EVENT_INCIDENTS\"")))
+                .andExpect(content().string(containsString("Statistiques des joueurs non disponibles pour ce match")))
+                .andExpect(content().string(not(containsString("data-lineups-player-details"))))
+                .andExpect(content().string(not(containsString("data-lineups-statistics-hint"))));
     }
 
     @Test
@@ -191,6 +323,46 @@ class J5EventDataControllerTest {
                 .andExpect(content().string(containsString("Aucune statistique locale")))
                 .andExpect(content().string(containsString("Aucun incident local")))
                 .andExpect(content().string(containsString("Aucune composition locale")));
+    }
+
+    @Test
+    void unavailableIncidentsDoNotBecomeAnEmptyGraphicalObservation() throws Exception {
+        J4EventSearchItem current = currentEvent();
+        var incidents = new J5EventDataObservationView(31L, current.event().identity(),
+                J5UnavailableFamily.emptyObservation(SofascoreEndpointType.EVENT_INCIDENTS, 900001L),
+                EventSourceTrace.providerSnapshot(31, "e".repeat(64), "event-incidents-unavailable-v1",
+                        Instant.parse("2026-08-15T19:50:46Z")),
+                J5CompletenessReport.unavailable(), "f".repeat(64));
+        var page = new J5EventDataPage(ZoneId.of("Europe/Paris"), current,
+                new J5EventDataBundle(Optional.empty(), Optional.of(incidents), Optional.empty()));
+        when(queryService.find(current.event().identity().value(), "Europe/Paris")).thenReturn(Optional.of(page));
+        when(formTokenService.issue(any(HttpSession.class))).thenReturn("one-use-token");
+        mockMvc.perform(get("/events/{id}/statistics", current.event().identity().value()))
+                .andExpect(status().isOk())
+                .andExpect(model().attributeDoesNotExist("incidentsView"))
+                .andExpect(model().attribute("incidents", incidents));
+        verifyNoInteractions(realEventDataService, fixtureImportService, localJsonImportService);
+    }
+
+    @Test
+    void unavailableLineupsNeverRenderAsProvisionalOrEmptyTeamCards() throws Exception {
+        J4EventSearchItem current = currentEvent();
+        var lineups = new J5EventDataObservationView(31L, current.event().identity(),
+                J5UnavailableFamily.emptyObservation(SofascoreEndpointType.EVENT_LINEUPS, 900001L),
+                EventSourceTrace.providerSnapshot(31, "e".repeat(64), "event-lineups-unavailable-v1",
+                        Instant.parse("2026-08-15T19:50:46Z")),
+                J5CompletenessReport.unavailable(), "f".repeat(64));
+        var page = new J5EventDataPage(ZoneId.of("Europe/Paris"), current,
+                new J5EventDataBundle(Optional.empty(), Optional.empty(), Optional.of(lineups)));
+        when(queryService.find(current.event().identity().value(), "Europe/Paris")).thenReturn(Optional.of(page));
+        when(formTokenService.issue(any(HttpSession.class))).thenReturn("one-use-token");
+        mockMvc.perform(get("/events/{id}/statistics", current.event().identity().value()))
+                .andExpect(status().isOk())
+                .andExpect(model().attributeDoesNotExist("lineupsView"))
+                .andExpect(content().string(containsString("Compositions indisponibles chez le fournisseur")))
+                .andExpect(content().string(not(containsString("data-lineups-team"))))
+                .andExpect(content().string(not(containsString("Composition provisoire"))));
+        verifyNoInteractions(realEventDataService, fixtureImportService, localJsonImportService);
     }
 
     @Test

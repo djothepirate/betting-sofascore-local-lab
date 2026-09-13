@@ -5,6 +5,12 @@
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <title>Détail local — SofaScore Local Lab</title>
   <link rel="stylesheet" th:href="@{/css/app.css}" href="/css/app.css">
+  <link rel="stylesheet" th:href="@{/css/statistics.css}" href="/css/statistics.css">
+  <script defer th:src="@{/js/statistics.js}" src="/js/statistics.js"></script>
+  <link rel="stylesheet" th:href="@{/css/lineups.css}" href="/css/lineups.css">
+  <script defer th:src="@{/js/lineups.js}" src="/js/lineups.js"></script>
+  <script defer th:src="@{/js/event-details.js}" src="/js/event-details.js"></script>
+  <script defer th:src="@{/js/live-campaign.js}" src="/js/live-campaign.js"></script>
 </head>
 <body>
 <header class="topbar compact-topbar">
@@ -34,7 +40,8 @@
     La base PostgreSQL locale n’est pas disponible.
   </p>
 
-  <div th:if="${detail != null}">
+  <div th:if="${detail != null}" data-live-monitor data-live-mirror-canonical
+       th:attr="data-live-state-url=@{/events/{id}/state(id=${detail.current.event.identity.value})},data-live-event-id=${detail.current.event.identity.value},data-live-canonical-received-at=${detail.current.event.source.receivedAt}">
     <section class="panel event-panel">
       <div class="panel-heading">
         <div>
@@ -45,7 +52,7 @@
             <span th:text="${detail.current.event.awayTeam.name}">Away</span>
           </h2>
         </div>
-        <span class="chip chip-safe" th:text="${detail.current.event.status.type}">notstarted</span>
+        <span class="chip chip-safe" data-live-sport-status th:text="${detail.current.sportStatusLabel()}">notstarted</span>
       </div>
       <dl class="detail-grid">
         <div><dt>UUID local</dt><dd class="mono" th:text="${detail.current.event.identity.value}">UUID</dd></div>
@@ -54,6 +61,7 @@
         <div><dt>Zone</dt><dd th:text="${detail.zoneId.id}">Europe/Paris</dd></div>
         <div><dt>Compétition</dt><dd th:text="${detail.current.event.tournament.isPresent() ? detail.current.event.tournament.get().name : '—'}">—</dd></div>
         <div><dt>Versions conservées</dt><dd th:text="${detail.history.size()}">1</dd></div>
+        <div><dt>Score J4</dt><dd data-live-score th:text="${detail.current.result.score()}">—</dd></div>
       </dl>
       <div class="actions">
         <a class="button button-secondary"
@@ -74,6 +82,25 @@
       </div>
     </section>
 
+    <section class="panel" aria-labelledby="live-event-title">
+      <p class="label">Observations de la dernière campagne live</p><h2 id="live-event-title">Suivi dynamique local</h2>
+      <p data-live-refresh-status role="status" aria-live="polite">Recherche des observations locales, puis lecture toutes les cinq secondes.</p>
+      <p class="notice notice-warning" data-live-runtime-status role="status" hidden></p>
+      <dl class="detail-grid">
+        <div><dt>Score courant J4</dt><dd data-live-campaign-score>—</dd></div>
+        <div><dt>État de collecte enregistré</dt><dd data-live-event-state>—</dd></div>
+        <div><dt>Motif</dt><dd data-live-event-reason>—</dd></div>
+        <div data-live-status-reason-row hidden><dt>Raison de suspension J4</dt><dd data-live-status-reason>—</dd></div>
+        <div><dt>Prochaine échéance (UTC)</dt><dd data-live-next-due>—</dd></div>
+        <div><dt>Cycles manqués</dt><dd data-live-missed-cycles>—</dd></div>
+        <div><dt>Dernier cycle J5 complet</dt><dd data-live-final-complete>Non établi</dd></div>
+        <div><dt>Source du statut J4</dt><dd data-live-source-ref>—</dd></div>
+        <div><dt>Réception du statut J4 (UTC)</dt><dd data-live-source-received>—</dd></div>
+      </dl>
+      <a class="button button-secondary" data-live-link hidden>Ouvrir la campagne</a>
+      <div data-live-families></div>
+    </section>
+
     <section class="panel event-detail-panel" th:if="${offlineDetail != null}">
       <div class="panel-heading">
         <div>
@@ -85,11 +112,12 @@
               th:classappend="${offlineDetail.source.kind.name() == 'PROVIDER_SNAPSHOT'} ? 'chip-safe' : 'chip-warning'"
               th:text="${offlineDetail.source.kind}">SYNTHETIC_FIXTURE</span>
       </div>
+      <div th:if="${eventInformation != null}" th:insert="~{fragments/event-details :: view(${eventInformation})}"></div>
       <dl class="detail-grid">
-        <div><dt>Stade</dt><dd th:text="${offlineDetail.details.venue.isPresent() ? offlineDetail.details.venue.get().name : '—'}">—</dd></div>
+        <div th:if="${eventInformation == null}"><dt>Stade</dt><dd th:text="${offlineDetail.details.venue.isPresent() ? offlineDetail.details.venue.get().name : '—'}">—</dd></div>
         <div><dt>Ville</dt><dd th:text="${offlineDetail.details.venue.isPresent() && offlineDetail.details.venue.get().city.isPresent() ? offlineDetail.details.venue.get().city.get() : '—'}">—</dd></div>
-        <div><dt>Saison</dt><dd th:text="${offlineDetail.details.season.isPresent() ? offlineDetail.details.season.get().name : '—'}">—</dd></div>
-        <div><dt>Tour</dt><dd th:text="${offlineDetail.details.round.orElse('—')}">—</dd></div>
+        <div th:if="${eventInformation == null}"><dt>Saison</dt><dd th:text="${offlineDetail.details.season.isPresent() ? offlineDetail.details.season.get().name : '—'}">—</dd></div>
+        <div th:if="${eventInformation == null}"><dt>Tour</dt><dd th:text="${offlineDetail.details.round.orElse('—')}">—</dd></div>
         <div><dt>Source</dt><dd class="mono" th:text="${offlineDetail.source.sourceReference()}">source</dd></div>
         <div><dt>Parseur</dt><dd class="mono" th:text="${offlineDetail.source.parserVersion}">event-details-v1</dd></div>
         <div><dt>Réception source</dt><dd class="mono" th:text="${offlineDetail.source.receivedAt}">instant</dd></div>
@@ -129,7 +157,7 @@
             <td class="mono" th:text="${item.event.source.receivedAt}">instant</td>
             <td class="mono" th:text="${item.startsAtInZone}">date</td>
             <td th:text="${item.event.homeTeam.name + ' — ' + item.event.awayTeam.name}">match</td>
-            <td th:text="${item.event.status.type}">status</td>
+            <td th:text="${item.event.status.type == 'inprogress' ? item.event.status.description.orElse(item.event.status.type) : item.event.status.type}">status</td>
             <td class="mono" th:text="${item.event.source.sourceReference()}">source</td>
             <td class="mono" th:text="${item.event.source.parserVersion}">parser</td>
             <td class="mono hash-value" th:text="${item.event.source.payloadSha256}">hash</td>

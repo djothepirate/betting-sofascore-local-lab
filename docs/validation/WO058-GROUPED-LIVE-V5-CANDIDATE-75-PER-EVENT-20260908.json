@@ -1,0 +1,2496 @@
+{
+  "status": "PASSED",
+  "policyVersion": "live-v5",
+  "sourceReportSha256": "b9b44c3116eb45eb113cc31d51f120ff88458bed0e35037fd2d0b34a163ff5e9",
+  "pairsChecked": 80,
+  "failures": [],
+  "checks": [
+    {
+      "providerEventId": 17000001,
+      "endpoint": "EVENT_DETAILS",
+      "samples": 24,
+      "receiptIntervalSeconds": {
+        "count": 23,
+        "p95": 75.118,
+        "maximum": 75.129
+      },
+      "publicationIntervalSeconds": {
+        "count": 23,
+        "p95": 75.1312605,
+        "maximum": 75.1380224
+      },
+      "nominalIntervalSeconds": {
+        "count": 23,
+        "p95": 75.0,
+        "maximum": 75.0
+      },
+      "nominalLatenessSeconds": {
+        "count": 24,
+        "p95": 0.6091504,
+        "maximum": 0.6121504
+      },
+      "publicationLatenessSeconds": {
+        "count": 24,
+        "p95": 0.6606923,
+        "maximum": 0.6612109
+      },
+      "passed": true
+    },
+    {
+      "providerEventId": 17000001,
+      "endpoint": "EVENT_INCIDENTS",
+      "samples": 24,
+      "receiptIntervalSeconds": {
+        "count": 23,
+        "p95": 75.206,
+        "maximum": 75.263
+      },
+      "publicationIntervalSeconds": {
+        "count": 23,
+        "p95": 75.2003665,
+        "maximum": 75.2512471
+      },
+      "nominalIntervalSeconds": {
+        "count": 23,
+        "p95": 75.0,
+        "maximum": 75.0
+      },
+      "nominalLatenessSeconds": {
+        "count": 24,
+        "p95": 1.1801504,
+        "maximum": 1.2221504
+      },
+      "publicationLatenessSeconds": {
+        "count": 24,
+        "p95": 1.2239313,
+        "maximum": 1.2699415
+      },
+      "passed": true
+    },
+    {
+      "providerEventId": 17000001,
+      "endpoint": "EVENT_STATISTICS",
+      "samples": 24,
+      "receiptIntervalSeconds": {
+        "count": 23,
+        "p95": 75.166,
+        "maximum": 75.211
+      },
+      "publicationIntervalSeconds": {
+        "count": 23,
+        "p95": 75.1650199,
+        "maximum": 75.20324
+      },
+      "nominalIntervalSeconds": {
+        "count": 23,
+        "p95": 75.0,
+        "maximum": 75.0
+      },
+      "nominalLatenessSeconds": {
+        "count": 24,
+        "p95": 1.5891504,
+        "maximum": 1.6491504
+      },
+      "publicationLatenessSeconds": {
+        "count": 24,
+        "p95": 1.6357726,
+        "maximum": 1.6996698
+      },
+      "passed": true
+    },
+    {
+      "providerEventId": 17000001,
+      "endpoint": "EVENT_LINEUPS",
+      "samples": 6,
+      "receiptIntervalSeconds": {
+        "count": 5,
+        "p95": 300.156,
+        "maximum": 300.156
+      },
+      "publicationIntervalSeconds": {
+        "count": 5,
+        "p95": 300.1537771,
+        "maximum": 300.1537771
+      },
+      "nominalIntervalSeconds": {
+        "count": 5,
+        "p95": 300.0,
+        "maximum": 300.0
+      },
+      "nominalLatenessSeconds": {
+        "count": 6,
+        "p95": 2.1651504,
+        "maximum": 2.1651504
+      },
+      "publicationLatenessSeconds": {
+        "count": 6,
+        "p95": 2.231578,
+        "maximum": 2.231578
+      },
+      "passed": true
+    },
+    {
+      "providerEventId": 17000002,
+      "endpoint": "EVENT_DETAILS",
+      "samples": 24,
+      "receiptIntervalSeconds": {
+        "count": 23,
+        "p95": 75.096,
+        "maximum": 75.138
+      },
+      "publicationIntervalSeconds": {
+        "count": 23,
+        "p95": 75.0949356,
+        "maximum": 75.147343
+      },
+      "nominalIntervalSeconds": {
+        "count": 23,
+        "p95": 75.0,
+        "maximum": 75.0
+      },
+      "nominalLatenessSeconds": {
+        "count": 24,
+        "p95": 0.5571504,
+        "maximum": 0.5811504
+      },
+      "publicationLatenessSeconds": {
+        "count": 24,
+        "p95": 0.6040329,
+        "maximum": 0.6419341
+      },
+      "passed": true
+    },
+    {
+      "providerEventId": 17000002,
+      "endpoint": "EVENT_INCIDENTS",
+      "samples": 24,
+      "receiptIntervalSeconds": {
+        "count": 23,
+        "p95": 75.172,
+        "maximum": 75.175
+      },
+      "publicationIntervalSeconds": {
+        "count": 23,
+        "p95": 75.1772312,
+        "maximum": 75.1792617
+      },
+      "nominalIntervalSeconds": {
+        "count": 23,
+        "p95": 75.0,
+        "maximum": 75.0
+      },
+      "nominalLatenessSeconds": {
+        "count": 24,
+        "p95": 1.0761504,
+        "maximum": 1.1841504
+      },
+      "publicationLatenessSeconds": {
+        "count": 24,
+        "p95": 1.1271233,
+        "maximum": 1.2387779
+      },
+      "passed": true
+    },
+    {
+      "providerEventId": 17000002,
+      "endpoint": "EVENT_STATISTICS",
+      "samples": 24,
+      "receiptIntervalSeconds": {
+        "count": 23,
+        "p95": 75.152,
+        "maximum": 75.253
+      },
+      "publicationIntervalSeconds": {
+        "count": 23,
+        "p95": 75.1551153,
+        "maximum": 75.2549593
+      },
+      "nominalIntervalSeconds": {
+        "count": 23,
+        "p95": 75.0,
+        "maximum": 75.0
+      },
+      "nominalLatenessSeconds": {
+        "count": 24,
+        "p95": 1.5331504,
+        "maximum": 1.6741504
+      },
+      "publicationLatenessSeconds": {
+        "count": 24,
+        "p95": 1.5819672,
+        "maximum": 1.7237312
+      },
+      "passed": true
+    },
+    {
+      "providerEventId": 17000002,
+      "endpoint": "EVENT_LINEUPS",
+      "samples": 6,
+      "receiptIntervalSeconds": {
+        "count": 5,
+        "p95": 300.146,
+        "maximum": 300.146
+      },
+      "publicationIntervalSeconds": {
+        "count": 5,
+        "p95": 300.1540538,
+        "maximum": 300.1540538
+      },
+      "nominalIntervalSeconds": {
+        "count": 5,
+        "p95": 300.0,
+        "maximum": 300.0
+      },
+      "nominalLatenessSeconds": {
+        "count": 6,
+        "p95": 2.3051504,
+        "maximum": 2.3051504
+      },
+      "publicationLatenessSeconds": {
+        "count": 6,
+        "p95": 2.3953853,
+        "maximum": 2.3953853
+      },
+      "passed": true
+    },
+    {
+      "providerEventId": 17000003,
+      "endpoint": "EVENT_DETAILS",
+      "samples": 24,
+      "receiptIntervalSeconds": {
+        "count": 23,
+        "p95": 75.083,
+        "maximum": 75.086
+      },
+      "publicationIntervalSeconds": {
+        "count": 23,
+        "p95": 75.0838004,
+        "maximum": 75.0928951
+      },
+      "nominalIntervalSeconds": {
+        "count": 23,
+        "p95": 75.0,
+        "maximum": 75.0
+      },
+      "nominalLatenessSeconds": {
+        "count": 24,
+        "p95": 0.5561504,
+        "maximum": 0.5751504
+      },
+      "publicationLatenessSeconds": {
+        "count": 24,
+        "p95": 0.6184728,
+        "maximum": 0.6333584
+      },
+      "passed": true
+    },
+    {
+      "providerEventId": 17000003,
+      "endpoint": "EVENT_INCIDENTS",
+      "samples": 24,
+      "receiptIntervalSeconds": {
+        "count": 23,
+        "p95": 75.145,
+        "maximum": 75.155
+      },
+      "publicationIntervalSeconds": {
+        "count": 23,
+        "p95": 75.1419383,
+        "maximum": 75.1838437
+      },
+      "nominalIntervalSeconds": {
+        "count": 23,
+        "p95": 75.0,
+        "maximum": 75.0
+      },
+      "nominalLatenessSeconds": {
+        "count": 24,
+        "p95": 1.0641504,
+        "maximum": 1.0701504
+      },
+      "publicationLatenessSeconds": {
+        "count": 24,
+        "p95": 1.1215259,
+        "maximum": 1.1365483
+      },
+      "passed": true
+    },
+    {
+      "providerEventId": 17000003,
+      "endpoint": "EVENT_STATISTICS",
+      "samples": 24,
+      "receiptIntervalSeconds": {
+        "count": 23,
+        "p95": 75.177,
+        "maximum": 75.33
+      },
+      "publicationIntervalSeconds": {
+        "count": 23,
+        "p95": 75.1683995,
+        "maximum": 75.311855
+      },
+      "nominalIntervalSeconds": {
+        "count": 23,
+        "p95": 75.0,
+        "maximum": 75.0
+      },
+      "nominalLatenessSeconds": {
+        "count": 24,
+        "p95": 1.5341504,
+        "maximum": 1.7401504
+      },
+      "publicationLatenessSeconds": {
+        "count": 24,
+        "p95": 1.5799662,
+        "maximum": 1.7944839
+      },
+      "passed": true
+    },
+    {
+      "providerEventId": 17000003,
+      "endpoint": "EVENT_LINEUPS",
+      "samples": 6,
+      "receiptIntervalSeconds": {
+        "count": 5,
+        "p95": 300.054,
+        "maximum": 300.054
+      },
+      "publicationIntervalSeconds": {
+        "count": 5,
+        "p95": 300.0504307,
+        "maximum": 300.0504307
+      },
+      "nominalIntervalSeconds": {
+        "count": 5,
+        "p95": 300.0,
+        "maximum": 300.0
+      },
+      "nominalLatenessSeconds": {
+        "count": 6,
+        "p95": 2.2251504,
+        "maximum": 2.2251504
+      },
+      "publicationLatenessSeconds": {
+        "count": 6,
+        "p95": 2.317451,
+        "maximum": 2.317451
+      },
+      "passed": true
+    },
+    {
+      "providerEventId": 17000004,
+      "endpoint": "EVENT_DETAILS",
+      "samples": 24,
+      "receiptIntervalSeconds": {
+        "count": 23,
+        "p95": 75.106,
+        "maximum": 75.13
+      },
+      "publicationIntervalSeconds": {
+        "count": 23,
+        "p95": 75.1095705,
+        "maximum": 75.1546778
+      },
+      "nominalIntervalSeconds": {
+        "count": 23,
+        "p95": 75.0,
+        "maximum": 75.0
+      },
+      "nominalLatenessSeconds": {
+        "count": 24,
+        "p95": 0.5591504,
+        "maximum": 0.5951504
+      },
+      "publicationLatenessSeconds": {
+        "count": 24,
+        "p95": 0.602445,
+        "maximum": 0.6726148
+      },
+      "passed": true
+    },
+    {
+      "providerEventId": 17000004,
+      "endpoint": "EVENT_INCIDENTS",
+      "samples": 24,
+      "receiptIntervalSeconds": {
+        "count": 23,
+        "p95": 75.212,
+        "maximum": 75.359
+      },
+      "publicationIntervalSeconds": {
+        "count": 23,
+        "p95": 75.2124138,
+        "maximum": 75.3854934
+      },
+      "nominalIntervalSeconds": {
+        "count": 23,
+        "p95": 75.0,
+        "maximum": 75.0
+      },
+      "nominalLatenessSeconds": {
+        "count": 24,
+        "p95": 1.0311504,
+        "maximum": 1.3671504
+      },
+      "publicationLatenessSeconds": {
+        "count": 24,
+        "p95": 1.0874679,
+        "maximum": 1.4467969
+      },
+      "passed": true
+    },
+    {
+      "providerEventId": 17000004,
+      "endpoint": "EVENT_STATISTICS",
+      "samples": 24,
+      "receiptIntervalSeconds": {
+        "count": 23,
+        "p95": 75.274,
+        "maximum": 75.357
+      },
+      "publicationIntervalSeconds": {
+        "count": 23,
+        "p95": 75.2848199,
+        "maximum": 75.3788937
+      },
+      "nominalIntervalSeconds": {
+        "count": 23,
+        "p95": 75.0,
+        "maximum": 75.0
+      },
+      "nominalLatenessSeconds": {
+        "count": 24,
+        "p95": 1.6401504,
+        "maximum": 1.9141504
+      },
+      "publicationLatenessSeconds": {
+        "count": 24,
+        "p95": 1.711443,
+        "maximum": 1.9962629
+      },
+      "passed": true
+    },
+    {
+      "providerEventId": 17000004,
+      "endpoint": "EVENT_LINEUPS",
+      "samples": 6,
+      "receiptIntervalSeconds": {
+        "count": 5,
+        "p95": 300.121,
+        "maximum": 300.121
+      },
+      "publicationIntervalSeconds": {
+        "count": 5,
+        "p95": 300.115757,
+        "maximum": 300.115757
+      },
+      "nominalIntervalSeconds": {
+        "count": 5,
+        "p95": 300.0,
+        "maximum": 300.0
+      },
+      "nominalLatenessSeconds": {
+        "count": 6,
+        "p95": 1.9501504,
+        "maximum": 1.9501504
+      },
+      "publicationLatenessSeconds": {
+        "count": 6,
+        "p95": 1.9934662,
+        "maximum": 1.9934662
+      },
+      "passed": true
+    },
+    {
+      "providerEventId": 17000005,
+      "endpoint": "EVENT_DETAILS",
+      "samples": 24,
+      "receiptIntervalSeconds": {
+        "count": 23,
+        "p95": 75.186,
+        "maximum": 75.186
+      },
+      "publicationIntervalSeconds": {
+        "count": 23,
+        "p95": 75.1853789,
+        "maximum": 75.2152786
+      },
+      "nominalIntervalSeconds": {
+        "count": 23,
+        "p95": 75.0,
+        "maximum": 75.0
+      },
+      "nominalLatenessSeconds": {
+        "count": 24,
+        "p95": 0.6281504,
+        "maximum": 0.8131504
+      },
+      "publicationLatenessSeconds": {
+        "count": 24,
+        "p95": 0.6792418,
+        "maximum": 0.8936655
+      },
+      "passed": true
+    },
+    {
+      "providerEventId": 17000005,
+      "endpoint": "EVENT_INCIDENTS",
+      "samples": 24,
+      "receiptIntervalSeconds": {
+        "count": 23,
+        "p95": 75.227,
+        "maximum": 75.385
+      },
+      "publicationIntervalSeconds": {
+        "count": 23,
+        "p95": 75.225236,
+        "maximum": 75.3811775
+      },
+      "nominalIntervalSeconds": {
+        "count": 23,
+        "p95": 75.0,
+        "maximum": 75.0
+      },
+      "nominalLatenessSeconds": {
+        "count": 24,
+        "p95": 1.3191504,
+        "maximum": 1.3271504
+      },
+      "publicationLatenessSeconds": {
+        "count": 24,
+        "p95": 1.3668442,
+        "maximum": 1.4021243
+      },
+      "passed": true
+    },
+    {
+      "providerEventId": 17000005,
+      "endpoint": "EVENT_STATISTICS",
+      "samples": 24,
+      "receiptIntervalSeconds": {
+        "count": 23,
+        "p95": 75.217,
+        "maximum": 75.281
+      },
+      "publicationIntervalSeconds": {
+        "count": 23,
+        "p95": 75.2221241,
+        "maximum": 75.2901011
+      },
+      "nominalIntervalSeconds": {
+        "count": 23,
+        "p95": 75.0,
+        "maximum": 75.0
+      },
+      "nominalLatenessSeconds": {
+        "count": 24,
+        "p95": 1.7791504,
+        "maximum": 1.8541504
+      },
+      "publicationLatenessSeconds": {
+        "count": 24,
+        "p95": 1.8333821,
+        "maximum": 1.9272522
+      },
+      "passed": true
+    },
+    {
+      "providerEventId": 17000005,
+      "endpoint": "EVENT_LINEUPS",
+      "samples": 6,
+      "receiptIntervalSeconds": {
+        "count": 5,
+        "p95": 300.12,
+        "maximum": 300.12
+      },
+      "publicationIntervalSeconds": {
+        "count": 5,
+        "p95": 300.1231604,
+        "maximum": 300.1231604
+      },
+      "nominalIntervalSeconds": {
+        "count": 5,
+        "p95": 300.0,
+        "maximum": 300.0
+      },
+      "nominalLatenessSeconds": {
+        "count": 6,
+        "p95": 2.1591504,
+        "maximum": 2.1591504
+      },
+      "publicationLatenessSeconds": {
+        "count": 6,
+        "p95": 2.2155747,
+        "maximum": 2.2155747
+      },
+      "passed": true
+    },
+    {
+      "providerEventId": 17000006,
+      "endpoint": "EVENT_DETAILS",
+      "samples": 24,
+      "receiptIntervalSeconds": {
+        "count": 23,
+        "p95": 75.101,
+        "maximum": 75.117
+      },
+      "publicationIntervalSeconds": {
+        "count": 23,
+        "p95": 75.1153026,
+        "maximum": 75.1222606
+      },
+      "nominalIntervalSeconds": {
+        "count": 23,
+        "p95": 75.0,
+        "maximum": 75.0
+      },
+      "nominalLatenessSeconds": {
+        "count": 24,
+        "p95": 0.5741504,
+        "maximum": 0.5941504
+      },
+      "publicationLatenessSeconds": {
+        "count": 24,
+        "p95": 0.619439,
+        "maximum": 0.6591291
+      },
+      "passed": true
+    },
+    {
+      "providerEventId": 17000006,
+      "endpoint": "EVENT_INCIDENTS",
+      "samples": 24,
+      "receiptIntervalSeconds": {
+        "count": 23,
+        "p95": 75.204,
+        "maximum": 75.23
+      },
+      "publicationIntervalSeconds": {
+        "count": 23,
+        "p95": 75.1898227,
+        "maximum": 75.2337295
+      },
+      "nominalIntervalSeconds": {
+        "count": 23,
+        "p95": 75.0,
+        "maximum": 75.0
+      },
+      "nominalLatenessSeconds": {
+        "count": 24,
+        "p95": 1.0671504,
+        "maximum": 1.1291504
+      },
+      "publicationLatenessSeconds": {
+        "count": 24,
+        "p95": 1.1273964,
+        "maximum": 1.177267
+      },
+      "passed": true
+    },
+    {
+      "providerEventId": 17000006,
+      "endpoint": "EVENT_STATISTICS",
+      "samples": 24,
+      "receiptIntervalSeconds": {
+        "count": 23,
+        "p95": 75.182,
+        "maximum": 75.336
+      },
+      "publicationIntervalSeconds": {
+        "count": 23,
+        "p95": 75.2291059,
+        "maximum": 75.3268306
+      },
+      "nominalIntervalSeconds": {
+        "count": 23,
+        "p95": 75.0,
+        "maximum": 75.0
+      },
+      "nominalLatenessSeconds": {
+        "count": 24,
+        "p95": 1.6331504,
+        "maximum": 1.6681504
+      },
+      "publicationLatenessSeconds": {
+        "count": 24,
+        "p95": 1.6783387,
+        "maximum": 1.7176123
+      },
+      "passed": true
+    },
+    {
+      "providerEventId": 17000006,
+      "endpoint": "EVENT_LINEUPS",
+      "samples": 6,
+      "receiptIntervalSeconds": {
+        "count": 5,
+        "p95": 300.15,
+        "maximum": 300.15
+      },
+      "publicationIntervalSeconds": {
+        "count": 5,
+        "p95": 300.1465642,
+        "maximum": 300.1465642
+      },
+      "nominalIntervalSeconds": {
+        "count": 5,
+        "p95": 300.0,
+        "maximum": 300.0
+      },
+      "nominalLatenessSeconds": {
+        "count": 6,
+        "p95": 2.2511504,
+        "maximum": 2.2511504
+      },
+      "publicationLatenessSeconds": {
+        "count": 6,
+        "p95": 2.3056567,
+        "maximum": 2.3056567
+      },
+      "passed": true
+    },
+    {
+      "providerEventId": 17000007,
+      "endpoint": "EVENT_DETAILS",
+      "samples": 24,
+      "receiptIntervalSeconds": {
+        "count": 23,
+        "p95": 75.155,
+        "maximum": 75.194
+      },
+      "publicationIntervalSeconds": {
+        "count": 23,
+        "p95": 75.1800281,
+        "maximum": 75.2066286
+      },
+      "nominalIntervalSeconds": {
+        "count": 23,
+        "p95": 75.0,
+        "maximum": 75.0
+      },
+      "nominalLatenessSeconds": {
+        "count": 24,
+        "p95": 0.5631504,
+        "maximum": 0.7151504
+      },
+      "publicationLatenessSeconds": {
+        "count": 24,
+        "p95": 0.6339528,
+        "maximum": 0.7746618
+      },
+      "passed": true
+    },
+    {
+      "providerEventId": 17000007,
+      "endpoint": "EVENT_INCIDENTS",
+      "samples": 24,
+      "receiptIntervalSeconds": {
+        "count": 23,
+        "p95": 75.259,
+        "maximum": 75.271
+      },
+      "publicationIntervalSeconds": {
+        "count": 23,
+        "p95": 75.2608522,
+        "maximum": 75.2734744
+      },
+      "nominalIntervalSeconds": {
+        "count": 23,
+        "p95": 75.0,
+        "maximum": 75.0
+      },
+      "nominalLatenessSeconds": {
+        "count": 24,
+        "p95": 1.1631504,
+        "maximum": 1.2121504
+      },
+      "publicationLatenessSeconds": {
+        "count": 24,
+        "p95": 1.2245261,
+        "maximum": 1.2719785
+      },
+      "passed": true
+    },
+    {
+      "providerEventId": 17000007,
+      "endpoint": "EVENT_STATISTICS",
+      "samples": 24,
+      "receiptIntervalSeconds": {
+        "count": 23,
+        "p95": 75.183,
+        "maximum": 75.417
+      },
+      "publicationIntervalSeconds": {
+        "count": 23,
+        "p95": 75.1763457,
+        "maximum": 75.4343767
+      },
+      "nominalIntervalSeconds": {
+        "count": 23,
+        "p95": 75.0,
+        "maximum": 75.0
+      },
+      "nominalLatenessSeconds": {
+        "count": 24,
+        "p95": 1.5841504,
+        "maximum": 1.8451504
+      },
+      "publicationLatenessSeconds": {
+        "count": 24,
+        "p95": 1.633478,
+        "maximum": 1.920846
+      },
+      "passed": true
+    },
+    {
+      "providerEventId": 17000007,
+      "endpoint": "EVENT_LINEUPS",
+      "samples": 6,
+      "receiptIntervalSeconds": {
+        "count": 5,
+        "p95": 300.084,
+        "maximum": 300.084
+      },
+      "publicationIntervalSeconds": {
+        "count": 5,
+        "p95": 300.0748691,
+        "maximum": 300.0748691
+      },
+      "nominalIntervalSeconds": {
+        "count": 5,
+        "p95": 300.0,
+        "maximum": 300.0
+      },
+      "nominalLatenessSeconds": {
+        "count": 6,
+        "p95": 2.0261504,
+        "maximum": 2.0261504
+      },
+      "publicationLatenessSeconds": {
+        "count": 6,
+        "p95": 2.0758006,
+        "maximum": 2.0758006
+      },
+      "passed": true
+    },
+    {
+      "providerEventId": 17000008,
+      "endpoint": "EVENT_DETAILS",
+      "samples": 24,
+      "receiptIntervalSeconds": {
+        "count": 23,
+        "p95": 75.108,
+        "maximum": 75.117
+      },
+      "publicationIntervalSeconds": {
+        "count": 23,
+        "p95": 75.1169689,
+        "maximum": 75.1263525
+      },
+      "nominalIntervalSeconds": {
+        "count": 23,
+        "p95": 75.0,
+        "maximum": 75.0
+      },
+      "nominalLatenessSeconds": {
+        "count": 24,
+        "p95": 0.5491504,
+        "maximum": 0.5521504
+      },
+      "publicationLatenessSeconds": {
+        "count": 24,
+        "p95": 0.5929355,
+        "maximum": 0.5985698
+      },
+      "passed": true
+    },
+    {
+      "providerEventId": 17000008,
+      "endpoint": "EVENT_INCIDENTS",
+      "samples": 24,
+      "receiptIntervalSeconds": {
+        "count": 23,
+        "p95": 75.18,
+        "maximum": 75.236
+      },
+      "publicationIntervalSeconds": {
+        "count": 23,
+        "p95": 75.1864386,
+        "maximum": 75.232883
+      },
+      "nominalIntervalSeconds": {
+        "count": 23,
+        "p95": 75.0,
+        "maximum": 75.0
+      },
+      "nominalLatenessSeconds": {
+        "count": 24,
+        "p95": 1.0531504,
+        "maximum": 1.1021504
+      },
+      "publicationLatenessSeconds": {
+        "count": 24,
+        "p95": 1.1011501,
+        "maximum": 1.1522235
+      },
+      "passed": true
+    },
+    {
+      "providerEventId": 17000008,
+      "endpoint": "EVENT_STATISTICS",
+      "samples": 24,
+      "receiptIntervalSeconds": {
+        "count": 23,
+        "p95": 75.207,
+        "maximum": 75.345
+      },
+      "publicationIntervalSeconds": {
+        "count": 23,
+        "p95": 75.2296507,
+        "maximum": 75.358539
+      },
+      "nominalIntervalSeconds": {
+        "count": 23,
+        "p95": 75.0,
+        "maximum": 75.0
+      },
+      "nominalLatenessSeconds": {
+        "count": 24,
+        "p95": 1.6051504,
+        "maximum": 1.6601504
+      },
+      "publicationLatenessSeconds": {
+        "count": 24,
+        "p95": 1.6687695,
+        "maximum": 1.7209566
+      },
+      "passed": true
+    },
+    {
+      "providerEventId": 17000008,
+      "endpoint": "EVENT_LINEUPS",
+      "samples": 6,
+      "receiptIntervalSeconds": {
+        "count": 5,
+        "p95": 300.128,
+        "maximum": 300.128
+      },
+      "publicationIntervalSeconds": {
+        "count": 5,
+        "p95": 300.1174221,
+        "maximum": 300.1174221
+      },
+      "nominalIntervalSeconds": {
+        "count": 5,
+        "p95": 300.0,
+        "maximum": 300.0
+      },
+      "nominalLatenessSeconds": {
+        "count": 6,
+        "p95": 1.9701504,
+        "maximum": 1.9701504
+      },
+      "publicationLatenessSeconds": {
+        "count": 6,
+        "p95": 2.0175363,
+        "maximum": 2.0175363
+      },
+      "passed": true
+    },
+    {
+      "providerEventId": 17000009,
+      "endpoint": "EVENT_DETAILS",
+      "samples": 24,
+      "receiptIntervalSeconds": {
+        "count": 23,
+        "p95": 75.109,
+        "maximum": 75.12
+      },
+      "publicationIntervalSeconds": {
+        "count": 23,
+        "p95": 75.1103461,
+        "maximum": 75.1359671
+      },
+      "nominalIntervalSeconds": {
+        "count": 23,
+        "p95": 75.0,
+        "maximum": 75.0
+      },
+      "nominalLatenessSeconds": {
+        "count": 24,
+        "p95": 0.6491504,
+        "maximum": 0.6631504
+      },
+      "publicationLatenessSeconds": {
+        "count": 24,
+        "p95": 0.6963351,
+        "maximum": 0.7098321
+      },
+      "passed": true
+    },
+    {
+      "providerEventId": 17000009,
+      "endpoint": "EVENT_INCIDENTS",
+      "samples": 24,
+      "receiptIntervalSeconds": {
+        "count": 23,
+        "p95": 75.203,
+        "maximum": 75.301
+      },
+      "publicationIntervalSeconds": {
+        "count": 23,
+        "p95": 75.2052044,
+        "maximum": 75.3072109
+      },
+      "nominalIntervalSeconds": {
+        "count": 23,
+        "p95": 75.0,
+        "maximum": 75.0
+      },
+      "nominalLatenessSeconds": {
+        "count": 24,
+        "p95": 1.1321504,
+        "maximum": 1.2141504
+      },
+      "publicationLatenessSeconds": {
+        "count": 24,
+        "p95": 1.1812375,
+        "maximum": 1.2694058
+      },
+      "passed": true
+    },
+    {
+      "providerEventId": 17000009,
+      "endpoint": "EVENT_STATISTICS",
+      "samples": 24,
+      "receiptIntervalSeconds": {
+        "count": 23,
+        "p95": 75.163,
+        "maximum": 75.206
+      },
+      "publicationIntervalSeconds": {
+        "count": 23,
+        "p95": 75.1742527,
+        "maximum": 75.2023968
+      },
+      "nominalIntervalSeconds": {
+        "count": 23,
+        "p95": 75.0,
+        "maximum": 75.0
+      },
+      "nominalLatenessSeconds": {
+        "count": 24,
+        "p95": 1.5671504,
+        "maximum": 1.6331504
+      },
+      "publicationLatenessSeconds": {
+        "count": 24,
+        "p95": 1.6136528,
+        "maximum": 1.6899201
+      },
+      "passed": true
+    },
+    {
+      "providerEventId": 17000009,
+      "endpoint": "EVENT_LINEUPS",
+      "samples": 6,
+      "receiptIntervalSeconds": {
+        "count": 5,
+        "p95": 300.129,
+        "maximum": 300.129
+      },
+      "publicationIntervalSeconds": {
+        "count": 5,
+        "p95": 300.1252021,
+        "maximum": 300.1252021
+      },
+      "nominalIntervalSeconds": {
+        "count": 5,
+        "p95": 300.0,
+        "maximum": 300.0
+      },
+      "nominalLatenessSeconds": {
+        "count": 6,
+        "p95": 2.1471504,
+        "maximum": 2.1471504
+      },
+      "publicationLatenessSeconds": {
+        "count": 6,
+        "p95": 2.1960606,
+        "maximum": 2.1960606
+      },
+      "passed": true
+    },
+    {
+      "providerEventId": 17000010,
+      "endpoint": "EVENT_DETAILS",
+      "samples": 24,
+      "receiptIntervalSeconds": {
+        "count": 23,
+        "p95": 75.083,
+        "maximum": 75.098
+      },
+      "publicationIntervalSeconds": {
+        "count": 23,
+        "p95": 75.0996608,
+        "maximum": 75.1088031
+      },
+      "nominalIntervalSeconds": {
+        "count": 23,
+        "p95": 75.0,
+        "maximum": 75.0
+      },
+      "nominalLatenessSeconds": {
+        "count": 24,
+        "p95": 0.5511504,
+        "maximum": 0.5581504
+      },
+      "publicationLatenessSeconds": {
+        "count": 24,
+        "p95": 0.6106527,
+        "maximum": 0.618115
+      },
+      "passed": true
+    },
+    {
+      "providerEventId": 17000010,
+      "endpoint": "EVENT_INCIDENTS",
+      "samples": 24,
+      "receiptIntervalSeconds": {
+        "count": 23,
+        "p95": 75.178,
+        "maximum": 75.225
+      },
+      "publicationIntervalSeconds": {
+        "count": 23,
+        "p95": 75.1785564,
+        "maximum": 75.2569333
+      },
+      "nominalIntervalSeconds": {
+        "count": 23,
+        "p95": 75.0,
+        "maximum": 75.0
+      },
+      "nominalLatenessSeconds": {
+        "count": 24,
+        "p95": 1.0531504,
+        "maximum": 1.0891504
+      },
+      "publicationLatenessSeconds": {
+        "count": 24,
+        "p95": 1.1146272,
+        "maximum": 1.1717407
+      },
+      "passed": true
+    },
+    {
+      "providerEventId": 17000010,
+      "endpoint": "EVENT_STATISTICS",
+      "samples": 24,
+      "receiptIntervalSeconds": {
+        "count": 23,
+        "p95": 75.243,
+        "maximum": 75.508
+      },
+      "publicationIntervalSeconds": {
+        "count": 23,
+        "p95": 75.2433148,
+        "maximum": 75.5262528
+      },
+      "nominalIntervalSeconds": {
+        "count": 23,
+        "p95": 75.0,
+        "maximum": 75.0
+      },
+      "nominalLatenessSeconds": {
+        "count": 24,
+        "p95": 1.6011504,
+        "maximum": 1.8661504
+      },
+      "publicationLatenessSeconds": {
+        "count": 24,
+        "p95": 1.6714241,
+        "maximum": 1.9376245
+      },
+      "passed": true
+    },
+    {
+      "providerEventId": 17000010,
+      "endpoint": "EVENT_LINEUPS",
+      "samples": 6,
+      "receiptIntervalSeconds": {
+        "count": 5,
+        "p95": 300.079,
+        "maximum": 300.079
+      },
+      "publicationIntervalSeconds": {
+        "count": 5,
+        "p95": 300.0918481,
+        "maximum": 300.0918481
+      },
+      "nominalIntervalSeconds": {
+        "count": 5,
+        "p95": 300.0,
+        "maximum": 300.0
+      },
+      "nominalLatenessSeconds": {
+        "count": 6,
+        "p95": 2.3181504,
+        "maximum": 2.3181504
+      },
+      "publicationLatenessSeconds": {
+        "count": 6,
+        "p95": 2.3749591,
+        "maximum": 2.3749591
+      },
+      "passed": true
+    },
+    {
+      "providerEventId": 17000011,
+      "endpoint": "EVENT_DETAILS",
+      "samples": 24,
+      "receiptIntervalSeconds": {
+        "count": 23,
+        "p95": 75.081,
+        "maximum": 75.086
+      },
+      "publicationIntervalSeconds": {
+        "count": 23,
+        "p95": 75.0815333,
+        "maximum": 75.0910707
+      },
+      "nominalIntervalSeconds": {
+        "count": 23,
+        "p95": 75.0,
+        "maximum": 75.0
+      },
+      "nominalLatenessSeconds": {
+        "count": 24,
+        "p95": 0.5441504,
+        "maximum": 0.5541504
+      },
+      "publicationLatenessSeconds": {
+        "count": 24,
+        "p95": 0.5901812,
+        "maximum": 0.6124409
+      },
+      "passed": true
+    },
+    {
+      "providerEventId": 17000011,
+      "endpoint": "EVENT_INCIDENTS",
+      "samples": 24,
+      "receiptIntervalSeconds": {
+        "count": 23,
+        "p95": 75.161,
+        "maximum": 75.187
+      },
+      "publicationIntervalSeconds": {
+        "count": 23,
+        "p95": 75.1695631,
+        "maximum": 75.1780831
+      },
+      "nominalIntervalSeconds": {
+        "count": 23,
+        "p95": 75.0,
+        "maximum": 75.0
+      },
+      "nominalLatenessSeconds": {
+        "count": 24,
+        "p95": 1.0641504,
+        "maximum": 1.0791504
+      },
+      "publicationLatenessSeconds": {
+        "count": 24,
+        "p95": 1.1165978,
+        "maximum": 1.1233878
+      },
+      "passed": true
+    },
+    {
+      "providerEventId": 17000011,
+      "endpoint": "EVENT_STATISTICS",
+      "samples": 24,
+      "receiptIntervalSeconds": {
+        "count": 23,
+        "p95": 75.191,
+        "maximum": 75.221
+      },
+      "publicationIntervalSeconds": {
+        "count": 23,
+        "p95": 75.1884864,
+        "maximum": 75.2000255
+      },
+      "nominalIntervalSeconds": {
+        "count": 23,
+        "p95": 75.0,
+        "maximum": 75.0
+      },
+      "nominalLatenessSeconds": {
+        "count": 24,
+        "p95": 1.5221504,
+        "maximum": 1.5521504
+      },
+      "publicationLatenessSeconds": {
+        "count": 24,
+        "p95": 1.572575,
+        "maximum": 1.5944096
+      },
+      "passed": true
+    },
+    {
+      "providerEventId": 17000011,
+      "endpoint": "EVENT_LINEUPS",
+      "samples": 6,
+      "receiptIntervalSeconds": {
+        "count": 5,
+        "p95": 300.107,
+        "maximum": 300.107
+      },
+      "publicationIntervalSeconds": {
+        "count": 5,
+        "p95": 300.1066385,
+        "maximum": 300.1066385
+      },
+      "nominalIntervalSeconds": {
+        "count": 5,
+        "p95": 300.0,
+        "maximum": 300.0
+      },
+      "nominalLatenessSeconds": {
+        "count": 6,
+        "p95": 2.0451504,
+        "maximum": 2.0451504
+      },
+      "publicationLatenessSeconds": {
+        "count": 6,
+        "p95": 2.0910234,
+        "maximum": 2.0910234
+      },
+      "passed": true
+    },
+    {
+      "providerEventId": 17000012,
+      "endpoint": "EVENT_DETAILS",
+      "samples": 24,
+      "receiptIntervalSeconds": {
+        "count": 23,
+        "p95": 75.093,
+        "maximum": 75.142
+      },
+      "publicationIntervalSeconds": {
+        "count": 23,
+        "p95": 75.091601,
+        "maximum": 75.154317
+      },
+      "nominalIntervalSeconds": {
+        "count": 23,
+        "p95": 75.0,
+        "maximum": 75.0
+      },
+      "nominalLatenessSeconds": {
+        "count": 24,
+        "p95": 0.5631504,
+        "maximum": 0.5631504
+      },
+      "publicationLatenessSeconds": {
+        "count": 24,
+        "p95": 0.6074161,
+        "maximum": 0.6200014
+      },
+      "passed": true
+    },
+    {
+      "providerEventId": 17000012,
+      "endpoint": "EVENT_INCIDENTS",
+      "samples": 24,
+      "receiptIntervalSeconds": {
+        "count": 23,
+        "p95": 75.142,
+        "maximum": 75.241
+      },
+      "publicationIntervalSeconds": {
+        "count": 23,
+        "p95": 75.1499572,
+        "maximum": 75.2452852
+      },
+      "nominalIntervalSeconds": {
+        "count": 23,
+        "p95": 75.0,
+        "maximum": 75.0
+      },
+      "nominalLatenessSeconds": {
+        "count": 24,
+        "p95": 1.0491504,
+        "maximum": 1.1531504
+      },
+      "publicationLatenessSeconds": {
+        "count": 24,
+        "p95": 1.1002526,
+        "maximum": 1.2003927
+      },
+      "passed": true
+    },
+    {
+      "providerEventId": 17000012,
+      "endpoint": "EVENT_STATISTICS",
+      "samples": 24,
+      "receiptIntervalSeconds": {
+        "count": 23,
+        "p95": 75.167,
+        "maximum": 75.191
+      },
+      "publicationIntervalSeconds": {
+        "count": 23,
+        "p95": 75.1681261,
+        "maximum": 75.1885007
+      },
+      "nominalIntervalSeconds": {
+        "count": 23,
+        "p95": 75.0,
+        "maximum": 75.0
+      },
+      "nominalLatenessSeconds": {
+        "count": 24,
+        "p95": 1.4811504,
+        "maximum": 1.5781504
+      },
+      "publicationLatenessSeconds": {
+        "count": 24,
+        "p95": 1.5313374,
+        "maximum": 1.6300406
+      },
+      "passed": true
+    },
+    {
+      "providerEventId": 17000012,
+      "endpoint": "EVENT_LINEUPS",
+      "samples": 6,
+      "receiptIntervalSeconds": {
+        "count": 5,
+        "p95": 300.106,
+        "maximum": 300.106
+      },
+      "publicationIntervalSeconds": {
+        "count": 5,
+        "p95": 300.1058352,
+        "maximum": 300.1058352
+      },
+      "nominalIntervalSeconds": {
+        "count": 5,
+        "p95": 300.0,
+        "maximum": 300.0
+      },
+      "nominalLatenessSeconds": {
+        "count": 6,
+        "p95": 1.9841504,
+        "maximum": 1.9841504
+      },
+      "publicationLatenessSeconds": {
+        "count": 6,
+        "p95": 2.0324677,
+        "maximum": 2.0324677
+      },
+      "passed": true
+    },
+    {
+      "providerEventId": 17000013,
+      "endpoint": "EVENT_DETAILS",
+      "samples": 24,
+      "receiptIntervalSeconds": {
+        "count": 23,
+        "p95": 75.107,
+        "maximum": 75.111
+      },
+      "publicationIntervalSeconds": {
+        "count": 23,
+        "p95": 75.1290647,
+        "maximum": 75.1301392
+      },
+      "nominalIntervalSeconds": {
+        "count": 23,
+        "p95": 75.0,
+        "maximum": 75.0
+      },
+      "nominalLatenessSeconds": {
+        "count": 24,
+        "p95": 0.6211504,
+        "maximum": 0.6231504
+      },
+      "publicationLatenessSeconds": {
+        "count": 24,
+        "p95": 0.6834603,
+        "maximum": 0.697514
+      },
+      "passed": true
+    },
+    {
+      "providerEventId": 17000013,
+      "endpoint": "EVENT_INCIDENTS",
+      "samples": 24,
+      "receiptIntervalSeconds": {
+        "count": 23,
+        "p95": 75.164,
+        "maximum": 75.172
+      },
+      "publicationIntervalSeconds": {
+        "count": 23,
+        "p95": 75.1542467,
+        "maximum": 75.1680089
+      },
+      "nominalIntervalSeconds": {
+        "count": 23,
+        "p95": 75.0,
+        "maximum": 75.0
+      },
+      "nominalLatenessSeconds": {
+        "count": 24,
+        "p95": 1.1191504,
+        "maximum": 1.2741504
+      },
+      "publicationLatenessSeconds": {
+        "count": 24,
+        "p95": 1.1816426,
+        "maximum": 1.3191518
+      },
+      "passed": true
+    },
+    {
+      "providerEventId": 17000013,
+      "endpoint": "EVENT_STATISTICS",
+      "samples": 24,
+      "receiptIntervalSeconds": {
+        "count": 23,
+        "p95": 75.2,
+        "maximum": 75.219
+      },
+      "publicationIntervalSeconds": {
+        "count": 23,
+        "p95": 75.1817407,
+        "maximum": 75.2122168
+      },
+      "nominalIntervalSeconds": {
+        "count": 23,
+        "p95": 75.0,
+        "maximum": 75.0
+      },
+      "nominalLatenessSeconds": {
+        "count": 24,
+        "p95": 1.7021504,
+        "maximum": 1.7151504
+      },
+      "publicationLatenessSeconds": {
+        "count": 24,
+        "p95": 1.7594038,
+        "maximum": 1.7598905
+      },
+      "passed": true
+    },
+    {
+      "providerEventId": 17000013,
+      "endpoint": "EVENT_LINEUPS",
+      "samples": 6,
+      "receiptIntervalSeconds": {
+        "count": 5,
+        "p95": 300.099,
+        "maximum": 300.099
+      },
+      "publicationIntervalSeconds": {
+        "count": 5,
+        "p95": 300.0892029,
+        "maximum": 300.0892029
+      },
+      "nominalIntervalSeconds": {
+        "count": 5,
+        "p95": 300.0,
+        "maximum": 300.0
+      },
+      "nominalLatenessSeconds": {
+        "count": 6,
+        "p95": 2.1611504,
+        "maximum": 2.1611504
+      },
+      "publicationLatenessSeconds": {
+        "count": 6,
+        "p95": 2.2220852,
+        "maximum": 2.2220852
+      },
+      "passed": true
+    },
+    {
+      "providerEventId": 17000014,
+      "endpoint": "EVENT_DETAILS",
+      "samples": 24,
+      "receiptIntervalSeconds": {
+        "count": 23,
+        "p95": 75.097,
+        "maximum": 75.137
+      },
+      "publicationIntervalSeconds": {
+        "count": 23,
+        "p95": 75.1008715,
+        "maximum": 75.1518798
+      },
+      "nominalIntervalSeconds": {
+        "count": 23,
+        "p95": 75.0,
+        "maximum": 75.0
+      },
+      "nominalLatenessSeconds": {
+        "count": 24,
+        "p95": 0.5491504,
+        "maximum": 0.5591504
+      },
+      "publicationLatenessSeconds": {
+        "count": 24,
+        "p95": 0.5981275,
+        "maximum": 0.6226103
+      },
+      "passed": true
+    },
+    {
+      "providerEventId": 17000014,
+      "endpoint": "EVENT_INCIDENTS",
+      "samples": 24,
+      "receiptIntervalSeconds": {
+        "count": 23,
+        "p95": 75.154,
+        "maximum": 75.259
+      },
+      "publicationIntervalSeconds": {
+        "count": 23,
+        "p95": 75.1509042,
+        "maximum": 75.2721698
+      },
+      "nominalIntervalSeconds": {
+        "count": 23,
+        "p95": 75.0,
+        "maximum": 75.0
+      },
+      "nominalLatenessSeconds": {
+        "count": 24,
+        "p95": 1.0661504,
+        "maximum": 1.1681504
+      },
+      "publicationLatenessSeconds": {
+        "count": 24,
+        "p95": 1.1411589,
+        "maximum": 1.228018
+      },
+      "passed": true
+    },
+    {
+      "providerEventId": 17000014,
+      "endpoint": "EVENT_STATISTICS",
+      "samples": 24,
+      "receiptIntervalSeconds": {
+        "count": 23,
+        "p95": 75.193,
+        "maximum": 75.253
+      },
+      "publicationIntervalSeconds": {
+        "count": 23,
+        "p95": 75.1898904,
+        "maximum": 75.2599226
+      },
+      "nominalIntervalSeconds": {
+        "count": 23,
+        "p95": 75.0,
+        "maximum": 75.0
+      },
+      "nominalLatenessSeconds": {
+        "count": 24,
+        "p95": 1.5901504,
+        "maximum": 1.6031504
+      },
+      "publicationLatenessSeconds": {
+        "count": 24,
+        "p95": 1.6470505,
+        "maximum": 1.6627917
+      },
+      "passed": true
+    },
+    {
+      "providerEventId": 17000014,
+      "endpoint": "EVENT_LINEUPS",
+      "samples": 6,
+      "receiptIntervalSeconds": {
+        "count": 5,
+        "p95": 300.121,
+        "maximum": 300.121
+      },
+      "publicationIntervalSeconds": {
+        "count": 5,
+        "p95": 300.12861,
+        "maximum": 300.12861
+      },
+      "nominalIntervalSeconds": {
+        "count": 5,
+        "p95": 300.0,
+        "maximum": 300.0
+      },
+      "nominalLatenessSeconds": {
+        "count": 6,
+        "p95": 2.0201504,
+        "maximum": 2.0201504
+      },
+      "publicationLatenessSeconds": {
+        "count": 6,
+        "p95": 2.0730863,
+        "maximum": 2.0730863
+      },
+      "passed": true
+    },
+    {
+      "providerEventId": 17000015,
+      "endpoint": "EVENT_DETAILS",
+      "samples": 24,
+      "receiptIntervalSeconds": {
+        "count": 23,
+        "p95": 75.092,
+        "maximum": 75.108
+      },
+      "publicationIntervalSeconds": {
+        "count": 23,
+        "p95": 75.1077752,
+        "maximum": 75.1091345
+      },
+      "nominalIntervalSeconds": {
+        "count": 23,
+        "p95": 75.0,
+        "maximum": 75.0
+      },
+      "nominalLatenessSeconds": {
+        "count": 24,
+        "p95": 0.5611504,
+        "maximum": 0.5831504
+      },
+      "publicationLatenessSeconds": {
+        "count": 24,
+        "p95": 0.6281501,
+        "maximum": 0.6478699
+      },
+      "passed": true
+    },
+    {
+      "providerEventId": 17000015,
+      "endpoint": "EVENT_INCIDENTS",
+      "samples": 24,
+      "receiptIntervalSeconds": {
+        "count": 23,
+        "p95": 75.182,
+        "maximum": 75.214
+      },
+      "publicationIntervalSeconds": {
+        "count": 23,
+        "p95": 75.2112757,
+        "maximum": 75.2242128
+      },
+      "nominalIntervalSeconds": {
+        "count": 23,
+        "p95": 75.0,
+        "maximum": 75.0
+      },
+      "nominalLatenessSeconds": {
+        "count": 24,
+        "p95": 1.0711504,
+        "maximum": 1.1181504
+      },
+      "publicationLatenessSeconds": {
+        "count": 24,
+        "p95": 1.1149496,
+        "maximum": 1.176437
+      },
+      "passed": true
+    },
+    {
+      "providerEventId": 17000015,
+      "endpoint": "EVENT_STATISTICS",
+      "samples": 24,
+      "receiptIntervalSeconds": {
+        "count": 23,
+        "p95": 75.306,
+        "maximum": 75.373
+      },
+      "publicationIntervalSeconds": {
+        "count": 23,
+        "p95": 75.3007251,
+        "maximum": 75.3658861
+      },
+      "nominalIntervalSeconds": {
+        "count": 23,
+        "p95": 75.0,
+        "maximum": 75.0
+      },
+      "nominalLatenessSeconds": {
+        "count": 24,
+        "p95": 1.6341504,
+        "maximum": 1.7121504
+      },
+      "publicationLatenessSeconds": {
+        "count": 24,
+        "p95": 1.6776659,
+        "maximum": 1.7694558
+      },
+      "passed": true
+    },
+    {
+      "providerEventId": 17000015,
+      "endpoint": "EVENT_LINEUPS",
+      "samples": 6,
+      "receiptIntervalSeconds": {
+        "count": 5,
+        "p95": 300.145,
+        "maximum": 300.145
+      },
+      "publicationIntervalSeconds": {
+        "count": 5,
+        "p95": 300.1437338,
+        "maximum": 300.1437338
+      },
+      "nominalIntervalSeconds": {
+        "count": 5,
+        "p95": 300.0,
+        "maximum": 300.0
+      },
+      "nominalLatenessSeconds": {
+        "count": 6,
+        "p95": 2.1981504,
+        "maximum": 2.1981504
+      },
+      "publicationLatenessSeconds": {
+        "count": 6,
+        "p95": 2.255104,
+        "maximum": 2.255104
+      },
+      "passed": true
+    },
+    {
+      "providerEventId": 17000016,
+      "endpoint": "EVENT_DETAILS",
+      "samples": 24,
+      "receiptIntervalSeconds": {
+        "count": 23,
+        "p95": 75.085,
+        "maximum": 75.085
+      },
+      "publicationIntervalSeconds": {
+        "count": 23,
+        "p95": 75.087784,
+        "maximum": 75.0879067
+      },
+      "nominalIntervalSeconds": {
+        "count": 23,
+        "p95": 75.0,
+        "maximum": 75.0
+      },
+      "nominalLatenessSeconds": {
+        "count": 24,
+        "p95": 0.5491504,
+        "maximum": 0.5531504
+      },
+      "publicationLatenessSeconds": {
+        "count": 24,
+        "p95": 0.5920616,
+        "maximum": 0.5998165
+      },
+      "passed": true
+    },
+    {
+      "providerEventId": 17000016,
+      "endpoint": "EVENT_INCIDENTS",
+      "samples": 24,
+      "receiptIntervalSeconds": {
+        "count": 23,
+        "p95": 75.126,
+        "maximum": 75.16
+      },
+      "publicationIntervalSeconds": {
+        "count": 23,
+        "p95": 75.1432026,
+        "maximum": 75.1672973
+      },
+      "nominalIntervalSeconds": {
+        "count": 23,
+        "p95": 75.0,
+        "maximum": 75.0
+      },
+      "nominalLatenessSeconds": {
+        "count": 24,
+        "p95": 1.0431504,
+        "maximum": 1.0691504
+      },
+      "publicationLatenessSeconds": {
+        "count": 24,
+        "p95": 1.0991024,
+        "maximum": 1.1240013
+      },
+      "passed": true
+    },
+    {
+      "providerEventId": 17000016,
+      "endpoint": "EVENT_STATISTICS",
+      "samples": 24,
+      "receiptIntervalSeconds": {
+        "count": 23,
+        "p95": 75.165,
+        "maximum": 75.192
+      },
+      "publicationIntervalSeconds": {
+        "count": 23,
+        "p95": 75.1626474,
+        "maximum": 75.1954279
+      },
+      "nominalIntervalSeconds": {
+        "count": 23,
+        "p95": 75.0,
+        "maximum": 75.0
+      },
+      "nominalLatenessSeconds": {
+        "count": 24,
+        "p95": 1.5061504,
+        "maximum": 1.5301504
+      },
+      "publicationLatenessSeconds": {
+        "count": 24,
+        "p95": 1.560273,
+        "maximum": 1.5814123
+      },
+      "passed": true
+    },
+    {
+      "providerEventId": 17000016,
+      "endpoint": "EVENT_LINEUPS",
+      "samples": 6,
+      "receiptIntervalSeconds": {
+        "count": 5,
+        "p95": 300.082,
+        "maximum": 300.082
+      },
+      "publicationIntervalSeconds": {
+        "count": 5,
+        "p95": 300.0844966,
+        "maximum": 300.0844966
+      },
+      "nominalIntervalSeconds": {
+        "count": 5,
+        "p95": 300.0,
+        "maximum": 300.0
+      },
+      "nominalLatenessSeconds": {
+        "count": 6,
+        "p95": 1.9711504,
+        "maximum": 1.9711504
+      },
+      "publicationLatenessSeconds": {
+        "count": 6,
+        "p95": 2.0166443,
+        "maximum": 2.0166443
+      },
+      "passed": true
+    },
+    {
+      "providerEventId": 17000017,
+      "endpoint": "EVENT_DETAILS",
+      "samples": 24,
+      "receiptIntervalSeconds": {
+        "count": 23,
+        "p95": 75.112,
+        "maximum": 75.172
+      },
+      "publicationIntervalSeconds": {
+        "count": 23,
+        "p95": 75.114032,
+        "maximum": 75.1892225
+      },
+      "nominalIntervalSeconds": {
+        "count": 23,
+        "p95": 75.0,
+        "maximum": 75.0
+      },
+      "nominalLatenessSeconds": {
+        "count": 24,
+        "p95": 0.6261504,
+        "maximum": 0.6291504
+      },
+      "publicationLatenessSeconds": {
+        "count": 24,
+        "p95": 0.6777052,
+        "maximum": 0.6890517
+      },
+      "passed": true
+    },
+    {
+      "providerEventId": 17000017,
+      "endpoint": "EVENT_INCIDENTS",
+      "samples": 24,
+      "receiptIntervalSeconds": {
+        "count": 23,
+        "p95": 75.224,
+        "maximum": 75.359
+      },
+      "publicationIntervalSeconds": {
+        "count": 23,
+        "p95": 75.2208366,
+        "maximum": 75.4042851
+      },
+      "nominalIntervalSeconds": {
+        "count": 23,
+        "p95": 75.0,
+        "maximum": 75.0
+      },
+      "nominalLatenessSeconds": {
+        "count": 24,
+        "p95": 1.1731504,
+        "maximum": 1.3441504
+      },
+      "publicationLatenessSeconds": {
+        "count": 24,
+        "p95": 1.2222976,
+        "maximum": 1.4406575
+      },
+      "passed": true
+    },
+    {
+      "providerEventId": 17000017,
+      "endpoint": "EVENT_STATISTICS",
+      "samples": 24,
+      "receiptIntervalSeconds": {
+        "count": 23,
+        "p95": 75.196,
+        "maximum": 75.377
+      },
+      "publicationIntervalSeconds": {
+        "count": 23,
+        "p95": 75.1889979,
+        "maximum": 75.416775
+      },
+      "nominalIntervalSeconds": {
+        "count": 23,
+        "p95": 75.0,
+        "maximum": 75.0
+      },
+      "nominalLatenessSeconds": {
+        "count": 24,
+        "p95": 1.6211504,
+        "maximum": 1.9241504
+      },
+      "publicationLatenessSeconds": {
+        "count": 24,
+        "p95": 1.6706805,
+        "maximum": 2.0060585
+      },
+      "passed": true
+    },
+    {
+      "providerEventId": 17000017,
+      "endpoint": "EVENT_LINEUPS",
+      "samples": 6,
+      "receiptIntervalSeconds": {
+        "count": 5,
+        "p95": 300.164,
+        "maximum": 300.164
+      },
+      "publicationIntervalSeconds": {
+        "count": 5,
+        "p95": 300.2050859,
+        "maximum": 300.2050859
+      },
+      "nominalIntervalSeconds": {
+        "count": 5,
+        "p95": 300.0,
+        "maximum": 300.0
+      },
+      "nominalLatenessSeconds": {
+        "count": 6,
+        "p95": 2.1341504,
+        "maximum": 2.1341504
+      },
+      "publicationLatenessSeconds": {
+        "count": 6,
+        "p95": 2.1988767,
+        "maximum": 2.1988767
+      },
+      "passed": true
+    },
+    {
+      "providerEventId": 17000018,
+      "endpoint": "EVENT_DETAILS",
+      "samples": 24,
+      "receiptIntervalSeconds": {
+        "count": 23,
+        "p95": 75.11,
+        "maximum": 75.129
+      },
+      "publicationIntervalSeconds": {
+        "count": 23,
+        "p95": 75.1198151,
+        "maximum": 75.1297389
+      },
+      "nominalIntervalSeconds": {
+        "count": 23,
+        "p95": 75.0,
+        "maximum": 75.0
+      },
+      "nominalLatenessSeconds": {
+        "count": 24,
+        "p95": 0.5511504,
+        "maximum": 0.5781504
+      },
+      "publicationLatenessSeconds": {
+        "count": 24,
+        "p95": 0.600945,
+        "maximum": 0.6398133
+      },
+      "passed": true
+    },
+    {
+      "providerEventId": 17000018,
+      "endpoint": "EVENT_INCIDENTS",
+      "samples": 24,
+      "receiptIntervalSeconds": {
+        "count": 23,
+        "p95": 75.22,
+        "maximum": 75.233
+      },
+      "publicationIntervalSeconds": {
+        "count": 23,
+        "p95": 75.22826,
+        "maximum": 75.2479439
+      },
+      "nominalIntervalSeconds": {
+        "count": 23,
+        "p95": 75.0,
+        "maximum": 75.0
+      },
+      "nominalLatenessSeconds": {
+        "count": 24,
+        "p95": 1.1121504,
+        "maximum": 1.1211504
+      },
+      "publicationLatenessSeconds": {
+        "count": 24,
+        "p95": 1.1621927,
+        "maximum": 1.1792476
+      },
+      "passed": true
+    },
+    {
+      "providerEventId": 17000018,
+      "endpoint": "EVENT_STATISTICS",
+      "samples": 24,
+      "receiptIntervalSeconds": {
+        "count": 23,
+        "p95": 75.177,
+        "maximum": 75.29
+      },
+      "publicationIntervalSeconds": {
+        "count": 23,
+        "p95": 75.1679772,
+        "maximum": 75.295029
+      },
+      "nominalIntervalSeconds": {
+        "count": 23,
+        "p95": 75.0,
+        "maximum": 75.0
+      },
+      "nominalLatenessSeconds": {
+        "count": 24,
+        "p95": 1.5751504,
+        "maximum": 1.6551504
+      },
+      "publicationLatenessSeconds": {
+        "count": 24,
+        "p95": 1.6240501,
+        "maximum": 1.7140617
+      },
+      "passed": true
+    },
+    {
+      "providerEventId": 17000018,
+      "endpoint": "EVENT_LINEUPS",
+      "samples": 6,
+      "receiptIntervalSeconds": {
+        "count": 5,
+        "p95": 300.11,
+        "maximum": 300.11
+      },
+      "publicationIntervalSeconds": {
+        "count": 5,
+        "p95": 300.1117833,
+        "maximum": 300.1117833
+      },
+      "nominalIntervalSeconds": {
+        "count": 5,
+        "p95": 300.0,
+        "maximum": 300.0
+      },
+      "nominalLatenessSeconds": {
+        "count": 6,
+        "p95": 2.2511504,
+        "maximum": 2.2511504
+      },
+      "publicationLatenessSeconds": {
+        "count": 6,
+        "p95": 2.3256556,
+        "maximum": 2.3256556
+      },
+      "passed": true
+    },
+    {
+      "providerEventId": 17000019,
+      "endpoint": "EVENT_DETAILS",
+      "samples": 24,
+      "receiptIntervalSeconds": {
+        "count": 23,
+        "p95": 75.104,
+        "maximum": 75.144
+      },
+      "publicationIntervalSeconds": {
+        "count": 23,
+        "p95": 75.1024698,
+        "maximum": 75.1416837
+      },
+      "nominalIntervalSeconds": {
+        "count": 23,
+        "p95": 75.0,
+        "maximum": 75.0
+      },
+      "nominalLatenessSeconds": {
+        "count": 24,
+        "p95": 0.5541504,
+        "maximum": 0.5971504
+      },
+      "publicationLatenessSeconds": {
+        "count": 24,
+        "p95": 0.601281,
+        "maximum": 0.6505041
+      },
+      "passed": true
+    },
+    {
+      "providerEventId": 17000019,
+      "endpoint": "EVENT_INCIDENTS",
+      "samples": 24,
+      "receiptIntervalSeconds": {
+        "count": 23,
+        "p95": 75.146,
+        "maximum": 75.218
+      },
+      "publicationIntervalSeconds": {
+        "count": 23,
+        "p95": 75.1545406,
+        "maximum": 75.2106258
+      },
+      "nominalIntervalSeconds": {
+        "count": 23,
+        "p95": 75.0,
+        "maximum": 75.0
+      },
+      "nominalLatenessSeconds": {
+        "count": 24,
+        "p95": 1.0821504,
+        "maximum": 1.1091504
+      },
+      "publicationLatenessSeconds": {
+        "count": 24,
+        "p95": 1.1351156,
+        "maximum": 1.1512009
+      },
+      "passed": true
+    },
+    {
+      "providerEventId": 17000019,
+      "endpoint": "EVENT_STATISTICS",
+      "samples": 24,
+      "receiptIntervalSeconds": {
+        "count": 23,
+        "p95": 75.183,
+        "maximum": 75.215
+      },
+      "publicationIntervalSeconds": {
+        "count": 23,
+        "p95": 75.1763465,
+        "maximum": 75.2085796
+      },
+      "nominalIntervalSeconds": {
+        "count": 23,
+        "p95": 75.0,
+        "maximum": 75.0
+      },
+      "nominalLatenessSeconds": {
+        "count": 24,
+        "p95": 1.5491504,
+        "maximum": 1.6311504
+      },
+      "publicationLatenessSeconds": {
+        "count": 24,
+        "p95": 1.5923133,
+        "maximum": 1.7166917
+      },
+      "passed": true
+    },
+    {
+      "providerEventId": 17000019,
+      "endpoint": "EVENT_LINEUPS",
+      "samples": 6,
+      "receiptIntervalSeconds": {
+        "count": 5,
+        "p95": 300.081,
+        "maximum": 300.081
+      },
+      "publicationIntervalSeconds": {
+        "count": 5,
+        "p95": 300.0791808,
+        "maximum": 300.0791808
+      },
+      "nominalIntervalSeconds": {
+        "count": 5,
+        "p95": 300.0,
+        "maximum": 300.0
+      },
+      "nominalLatenessSeconds": {
+        "count": 6,
+        "p95": 2.0161504,
+        "maximum": 2.0161504
+      },
+      "publicationLatenessSeconds": {
+        "count": 6,
+        "p95": 2.0573336,
+        "maximum": 2.0573336
+      },
+      "passed": true
+    },
+    {
+      "providerEventId": 17000020,
+      "endpoint": "EVENT_DETAILS",
+      "samples": 24,
+      "receiptIntervalSeconds": {
+        "count": 23,
+        "p95": 75.121,
+        "maximum": 75.13
+      },
+      "publicationIntervalSeconds": {
+        "count": 23,
+        "p95": 75.1232764,
+        "maximum": 75.1338117
+      },
+      "nominalIntervalSeconds": {
+        "count": 23,
+        "p95": 75.0,
+        "maximum": 75.0
+      },
+      "nominalLatenessSeconds": {
+        "count": 24,
+        "p95": 0.5531504,
+        "maximum": 0.5761504
+      },
+      "publicationLatenessSeconds": {
+        "count": 24,
+        "p95": 0.6077179,
+        "maximum": 0.6255199
+      },
+      "passed": true
+    },
+    {
+      "providerEventId": 17000020,
+      "endpoint": "EVENT_INCIDENTS",
+      "samples": 24,
+      "receiptIntervalSeconds": {
+        "count": 23,
+        "p95": 75.179,
+        "maximum": 75.222
+      },
+      "publicationIntervalSeconds": {
+        "count": 23,
+        "p95": 75.1720923,
+        "maximum": 75.2231544
+      },
+      "nominalIntervalSeconds": {
+        "count": 23,
+        "p95": 75.0,
+        "maximum": 75.0
+      },
+      "nominalLatenessSeconds": {
+        "count": 24,
+        "p95": 1.0961504,
+        "maximum": 1.1221504
+      },
+      "publicationLatenessSeconds": {
+        "count": 24,
+        "p95": 1.1460986,
+        "maximum": 1.1727925
+      },
+      "passed": true
+    },
+    {
+      "providerEventId": 17000020,
+      "endpoint": "EVENT_STATISTICS",
+      "samples": 24,
+      "receiptIntervalSeconds": {
+        "count": 23,
+        "p95": 75.167,
+        "maximum": 75.264
+      },
+      "publicationIntervalSeconds": {
+        "count": 23,
+        "p95": 75.1697469,
+        "maximum": 75.2868755
+      },
+      "nominalIntervalSeconds": {
+        "count": 23,
+        "p95": 75.0,
+        "maximum": 75.0
+      },
+      "nominalLatenessSeconds": {
+        "count": 24,
+        "p95": 1.5261504,
+        "maximum": 1.6071504
+      },
+      "publicationLatenessSeconds": {
+        "count": 24,
+        "p95": 1.574611,
+        "maximum": 1.6789062
+      },
+      "passed": true
+    },
+    {
+      "providerEventId": 17000020,
+      "endpoint": "EVENT_LINEUPS",
+      "samples": 6,
+      "receiptIntervalSeconds": {
+        "count": 5,
+        "p95": 300.169,
+        "maximum": 300.169
+      },
+      "publicationIntervalSeconds": {
+        "count": 5,
+        "p95": 300.1734093,
+        "maximum": 300.1734093
+      },
+      "nominalIntervalSeconds": {
+        "count": 5,
+        "p95": 300.0,
+        "maximum": 300.0
+      },
+      "nominalLatenessSeconds": {
+        "count": 6,
+        "p95": 2.0571504,
+        "maximum": 2.0571504
+      },
+      "publicationLatenessSeconds": {
+        "count": 6,
+        "p95": 2.1155415,
+        "maximum": 2.1155415
+      },
+      "passed": true
+    }
+  ],
+  "acceptance": {
+    "criticalReceiptAndPublicationP95Seconds": 80,
+    "criticalReceiptAndPublicationMaximumSeconds": 90,
+    "lineupNominalLatenessP95Seconds": 15,
+    "criticalMinimumSteadySamplesPerPair": 22,
+    "lineupMinimumSteadySamplesPerPair": 5
+  }
+}

@@ -6,6 +6,7 @@ import com.bettingproject.sofascorelocal.application.event.J4OfflineFixtureImpor
 import com.bettingproject.sofascorelocal.application.event.J4OfflineFixtureImportService;
 import com.bettingproject.sofascorelocal.application.event.J4ScheduledEventsSnapshotNormalizationService;
 import com.bettingproject.sofascorelocal.application.event.J4SnapshotNormalizationException;
+import com.bettingproject.sofascorelocal.application.live.LiveCampaignService;
 import com.bettingproject.sofascorelocal.application.network.J4RealEventDetailsPhase1Service;
 import com.bettingproject.sofascorelocal.application.network.J4RealEventDetailsPhase2Service;
 import com.bettingproject.sofascorelocal.application.network.J4ProviderCampaignStopException;
@@ -49,6 +50,7 @@ public class EventExplorerController {
     private final J4RealEventDetailsPhase2Service realPhase2Service;
     private final J4ProviderCampaignStopService providerCampaignStopService;
     private final LocalFormTokenService formTokenService;
+    private final LiveCampaignService liveCampaigns;
 
     public EventExplorerController(
             J4EventQueryService queryService,
@@ -59,7 +61,8 @@ public class EventExplorerController {
             J4RealPhase2ControlService realPhase2ControlService,
             J4RealEventDetailsPhase2Service realPhase2Service,
             J4ProviderCampaignStopService providerCampaignStopService,
-            LocalFormTokenService formTokenService) {
+            LocalFormTokenService formTokenService,
+            LiveCampaignService liveCampaigns) {
         this.queryService = queryService;
         this.fixtureImportService = fixtureImportService;
         this.normalizationService = normalizationService;
@@ -69,6 +72,7 @@ public class EventExplorerController {
         this.realPhase2Service = realPhase2Service;
         this.providerCampaignStopService = providerCampaignStopService;
         this.formTokenService = formTokenService;
+        this.liveCampaigns = liveCampaigns;
     }
 
     @GetMapping
@@ -93,8 +97,11 @@ public class EventExplorerController {
                 "realPhase1EventIds",
                 EventDetailsProviderRequest.PHASE_1_EVENT_IDS);
         model.addAttribute("realPhase2CanonicalSelections", List.of());
+        model.addAttribute("liveSelectionMaximum", liveCampaigns.selectionMaximum());
         try {
             var search = queryService.search(selectedDate, zone);
+            model.addAttribute("blockedLiveEventIds", liveCampaigns.selectionBlockedEvents(search.events().stream()
+                    .map(item -> item.event().identity().value()).toList()));
             model.addAttribute("search", search);
             model.addAttribute("realPhase2CanonicalSelections", search.events());
         }
@@ -131,6 +138,8 @@ public class EventExplorerController {
                         "detailSearchDate",
                         detail.current().startsAtInZone().toLocalDate());
                 model.addAttribute("offlineDetail", detail.offlineDetail().orElse(null));
+                model.addAttribute("eventInformation", detail.offlineDetail()
+                        .map(observation -> EventDetailsPresentation.from(observation.details())).orElse(null));
             }
         }
         catch (IllegalArgumentException exception) {

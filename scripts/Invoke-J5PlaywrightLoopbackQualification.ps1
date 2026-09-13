@@ -167,7 +167,7 @@ try {
     $qualificationReportPath = Join-Path $repositoryRoot `
         'target\failsafe-reports\TEST-com.bettingproject.sofascorelocal.application.network.playwright.ProviderPlaywrightLocalQualificationIT.xml'
     $expectedXmlSuites = @(
-        [pscustomobject]@{ Path = $protocolReportPath; Tests = 10; Exact = $true },
+        [pscustomobject]@{ Path = $protocolReportPath; Tests = 11; Exact = $true },
         [pscustomobject]@{ Path = $securityReportPath; Tests = 1; Exact = $true },
         [pscustomobject]@{ Path = $networkObservationReportPath; Tests = 10; Exact = $true },
         [pscustomobject]@{ Path = $qualificationReportPath; Tests = 14; Exact = $true }
@@ -194,6 +194,17 @@ try {
             $errors -ne 0 -or $skipped -ne 0) {
             throw "The expected J5 Playwright Maven test report does not have the exact successful suite shape: $reportPath"
         }
+    }
+
+    # The closed loopback TCP-port range regression was added in 154349a.
+    [xml]$protocolReport = Get-Content -LiteralPath $protocolReportPath -Raw
+    $closedPortRangeCases = @($protocolReport.testsuite.testcase |
+        Where-Object { $_.name -eq 'acceptsOnlyTheClosedLoopbackOriginTcpPortRange' })
+    if ($closedPortRangeCases.Count -ne 1 -or
+        $null -ne $closedPortRangeCases[0].SelectSingleNode('failure') -or
+        $null -ne $closedPortRangeCases[0].SelectSingleNode('error') -or
+        $null -ne $closedPortRangeCases[0].SelectSingleNode('skipped')) {
+        throw 'The worker protocol qualification requires its successful closed loopback TCP-port range regression'
     }
 
     [xml]$qualificationReport = Get-Content -LiteralPath $qualificationReportPath -Raw
@@ -252,6 +263,9 @@ Write-Host 'J5_PLAYWRIGHT_LOOPBACK_QUALIFICATION=PASS'
 Write-Host 'WORKER_PROTOCOL_AND_SECURITY_TESTS=PASS'
 Write-Host 'WORKER_NETWORK_OBSERVATION_TESTS=PASS'
 Write-Host 'J5_EVENT_DATA_ROUTE_TESTS=PASS'
+# These delay assertions qualify supervisor.open, not the grouped manual-J5 authority.
+Write-Host 'J5_GAP_MEASUREMENT_SCOPE=LEGACY_GENERIC_SUPERVISOR_OPEN'
+Write-Host 'GROUPED_MANUAL_J5_QUALIFICATION=SEPARATE_MANUAL_J5_GROUPED_QUALIFICATION_IT'
 Write-Host 'MINIMUM_PERSISTED_NETWORK_START_GAP_MS=PASS_GE_3000'
 Write-Host 'MINIMUM_LOOPBACK_SERVER_ARRIVAL_GAP_NS=PASS_GE_3000000000'
 Write-Host 'J5_REQUESTED_AT_GAPS=PASS_GE_3000_MS'

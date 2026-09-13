@@ -1,0 +1,184 @@
+{
+  "schemaVersion": 1,
+  "workOrder": "WO-058",
+  "date": "2026-09-08",
+  "baselineCommit": "06c7e3d272e8f96873eca822e4bdaa8302cf1b01",
+  "testedWorkingTreeIncludedUncommittedChanges": true,
+  "statuses": [
+    "EXPERIMENTAL",
+    "LOCAL_ONLY",
+    "NOT_PRODUCTION_APPROVED",
+    "NO_CRITICAL_DEPENDENCY"
+  ],
+  "scope": "SYNTHETIC_LOOPBACK_BROWSER_RENDERING",
+  "providerCollectionQualified": false,
+  "productionCapacityGuaranteed": false,
+  "environment": {
+    "os": "Windows 11",
+    "architecture": "amd64",
+    "javaVersion": "25.0.4",
+    "browserEngine": "Chromium",
+    "headless": true,
+    "viewportWidth": 1440,
+    "viewportHeight": 1000
+  },
+  "testClass": "com.bettingproject.sofascorelocal.adapter.web.LiveTenMatchRefreshBrowserQualificationIT",
+  "testMethod": "tenMatchesRenderChangedAndRepeatedReceiptsWithinTenSecondsOfLocalPublication",
+  "fixture": {
+    "httpBinding": "127.0.0.1:ephemeral",
+    "page": "synthetic HTML fixture using production selectors",
+    "assets": "production JavaScript and CSS",
+    "statisticsProjection": "production StatisticsPresentation",
+    "familiesPerMatch": [
+      "EVENT_DETAILS",
+      "EVENT_INCIDENTS",
+      "EVENT_STATISTICS"
+    ],
+    "statisticsPeriods": [
+      "ALL",
+      "1ST",
+      "2ND"
+    ],
+    "statisticsPerPeriodPerMatch": 45,
+    "statisticsPerMatch": 135,
+    "incidentsPerMatch": 30,
+    "lineupsIncluded": false,
+    "policyDisplay": "live-v5",
+    "familyIntervalSeconds": 75,
+    "localRefreshDelayAfterResponseSeconds": 5,
+    "publicationRevisions": 3,
+    "measuredRevisions": 2,
+    "sameContentReceiptAdvanceChecked": true,
+    "unchangedNodesAndHashesPreserved": true,
+    "realProviderCalls": 0,
+    "externalNetworkRequests": 0,
+    "httpPosts": 0,
+    "operatorDatabaseUsed": false
+  },
+  "measurement": {
+    "start": "monotonic timestamp after synthetic JSON serialization, immediately before publication to the local state endpoint",
+    "end": "browser assertions confirm all match scores/statuses and family receipts, final incident row and possession value are rendered and visible",
+    "thresholdMillis": 10000,
+    "includes": [
+      "wait for the next local refresh",
+      "loopback HTTP transfer",
+      "JSON parsing",
+      "production browser update",
+      "browser assertion observation"
+    ],
+    "excludes": [
+      "browser startup",
+      "provider updates and calls",
+      "database work",
+      "synthetic JSON construction and serialization"
+    ],
+    "claim": "two measured updates at each of two load points; not a latency percentile or sustained-load guarantee"
+  },
+  "runs": [
+    {
+      "id": "ui20",
+      "matches": 20,
+      "criticalFamilies": 60,
+      "statistics": 2700,
+      "incidents": 600,
+      "changedPublicationToRenderedMillis": 5004,
+      "repeatedPublicationToRenderedMillis": 4735,
+      "tests": 1,
+      "failures": 0,
+      "errors": 0,
+      "skipped": 0,
+      "testSuiteSeconds": 13.344,
+      "mavenSeconds": 15.701,
+      "finishedAt": "2026-09-08T16:56:23Z",
+      "result": "PASS",
+      "parameters": {
+        "wo058.ui.matches": "20",
+        "wo058.grouped.v5": "true"
+      },
+      "log": {
+        "path": ".tmp/wo058-v5-candidate-75-ui20.log",
+        "sha256": "2bc29a03cc93772bb67335d543395d2d3a5a98d58e666f2ce4ab3b1945290d7e"
+      },
+      "junitXml": {
+        "path": ".tmp/wo058-v5-candidate-75-evidence/ui20/TEST-com.bettingproject.sofascorelocal.adapter.web.LiveTenMatchRefreshBrowserQualificationIT.xml",
+        "sha256": "f648b1ea6f7a4e9b9b910dcc293f60a4647fb8b5778028f81afeb243b5f2bbdd"
+      }
+    },
+    {
+      "id": "ui100",
+      "matches": 100,
+      "criticalFamilies": 300,
+      "statistics": 13500,
+      "incidents": 3000,
+      "changedPublicationToRenderedMillis": 5590,
+      "repeatedPublicationToRenderedMillis": 4484,
+      "tests": 1,
+      "failures": 0,
+      "errors": 0,
+      "skipped": 0,
+      "testSuiteSeconds": 15.51,
+      "mavenSeconds": 17.717,
+      "finishedAt": "2026-09-08T16:56:42Z",
+      "result": "PASS",
+      "parameters": {
+        "wo058.ui.matches": "100",
+        "wo058.grouped.v5": "true"
+      },
+      "log": {
+        "path": ".tmp/wo058-v5-candidate-75-ui100.log",
+        "sha256": "41c0aac8cfab011b9e431bef7ae6a642262f6cfe34b31bd861c114f3535e9127"
+      },
+      "junitXml": {
+        "path": ".tmp/wo058-v5-candidate-75-evidence/ui100/TEST-com.bettingproject.sofascorelocal.adapter.web.LiveTenMatchRefreshBrowserQualificationIT.xml",
+        "sha256": "610d246a5e9b36bb9a359c410d92c2e0b086e9e5b2947e002683b77f184b78a0"
+      }
+    }
+  ],
+  "sources": [
+    {
+      "path": "src/provider-playwright-qualification-test/java/com/bettingproject/sofascorelocal/adapter/web/LiveTenMatchRefreshBrowserQualificationIT.java",
+      "sha256": "2c5a5c2b2423e4f2513876db1cfd45ec095a25573e5679cbe1e2de5c8db661a6"
+    },
+    {
+      "path": "src/main/java/com/bettingproject/sofascorelocal/adapter/web/StatisticsPresentation.java",
+      "sha256": "f42a758014fe66955dfcfb12e5b1d971b04dd1061120e840213d7ab9c5065957"
+    },
+    {
+      "path": "src/main/resources/static/js/live-campaign.js",
+      "sha256": "8d13e79fc06d88fd0306a35709ea715c384a0471417300bab3e8883af4b8edff",
+      "matchesRuntimeAsset": true
+    },
+    {
+      "path": "src/main/resources/static/js/statistics.js",
+      "sha256": "5ae1fc288b4ea808d80808782202c22c7748936cee93616965c22f70b42b98af",
+      "matchesRuntimeAsset": true
+    },
+    {
+      "path": "src/main/resources/static/css/app.css",
+      "sha256": "d282de282174b19ebd928ce06deabbb069eeef9c399925de0ea0344f1dc72e33",
+      "matchesRuntimeAsset": true
+    },
+    {
+      "path": "src/main/resources/static/css/statistics.css",
+      "sha256": "6834dd9a30cb47c815a058ec126fe85392f6e7a9c9841c47852f4bf04d79dcb2",
+      "matchesRuntimeAsset": true
+    }
+  ],
+  "compiledHarness": {
+    "path": "target/provider-playwright-runtime/test-classes/com/bettingproject/sofascorelocal/adapter/web/LiveTenMatchRefreshBrowserQualificationIT.class",
+    "sha256": "7f25f659a6277f4f6da9866a10f8b387a2b608a8401b0a44e96ca0e565d95ef9"
+  },
+  "evidenceHandling": "Only selected test counts, non-sensitive environment facts, requested flags, filenames and SHA-256 hashes are published. Raw JUnit property blocks remain local and are not reproduced.",
+  "limitations": [
+    "100 synthetic displayed matches do not authorize collection of 100 provider matches",
+    "no separate 50-match execution and no guarantee for every intermediate load",
+    "no sustained UI soak test or CPU/memory bound",
+    "no production MVC controller, PostgreSQL or supplier-to-screen timing measured",
+    "no lineups in this scale scenario; their two Chromium tests are documented separately",
+    "rendered elements may be outside the viewport; not all cards are simultaneously on screen",
+    "desktop viewport only; no 100-match mobile or scrolling-performance qualification"
+  ],
+  "relatedLineupsReport": "WO058-LINEUPS-VISIBILITY-20260908.md",
+  "evidenceRole": "ARCHIVED_CANDIDATE_75_SECONDS",
+  "originalCompactEvidenceSha256": "01d4830cc398e6b2d3dfe162c60c6386c7a1fe1712b142bd41b1663ecc182db8"
+}

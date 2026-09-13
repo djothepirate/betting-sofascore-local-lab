@@ -79,6 +79,123 @@ info:
 
 sofascore:
   enabled: ${SOFASCORE_ENABLED:false}
+  live:
+    enabled: ${SOFASCORE_LIVE_ENABLED:false}
+    docker-executable: ${SOFASCORE_LIVE_DOCKER_EXECUTABLE:}
+    postgres-container: ${SOFASCORE_LIVE_POSTGRES_CONTAINER:betting-sofascore-local-lab-postgres}
+    qualified-match-capacity: ${SOFASCORE_LIVE_QUALIFIED_MATCH_CAPACITY:1}
+    qualification-sha256: ${SOFASCORE_LIVE_QUALIFICATION_SHA256:}
+    request-envelope: ${SOFASCORE_LIVE_REQUEST_ENVELOPE:10s}
+    processing-envelope: ${SOFASCORE_LIVE_PROCESSING_ENVELOPE:1s}
+    grouped:
+      qualification-sha256: ${SOFASCORE_LIVE_GROUPED_QUALIFICATION_SHA256:}
+      endpoints:
+        EVENT_DETAILS:
+          request-envelope: ${SOFASCORE_LIVE_GROUPED_J4_REQUEST_ENVELOPE:10s}
+          processing-envelope: ${SOFASCORE_LIVE_GROUPED_J4_PROCESSING_ENVELOPE:1s}
+        EVENT_INCIDENTS:
+          request-envelope: ${SOFASCORE_LIVE_GROUPED_INCIDENTS_REQUEST_ENVELOPE:10s}
+          processing-envelope: ${SOFASCORE_LIVE_GROUPED_INCIDENTS_PROCESSING_ENVELOPE:1s}
+        EVENT_STATISTICS:
+          request-envelope: ${SOFASCORE_LIVE_GROUPED_STATISTICS_REQUEST_ENVELOPE:10s}
+          processing-envelope: ${SOFASCORE_LIVE_GROUPED_STATISTICS_PROCESSING_ENVELOPE:1s}
+        EVENT_LINEUPS:
+          request-envelope: ${SOFASCORE_LIVE_GROUPED_LINEUPS_REQUEST_ENVELOPE:10s}
+          processing-envelope: ${SOFASCORE_LIVE_GROUPED_LINEUPS_PROCESSING_ENVELOPE:1s}
+    grouped-v5:
+      qualification-sha256: ${SOFASCORE_LIVE_GROUPED_V5_QUALIFICATION_SHA256:}
+      endpoints:
+        EVENT_DETAILS:
+          request-envelope: ${SOFASCORE_LIVE_GROUPED_V5_J4_REQUEST_ENVELOPE:10s}
+          processing-envelope: ${SOFASCORE_LIVE_GROUPED_V5_J4_PROCESSING_ENVELOPE:1s}
+        EVENT_INCIDENTS:
+          request-envelope: ${SOFASCORE_LIVE_GROUPED_V5_INCIDENTS_REQUEST_ENVELOPE:10s}
+          processing-envelope: ${SOFASCORE_LIVE_GROUPED_V5_INCIDENTS_PROCESSING_ENVELOPE:1s}
+        EVENT_STATISTICS:
+          request-envelope: ${SOFASCORE_LIVE_GROUPED_V5_STATISTICS_REQUEST_ENVELOPE:10s}
+          processing-envelope: ${SOFASCORE_LIVE_GROUPED_V5_STATISTICS_PROCESSING_ENVELOPE:1s}
+        EVENT_LINEUPS:
+          request-envelope: ${SOFASCORE_LIVE_GROUPED_V5_LINEUPS_REQUEST_ENVELOPE:10s}
+          processing-envelope: ${SOFASCORE_LIVE_GROUPED_V5_LINEUPS_PROCESSING_ENVELOPE:1s}
+    grouped-v6:
+      qualification-sha256: ${SOFASCORE_LIVE_GROUPED_V6_QUALIFICATION_SHA256:}
+      endpoints:
+        EVENT_DETAILS:
+          request-envelope: ${SOFASCORE_LIVE_GROUPED_V6_J4_REQUEST_ENVELOPE:10s}
+          processing-envelope: ${SOFASCORE_LIVE_GROUPED_V6_J4_PROCESSING_ENVELOPE:1s}
+        EVENT_INCIDENTS:
+          request-envelope: ${SOFASCORE_LIVE_GROUPED_V6_INCIDENTS_REQUEST_ENVELOPE:10s}
+          processing-envelope: ${SOFASCORE_LIVE_GROUPED_V6_INCIDENTS_PROCESSING_ENVELOPE:1s}
+        EVENT_STATISTICS:
+          request-envelope: ${SOFASCORE_LIVE_GROUPED_V6_STATISTICS_REQUEST_ENVELOPE:10s}
+          processing-envelope: ${SOFASCORE_LIVE_GROUPED_V6_STATISTICS_PROCESSING_ENVELOPE:1s}
+        EVENT_LINEUPS:
+          request-envelope: ${SOFASCORE_LIVE_GROUPED_V6_LINEUPS_REQUEST_ENVELOPE:10s}
+          processing-envelope: ${SOFASCORE_LIVE_GROUPED_V6_LINEUPS_PROCESSING_ENVELOPE:1s}
+    grouped-v7:
+      qualification-sha256: ${SOFASCORE_LIVE_GROUPED_V7_QUALIFICATION_SHA256:}
+      endpoints:
+        EVENT_DETAILS:
+          request-envelope: ${SOFASCORE_LIVE_GROUPED_V7_J4_REQUEST_ENVELOPE:10s}
+          processing-envelope: ${SOFASCORE_LIVE_GROUPED_V7_J4_PROCESSING_ENVELOPE:1s}
+        EVENT_INCIDENTS:
+          request-envelope: ${SOFASCORE_LIVE_GROUPED_V7_INCIDENTS_REQUEST_ENVELOPE:10s}
+          processing-envelope: ${SOFASCORE_LIVE_GROUPED_V7_INCIDENTS_PROCESSING_ENVELOPE:1s}
+        EVENT_STATISTICS:
+          request-envelope: ${SOFASCORE_LIVE_GROUPED_V7_STATISTICS_REQUEST_ENVELOPE:10s}
+          processing-envelope: ${SOFASCORE_LIVE_GROUPED_V7_STATISTICS_PROCESSING_ENVELOPE:1s}
+        EVENT_LINEUPS:
+          request-envelope: ${SOFASCORE_LIVE_GROUPED_V7_LINEUPS_REQUEST_ENVELOPE:10s}
+          processing-envelope: ${SOFASCORE_LIVE_GROUPED_V7_LINEUPS_PROCESSING_ENVELOPE:1s}
+    grouped-v8:
+      qualification-sha256: ${SOFASCORE_LIVE_GROUPED_V8_QUALIFICATION_SHA256:}
+      endpoints:
+        EVENT_DETAILS:
+          request-envelope: ${SOFASCORE_LIVE_GROUPED_V8_J4_REQUEST_ENVELOPE:10s}
+          processing-envelope: ${SOFASCORE_LIVE_GROUPED_V8_J4_PROCESSING_ENVELOPE:1s}
+        EVENT_INCIDENTS:
+          request-envelope: ${SOFASCORE_LIVE_GROUPED_V8_INCIDENTS_REQUEST_ENVELOPE:10s}
+          processing-envelope: ${SOFASCORE_LIVE_GROUPED_V8_INCIDENTS_PROCESSING_ENVELOPE:1s}
+        EVENT_STATISTICS:
+          request-envelope: ${SOFASCORE_LIVE_GROUPED_V8_STATISTICS_REQUEST_ENVELOPE:10s}
+          processing-envelope: ${SOFASCORE_LIVE_GROUPED_V8_STATISTICS_PROCESSING_ENVELOPE:1s}
+        EVENT_LINEUPS:
+          request-envelope: ${SOFASCORE_LIVE_GROUPED_V8_LINEUPS_REQUEST_ENVELOPE:10s}
+          processing-envelope: ${SOFASCORE_LIVE_GROUPED_V8_LINEUPS_PROCESSING_ENVELOPE:1s}
+    # V9 is independently qualified. It must not inherit a V8 proof merely
+    # because its J4 facts can suppress optional J5 calls at runtime.
+    grouped-v9:
+      qualification-sha256: ${SOFASCORE_LIVE_GROUPED_V9_QUALIFICATION_SHA256:}
+      endpoints:
+        EVENT_DETAILS:
+          request-envelope: ${SOFASCORE_LIVE_GROUPED_V9_J4_REQUEST_ENVELOPE:10s}
+          processing-envelope: ${SOFASCORE_LIVE_GROUPED_V9_J4_PROCESSING_ENVELOPE:1s}
+        EVENT_INCIDENTS:
+          request-envelope: ${SOFASCORE_LIVE_GROUPED_V9_INCIDENTS_REQUEST_ENVELOPE:10s}
+          processing-envelope: ${SOFASCORE_LIVE_GROUPED_V9_INCIDENTS_PROCESSING_ENVELOPE:1s}
+        EVENT_STATISTICS:
+          request-envelope: ${SOFASCORE_LIVE_GROUPED_V9_STATISTICS_REQUEST_ENVELOPE:10s}
+          processing-envelope: ${SOFASCORE_LIVE_GROUPED_V9_STATISTICS_PROCESSING_ENVELOPE:1s}
+        EVENT_LINEUPS:
+          request-envelope: ${SOFASCORE_LIVE_GROUPED_V9_LINEUPS_REQUEST_ENVELOPE:10s}
+          processing-envelope: ${SOFASCORE_LIVE_GROUPED_V9_LINEUPS_PROCESSING_ENVELOPE:1s}
+    # V10 owns an independent qualification and a stricter local pressure profile.
+    # Its scheduler shape remains the immutable V9 state machine.
+    grouped-v10:
+      qualification-sha256: ${SOFASCORE_LIVE_GROUPED_V10_QUALIFICATION_SHA256:}
+      endpoints:
+        EVENT_DETAILS:
+          request-envelope: ${SOFASCORE_LIVE_GROUPED_V10_J4_REQUEST_ENVELOPE:10s}
+          processing-envelope: ${SOFASCORE_LIVE_GROUPED_V10_J4_PROCESSING_ENVELOPE:1s}
+        EVENT_INCIDENTS:
+          request-envelope: ${SOFASCORE_LIVE_GROUPED_V10_INCIDENTS_REQUEST_ENVELOPE:10s}
+          processing-envelope: ${SOFASCORE_LIVE_GROUPED_V10_INCIDENTS_PROCESSING_ENVELOPE:1s}
+        EVENT_STATISTICS:
+          request-envelope: ${SOFASCORE_LIVE_GROUPED_V10_STATISTICS_REQUEST_ENVELOPE:10s}
+          processing-envelope: ${SOFASCORE_LIVE_GROUPED_V10_STATISTICS_PROCESSING_ENVELOPE:1s}
+        EVENT_LINEUPS:
+          request-envelope: ${SOFASCORE_LIVE_GROUPED_V10_LINEUPS_REQUEST_ENVELOPE:10s}
+          processing-envelope: ${SOFASCORE_LIVE_GROUPED_V10_LINEUPS_PROCESSING_ENVELOPE:1s}
   playwright:
     enabled: ${SOFASCORE_PLAYWRIGHT_ENABLED:false}
     worker-jar: ${SOFASCORE_PLAYWRIGHT_WORKER_JAR:}

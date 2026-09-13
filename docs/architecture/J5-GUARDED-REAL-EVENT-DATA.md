@@ -9,7 +9,15 @@ NOT_PRODUCTION_APPROVED
 NO_CRITICAL_DEPENDENCY
 V13_PROVIDER_SCHEMA_VALIDATED=YES
 V13_PROVIDER_SCHEMA_VALIDATION_SCOPE=EVENTS_16691018_AND_16851672
-CURRENT_INCIDENT_PARSER=event-incidents-v15
+CURRENT_INCIDENT_PARSER=event-incidents-v17
+V17_SCOPE=WO058_EXACT_CARD_REASON_PROFESSIONAL_HANDBALL
+V17_PROVIDER_CALLS_DURING_IMPLEMENTATION_AND_TESTS=0
+V17_PERSISTED_HISTORICAL_REPARSE=NO
+V17_PROVIDER_SCHEMA_VALIDATED=NO_NEW_HUMAN_QUALIFICATION
+V16_SCOPE=WO058_IN_GAME_PENALTY_AWARDED
+V16_PROVIDER_CALLS_DURING_IMPLEMENTATION_AND_TESTS=0
+V16_PERSISTED_HISTORICAL_REPARSE=NO
+V16_PROVIDER_SCHEMA_VALIDATED=NO_NEW_HUMAN_QUALIFICATION
 V14_PROVIDER_SCHEMA_VALIDATED=YES_OWNER_LOCAL_JSON_IMPORT
 V14_PROVIDER_SCHEMA_VALIDATION_SCOPE=EVENT_16809018_OBSERVATIONS_567_AND_570
 V14_HUMAN_FUNCTIONAL_QUALIFICATION=PASS
@@ -161,7 +169,10 @@ La voie réelle n'est disponible que si les conditions suivantes sont simultané
 Les propriétés Spring autorisent J3, J4 phase 2 et J5 dans la même instance uniquement avec leur
 union exacte de cinq endpoints ; toute famille absente ou supplémentaire bloque le démarrage. Le
 coordinateur partagé et la lease Playwright sérialisent les campagnes de ces trois voies et
-imposent le même délai minimal entre deux départs. Le catalogue général reste `callable=false`,
+imposent le délai commun aux frontières entre campagnes. Depuis le complément
+[WO-058 / ADR-SS-005 v0.5](../../ADR-SS-005-bounded-local-live-j4-j5-campaigns.md), les trois
+familles d’une collecte J5 manuelle confirmée forment un groupe séquentiel sans pause ajoutée
+entre elles. Le catalogue général reste `callable=false`,
 sans URI, et `ConnectorGate` reste bloquant. Les chemins J3/J4/J5 sont des exceptions spécialisées,
 temporaires et contrôlées par
 leurs Work Orders. Les résultats historiques du Work Order J5 restent inchangés ; cette extension
@@ -229,12 +240,15 @@ terminaux autorise une nouvelle préparation explicite sans redémarrage.
 
 ```text
 identité locale vérifiée
+  → confirmation et groupe serveur J5 manuel unique
   → EVENT_STATISTICS
-  → délai minimal de 3 s
+  → réception, persistance et traitement
   → EVENT_INCIDENTS
-  → délai minimal de 3 s
+  → réception, persistance et traitement
   → EVENT_LINEUPS
+  → réception, persistance et traitement
   → COMPLETED_LOCKED
+  → délai minimal de 3 s après la dernière réponse avant une autre collecte
 ```
 
 Chaque commande est un `GET` vers un chemin construit localement et validé avant l'IPC. Le worker
@@ -249,8 +263,10 @@ simule pas ces GET et n'ajoute aucun délai artificiel ; elle conserve toutefois
 persistance et de normalisation ainsi que les mêmes états terminaux.
 
 Les services réels J3, J4 et J5 partagent un coordinateur et une lease de campagne. Ils maintiennent
-`maximumConcurrency=1` même avec plusieurs onglets et appliquent le délai minimal entre deux débuts
-de transport, y compris entre le dernier appel J4 et le premier appel J5. La lease J5 couvre les
+`maximumConcurrency=1` même avec plusieurs onglets et appliquent au moins trois secondes après
+la dernière réponse avant une nouvelle campagne, y compris entre le dernier appel J4 et le
+premier appel J5. Seules les continuations du groupe J5 manuel contrôlé suppriment la pause.
+La lease J5 couvre les
 trois familles et la fermeture du worker : aucune autre campagne ne peut s'intercaler entre elles.
 Les contrôles terminaux restent séparés : un arrêt global J4 ne bloque pas la préparation J5, et
 inversement.
@@ -258,7 +274,7 @@ inversement.
 Un HTTP `404` sur l'un des trois chemins exacts n'est pas un incident de transport : la famille est
 facultative et peut ne pas être publiée pour l'événement ou sa compétition. Le snapshot est
 conservé, l'indisponibilité est enregistrée, aucun retry n'est effectué et la séquence continue
-vers la famille suivante après le délai normal.
+vers la famille suivante sans pause artificielle dans le groupe courant.
 
 Au premier incident réel, les étapes restantes ne sont pas exécutées. Sont notamment terminaux :
 arrêt opérateur, timeout, erreur I/O, réponse trop volumineuse, contenu sensible, HTTP `400`, `401`,
@@ -284,7 +300,14 @@ Pour chaque famille, qu'elle soit acquise directement ou importée localement :
    reste immuable et le résultat du parseur courant est porté uniquement par l'observation
    normalisée append-only.
 
-Les parseurs courants sont `event-statistics-v2`, `event-incidents-v15` et `event-lineups-v2`.
+Les parseurs courants sont `event-statistics-v2`, `event-incidents-v17` et `event-lineups-v3`.
+Le [contrat compositions V3](J5-LINEUPS-V3-PLAYER-DETAILS.md) ajoute les capitaines,
+statistiques individuelles et indisponibles, avec migration V41 et empreintes historiques conservées.
+V16 ajoute la seule classe `awarded` pour `inGamePenalty`, avec complétude adaptée à l'attribution
+et sans résultat de tir inféré. V36 ajoute cette version à la contrainte PostgreSQL tout en
+conservant les versions précédentes. Le [diagnostic WO-058](../validation/WO058-INCIDENT-AWARDED-20260907.md)
+sépare replay exact local, tests synthétiques et historique V15 ; les qualifications V15
+consignées ci-dessus restent historiques et ne sont pas transférées à V16.
 L'identifiant d'événement vient du claim et non du JSON. Les champs inconnus génèrent au plus 256
 avertissements.
 Une liste vide structurellement valide reste `EMPTY_VALID`; une absence facultative mesurée reste

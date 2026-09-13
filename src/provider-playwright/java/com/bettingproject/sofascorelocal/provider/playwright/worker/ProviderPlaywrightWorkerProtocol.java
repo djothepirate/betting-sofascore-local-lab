@@ -23,30 +23,52 @@ import java.util.Objects;
  *
  * <p>A successful request response is {@code byte RESPONSE}, two epoch-millisecond timestamps,
  * {@code int HTTP status}, {@code writeUTF(content-type)}, {@code int bodyLength}, and the exact
- * body bytes. A closed failure is {@code byte FAILURE}, {@code writeUTF(failureCode)}. A normal
+ * body bytes. Up to four ordered {@code byte PROGRESS} frames may precede a terminal frame,
+ * with a bounded numeric stage, configured timeout, observed network/header timestamps,
+ * HTTP status and a validated Retry-After deadline. Unknown timestamps use -1 and unknown
+ * status uses 0. No raw header crosses IPC. Progress does not complete a response or extend
+ * its deadline. Version 7 adds GET_LIVE_V6 with the same GET payload and a maximum 30-second
+ * exchange deadline. Only this command may emit TIMEOUT_ENDED: one end timestamp and a bounded
+ * FINISHED/ABORTED code, after exact network completion and verified page/context cleanup.
+ * This frame carries no body, abandons the exchange, and leaves the existing worker awaiting
+ * a new group. Cancellation and cleanup have a separate two-second bound. A closed failure
+ * is {@code byte FAILURE}, {@code writeUTF(failureCode)}. A normal
  * close is acknowledged with {@code byte CLOSED}. After that acknowledgement the worker remains
  * alive and quiescent until the parent closes the channel or terminates the worker. Commands are
- * strictly sequential, so a request identifier is deliberately absent.</p>
+ * strictly sequential, so a request identifier is deliberately absent. Version 9 adds the
+ * explicitly named {@code GET_LIVE_V9} command for the four event endpoints only. Its payload
+ * keeps the endpoint fields and adds a bounded, opaque optional {@code If-None-Match} value
+ * before the final timeout. Its terminal {@code RESPONSE_V9} frame keeps historical
+ * {@code RESPONSE} frames unchanged, and carries an optional bounded response entity tag.
+ * A V9 {@code 304} must carry an empty body.</p>
  */
 public final class ProviderPlaywrightWorkerProtocol {
 
     public static final int MAGIC = 0x53335057;
-    public static final int VERSION = 5;
+    public static final int VERSION = 9;
 
     public static final byte GET = 1;
     public static final byte CLOSE = 2;
     public static final byte START = 3;
+    public static final byte GET_LIVE_V6 = 4;
+    public static final byte GET_LIVE_V9 = 5;
     public static final byte RESPONSE = 10;
     public static final byte FAILURE = 11;
     public static final byte CLOSED = 12;
     public static final byte READY = 13;
+    public static final byte PROGRESS = 14;
+    public static final byte TIMEOUT_ENDED = 15;
+    public static final byte RESPONSE_V9 = 16;
 
     public static final int MAX_BODY_BYTES = 5 * 1024 * 1024;
     public static final int MAX_CONTENT_TYPE_BYTES = 160;
     public static final int MAX_TOKEN_BYTES = 512;
     public static final int MIN_TOKEN_BYTES = 32;
+    public static final int MAX_ENTITY_TAG_BYTES = 512;
     public static final int MAX_TIMEOUT_MILLIS = 60_000;
     public static final long MAX_EVENT_ID = 999_999_999L;
+    /** Kept in sync with the parent J3 manual-collection bound. */
+    public static final int MAXIMUM_SCHEDULED_EVENTS_PAGE = 35;
 
     private ProviderPlaywrightWorkerProtocol() {
     }
@@ -71,6 +93,7 @@ public final class ProviderPlaywrightWorkerProtocol {
         INVALID_TOURNAMENT_ID,
         INVALID_EVENT_ID,
         INVALID_TIMEOUT,
+        INVALID_VALIDATOR,
         SENSITIVE_REQUEST_BLOCKED,
         UNEXPECTED_ROUTE,
         REDIRECT_BLOCKED,
@@ -87,7 +110,18 @@ public final class ProviderPlaywrightWorkerProtocol {
             int page,
             long tournamentId,
             long eventId,
-            int timeoutMillis) {
+            int timeoutMillis,
+            EntityTag ifNoneMatch) {
+
+        public GetCommand(
+                Endpoint endpoint,
+                LocalDate date,
+                int page,
+                long tournamentId,
+                long eventId,
+                int timeoutMillis) {
+            this(endpoint, date, page, tournamentId, eventId, timeoutMillis, null);
+        }
 
         public GetCommand {
             Objects.requireNonNull(endpoint, "endpoint");
@@ -97,7 +131,7 @@ public final class ProviderPlaywrightWorkerProtocol {
             switch (endpoint) {
                 case SCHEDULED_EVENTS -> {
                     requireDate(date);
-                    if (page < 1 || page > 25) {
+                    if (page < 1 || page > MAXIMUM_SCHEDULED_EVENTS_PAGE) {
                         throw new IllegalArgumentException(FailureCode.INVALID_PAGE.name());
                     }
                     if (tournamentId != 0) {
@@ -134,12 +168,31 @@ public final class ProviderPlaywrightWorkerProtocol {
                     }
                 }
             }
+            if (ifNoneMatch != null && !isEventEndpoint(endpoint)) {
+                throw new IllegalArgumentException(FailureCode.INVALID_VALIDATOR.name());
+            }
         }
 
         private static void requireDate(LocalDate date) {
             if (date == null) {
                 throw new IllegalArgumentException(FailureCode.INVALID_DATE.name());
             }
+        }
+    }
+
+    /** Opaque, bounded header value whose diagnostic representation never reveals the value. */
+    public record EntityTag(String value) {
+
+        public EntityTag {
+            if (value == null || value.isEmpty() || value.length() > MAX_ENTITY_TAG_BYTES
+                    || value.chars().anyMatch(character -> character < 0x21 || character > 0x7e)) {
+                throw new IllegalArgumentException(FailureCode.INVALID_VALIDATOR.name());
+            }
+        }
+
+        @Override
+        public String toString() {
+            return "EntityTag[redacted]";
         }
     }
 
@@ -176,6 +229,52 @@ public final class ProviderPlaywrightWorkerProtocol {
         }
     }
 
+    /** Stages: 0 navigation, 1 request sent, 2 headers, 3 reading body. Unknown time=-1, status=0. */
+    public record ProgressFrame(int stage, int timeoutMillis, long requestedEpochMillis,
+            long headersEpochMillis, int status, long retryAfterEpochMillis) {
+        public ProgressFrame {
+            if (stage < 0 || stage > 3 || timeoutMillis < 1 || timeoutMillis > MAX_TIMEOUT_MILLIS
+                    || status != 0 && (status < 100 || status > 599)
+                    || stage == 0 && requestedEpochMillis != -1
+                    || stage > 0 && requestedEpochMillis < 1
+                    || stage < 2 && (headersEpochMillis != -1 || status != 0 || retryAfterEpochMillis != -1)
+                    || stage >= 2 && (headersEpochMillis < requestedEpochMillis || status == 0)
+                    || retryAfterEpochMillis != -1 && retryAfterEpochMillis < headersEpochMillis)
+                throw new IllegalArgumentException("invalid bounded progress");
+            for (long value : new long[]{requestedEpochMillis, headersEpochMillis, retryAfterEpochMillis})
+                if (value != -1 && (value < 1 || value > 253_402_300_799_999L))
+                    throw new IllegalArgumentException("invalid progress timestamp");
+        }
+    }
+
+    public static void writeProgress(DataOutputStream output, ProgressFrame frame) throws IOException {
+        Objects.requireNonNull(output); Objects.requireNonNull(frame);
+        output.writeByte(PROGRESS);
+        output.writeByte(frame.stage());
+        output.writeInt(frame.timeoutMillis());
+        output.writeLong(frame.requestedEpochMillis());
+        output.writeLong(frame.headersEpochMillis());
+        output.writeInt(frame.status());
+        output.writeLong(frame.retryAfterEpochMillis());
+        output.flush();
+    }
+
+    /** Emitted only after correlated network completion and verified cleanup of the exact page. */
+    public record TimeoutEndedFrame(long endedEpochMillis, int endReason) {
+        public TimeoutEndedFrame {
+            if (endedEpochMillis < 1 || endedEpochMillis > 253_402_300_799_999L
+                    || endReason < 1 || endReason > 2)
+                throw new IllegalArgumentException("invalid bounded exchange end");
+        }
+    }
+
+    public static void writeTimeoutEnded(DataOutputStream output, TimeoutEndedFrame frame) throws IOException {
+        output.writeByte(TIMEOUT_ENDED);
+        output.writeLong(frame.endedEpochMillis());
+        output.writeByte(frame.endReason()); // 1=FINISHED, 2=ABORTED; context reuse is certified by this frame.
+        output.flush();
+    }
+
     public static GetCommand readGetCommand(DataInputStream input) throws IOException {
         Objects.requireNonNull(input, "input");
         Endpoint endpoint = readEndpoint(input.readUTF());
@@ -190,6 +289,33 @@ public final class ProviderPlaywrightWorkerProtocol {
             case EVENT_DETAILS, EVENT_STATISTICS, EVENT_INCIDENTS, EVENT_LINEUPS -> new GetCommand(
                     endpoint, null, 0, 0, input.readLong(), input.readInt());
             };
+        }
+        catch (IllegalArgumentException exception) {
+            throw new ProtocolValidationException(readFailureCode(exception), exception);
+        }
+    }
+
+    /** Reads the V9-only event request shape without changing the historical GET wire shape. */
+    public static GetCommand readLiveV9GetCommand(DataInputStream input) throws IOException {
+        Objects.requireNonNull(input, "input");
+        Endpoint endpoint = readEndpoint(input.readUTF());
+        if (!isEventEndpoint(endpoint)) {
+            throw new ProtocolValidationException(FailureCode.INVALID_ENDPOINT);
+        }
+        try {
+            long eventId = input.readLong();
+            int validatorPresent = input.readUnsignedByte();
+            EntityTag ifNoneMatch;
+            if (validatorPresent == 0) {
+                ifNoneMatch = null;
+            }
+            else if (validatorPresent == 1) {
+                ifNoneMatch = new EntityTag(input.readUTF());
+            }
+            else {
+                throw new IllegalArgumentException(FailureCode.INVALID_VALIDATOR.name());
+            }
+            return new GetCommand(endpoint, null, 0, 0, eventId, input.readInt(), ifNoneMatch);
         }
         catch (IllegalArgumentException exception) {
             throw new ProtocolValidationException(readFailureCode(exception), exception);
@@ -229,6 +355,37 @@ public final class ProviderPlaywrightWorkerProtocol {
             output.writeLong(response.receivedEpochMillis());
             output.writeInt(response.status());
             output.writeUTF(response.contentType());
+            output.writeInt(body.length);
+            output.write(body);
+            output.flush();
+        }
+        finally {
+            java.util.Arrays.fill(body, (byte) 0);
+            response.clearBody();
+        }
+    }
+
+    /** Writes the V9-only terminal response without changing the historical RESPONSE frame. */
+    public static void writeLiveV9Response(
+            DataOutputStream output,
+            ResponseFrame response,
+            EntityTag entityTag) throws IOException {
+        Objects.requireNonNull(output, "output");
+        Objects.requireNonNull(response, "response");
+        byte[] body = response.body();
+        try {
+            if (response.status() == 304 && body.length != 0) {
+                throw new IllegalArgumentException("invalid V9 304 body");
+            }
+            output.writeByte(RESPONSE_V9);
+            output.writeLong(response.requestedEpochMillis());
+            output.writeLong(response.receivedEpochMillis());
+            output.writeInt(response.status());
+            output.writeUTF(response.contentType());
+            output.writeBoolean(entityTag != null);
+            if (entityTag != null) {
+                output.writeUTF(entityTag.value());
+            }
             output.writeInt(body.length);
             output.write(body);
             output.flush();
@@ -291,6 +448,13 @@ public final class ProviderPlaywrightWorkerProtocol {
         catch (IllegalArgumentException exception) {
             throw new ProtocolValidationException(FailureCode.INVALID_ENDPOINT, exception);
         }
+    }
+
+    private static boolean isEventEndpoint(Endpoint endpoint) {
+        return endpoint == Endpoint.EVENT_DETAILS
+                || endpoint == Endpoint.EVENT_STATISTICS
+                || endpoint == Endpoint.EVENT_INCIDENTS
+                || endpoint == Endpoint.EVENT_LINEUPS;
     }
 
     private static LocalDate readDate(String value) throws ProtocolValidationException {

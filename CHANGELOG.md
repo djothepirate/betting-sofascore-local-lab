@@ -4,6 +4,677 @@ Les évolutions notables du SofaScore Local Lab sont consignées dans ce fichier
 
 ## [Non publié]
 
+### WO-058 — politique locale `live-v10` à huit rencontres et 35 départs par minute
+
+- Introduit `live-v10` pour les **nouvelles** préparations de campagne locale : la sélection est
+  plafonnée à huit rencontres et les quatre familles J4/J5 représentent au plus 32 départs
+  comptabilisés par minute dans la charge nominale (`8 × 4`).
+- Ajoute un plafond durable, sérialisé et partagé de 35 départs comptabilisés sur toute fenêtre
+  glissante de 60 secondes et de 2 100 sur toute fenêtre glissante d'une heure. La vague initiale
+  exige la capacité locale `4 × N` ; les réservations et leurs clôtures restent auditables.
+- Versionne un profil V10 autonome, sans repli depuis V8 ou V9, et sa preuve de replay hors
+  réseau. Une absence de profil V10 complet et cohérent ferme l'admission ; le lanceur reste une
+  action opérateur distincte et manuelle.
+- Le lecteur V10 en lecture seule affiche les **dix** entrées à reporter dans Eclipse :
+  `SOFASCORE_LIVE_QUALIFIED_MATCH_CAPACITY=8`, le SHA-256 V10 et les huit enveloppes. Il ne
+  modifie ni lanceur, ni environnement, ni opt-in live, et n'exécute aucun appel fournisseur.
+- Préserve les manifestes, preuves, lectures et règles de pression `live-v9` déjà persistés. Les
+  règles J4/J5 et la révalidation conditionnelle restent confinées à leur contexte neuf ; aucune
+  nouvelle campagne ne convertit une campagne V9.
+- Documente ces bornes comme des gardes internes du Local Lab. Elles n'affirment ni quota, ni
+  acceptation, ni absence de refus du fournisseur et n'ajoutent aucun proxy, changement d'adresse,
+  contexte persistant, cookie, défi, retry ou reprise automatique. La qualification locale, la
+  revue Codex de la PR #35 et les quatre checks CI sont achevés ; la fusion vers le train feature
+  demeure une opération Git autorisée et distincte.
+- Rétablit la qualification CI interplateforme de la chaîne de preuves V5 : le jeu d'archives est
+  gelé par `.gitattributes` et les artefacts directement référencés retrouvent leurs octets
+  d'origine. Le scanner de secrets reconnaît seulement deux blobs WO-058 audités de canaris
+  synthétiques inchangés, et la sonde CIM locale conserve une borne totale de vingt secondes. Le
+  smoke test CIM dépendant de l'hôte est ignoré seulement lorsque `Win32_Process` expire ; le code
+  applicatif reste fail-closed dans ce cas. Voir la
+  [note de correction CI](docs/validation/WO058-CI-PR35-CORRECTION-20260913.md).
+- Complète le diff sémantique J6 des contrats V4 : les corrections de nom et de pays des
+  entraîneurs/arbitre J4, ainsi que les corrections de pays des joueurs et indisponibles J5,
+  restent visibles dans l'historique. Cette projection compare exclusivement les observations
+  normalisées déjà persistées ; elle n'ajoute ni endpoint, ni collecte, ni migration. Voir la
+  [preuve J6 V4](docs/validation/WO058-J6-V4-PEOPLE-COUNTRY-DIFFS-20260913.md).
+- Aligne les gardes J6 de sauvegarde/restauration et de rétention sur le schéma courant
+  Flyway V54. `Backup-Restore-J6.ps1` ne qualifie qu'une source V54 et
+  `Invoke-J6Retention.ps1` n'accepte qu'un manifeste source/restauration V54. V53 reste
+  une preuve historique insuffisante pour la garde courante ; aucune migration, archive,
+  manifeste ni donnée persistée n'est réécrit. Les contrats des scripts et
+  `FlywayMigrationIT` vérifient ce refus fermé. Voir la
+  [preuve J6 Flyway V54](docs/validation/WO058-J6-FLYWAY-V54-QUALIFICATION-20260913.md).
+- Ajoute une libération locale strictement bornée pour une garde manuelle J3/J4/J5 orpheline :
+  elle est proposée sur `/provider-access` seulement pour un garde `CLEANUP_REQUIRED` sans ligne
+  `live_campaign`, exige un jeton à usage unique, une confirmation, la génération observée et la
+  preuve d'absence des processus par `LiveOrphanProcessProbe`. La transaction libère uniquement
+  l'identité exacte encore observée. Elle ne déclenche aucun navigateur, appel fournisseur, reprise,
+  réarmement ou clôture de départ incertain. Voir la
+  [preuve de garde manuelle orpheline](docs/validation/WO058-MANUAL-ORPHAN-GUARD-RECOVERY-20260913.md).
+- Corrige la fenêtre d’interruption après l’acquisition durable d’un garde live et avant
+  `store.launch`. Au redémarrage, une préparation intacte sans ownership ni exécution est conservée
+  et placée en `CLEANUP_REQUIRED`, sans appel à `interruptOrphan`. Son panneau de campagne exige une
+  confirmation, une preuve locale d’absence du propriétaire et des processus Playwright, puis une
+  transaction qui revalide l’identité complète du garde et l’absence de toute exécution avant de
+  libérer uniquement cette garde. La trace `LOCAL_PRELAUNCH_CLEANUP_VERIFIED` conserve l’empreinte
+  de la preuve; aucun navigateur, appel fournisseur, reprise, retry ou réarmement n’est créé. Voir la
+  [preuve de récupération pré-lancement](docs/validation/WO058-PRELAUNCH-GUARD-RECOVERY-20260913.md).
+
+- Clôture documentaire pré-fusion autorisée par le propriétaire : les deux P2 de l'historique J6
+  et les trois P1 de robustesse sont résolus, la revue Codex du commit `8299722` ne relève aucune
+  remarque majeure et les quatre checks CI sont verts. Le WO est classé dans
+  [les Work Orders terminés](docs/work_orders/completed/WO-SS-20260907-058-bounded-live-j4-j5.md) ;
+  la fusion de la PR #35 vers `feature/V0.1.0-RC01` reste l'opération Git autorisée suivante.
+
+### WO-059 — plafond local de pagination manuelle J3 à 35 pages
+
+- Porte les nouvelles collectes J3 `SCHEDULED_EVENTS`, directes ou importées localement, de 25 à
+  35 pages. Le terminal reste dicté par `hasNextPage=false` : une séquence peut donc se terminer
+  normalement en page 27.
+- Ferme la frontière à `1..35` dans les validations, la preuve, le contrôleur et le worker isolé.
+  Une page 35 qui annonce encore une suite produit `PAGINATION_LIMIT_REACHED` sans tentative de
+  page 36 ; une page 36 est refusée avant claim, persistance ou départ fournisseur.
+- Conserve la collecte manuelle séquentielle, le cache-first, le délai minimal de trois secondes,
+  l'absence de retry/polling, ainsi que les limites de 5 Mio par page et 25 Mio par lot.
+- Ajoute V53 append-only : les nouvelles campagnes J8 `J3_SCHEDULED_EVENTS` sont créées à 35,
+  tandis que les campagnes historiques à 25 restent lisibles et conservent leur borne persistée.
+- Cadre la réalisation par [ADR-SS-006](ADR-SS-006-j3-manual-pagination-cap-35.md) et
+  [WO-SS-20260912-059](docs/work_orders/completed/WO-SS-20260912-059-j3-pagination-cap-35.md) ;
+  aucune validation de ce lot n'effectue d'appel fournisseur.
+- Validation propriétaire du 12 septembre : la collecte fonctionnelle de 27 pages est conforme,
+  avec deux transports fournisseur, vingt-cinq cache hits locaux, l'intention max=35, le terminal
+  COMPLETED et la réapplication de l'arrêt global.
+
+### WO-058 — règles J4/J5 `live-v9` et cartes joueurs enrichies par les incidents
+
+- Versionne une preuve V9 distincte, liée par SHA-256 au replay local de ses 16 scénarios
+  de planification et à la borne haute quatre-familles déjà mesurée sur loopback. Le script
+  de préparation affiche les neuf variables V9 à reporter manuellement dans Eclipse, sans
+  modifier de lanceur, d'environnement, d'opt-in live, de campagne ou de transport ; le SHA V8
+  n'est jamais employé comme SHA V9.
+- Introduit la politique de campagne locale `live-v9`, avec un profil de qualification propre
+  et un refus fermé quand celui-ci est absent ou incohérent. Sa borne maximale reste dix
+  rencontres et son enveloppe de départ réutilise strictement celle de `live-v8` (quatre
+  familles, fence de 500 ms et réserve inter-groupe d’une seconde) : aucun plafond local,
+  endpoint ou transport supplémentaire n’est créé.
+- Fait décider le planificateur à partir des faits J4 conservés dans une projection typée :
+  `finalResultOnly`, `detailId`, les deux capacités de statistiques joueur et la description
+  de statut. Un premier J4 `finalResultOnly=true` termine localement la rencontre sans J5 ;
+  `notstarted`, `postponed` et `delayed` ne planifient pas statistiques/incidents ;
+  `inprogress`, `interrupted`, `canceled` et `finished` les autorisent selon les autres
+  règles J4.
+- Traite le contrat `detailId` absent sans rabattre les 404 dans le backoff générique : après
+  trois réponses consécutives exactement `HTTP_404` pour J5 statistiques, cette famille est
+  suspendue pour la rencontre et reçoit une seule vérification terminale sur J4
+  `interrupted`, `canceled` ou `finished`. Un succès ou une autre issue remet le compteur à
+  zéro ; `detailId=1` rétablit le chemin normal.
+- Met la mi-temps en pause locale de quinze minutes sans appel. Le réveil effectue un seul J4 ;
+  tant que J4 ne confirme pas « 2nd half », les relectures suivantes sont J4 seules à une
+  minute. Les familles habituelles reprennent seulement après cette confirmation.
+- Rend les compositions dépendantes du fait J4 `hasEventPlayerStatistics` (false exclut J5
+  lineups) et rend les cartes cliquables seulement lorsque la capacité tournoi J4 est
+  explicitement vraie. Les cartes fusionnent les faits par type avec des observations J5
+  incidents strictement jointes par équipe et identifiant joueur : les buts et passes J5 lineups
+  gardent leur priorité, tandis que les cartons et entrées/sorties observés restent visibles avec
+  leur minute même si la carte a déjà une note ou des minutes de jeu, sans réécrire les
+  statistiques de composition.
+- Simplifie uniquement les décorations d'incidents sur les cartes des compositions : un carton
+  est représenté par sa seule icône ; un remplacement montre le nom du joueur opposé et sa minute,
+  avec flèche montante verte pour l'entrant et descendante rouge pour le sortant. Une croix médicale
+  distingue un remplacement sur blessure explicitement observé. Le tableau des incidents conserve
+  sa présentation détaillée et aucune provenance ou observation normalisée n'est modifiée.
+- Maintient une rencontre V9 au statut J4 `suspended` : J4 seul est réévalué chaque minute,
+  les trois familles J5 restent suspendues, puis reprennent seulement après le retour J4
+  `inprogress`. La raison `statusReason` est affichée seulement pendant cette suspension, sans
+  texte de remplacement lorsqu'elle n'est pas fournie.
+- Aligne les cartes de composition live et J5 manuelles : le poste individuel n'est plus affiché
+  dans une section qui le rend déjà évident, tout en restant accessible ; le libellé du pays est
+  visible seulement comme repli lorsque le SVG local du drapeau ne peut pas être rendu.
+- Ajoute pour `live-v9` la révalidation conditionnelle bornée des seules familles J4/J5 live.
+  Un `304` valide réutilise la dernière donnée `200` acceptée sans nouveau corps brut, snapshot,
+  normalisation ni octet métier reçu. Son départ physique reste consigné append-only pour l'audit
+  et la protection de cadence, mais il est exclu des compteurs fonctionnels, du budget et de la
+  pression affichée de la campagne. Le résultat existant
+  `NOT_MODIFIED/NONE/HTTP_304` et le diagnostic `COMPLETE/304` prouvent une libération
+  idempotente sans migration historique. Les validateurs restent volatils, confinés à la campagne
+  et au contexte neuf ; aucun parcours manuel, redémarrage, retry ou réutilisation de session ne
+  les reprend. La vue distingue la dernière réception `200` de la dernière revalidation de cache
+  `304`, horodatée à la réception des en-têtes, afin que le contrôle de fraîcheur ne fasse jamais
+  passer le cache pour une nouvelle donnée fournisseur.
+- Conserve le lissage V9 déterministe déjà qualifié (slots, fences de 500 ms et réserve de 1 s)
+  et n'ajoute pas de jitter aléatoire ou adaptatif à une vague de dix rencontres qui occupe déjà
+  toute sa fenêtre de 60 s.
+- Corrige le rendu de la raison de suspension J4 : une ligne HTML `hidden` sort désormais réellement
+  de la mise en page malgré la grille de détails en flex. La qualification Chromium loopback couvre
+  l'état `inprogress` sans raison et la transition `suspended` avec une raison rendue.
+- Affiche pour `live-v9` l'état terminal `FINISHED_J5_INCOMPLETE` lorsque J4 confirme le résultat
+  mais que le dernier cycle J5 facultatif est incomplet. Les politiques historiques conservent
+  leur libellé `FINISHED_CONFIRMED` et aucune nouvelle collecte n'est déclenchée.
+- Ajoute la migration append-only V52 pour accepter `live-v9` tout en conservant
+  `admission_profile='live-v8'` dans le ledger de départ partagé. Le runbook J6 exige donc
+  désormais Flyway V52 avant une qualification de sauvegarde/restauration.
+
+### WO-058 — qualification locale de la cadence live-v8, dix rencontres
+
+- Ajoute une vue de pression strictement locale par campagne. Elle compte seulement les
+  instants `REQUEST_SENT` persistés dans les diagnostics worker, puis affiche les pics
+  glissants de 60 secondes et 5 minutes ainsi que la répartition J4/J5. Les réservations,
+  le ledger partagé et le trafic hors du Lab restent exclus ; la vue ne présente pas ces
+  observations comme un quota ou un seuil d’acceptation fournisseur. Le relevé de trois
+  refus HTTP 403 réels du 10 septembre est conservé séparément comme observation
+  opérateur, sans réarmement ni nouvelle collecte :
+  [WO058-REAL-LIVE-V8-403-OBSERVATIONS-20260910](docs/validation/WO058-REAL-LIVE-V8-403-OBSERVATIONS-20260910.md).
+- Corrige le formulaire local `/provider-access` après refus : la page de réarmement est rendue
+  avec `Referrer-Policy: same-origin`, afin que Chromium/Brave conserve l'origine loopback exacte
+  pour son `POST`. `Origin: null`, les origines étrangères et les en-têtes de proxy restent
+  refusés par la frontière locale ; le réarmement demeure manuel et ne contacte pas le fournisseur.
+  Le libellé affiché indique maintenant les paramètres V8 (45/minute, 2 756/heure, fence 500 ms)
+  et distingue les profils historiques ou manuels plus conservateurs.
+- Qualifie `live-v8` hors fournisseur pour les nouvelles préparations, avec dix rencontres au
+  plus, une vague normale de 60 s par couple rencontre/famille et des slots déterministes
+  construits à partir des enveloppes immuables du profil. La preuve est exclusivement
+  Chromium/worker/PostgreSQL de test sur loopback ; elle n’établit ni acceptation, ni quota,
+  ni absence future de refus du fournisseur.
+- Prévoit un fence local de 500 ms après une fin d'échange prouvée, une réserve statique V51 de
+  1 s entre groupes afin de préserver ce fence sous le jitter J4 borné de 500 ms, et des budgets
+  persistants de 45 départs/60 s et 2 756 départs/heure.
+  La borne V51 `N × réserve de groupe <= 60 s` est distincte de la planification horaire
+  2 480/2 756 à dix rencontres. Les retards dus aux slots, budgets, 404, timeouts ou refus
+  restent visibles et ne sont pas annoncés comme fraîcheur tenue.
+- Après acquisition du `CampaignLease` exclusif, vérifie une marge durable locale de `4 × N`
+  départs pour la vague initiale V8 (40 à dix cibles). La prélecture ne réserve rien : chaque
+  départ reste réservé atomiquement. Le stress froid `INITIAL_COLD_START_STRESS` à quarante
+  réponses de 5 Mio est séparé de cette vague runtime et ne revendique pas sa fenêtre de 60 s.
+- Lisse la bascule d'un lancement très proche de T0 : après un J4 initial `notstarted` récent,
+  le premier J4 de coup d'envoi est conservé sur son prochain créneau de 60 s au lieu de
+  créer une seconde vague J4/J5 immédiate. Les J5 restent conditionnels à la confirmation
+  `inprogress`, ce qui maintient dix rencontres dans le budget de 45 départs/minute.
+- Compte les fenêtres V8 sur l'horodatage `REQUEST_SENT` authentifié par le worker lorsqu'il
+  est observé. Le départ reste réservé atomiquement avant émission, la preuve est bornée entre
+  cette réservation et son observation parent, et une fin sans preuve conserve le repli
+  conservateur sur l'heure de complétion.
+- Met à niveau la garde courante du runbook J6 vers Flyway V51 : V50 étend la preuve
+  sauvegarde/restauration avec `provider_departure_accounting`, tandis que V51 valide la réserve
+  temporelle V8 sans modifier le périmètre de cette preuve :
+  `provider_departure_accounting` entre dans l'empreinte append-only du ledger live et son
+  compteur source/restauration est exigé avant une rétention. L'horodatage
+  `AUTHENTICATED_WORKER_REQUEST` est conservé lorsqu'il est prouvé ;
+  `COMPLETION_FALLBACK` reste le repli conservateur. Cette évolution n'exécute ni sauvegarde,
+  ni purge, ni qualification opérationnelle sur la base opérateur.
+- Transforme un report durable qui franchit un créneau normal en `WAITING_PRESSURE_RECHECK` :
+  le cycle et les familles réellement manqués restent visibles, les autres cibles touchées par
+  le même hold sont requalifiées, puis un J4 explicite reprend après `notBefore`.
+- Corrige le chemin distinct `WAITING_CADENCE_RECHECK` : lorsqu'une émission J4 authentifiée
+  dépasse sa fenêtre stricte de 500 ms, son groupe J4/J5 reste compté manqué et aucun J5 de
+  rattrapage ne part. Le prochain J4 est proposé sur la phase stable suivante dérivée du dernier
+  `REQUEST_SENT` (`+ 60 s − 500 ms`), au lieu d'hériter du backoff de cinq minutes des timeouts.
+  Le fence, les budgets, les enveloppes et la capacité V8 restent inchangés ; les vrais timeouts
+  et dépassements d'enveloppe conservent leur délai de récupération propre.
+- Conserve la suspension durable sur 403/429, sans réarmement automatique, rotation d'adresse,
+  proxy, VPN ou sonde fournisseur. Les manifestes et profils live-v1 à live-v7 restent
+  historiques et inchangés.
+- Fige la [preuve V8 locale](docs/validation/WO058-LIVE-V8-CAPACITY-20260910.md) du 10 septembre :
+  40 réponses froides de 5 Mio et un drain de 60 001 ms, puis 1 800,0198031 s établies et
+  2 100,0198031 s de voie stricte. Elle compte 1 444 appels au total, dont 1 203 établis et
+  40 froids, avec zéro appel fournisseur, hors périmètre ou cycle manqué. Les empreintes exactes
+  sont `f5b70709dcc51d9b40223fde1175d3c507190244562355e675689cb06e9a7fc0` pour le rapport natif
+  et `c5cef2745422d70bab769d03a93991af8ce3d685fb9daabb64fd00ab0a1ca3c8` pour le profil.
+- Le profil est qualifié seulement avec ses neuf variables V8, ses bornes immuables
+  DETAILS 300/500 ms, INCIDENTS 300/400 ms, STATISTICS 350/400 ms et LINEUPS 300/450 ms. Sa
+  livraison dans Eclipse, la revue humaine et la fusion restent à faire ; aucune campagne live
+  fournisseur n’a été lancée par cette qualification.
+
+### WO-058 — libellés français de pays et repli fiable des drapeaux locaux
+
+- Localise les libellés de pays dans la seule projection web commune aux personnes J4 et aux
+  compositions J5. `ProviderCountry`, les observations normalisées, snapshots, hashes et lignes
+  de persistance restent bruts et inchangés.
+- Résout explicitement les associations de football `England`, `Scotland`, `Wales` et
+  `Northern Ireland` d'après leur nom exact, même lorsqu'un snapshot fournit un code contradictoire.
+  Les trois premières gardent leur SVG local dédié ; l'Irlande du Nord emploie le drapeau britannique
+  `gb.svg` déjà versionné. Cette exception reste bornée à ces quatre noms, donc les pays ordinaires
+  continuent à être résolus par leur propre code ISO.
+- Traduit aussi `Physical Discomfort` par « Inconfort physique », `Abdominal Injury` par
+  « Blessure abdominale » et `ACL Knee Injury` par « Ligament Croisé Antérieur du genou » dans les
+  indisponibilités J5, sans modifier les valeurs brutes conservées.
+- Traduit dans la projection des incidents de carte la raison exacte `Professional foul last man`
+  par « Faute volontaire du dernier défenseur ». La valeur fournisseur reste conservée ; une
+  `description` fournisseur présente garde sa priorité, et les variantes ou autres types
+  d’incident restent inchangés.
+- Conserve le libellé français comme texte accessible et comme repli visible tant qu’un SVG local
+  n’a pas effectivement terminé son chargement, après une erreur d’image, sans JavaScript ou en
+  mode de contraste forcé. Lorsqu’il est confirmé, le seul SVG local est affiché ; aucune image
+  n’est demandée au fournisseur ni à un CDN. La qualification Chromium locale (3 scénarios) est
+  verte ; la passe `clean verify` actuelle est bloquée uniquement par deux contrôles Windows
+  d’identité de processus qui ferment en échec sûr, détail dans la
+  [note de validation dédiée](docs/validation/WO058-COUNTRY-FRENCH-LABELS-AND-FLAG-FALLBACK-20260910.md).
+
+### WO-058 — compositions enrichies, informations J4 et cadence live-v7
+
+- Ajoute les buts et passes décisives aux cartes, avec répétition d’icônes et compteur
+  compact sur petit écran. Une carte sans statistique exploitable reste statique.
+- Affiche les nationalités des joueurs, entraîneurs et arbitre depuis les pays fournis.
+  Les drapeaux SVG flag-icons 7.3.2 sont embarqués avec licence MIT et manifeste SHA-256 ;
+  aucune image n’est demandée au fournisseur ou à un CDN. Pour les compositions V3 historiques,
+  un overlay de présentation relit uniquement le pays déjà présent dans un snapshot local vérifié ;
+  la donnée normalisée V4 reste prioritaire. Sans pays ou preuve cohérente, la carte omet ce champ.
+- Classe `accurateKeeperSweeper`, `totalKeeperSweeper`, `hitWoodwork`, `errorLeadToAShot`,
+  `errorLeadToAGoal` et `clearanceOffLine` dans les rubriques Gardien, Attaque ou Défense avec
+  leurs libellés français, sans changer les clés ni valeurs conservées.
+- Versionne `event-details-v4` et `event-lineups-v4`, avec persistance V46. J4 conserve
+  les entraîneurs, l’arbitre et le tour nommé, prioritaire sur le numéro de tour.
+  Les observations et hashes historiques restent inchangés.
+- Rend les incidents repliables globalement et par période, en conservant les panneaux
+  ouverts et le focus au rafraîchissement.
+- Introduit `live-v7`/V47 pour les nouvelles préparations : groupe initial, contrôle
+  à T−60 min, compositions toutes les cinq minutes jusqu’à confirmation/T−5 min,
+  attente du coup d’envoi, J4 seul jusqu’à `inprogress`, puis quatre familles à 60 s.
+  Un J4 `delayed` avec un nouveau coup d’envoi recale les fenêtres sans arrêter la
+  rencontre ; horaire absent ou régression après `inprogress` restent à revoir. Profil
+  distinct, trois rencontres au plus dans les budgets actuels ; aucune conversion de
+  campagne existante, suspension persistante 403/429 conservée.
+- Versionne le profil de qualification local `live-v7`, son rapport natif et son
+  calculateur hors réseau ; le runbook publie les onze valeurs opt-in nécessaires au
+  prochain démarrage, sans modifier le lanceur Eclipse ni la configuration par défaut.
+- Traduit dans la projection française les motifs d’indisponibilité observés, y compris
+  `red_card_suspension`, épaule, ménisque, hernie, ligaments, cœur, coup, aine et
+  `Strain Injury` (« Blessure à l’entraînement »), sans modifier les attributs bruts
+  conservés dans l’observation.
+- Qualification hors fournisseur et limites consignées dans le rapport dédié du lot.
+
+### WO-058 — tolérance bornée aux timeouts prouvés et groupes v6 avec familles différées
+
+- Consigne l'autorisation explicite du correctif pour réponses lentes et timeouts isolés
+  dans [ADR-SS-005 v0.9](ADR-SS-005-bounded-local-live-j4-j5-campaigns.md). Correctif réalisé
+  et qualifié fonctionnellement hors fournisseur, sans augmentation du timeout configuré.
+- Réserve la récupération à live-v6 avec fin CDP corrélée `FINISHED`/`ABORTED`, page et
+  cookies nettoyés, contexte existant réutilisable et trame authentifiée. Avant les
+  en-têtes, annulation immédiate avec terminal `ABORTED` corrélé ; après les en-têtes,
+  attente naturelle de `FINISHED` dans la même grâce de deux secondes, sans
+  `Page.stopLoading`. Le corps après timeout reste abandonné ; sans terminal dans la
+  borne, arrêt fatal et fermeture. La seconde IPC supplémentaire ne prolonge ni le
+  timeout de collecte ni ses budgets.
+- Abandonne le corps incomplet sans snapshot ni donnée normalisée, conserve la tentative
+  et sa charge, ferme le groupe et reporte le match entier d'au moins cinq minutes avant
+  un nouveau J4. Les autres matchs restent admissibles ; aucune rafale ni extension de
+  fenêtre ou de budget n'est ajoutée. Trois tolérances au plus par session, `PARSED`
+  intermédiaire obligatoire et succès de la même famille exigé avant sa récidive.
+- Conserve l'arrêt global et la suspension persistante sur 403/429. Un timeout admissible
+  en finalisation arrête le match avec collecte finale incomplète, sans retry final.
+- Sépare l'autorité `LIVE_V6` : les familles en jeu différées après 404 peuvent être omises
+  dans leur ordre strictement croissant, sans assouplir les identités, l'unicité, la
+  fermeture des groupes ni les autorités historiques/manuelles.
+- Ajoute la preuve terminale aux diagnostics via V45, sans l'inférer des anciennes
+  observations. Acquitte aussi la tâche en vol après un arrêt individuel pendant timeout,
+  sans reprogrammer le match arrêté ni bloquer les autres rencontres.
+- Conserve dans le [rapport du correctif](docs/validation/WO058-SLOW-TIMEOUT-RECOVERY-20260909.md)
+  les passes rouges et leur correction, les neuf cas Chromium transport/UI réussis,
+  les deux contrôles natifs de réception et le résultat final `-Pintegration-tests clean verify`
+  du 9 septembre à 17:17:59Z : 2 068 cas standards, cinq skips explicités, 213 cas PostgreSQL,
+  aucun échec ni erreur. Le smoke nominal de trois minutes réussit ; aucune requalification
+  de capacité sur 35 minutes, livraison Eclipse ou collecte fournisseur n'est effectuée.
+
+### WO-058 — priorité à la résilience face aux refus fournisseur
+
+- Consigne la priorité propriétaire à la robustesse avant accélération de la collecte,
+  avec une [proposition d'architecture](docs/architecture/LIVE-PROVIDER-RESILIENCE-PROPOSAL-20260909.md)
+  désormais autorisée pour le premier lot, et [ADR-SS-005 v0.8](ADR-SS-005-bounded-local-live-j4-j5-campaigns.md).
+- Implémente `live-v6`, admission au plus sept rencontres avec preuve dédiée, cible 100/300 s
+  subordonnée à un budget persistant commun à tous les parcours Playwright J3/J4/J5 :
+  deux secondes après chaque fin d'échange, 25 charges/60 s et 1 000 charges/heure.
+- Suspend les nouveaux accès sur 403/429 connu, conserve les diagnostics de transport
+  même sans corps complet et propose un réarmement manuel sans requête fournisseur.
+- Espace les 404 J5 par rencontre/famille avec paliers bornés et réévaluation aux transitions,
+  sans modifier J4, la finalisation ou les observations historiques. V42–V44 portent les
+  preuves durables ; la sauvegarde/rétention J6 contrôle désormais le schéma 44 et les six tables ajoutées.
+- Qualification fonctionnelle hors fournisseur réussie : deux passes Maven complètes
+  (2 016 cas Surefire, cinq ignorés, 207 intégrations par passe), 40 tests worker/contrôleur
+  et 20 cas Chromium loopback, sans échec ni erreur. Voir le
+  [rapport du lot](docs/validation/WO-058-provider-resilience-qualification-20260909.md).
+  Au point `3130e39`, le profil temporel v6 restait à qualifier ; ce résultat fonctionnel
+  demeure distinct du complément de capacité ci-dessous.
+- Qualifie le [profil temporel v6](docs/validation/WO058-LIVE-V6-CAPACITY-20260909.md) à sept
+  rencontres en 35 minutes Chromium loopback avec wrapper persistant et PostgreSQL V44 :
+  494 échanges dont 420 établis, zéro cycle manqué, maximum observé 18 départs/60 s et
+  délai minimal après fin d'échange de 2,299724 s. Les enveloppes couvrent le régime établi
+  de 64 Kio ; les 28 premiers corps de 5 Mio restent une mesure initiale séparée.
+  L'admission Java rejoue ses 24 scénarios avec les maxima arrondis vers le haut à 50 ms.
+  Le plafond opérateur de six et le timeout de 30 s sont conservés comme réglages distincts.
+  Corrige aussi la sélection à capacité nulle et son ancien message live-v5. Vérification
+  finale réussie : 2 019 cas Surefire (cinq ignorés), 207 intégrations et trois contrôles
+  Chromium de l'interface, sans échec ni erreur. Aucun paramétrage ou lancement automatique ;
+  aucune capacité d'acceptation fournisseur n'est déduite.
+
+### WO-058 — attente Playwright portée à vingt secondes pour les prochains essais
+
+- Autorise un timeout strictement positif jusqu’à vingt secondes au lancement live-v5,
+  avec vingt secondes par défaut dans le profil `local` et override
+  `SOFASCORE_PLAYWRIGHT_REQUEST_TIMEOUT`. Le réglage local Playwright est partagé
+  avec les parcours manuels ; les campagnes live-v1 à live-v4 restent limitées à dix secondes.
+- Conserve les enveloppes d’admission, les cadences, les budgets et l’arrêt global
+  sur timeout/403 sans retry. Aucune nouvelle qualification de capacité fournisseur.
+- Voir [ADR-SS-005 v0.7](ADR-SS-005-bounded-local-live-j4-j5-campaigns.md) et la
+  [validation du changement](docs/validation/WO058-PLAYWRIGHT-TIMEOUT-20260909.md).
+
+### WO-058 — catégories des statistiques individuelles et motifs des indisponibles
+
+- Classe `savedShotsFromInsideTheBox` et la variante propriétaire `savedFromInsideTheBox`
+  sous « Gardien · Arrêts dans la surface », et `bigChanceMissed` sous « Attaque · Grosses occasions manquées ».
+  Les clés et les valeurs reçues sont conservées, y compris si les deux variantes d'arrêts coexistent.
+- Traduit `Back Injury` en « Blessure au dos », `Broken Ankle`/`Broken ankle` en « Fracture de la cheville »
+  et `Knee Injury` en « Blessure au genou », sans modifier les descriptions fournisseur conservées.
+- Voir la [validation de la présentation](docs/validation/WO058-PLAYER-DISPLAY-LABELS-20260909.md).
+
+### WO-058 — motifs d'incidents et d'indisponibilité en français
+
+- Traduit les descriptions observées de ligament croisé, d'orteil et de blessure musculaire,
+  ainsi que « Unknown » en « Motif inconnu » et le motif de carton « Other reason » en « Autre motif ».
+  Les descriptions fournisseur restent conservées ; seul l'affichage commun live/J5 change.
+- Voir le [retour visuel et sa validation](docs/validation/WO058-FRENCH-REASONS-20260909.md).
+
+### WO-058 — capitaines et détails des joueurs dans les compositions
+
+- Ajoute le badge « C · Capitaine » pour `captain: true`, les statistiques individuelles
+  accessibles sur chaque carte et la liste des joueurs indisponibles sous leur équipe.
+- Conserve les statistiques numériques, variantes de note et attributs d'indisponibilité
+  dans les observations `event-lineups-v3`, avec migration V41 append-only. Les valeurs
+  absentes restent distinctes des zéros et des blocs vides ; les anciennes empreintes restent lisibles.
+- Étend le diff J6 ; conserve la projection fermée J7 v1 et la vérification complète de la source.
+- Contrat et preuves : [compositions V3](docs/architecture/J5-LINEUPS-V3-PLAYER-DETAILS.md),
+  [qualification](docs/validation/WO058-PLAYER-DETAILS-20260909.md).
+
+### WO-058 — libellés des statistiques et cartes joueurs
+
+- Précise « dans le tiers offensif » pour les fautes subies, entrées et phases concernées,
+  conformément à la retouche de vocabulaire demandée le 9 septembre.
+- Traduit les sept groupes et les 51 intitulés statistiques observés dans le corpus
+  local, sur les pages live et J5. Les noms inconnus restent affichés tels quels ;
+  les valeurs, les clés sources et l’ouverture des panneaux sont conservées.
+- Retire les mentions répétées « Titulaire » et « Remplaçant » sur les cartes joueurs.
+  Les sections « Titulaires » et « Remplaçants », leurs compteurs et les postes restent visibles.
+- Portée et validation : [libellés d’interface](docs/validation/WO058-UI-LABELS-20260909.md).
+
+### WO-058 — accueil pendant une clôture et présentation des incidents
+
+- Maintient l’accueil accessible lorsque l’aperçu de rétention refuse une campagne
+  active ou une clôture locale en attente ; affiche son indisponibilité sans faux plan.
+- Consigne la clôture orpheline opérateur du 8 septembre à 23:24:55, puis le rattrapage
+  terminé de quinze rencontres en soixante appels.
+- Présente les incidents en liste illustrée : score des buts, cartons distincts,
+  entrant et sortant, passeur, motif, temps additionnel et décisions VAR disponibles.
+  Le tableau technique reste accessible sous un volet ; les actualisations conservent
+  son ouverture et le focus des autres familles.
+- Preuves, portée et qualification : [récupération et accueil](docs/validation/WO058-RECOVERY-DASHBOARD-20260908.md).
+- Qualification visuelle : [présentation des incidents](docs/validation/WO058-INCIDENT-GRAPHICS-20260908.md).
+
+### WO-058 — diagnostic de l’arrêt et de la clôture live
+
+- Conserve séparément la première erreur d’exécution et le dernier échec de clôture,
+  y compris pour une erreur de contrôle local survenue avant la réservation d’un appel.
+- Expose phase, code contrôlé et instant dans les journaux et le lecteur local, avec
+  un encart global de diagnostic actualisé à révision de campagne inchangée.
+- Préserve les plafonds, délais, états persistés et preuves de clôture ; les nouvelles
+  observations ne reconstruisent pas l’exception perdue de la campagne du 8 septembre.
+- Preuves et limites : [diagnostic live](docs/validation/WO058-LIVE-FAILURE-DIAGNOSTICS-20260908.md).
+
+### WO-058 — pagination des rencontres live et lisibilité après arrêt
+
+- Affiche dix rencontres par page de campagne, avec navigation en haut et en bas dès la
+  onzième rencontre. Les lectures dynamiques utilisent la même page et les liens depuis
+  les rencontres ouvrent directement la page du match concerné.
+- Conserve les compteurs, l’arrêt global et le manifeste de lancement pour toute la campagne ;
+  une nouvelle préparation réutilise toute la sélection. Les arrêts individuels reviennent
+  sur la page consultée. Les rencontres terminées conservent leur place.
+- Suspend l’estimation d’autonomie lorsque le processus indique une collecte arrêtée,
+  même si la clôture locale n’a pas encore publié l’état terminal en base.
+- Corrige le chevauchement du message de clôture dans la liste des rencontres.
+- Qualification du complément : [pagination et affichage après arrêt](docs/validation/WO058-LIVE-PAGINATION-20260908.md).
+
+### WO-058 — capacité live-v5 et visibilité des remplaçants
+
+- Ajoute une nouvelle politique à 100 secondes pour J4, incidents et statistiques, avec
+  compositions en jeu toutes les cinq minutes et capacité limitée à vingt rencontres selon
+  une qualification synthétique v5 séparée de 35 minutes, 1 413 appels, zéro cycle manqué
+  et vingt-quatre scénarios d'admission réussis. L'observation fournisseur reste distincte.
+- Porte les plafonds à 2 500 appels par rencontre et 20 000 par campagne ; conserve quatre
+  heures et un plafond indépendant de 15 728 640 000 octets bruts.
+- Réduit la pause à une seconde entre groupes de la même session v5, en conservant les
+  contrôles avant chaque appel et les frontières historiques de trois secondes.
+- Ajoute V40 pour les contraintes versionnées ; conserve les campagnes et preuves historiques.
+- Utilise `insertBefore` pour déplacer les cartes de compositions : évite le défaut de
+  visibilité Chromium reproduit, avec conservation des panneaux et du focus.
+- Les mesures de capacité distinguent collecte soutenue, publication locale et rendu dynamique ;
+  l’objectif futur de 50–100 rencontres ne devient pas une capacité activée par extrapolation.
+
+### WO-058 — clôture d’une session interrompue après redémarrage
+
+- Ajoute « Clôturer la session interrompue » sur la campagne qui détient le verrou orphelin,
+  et un lien vers cette campagne depuis le refus de lancement.
+- Vérifie explicitement l’absence de l’ancien propriétaire et des composants Playwright sous
+  Windows, puis libère le garde et inscrit sa preuve dans une transaction PostgreSQL.
+  Un processus actif, une identité incertaine ou une génération modifiée conserve le blocage.
+- Conserve `INTERRUPTED`, les compteurs et toutes les observations ; propose ensuite une nouvelle
+  préparation avec les mêmes rencontres, soumise aux contrôles habituels et à un nouveau lancement manuel.
+- Détail et vérification : [clôture après interruption](docs/validation/WO058-ORPHAN-CLEANUP-20260908.md).
+
+### WO-058 — compositions J5 par équipe
+
+- Remplace les longues tables de compositions par un composant commun aux pages J5 manuelle,
+  campagne live et suivi de la fiche d’une rencontre : équipes, formation, confirmation,
+  titulaires regroupés par poste et remplaçants.
+- Ajoute des panneaux repliables au clavier, des compteurs d’effectif et des numéros de maillot
+  visibles ; les deux colonnes deviennent une colonne sur mobile. Les rafraîchissements
+  conservent l’ouverture des panneaux et le focus.
+- Utilise uniquement les données normalisées existantes, sans nouvelle collecte, photo,
+  note, entraîneur ou position tactique déduite. Les indisponibilités et champs absents restent explicites.
+- Détail et vérification : [présentation des compositions](docs/validation/WO058-LINEUPS-PRESENTATION-20260908.md).
+
+### WO-058 — préparation annulable et collecte J5 manuelle groupée
+
+- Ajoute « Annuler la préparation » aux campagnes non lancées ; conserve manifeste et historique,
+  sans appel fournisseur, avec protection contre une course avec le lancement.
+- Supprime les deux pauses internes d’une collecte J5 manuelle confirmée, dans l’ordre
+  statistiques/incidents/compositions, avec requêtes séquentielles et trois secondes entre collectes.
+- Documente le diagnostic d’une capacité live-v4 nulle et l’activation du profil groupé mesuré
+  dans le lanceur Eclipse ; les anciens paramètres de qualification ne suffisent pas.
+- Décision et preuves : ADR-SS-005 v0.5 et [retour opérateur](docs/validation/WO058-PREPARATION-MANUAL-J5-20260908.md).
+
+### WO-058 — minute fixe et appels regroupés live-v4
+
+- Prépare les nouvelles campagnes à 60 secondes nominales pour J4, incidents et statistiques,
+  avec compositions initiales puis réparties sur cinq minutes pendant le jeu.
+- Ajoute les groupes serveur séquentiels : aucune pause ajoutée entre leurs familles, trois
+  secondes entre groupes et aux transitions vers les parcours historiques ou manuels.
+- Exige un profil qualifié distinct par famille et refuse les sélections qui ne tiennent pas
+  la minute ; préserve les plafonds et la réserve finale sans ralentir pour étendre l’autonomie.
+- Rejoue quarante scénarios d'admission, incluant les dix fins dans le même tour ainsi que
+  les finalisations par cohortes pendant que les autres rencontres continuent.
+- Ajoute V39 pour les politiques, groupes et échéances auditables ; conserve v1–v3 et leurs hashes.
+- Affiche capacité, autonomie restante, prochaine collecte et retard par famille ; annule une
+  lecture locale bloquée à dix secondes puis reprend sans effacer les données ou panneaux.
+- Qualifie dix rencontres sur trente minutes établies de Chromium/PostgreSQL loopback :
+  1 128 appels avec initialisation, zéro cycle manqué, intervalle critique maximal 60,520 s.
+  Le profil de 64 Kio et la vague initiale de 5 Mio ont des portées distinctes explicites.
+- Décision et preuves : ADR-SS-005 v0.4 et [qualification live-v4](docs/validation/WO058-GROUPED-LIVE-V4-20260908.md).
+
+### WO-058 — résultats J4 et rencontres reportées
+
+- Ajoute le contrat `event-details-v3` et V38 : drapeau d'attribution et scores `display`,
+  avec conservation des observations et hashes historiques.
+- Affiche « Victoire sur tapis vert » pour `finished` avec `isAwarded=true`, et le score
+  domicile/extérieur uniquement lorsque les deux valeurs `display` sont présentes.
+- Exclut `postponed` à la préparation et au lancement ; un report reçu par J4 pendant
+  la campagne arrête seulement la rencontre concernée. `canceled` conserve son traitement.
+- Relie les résultats à leur observation J4 exacte, sans réutiliser un ancien score sur
+  une observation plus récente ; J6 compare les nouveaux champs et J7 garde son enveloppe v1.
+- Contrats et qualification : [retour J4 du 08/09](docs/validation/WO058-J4-AWARDED-POSTPONED-20260908.md).
+
+### WO-058 — périodes et groupes statistiques repliables
+
+- Rend les en-têtes verts des périodes et gris des groupes ouvrables/repliables au clic et
+  au clavier, ouverts par défaut, avec des contrôles HTML natifs utilisables sans JavaScript.
+- Conserve l'état de chaque période et de chaque groupe lors des rafraîchissements live,
+  ainsi que le focus de l'en-tête utilisé ; fermer une période conserve l'état de ses groupes.
+- Retour opérateur et qualification : [encadrés statistiques](docs/validation/WO058-COLLAPSIBLE-STATISTICS-20260908.md).
+
+### WO-058 — motif de carton Elche et statistiques applicatives
+
+- Ajoute incidents V17 et V37 pour le motif exact `Professional handball`, identifié dans le
+  snapshot 2427 d'Elche–Real Sociedad ; V16 et les anciennes preuves restent inchangés.
+- Affiche ce motif de carton comme « Main volontaire », conformément à la précision propriétaire,
+  tout en conservant la valeur fournisseur dans les données normalisées.
+- Intègre les statistiques par période aux vues live/J5, avec possession et fractions X/Y,
+  en conservant les valeurs source et leur provenance. Le prototype seul ne constituait pas
+  une amélioration des pages de l'application.
+- Conserve les libellés de phase fournisseur, dont `2nd half`, conformément à la précision opérateur.
+- Documente la fin de la campagne du 07/09 : trois collectes terminées et un arrêt de schéma
+  isolé dans une campagne dont l'exécution globale est terminée.
+
+### WO-058 — compositions prématch, phases et reprise après incident local
+
+- Corrige le rejet du penalty accordé `inGamePenalty/awarded` : parseur incidents V16 et migration
+  V36, sans confusion avec un tir raté ou un but. Le snapshot historique 2340 reste inchangé.
+- Ajoute la politique `live-v3` : J4 confirme `notstarted`, puis LINEUPS initial et périodique
+  à l'intervalle du manifeste. Statistiques et incidents commencent après J4 `inprogress`.
+  Le premier triplet respecte l'éligibilité de toutes ses familles ; les politiques v1/v2 restent figées.
+- Affiche la description J4 de la phase en cours, issue de la même observation que le statut sportif.
+- Ajoute V35 et aligne les gardes J6 ; les preuves et sauvegardes historiques V34 restent distinctes.
+- Sépare l'arrêt local de collecte et l'état durable lors d'une panne de stockage ; la clôture locale
+  peut être redemandée explicitement, sans nouveau GET fournisseur ni reprise automatique.
+- Fournit une extraction de métadonnées et un analyseur temporel offline, avec âges réels,
+  réceptions identiques, dernier changement et dispersion par match/famille, sans seuil métier arbitraire.
+- Propose un aperçu HTML des statistiques par période, avec possession et fractions ; les périodes
+  et fractions illustratives sont identifiées comme synthétiques. Aperçu historique précédant l’intégration applicative décrite ci-dessus.
+- Documente la coupure liée au redémarrage Docker, la correction ponctuelle du verrou orphelin et
+  le nouveau lancement opérateur à sept : [preuves et limites](docs/validation/WO058-PREMATCH-TEMPORAL-20260907.md).
+
+### WO-058 — plafond paramétrable et cadence par sélection
+
+- Corrige `LIVE_POLICY_INVALID` quand le plafond de rencontres est supérieur à trois.
+  Le paramètre désigne le maximum de rencontres éligibles par campagne ; les sélections
+  plus petites restent autorisées, notamment avec des plafonds à 5, 10 ou 25.
+- Fige au manifeste l'intervalle selon les cibles retenues : 60 s pour 1–3, puis 30 s
+  supplémentaires par rencontre ; 10 cibles donnent 270 s et 25 donnent 720 s.
+  L'ordonnanceur, les réinterrogations après HTTP 404, la fraîcheur et le récapitulatif
+  utilisent cet intervalle. Les limites de temps, d'appels et de stockage sont conservées.
+- Applique le décompte des seules rencontres éligibles dans J4 et côté serveur ; les
+  `finished` restent exclues et les verrous de campagne conservent l'exception `STOPPED_ERROR`.
+- Ajoute V34 sans modifier V33 : plafond entier paramétrable, sélection jusqu'à 100 identifiants
+  et cadence immuable. Les campagnes historiques gardent leurs empreintes et leur cadence de 60 s.
+  L'outillage J6 est aligné sur V34 ; la sauvegarde préalable V33 utilise la version précédente.
+- Décision propriétaire enregistrée dans ADR-SS-005 v0.2 ;
+  [preuves et résultats](docs/validation/WO058-ADAPTIVE-CAPACITY-20260907.md).
+- Consigne le retour fournisseur à huit rencontres (210 s, arrêt volontaire après environ
+  34 minutes, quatre fins confirmées, aucun cycle manqué) et le relevé d'une campagne à seize
+  encore active (450 s). Précise dans le guide l'exclusivité globale `LIVE_PROVIDER_BUSY`,
+  indépendante du plafond de rencontres par campagne. Aucune modification du moteur live ;
+  [constats et limites](docs/validation/WO058-OPERATOR-EIGHT-SIXTEEN-20260907.md).
+
+### WO-058 — indisponibilités J5 et sélection des rencontres suivies
+
+- Corrige la publication live d'un HTTP 404 : le snapshot est classé `ENDPOINT_UNAVAILABLE`
+  sans code d'erreur de schéma ; `HTTP_404` reste dans le ledger de la tentative. Statistiques,
+  incidents et compositions indisponibles n'arrêtent ni le match ni les autres rencontres.
+  Chaque famille retrouve son cycle planifié et conserve sa dernière donnée lisible.
+- Désactive sur J4 la sélection d'une rencontre appartenant à une campagne en cours, sauf
+  `STOPPED_ERROR`. Le contrôle existe dès le rendu HTML, suit les actualisations et est répété
+  côté serveur à la préparation et au lancement d'un ancien manifeste.
+- Consigne les essais opérateur réussis à trois rencontres et le diagnostic du premier J5
+  après un coup d'envoi différé. Preuves : [rapport 404 et sélection](docs/validation/WO058-J5-404-AND-SELECTION-20260907.md).
+- Fiabilise le contrôle de fermeture dans la qualification Chromium : arbre natif absent
+  immédiatement, puis attente bornée de la notification Java, sans changer le transport.
+
+### WO-058 — sélection multiple après le premier parcours fournisseur
+
+- Consigne le premier essai opérateur complet : ancienne observation `notstarted`, J4 `finished`,
+  trois familles J5, score 1–1 et campagne `COMPLETED` ; quatre appels, aucun cycle manqué.
+- Relie les paramètres Eclipse de capacité, de charge et de preuve à la configuration live.
+  Les profils des paliers deux et trois suivent la qualification ; le pilote initial et les
+  opt-ins désactivés restent les défauts. Les matchs terminés sont exclus avant admission.
+- Distingue un plafond de sélection dépassé d'un profil de charge incompatible avec la minute.
+  Ajoute les tests de préparation/confirmation multiple, la simulation de longue durée et la
+  qualification Chromium de plusieurs matchs avec réponses de taille maximale.
+- Résultats et limites : [preuve des paliers](docs/validation/WO058-MULTIMATCH-CAPACITY-20260907.md).
+
+### WO-058 — admission locale et deuxième retour opérateur
+
+- Essais opérateur conformes après `017888b` : un puis trois matchs déjà `finished` sont exclus
+  avec une explication, sans campagne. Le cas d'une rencontre future reste à essayer par l'opérateur.
+- Identifie le refus des sélections encore localement `notstarted` : le chemin Docker requis pour
+  mesurer le volume PostgreSQL n'était pas renseigné. Ce refus d'admission est indépendant de
+  l'âge du snapshot et des opt-ins fournisseur.
+- Affiche les causes connues de refus local avec un code et une action précise ; les exceptions
+  arbitraires restent masquées. Relie explicitement les variables Eclipse de chemin Docker et de
+  conteneur PostgreSQL à la configuration, sans activation réseau par défaut.
+- Diagnostic et nouvelle qualification : [rapport de reprise](docs/validation/WO058-OPERATOR-RETEST-STORAGE-20260907.md).
+
+### WO-058 — retour opérateur : préparation locale et rencontres terminées
+
+- Corrige le refus 403 des formulaires live Chromium : les pages locales concernées utilisent
+  `Referrer-Policy: same-origin`, avec maintien du rejet des origines nulles ou étrangères.
+- Exclut les rencontres déjà `finished` dans les observations locales avant l'admission.
+  Une sélection entièrement terminée affiche une explication sans créer de campagne ; une
+  sélection mixte prépare uniquement les rencontres restantes et indique les exclusions.
+- Revérifie les statuts locaux au lancement et avant l'ouverture du navigateur. Un match
+  devenu terminé ne reçoit aucun appel ; les autres peuvent continuer. Le premier J4 d'une
+  rencontre admise qui découvre `finished` conserve sa finalisation bornée.
+- Le commit initial `54d1597` et ses preuves sont conservés. Qualification de ce correctif :
+  [retour fonctionnel](docs/validation/WO058-FUNCTIONAL-FEEDBACK-20260907.md).
+
+### WO-058 — réalisation des campagnes live locales J4/J5
+
+- Validation propriétaire du WO enregistrée le 7 septembre, après ADR-SS-005 v0.1 accepté.
+  Réalisation locale sur la branche issue du train RC01, enregistrée dans `54d1597` sur demande
+  propriétaire pour les essais Eclipse ; aucune publication effectuée par ce lot.
+- Sélection dans les résultats normalisés, manifeste immuable valable cinq minutes, lancement
+  explicite d'une session Playwright unique et ordonnanceur J4/J5 borné. Admission conservatrice
+  à un match, paliers qualifiés 2/3, réserve de clôture, budgets et contrôle du volume PostgreSQL.
+- Ledger V33 append-only et garde fournisseur durable partagé avec les parcours manuels.
+  Réception brute avant parsing, publications atomiques et curseurs par occurrence A→A/A→B→A.
+  Projections versionnées du score J4 et des signaux J5, fraîcheur par famille et erreurs isolées.
+- Contrôles locaux de préparation/lancement/arrêt, lectures MVC toutes les cinq secondes,
+  conservation du focus et des sélections, révisions anciennes ignorées, CSP limitée aux pages live.
+- Replay synthétique, qualification PostgreSQL isolée, tests Web et Chromium loopback dédiés.
+  J6 prend en compte V33, les huit tables du lot et le garde. Le lanceur historique J5 corrige son
+  compteur de protocole devenu obsolète, avec présence obligatoire du cas TCP ajouté antérieurement.
+- Les résultats et limites exacts sont dans le
+  [rapport de réalisation](docs/validation/WO058-LIVE-J4-J5-IMPLEMENTATION-20260907.md).
+  Aucune migration sur la base de l'opérateur ni campagne fournisseur n'est effectuée.
+- Lot `READY_FOR_REVIEW` : les deux commandes Maven demandées passent avec 1 302 tests
+  Surefire et 122 Failsafe chacune (5 skips standards distincts). Qualifications Chromium live,
+  navigateur final et lanceur J5 corrigé vertes ; aucun classement terminé anticipé.
+
+### WO-058 — historique du cadrage, avant validation du WO
+
+- Acceptation formelle propriétaire d'ADR-SS-005 v0.1 enregistrée le 7 septembre : version
+  conservée, copie exacte de la proposition figée et protégée des conversions Git par une règle
+  `-text` ciblée ; empreinte acceptée et empreinte administrative distinctes dans la preuve.
+- WO-058 passé à `READY_FOR_OWNER_REVIEW`, sur la branche issue du train RC01 à `6dfd142` ;
+  acceptation ADR acquise, validation du WO et réalisation toujours distinctes. Renvoi ajouté à
+  ADR-SS-001, invariants 3/11 d'AGENTS.md alignés sur le lancement manuel et les cycles bornés.
+- ADR-SS-002 à 004, code, migrations et configuration runtime inchangés ; aucun nouveau build,
+  commit, push ou lancement de collecte. Preuve Maven initiale non verte conservée.
+- Historique de préparation ci-dessous : les états proposés décrivent la phase antérieure à
+  l'acceptation, sans rouvrir les arbitrages acquis.
+- Création d'ADR-SS-005 v0.1 au statut `PROPOSED — ARBITRAGES_FONCTIONNELS_VALIDÉS`, avec
+  supersession ciblée proposée, alternatives, critères et historique des choix propriétaires.
+- Choix validés transcrits : pilote 1→2/3, quatre heures, 1 000/3 000 tentatives, J4 sur signaux
+  avec secours cinq minutes, dernier cycle J5 et rééchantillonnage du 404 J5 au cycle normal.
+- Remplacement de la proposition initiale d'arrêt global sur tout schéma incompatible par
+  l'arrêt du seul match pour erreur métier isolable ; sécurité, identité, contenu inattendu,
+  exception interne du parseur, transport et stockage restent globaux. WO, matrices et AC10 alignés.
+- À cette phase de proposition, acceptation formelle d'ADR-SS-005 et validation de WO-058 en attente ;
+  ADR-SS-001 à 004, AGENTS.md et runtime alors inchangés. Revue documentaire complétée, preuve Maven non verte conservée.
+- Work Order proposé pour sélectionner des rencontres dans `/events`, suivre J4 jusqu'au début,
+  collecter les trois familles J5 à la minute et confirmer la fin avec J4, avec vue locale dynamique.
+- Règles explicites pour injuryTime, mi-temps/prolongations, absence de signal, dernier cycle J5,
+  admission selon la capacité, budgets, arrêt et absence de reprise automatique.
+- Contrat de fraîcheur par occurrence, révisions A→B→A, persistance append-only et matrice de
+  qualification ; réalisation et acceptation du nouvel ADR live alors soumises à décision, sans changement runtime/SQL.
+- Cadrage depuis le train RC01 `6dfd142` ; `clean verify` exécuté, non vert : un contrôle J6 exige
+  le port 8087 libre alors que le Lab local l'utilise. Résultats exacts dans la preuve WO-058.
+
 ### WO-057 — isolation des fixtures de packaging vis-à-vis de la CI appelante
 
 - Les assertions de packaging exécutent leur scénario avec `env -i PATH=...` et uniquement ses

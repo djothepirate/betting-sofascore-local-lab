@@ -143,6 +143,7 @@ public class JdbcJ6RawPayloadRetentionStore implements J6RawPayloadRetentionStor
             Instant cutoffAt,
             int maximumCandidates) {
         requireQuery(retentionDays, generatedAt, cutoffAt, maximumCandidates);
+        requireProviderQuiescent(false);
         return loadPreview(
                 retentionDays,
                 generatedAt,
@@ -165,6 +166,7 @@ public class JdbcJ6RawPayloadRetentionStore implements J6RawPayloadRetentionStor
         Objects.requireNonNull(backupEvidence, "backupEvidence");
         Objects.requireNonNull(batchId, "batchId");
         requireQuery(retentionDays, executedAt, cutoffAt, maximumCandidates);
+        requireProviderQuiescent(true);
         J6RetentionPreview current = loadPreview(
                 retentionDays,
                 executedAt,
@@ -236,6 +238,17 @@ public class JdbcJ6RawPayloadRetentionStore implements J6RawPayloadRetentionStor
                 updated,
                 current.selectedPayloadBytes(),
                 executedAt);
+    }
+
+    private void requireProviderQuiescent(boolean lock) {
+        String state = jdbcTemplate.queryForObject(
+                "select state from provider_campaign_guard where singleton_id=1" + (lock ? " for update" : ""),
+                new MapSqlParameterSource(), String.class);
+        Long active = jdbcTemplate.queryForObject(
+                "select count(*) from live_campaign where state in ('RUNNING','CLEANUP_REQUIRED')",
+                new MapSqlParameterSource(), Long.class);
+        if (!"FREE".equals(state) || active == null || active != 0)
+            throw new J6RetentionException(J6RetentionError.PROVIDER_CAMPAIGN_ACTIVE);
     }
 
     private J6RetentionPreview loadPreview(

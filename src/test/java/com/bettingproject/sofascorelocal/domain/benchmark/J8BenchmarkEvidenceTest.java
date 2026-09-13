@@ -1,5 +1,6 @@
 package com.bettingproject.sofascorelocal.domain.benchmark;
 
+import com.bettingproject.sofascorelocal.application.benchmark.J8BenchmarkReadEvidence;
 import com.bettingproject.sofascorelocal.domain.eventdata.J5CompletenessStatus;
 import com.bettingproject.sofascorelocal.domain.provider.RawSnapshotSchemaStatus;
 import com.bettingproject.sofascorelocal.domain.provider.SofascoreEndpointType;
@@ -47,6 +48,95 @@ class J8BenchmarkEvidenceTest {
                 Optional.empty()))
                 .isInstanceOf(IllegalArgumentException.class)
                 .hasMessageContaining("J3 campaigns require");
+    }
+
+    @Test
+    void writesNewJ3CampaignsAtThirtyFiveWhileReadingOnlyTheDocumentedHistoricalBound() {
+        UUID campaignId = UUID.randomUUID();
+        Instant startedAt = Instant.parse("2026-09-12T08:00:00Z");
+        J8BenchmarkCampaign current = new J8BenchmarkCampaign(
+                campaignId,
+                J8BenchmarkCampaignType.J3_SCHEDULED_EVENTS,
+                J8BenchmarkExecutionMode.GUARDED_PROVIDER,
+                startedAt,
+                J8BenchmarkCampaignType.J3_SCHEDULED_EVENTS.maximumUnits(),
+                Optional.of(LocalDate.of(2026, 9, 12)));
+
+        assertThat(current.maximumUnits()).isEqualTo(35);
+        assertThatThrownBy(() -> new J8BenchmarkCampaign(
+                campaignId,
+                J8BenchmarkCampaignType.J3_SCHEDULED_EVENTS,
+                J8BenchmarkExecutionMode.GUARDED_PROVIDER,
+                startedAt,
+                J8BenchmarkCampaignType.HISTORICAL_J3_SCHEDULED_EVENTS_MAXIMUM_UNITS,
+                Optional.of(LocalDate.of(2026, 9, 12))))
+                .isInstanceOf(IllegalArgumentException.class)
+                .hasMessageContaining("bounded campaign type");
+
+        J8BenchmarkReadEvidence.CampaignEvidence historical =
+                new J8BenchmarkReadEvidence.CampaignEvidence(
+                        campaignId,
+                        J8BenchmarkCampaignType.J3_SCHEDULED_EVENTS,
+                        J8BenchmarkExecutionMode.GUARDED_PROVIDER,
+                        startedAt,
+                        J8BenchmarkCampaignType.HISTORICAL_J3_SCHEDULED_EVENTS_MAXIMUM_UNITS,
+                        Optional.empty(),
+                        Optional.empty(),
+                        OptionalInt.empty());
+        assertThat(historical.maximumUnits()).isEqualTo(25);
+        assertThatThrownBy(() -> new J8BenchmarkReadEvidence.CampaignEvidence(
+                campaignId,
+                J8BenchmarkCampaignType.J3_SCHEDULED_EVENTS,
+                J8BenchmarkExecutionMode.GUARDED_PROVIDER,
+                startedAt,
+                26,
+                Optional.empty(),
+                Optional.empty(),
+                OptionalInt.empty()))
+                .isInstanceOf(IllegalArgumentException.class)
+                .hasMessage("campaign maximum is inconsistent");
+    }
+
+    @Test
+    void acceptsTheThirtyFifthScheduledEventsUnitAndRejectsTheThirtySixth() {
+        UUID campaignId = UUID.randomUUID();
+        Instant declaredAt = Instant.parse("2026-09-12T08:00:01Z");
+
+        J8BenchmarkUnit maximumUnit = new J8BenchmarkUnit(
+                campaignId,
+                35,
+                SofascoreEndpointType.SCHEDULED_EVENTS,
+                "SCHEDULED_EVENTS|date=2026-09-12|page=35",
+                Optional.empty(),
+                OptionalLong.empty(),
+                declaredAt);
+        assertThat(maximumUnit.unitOrdinal()).isEqualTo(35);
+        assertThatThrownBy(() -> new J8BenchmarkUnit(
+                campaignId,
+                36,
+                SofascoreEndpointType.SCHEDULED_EVENTS,
+                "SCHEDULED_EVENTS|date=2026-09-12|page=36",
+                Optional.empty(),
+                OptionalLong.empty(),
+                declaredAt))
+                .isInstanceOf(IllegalArgumentException.class)
+                .hasMessageContaining("between 1 and 35");
+
+        J8BenchmarkCampaignResult maximumResult = new J8BenchmarkCampaignResult(
+                campaignId,
+                declaredAt,
+                J8BenchmarkCampaignTerminalState.COMPLETED,
+                Optional.empty(),
+                35);
+        assertThat(maximumResult.completedUnits()).isEqualTo(35);
+        assertThatThrownBy(() -> new J8BenchmarkCampaignResult(
+                campaignId,
+                declaredAt,
+                J8BenchmarkCampaignTerminalState.COMPLETED,
+                Optional.empty(),
+                36))
+                .isInstanceOf(IllegalArgumentException.class)
+                .hasMessageContaining("between 0 and 35");
     }
 
     @Test

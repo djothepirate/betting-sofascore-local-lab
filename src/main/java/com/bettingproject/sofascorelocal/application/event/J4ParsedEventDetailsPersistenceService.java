@@ -1,6 +1,6 @@
 package com.bettingproject.sofascorelocal.application.event;
 
-import com.bettingproject.sofascorelocal.adapter.sofascore.eventdetails.EventDetailsV2Parser;
+import com.bettingproject.sofascorelocal.adapter.sofascore.eventdetails.EventDetailsV4Parser;
 import com.bettingproject.sofascorelocal.domain.event.CanonicalEventIdentity;
 import com.bettingproject.sofascorelocal.domain.event.CanonicalEventObservation;
 import com.bettingproject.sofascorelocal.domain.event.EventSourceTrace;
@@ -67,7 +67,7 @@ public class J4ParsedEventDetailsPersistenceService {
         EventSourceTrace source = EventSourceTrace.providerSnapshot(
                 rawPersistence.snapshotId(),
                 rawPersistence.payloadSha256(),
-                EventDetailsV2Parser.PARSER_VERSION,
+                EventDetailsV4Parser.PARSER_VERSION,
                 response.receivedAt());
         CanonicalEventIdentity identity = CanonicalEventIdentity.sofascore(request.eventId());
         var eventPersistence = canonicalEventStore.save(CanonicalEventObservation.from(
@@ -85,7 +85,7 @@ public class J4ParsedEventDetailsPersistenceService {
                 request,
                 response,
                 rawPersistence,
-                EventDetailsV2Parser.PARSER_VERSION);
+                EventDetailsV4Parser.PARSER_VERSION);
         return new J4ParsedEventDetailsPersistenceResult(
                 identity.value(),
                 eventPersistence.observationId(),

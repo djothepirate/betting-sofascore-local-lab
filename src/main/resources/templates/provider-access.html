@@ -1,0 +1,64 @@
+<!DOCTYPE html>
+<html lang="fr" xmlns:th="http://www.thymeleaf.org">
+<head><meta charset="UTF-8"><meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Accès fournisseur — Lab local</title><link rel="stylesheet" th:href="@{/css/app.css}"></head>
+<body>
+<header class="topbar compact-topbar"><div class="shell"><p class="eyebrow">EXPERIMENTAL · LOCAL_ONLY · WO-058</p>
+  <h1>Accès fournisseur</h1><p>Protection partagée entre les collectes manuelles et les campagnes live.</p></div></header>
+<main class="shell event-page">
+  <p><a th:href="@{/events}">← Rencontres</a></p>
+  <p class="notice" th:if="${accessSuccess}" th:text="${accessSuccess}"></p>
+  <section class="panel">
+    <h2 th:text="${suspended ? 'Collecte suspendue après refus' : 'Aucune suspension active'}"></h2>
+    <p>Les observations locales restent consultables avec leur heure de réception d’origine.</p>
+    <p th:unless="${suspended}">Cet état local ne garantit pas que le fournisseur acceptera le prochain appel.</p>
+    <dl class="detail-grid">
+      <div><dt>Refus HTTP à l’origine de la suspension</dt><dd th:text="${access.httpStatus ?: 'Aucun'}"></dd></div>
+      <div><dt>Refus reçu (UTC)</dt><dd th:text="${access.suspendedAt ?: '—'}"></dd></div>
+      <div><dt>Attente minimale demandée (UTC)</dt><dd th:text="${access.retryNotBefore ?: 'Non précisée'}"></dd></div>
+      <div><dt>Prochain départ admissible au budget (UTC)</dt><dd th:text="${decision.nextAllowedAt ?: 'Non établi'}"></dd></div>
+    </dl>
+    <p>Les nouvelles campagnes live-v8 qualifiées utilisent au plus 45 départs par minute,
+      2&nbsp;756 par heure et un délai de protection de 500&nbsp;ms après une fin d’échange prouvée.
+      Les parcours historiques et manuels conservent leur propre profil, éventuellement plus conservateur.
+      Les quotas restent partagés, persistants entre campagnes et après redémarrage.</p>
+    <p th:if="${access.campaignId != null}">Identifiant de la session à l’origine du refus : <span class="mono" th:text="${access.campaignId}"></span>.</p>
+  </section>
+  <section class="panel" th:if="${access.unresolvedDispatchId != null}">
+    <h2>Départ précédent incertain</h2>
+    <p>La fin d’un appel n’a pas été confirmée. Aucun nouveau départ n’est admis.
+      La clôture ci-dessous exige que la session et ses processus aient déjà été nettoyés.</p>
+    <form method="post" th:action="@{/provider-access/finish-uncertain-departure}">
+      <input type="hidden" name="localFormToken" th:value="${localFormToken}">
+      <input type="hidden" name="dispatchId" th:value="${access.unresolvedDispatchId}">
+      <label><input type="checkbox" name="confirmation" value="true" required> Je confirme la clôture locale de ce départ incertain.</label>
+      <button type="submit" class="button">Clôturer la réservation</button>
+    </form>
+  </section>
+  <section class="panel" th:if="${orphanedManualGuard != null}">
+    <h2>Garde manuelle orpheline</h2>
+    <p>Une collecte manuelle J3, J4 ou J5 précédente s’est interrompue avant de libérer son accès partagé.
+      La libération ci-dessous exige une vérification locale que le processus propriétaire et ses processus Playwright
+      ne sont plus présents.</p>
+    <p>Cette action ne lance aucun navigateur, n’effectue aucun appel fournisseur, ne clôture pas un départ incertain
+      et ne lève pas une suspension. Si une réservation incertaine est affichée, elle doit être clôturée séparément.</p>
+    <form method="post" th:action="@{/provider-access/release-orphaned-manual-guard}">
+      <input type="hidden" name="localFormToken" th:value="${localFormToken}">
+      <input type="hidden" name="campaignId" th:value="${orphanedManualGuard.campaignId}">
+      <input type="hidden" name="generation" th:value="${orphanedManualGuard.generation}">
+      <label><input type="checkbox" name="confirmation" value="true" required> Je confirme la libération locale de cette garde manuelle orpheline après vérification des processus.</label>
+      <button type="submit" class="button">Libérer la garde manuelle</button>
+    </form>
+  </section>
+  <section class="panel" th:if="${suspended}">
+    <h2>Lever la suspension localement</h2>
+    <p>Le réarmement ne lance ni test d’accès ni campagne. Un nouveau refus suspendra à nouveau toutes les collectes.</p>
+    <p th:unless="${canRearm}">Le délai minimal communiqué par le fournisseur doit d’abord être écoulé.</p>
+    <form method="post" th:action="@{/provider-access/rearm}">
+      <input type="hidden" name="localFormToken" th:value="${localFormToken}">
+      <input type="hidden" name="version" th:value="${access.version}">
+      <label><input type="checkbox" name="confirmation" value="true" required> Je décide de lever cette suspension pour permettre un futur lancement manuel.</label>
+      <button type="submit" class="button" th:disabled="${!canRearm or access.unresolvedDispatchId != null}">Lever la suspension</button>
+    </form>
+  </section>
+</main></body></html>

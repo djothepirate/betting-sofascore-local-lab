@@ -1,0 +1,602 @@
+{
+  "schema": "wo058-preparation-manual-j5-verification-v1",
+  "date": "2026-09-08",
+  "baseCommit": "be1f631474a71d316cd938b3dfed15335e5eaf5a",
+  "statuses": [
+    "EXPERIMENTAL",
+    "LOCAL_ONLY",
+    "NOT_PRODUCTION_APPROVED",
+    "NO_CRITICAL_DEPENDENCY"
+  ],
+  "runtime": {
+    "postgresql": "18.4",
+    "springBoot": "4.1.0",
+    "java": "25.0.4",
+    "browser": "Chromium loopback only"
+  },
+  "realProviderCalls": 0,
+  "launcherBinding": {
+    "profilePath": "docs/validation/WO058-GROUPED-LIVE-V4-PROFILE-20260908.json",
+    "launchAutomaticallyStarted": false,
+    "operatorCeilingPreserved": 20,
+    "beforeCapacity": 0,
+    "requiresEclipseReload": true,
+    "profileSha256": "5d34019578a5f1b616f3570aa47d8451afe283eb52dee73e1c94eeb4f370fcc1",
+    "variablesAdded": 9,
+    "afterCapacity": 10
+  },
+  "runs": [
+    {
+      "command": "mvnw.cmd --offline -Dmaven.repo.local=C:/Users/geoff/.m2/repository clean verify",
+      "result": "PASS",
+      "exitCode": 0,
+      "finishedAtUtc": "2026-09-08T13:19:41Z",
+      "logSha256": "b469ca2256b0e95815aa13503056e13f9917026c7ae54e82d283742165adcf98",
+      "totals": [
+        {
+          "scope": "surefire",
+          "suites": 193,
+          "tests": 1738.0,
+          "failures": 0.0,
+          "errors": 0.0,
+          "skipped": 5.0
+        },
+        {
+          "scope": "failsafe",
+          "suites": 7,
+          "tests": 151.0,
+          "failures": 0.0,
+          "errors": 0.0,
+          "skipped": 0.0
+        }
+      ],
+      "selectedSuiteEvidence": [
+        {
+          "scope": "surefire",
+          "name": "com.bettingproject.sofascorelocal.adapter.sofascore.transport.ProviderJ5EventDataPlaywrightTransportTest",
+          "tests": 21,
+          "failures": 0,
+          "errors": 0,
+          "skipped": 0,
+          "timestamp": null,
+          "sha256": "27bfcffad76ba2896ae73663d83bda47d69240719107acb695364ba399e389fd",
+          "ignoredCases": []
+        },
+        {
+          "scope": "surefire",
+          "name": "com.bettingproject.sofascorelocal.adapter.web.LiveCampaignControllerTest",
+          "tests": 63,
+          "failures": 0,
+          "errors": 0,
+          "skipped": 0,
+          "timestamp": null,
+          "sha256": "873e8dbb5329dabc44caefa9620ea3c55afb4fbd43f4c1dde4bb82a15771f4e5",
+          "ignoredCases": []
+        },
+        {
+          "scope": "surefire",
+          "name": "com.bettingproject.sofascorelocal.application.live.LiveCampaignCleanupTest",
+          "tests": 20,
+          "failures": 0,
+          "errors": 0,
+          "skipped": 0,
+          "timestamp": null,
+          "sha256": "064fb20c7601173c6b59d35b1cc6aee7f5f4bd2ea9a55752a1a84031fb821dab",
+          "ignoredCases": []
+        },
+        {
+          "scope": "surefire",
+          "name": "com.bettingproject.sofascorelocal.application.live.LiveCampaignServiceTest",
+          "tests": 54,
+          "failures": 0,
+          "errors": 0,
+          "skipped": 0,
+          "timestamp": null,
+          "sha256": "aa1748f2db3df7419b1c17c0654e065208544e33c85338c3c716aee22372d34f",
+          "ignoredCases": []
+        },
+        {
+          "scope": "surefire",
+          "name": "com.bettingproject.sofascorelocal.application.network.J5RealEventDataServiceTest",
+          "tests": 24,
+          "failures": 0,
+          "errors": 0,
+          "skipped": 0,
+          "timestamp": null,
+          "sha256": "05e50aac65000d8ac711d97b707cc4190e24d47ef1da2fdb76c300fd0db20974",
+          "ignoredCases": []
+        },
+        {
+          "scope": "surefire",
+          "name": "com.bettingproject.sofascorelocal.application.network.ManualProviderRequestCoordinatorTest",
+          "tests": 10,
+          "failures": 0,
+          "errors": 0,
+          "skipped": 0,
+          "timestamp": null,
+          "sha256": "676bafa5383c6360b0f63ea239a0695aff96b19d0b50c48bdde38f02353ea9ac",
+          "ignoredCases": []
+        },
+        {
+          "scope": "surefire",
+          "name": "com.bettingproject.sofascorelocal.application.network.playwright.ChildJvmPlaywrightProviderSupervisorTest",
+          "tests": 43,
+          "failures": 0,
+          "errors": 0,
+          "skipped": 0,
+          "timestamp": null,
+          "sha256": "e7de71d6923460f945e36bf9f57e9c1729b01c9a8e13138ab02d1170c68b376f",
+          "ignoredCases": []
+        },
+        {
+          "scope": "surefire",
+          "name": "com.bettingproject.sofascorelocal.application.network.playwright.LiveProviderGroupTrackerTest",
+          "tests": 8,
+          "failures": 0,
+          "errors": 0,
+          "skipped": 0,
+          "timestamp": null,
+          "sha256": "09cb48443b3f4d695b94ab1cd0b77861a0c176b2ae0bbbcdd9c1ab0405db4411",
+          "ignoredCases": []
+        },
+        {
+          "scope": "failsafe",
+          "name": "com.bettingproject.sofascorelocal.integration.LiveCampaignPersistenceIT",
+          "tests": 39,
+          "failures": 0,
+          "errors": 0,
+          "skipped": 0,
+          "timestamp": null,
+          "sha256": "b36743fb316d9967ecf2ba46cb092a8c970b7eecaa592e5fd98b4ca955964a56",
+          "ignoredCases": []
+        }
+      ],
+      "skippedSuites": [
+        {
+          "scope": "surefire",
+          "name": "com.bettingproject.sofascorelocal.adapter.file.LocalJ7ExportFileStoreTest",
+          "tests": 9,
+          "failures": 0,
+          "errors": 0,
+          "skipped": 2,
+          "timestamp": null,
+          "sha256": "00e646641ebe69f0dbe9afd08b3a911f309a60490449bf69fb184c4d7af2daa4",
+          "ignoredCases": [
+            "refusesASymbolicLinkInsteadOfFollowingIt",
+            "refusesAMatchingCandidateSymlinkDuringOrphanEnumeration"
+          ]
+        },
+        {
+          "scope": "surefire",
+          "name": "com.bettingproject.sofascorelocal.build.J6NativeBinaryPipelineQualificationTest",
+          "tests": 4,
+          "failures": 0,
+          "errors": 0,
+          "skipped": 1,
+          "timestamp": null,
+          "sha256": "81588f77dcf4b1f2975f09a6dbe4474cbca2e9ac06da6c6a7473a6b5be996b7e",
+          "ignoredCases": [
+            "dockerQualificationPassesThreeSequentialRunsAtEffectiveDefaults"
+          ]
+        },
+        {
+          "scope": "surefire",
+          "name": "com.bettingproject.sofascorelocal.cli.J8BenchmarkExportCommandTest",
+          "tests": 9,
+          "failures": 0,
+          "errors": 0,
+          "skipped": 2,
+          "timestamp": null,
+          "sha256": "ef81204c9527c8e3c2fd9256d39f5d24233cc17d41d041bd1f9304fd0093db9e",
+          "ignoredCases": [
+            "refusesAnExportsSymbolicLinkOrReparsePointWhenSupported",
+            "refusesAJ8SymbolicLinkOrReparsePointWhenSupported"
+          ]
+        }
+      ]
+    },
+    {
+      "command": "mvnw.cmd --offline -Dmaven.repo.local=C:/Users/geoff/.m2/repository -Pintegration-tests verify",
+      "result": "PASS",
+      "exitCode": 0,
+      "finishedAtUtc": "2026-09-08T13:27:05Z",
+      "logSha256": "1c0bb45590f571fc7c5de48384cb6365ddc29f0cefae88e8fc4fef17917b0a4c",
+      "totals": [
+        {
+          "scope": "surefire",
+          "suites": 193,
+          "tests": 1738.0,
+          "failures": 0.0,
+          "errors": 0.0,
+          "skipped": 5.0
+        },
+        {
+          "scope": "failsafe",
+          "suites": 7,
+          "tests": 151.0,
+          "failures": 0.0,
+          "errors": 0.0,
+          "skipped": 0.0
+        }
+      ],
+      "selectedSuiteEvidence": [
+        {
+          "scope": "surefire",
+          "name": "com.bettingproject.sofascorelocal.adapter.sofascore.transport.ProviderJ5EventDataPlaywrightTransportTest",
+          "tests": 21,
+          "failures": 0,
+          "errors": 0,
+          "skipped": 0,
+          "timestamp": null,
+          "sha256": "e64a07429f6c11282a50d03081369f9339f7ba93fde4c8442b5d9f206f0255de",
+          "ignoredCases": []
+        },
+        {
+          "scope": "surefire",
+          "name": "com.bettingproject.sofascorelocal.adapter.web.LiveCampaignControllerTest",
+          "tests": 63,
+          "failures": 0,
+          "errors": 0,
+          "skipped": 0,
+          "timestamp": null,
+          "sha256": "0a910ee61f46f7a2f59977cc506efed7dcd166f7f2c508dc71ffdf66ed9361d4",
+          "ignoredCases": []
+        },
+        {
+          "scope": "surefire",
+          "name": "com.bettingproject.sofascorelocal.application.live.LiveCampaignCleanupTest",
+          "tests": 20,
+          "failures": 0,
+          "errors": 0,
+          "skipped": 0,
+          "timestamp": null,
+          "sha256": "e80b90d60742a5246542b5cd0f2371a1ece2b5138830780f43204297a1f6461b",
+          "ignoredCases": []
+        },
+        {
+          "scope": "surefire",
+          "name": "com.bettingproject.sofascorelocal.application.live.LiveCampaignServiceTest",
+          "tests": 54,
+          "failures": 0,
+          "errors": 0,
+          "skipped": 0,
+          "timestamp": null,
+          "sha256": "38c83498e6fb0116a895506984465513430ba698f506387a0d1a9818bbf420be",
+          "ignoredCases": []
+        },
+        {
+          "scope": "surefire",
+          "name": "com.bettingproject.sofascorelocal.application.network.J5RealEventDataServiceTest",
+          "tests": 24,
+          "failures": 0,
+          "errors": 0,
+          "skipped": 0,
+          "timestamp": null,
+          "sha256": "2dc256828c33a47156d5071a0d37e9bad33703ba2267e98745d636ff1fda05eb",
+          "ignoredCases": []
+        },
+        {
+          "scope": "surefire",
+          "name": "com.bettingproject.sofascorelocal.application.network.ManualProviderRequestCoordinatorTest",
+          "tests": 10,
+          "failures": 0,
+          "errors": 0,
+          "skipped": 0,
+          "timestamp": null,
+          "sha256": "33b71c3942f5895a05190a0e1a6c8ea8cb3a8690bdf395de0e1787c6319fc9c6",
+          "ignoredCases": []
+        },
+        {
+          "scope": "surefire",
+          "name": "com.bettingproject.sofascorelocal.application.network.playwright.ChildJvmPlaywrightProviderSupervisorTest",
+          "tests": 43,
+          "failures": 0,
+          "errors": 0,
+          "skipped": 0,
+          "timestamp": null,
+          "sha256": "0f6195c967f7b9a0152c5fab804b5f03252f46885021738efd67cf038cd41a8d",
+          "ignoredCases": []
+        },
+        {
+          "scope": "surefire",
+          "name": "com.bettingproject.sofascorelocal.application.network.playwright.LiveProviderGroupTrackerTest",
+          "tests": 8,
+          "failures": 0,
+          "errors": 0,
+          "skipped": 0,
+          "timestamp": null,
+          "sha256": "6892941c52a2f9d88f392ec9b1e8b7317ed31c4921266a0cd8398c9bae9f44de",
+          "ignoredCases": []
+        },
+        {
+          "scope": "failsafe",
+          "name": "com.bettingproject.sofascorelocal.integration.LiveCampaignPersistenceIT",
+          "tests": 39,
+          "failures": 0,
+          "errors": 0,
+          "skipped": 0,
+          "timestamp": null,
+          "sha256": "82c8bcf6f3b64a3fea4e1d617dbc6d3750c42c114908584c9b62e53f4206d82c",
+          "ignoredCases": []
+        }
+      ],
+      "skippedSuites": [
+        {
+          "scope": "surefire",
+          "name": "com.bettingproject.sofascorelocal.adapter.file.LocalJ7ExportFileStoreTest",
+          "tests": 9,
+          "failures": 0,
+          "errors": 0,
+          "skipped": 2,
+          "timestamp": null,
+          "sha256": "6371189b0cce67290b90dfdbc9c2d9c3d0e64f14c4bf8a182539980d732ce5f9",
+          "ignoredCases": [
+            "refusesASymbolicLinkInsteadOfFollowingIt",
+            "refusesAMatchingCandidateSymlinkDuringOrphanEnumeration"
+          ]
+        },
+        {
+          "scope": "surefire",
+          "name": "com.bettingproject.sofascorelocal.build.J6NativeBinaryPipelineQualificationTest",
+          "tests": 4,
+          "failures": 0,
+          "errors": 0,
+          "skipped": 1,
+          "timestamp": null,
+          "sha256": "5bced0c57eb86503f8690e8091cdc8faaeb8239b78d53bec96cd300207bd9da8",
+          "ignoredCases": [
+            "dockerQualificationPassesThreeSequentialRunsAtEffectiveDefaults"
+          ]
+        },
+        {
+          "scope": "surefire",
+          "name": "com.bettingproject.sofascorelocal.cli.J8BenchmarkExportCommandTest",
+          "tests": 9,
+          "failures": 0,
+          "errors": 0,
+          "skipped": 2,
+          "timestamp": null,
+          "sha256": "974c3b7fa6a74f34516fe2a1dc776e62eb44f6a6266c33df5eb2a58d7d0325cd",
+          "ignoredCases": [
+            "refusesAnExportsSymbolicLinkOrReparsePointWhenSupported",
+            "refusesAJ8SymbolicLinkOrReparsePointWhenSupported"
+          ]
+        }
+      ]
+    },
+    {
+      "command": "mvnw.cmd --offline -Dmaven.repo.local=C:/Users/geoff/.m2/repository -Pprovider-playwright-runtime,provider-playwright-local-qualification -DskipTests=false -DskipITs=false -Dit.test=ManualJ5GroupedQualificationIT,LiveGroupedDegradationQualificationIT,LiveCampaignFormBrowserQualificationIT -Dprovider.playwright.browser-cache=<worktree>/.tmp/provider-playwright-browsers failsafe:integration-test@provider-playwright-loopback-qualification failsafe:verify@provider-playwright-loopback-qualification",
+      "result": "PASS",
+      "exitCode": 0,
+      "finishedAtUtc": "2026-09-08T13:31:41Z",
+      "logSha256": "bcc6f23163ba6f308effa3040df4a2f99313cc197632862252c25054212e7c3a",
+      "totals": [
+        {
+          "scope": "failsafe",
+          "suites": 3,
+          "tests": 6.0,
+          "failures": 0.0,
+          "errors": 0.0,
+          "skipped": 0.0
+        }
+      ],
+      "selectedSuiteEvidence": [
+        {
+          "scope": "failsafe",
+          "name": "com.bettingproject.sofascorelocal.adapter.web.LiveCampaignFormBrowserQualificationIT",
+          "tests": 2,
+          "failures": 0,
+          "errors": 0,
+          "skipped": 0,
+          "timestamp": null,
+          "sha256": "913e3f16cf9eef6312104b5a47702cf8b6a948933ee4c23ae53a57af383a8c9f",
+          "ignoredCases": []
+        },
+        {
+          "scope": "failsafe",
+          "name": "com.bettingproject.sofascorelocal.application.network.playwright.LiveGroupedDegradationQualificationIT",
+          "tests": 2,
+          "failures": 0,
+          "errors": 0,
+          "skipped": 0,
+          "timestamp": null,
+          "sha256": "2cdab46c09fd576c3116396c46c5fd8e17a26a165b8b8dd4d86b060f3c7a45d6",
+          "ignoredCases": []
+        },
+        {
+          "scope": "failsafe",
+          "name": "com.bettingproject.sofascorelocal.application.network.playwright.ManualJ5GroupedQualificationIT",
+          "tests": 2,
+          "failures": 0,
+          "errors": 0,
+          "skipped": 0,
+          "timestamp": null,
+          "sha256": "d50eaa7938946bcfc474328e0cddc16a46b4e483c7f49dd7c3a52145181a3afe",
+          "ignoredCases": []
+        }
+      ],
+      "skippedSuites": []
+    }
+  ],
+  "workerPackaging": {
+    "testsExecuted": false,
+    "finishedAtUtc": "2026-09-08T13:30:13Z",
+    "result": "PASS",
+    "logSha256": "61c5aac1d0b1e982e88aae9fc0f9047207798fee7b4a6d432395f2a5bc3eccb5"
+  },
+  "manualJ5Native": {
+    "postgresGuardInNative": false,
+    "stopScenarioReceipts": 1,
+    "stopClaimInNative": "simulated",
+    "stopContinuationDepartures": 0,
+    "providerLatencyQualified": false,
+    "incident404ThenLineups": "PASS",
+    "groups": 2,
+    "innerGapsMilliseconds": [
+      61,
+      62,
+      63,
+      62
+    ],
+    "threeSecondGroupTransitions": "PASS",
+    "transitionScenarioReceipts": 10,
+    "physicalCleanup": "PASS"
+  },
+  "evidenceLimits": [
+    "Native J5 exercises production coordinator, adapter, supervisor and Chromium; PostgreSQL guard and application publication covered separately.",
+    "No new second-tab cancellation Chromium scenario; existing polling behavior reviewed.",
+    "No sustained load or external freshness requalification in this complement.",
+    "Four Windows symlink tests and one opt-in J6 native qualification skipped in standards; zero skips in new native run.",
+    "Earlier compile/import failures and two incorrect HTTP test expectations were corrected before the successful recorded runs."
+  ],
+  "modifiedFiles": [
+    "ADR-SS-001-experimentation-endpoints-sofascore-depuis-windows.md",
+    "ADR-SS-005-bounded-local-live-j4-j5-campaigns.md",
+    "AGENTS.md",
+    "CHANGELOG.md",
+    "docs/architecture/J5-GUARDED-REAL-EVENT-DATA.md",
+    "docs/architecture/LIVE-J4-J5-CAMPAIGNS.md",
+    "docs/runbooks/LIVE-J4-J5-CAMPAIGNS.md",
+    "docs/runbooks/RUNBOOK-LOCAL.md",
+    "docs/validation/WO058-PREPARATION-MANUAL-J5-20260908.md",
+    "docs/validation/WO058-PREPARATION-MANUAL-J5-VERIFICATION-20260908.json",
+    "docs/work_orders/completed/WO-SS-20260907-058-bounded-live-j4-j5.md",
+    "scripts/Invoke-J5PlaywrightLoopbackQualification.ps1",
+    "src/main/java/com/bettingproject/sofascorelocal/adapter/persistence/live/JdbcLiveCampaignStore.java",
+    "src/main/java/com/bettingproject/sofascorelocal/adapter/sofascore/transport/ProviderJ5EventDataPlaywrightTransport.java",
+    "src/main/java/com/bettingproject/sofascorelocal/adapter/web/LiveCampaignController.java",
+    "src/main/java/com/bettingproject/sofascorelocal/adapter/web/LiveCampaignPresentation.java",
+    "src/main/java/com/bettingproject/sofascorelocal/application/live/LiveCampaignService.java",
+    "src/main/java/com/bettingproject/sofascorelocal/application/network/J5RealEventDataService.java",
+    "src/main/java/com/bettingproject/sofascorelocal/application/network/ManualProviderRequestCoordinator.java",
+    "src/main/java/com/bettingproject/sofascorelocal/application/network/playwright/ChildJvmPlaywrightProviderSupervisor.java",
+    "src/main/java/com/bettingproject/sofascorelocal/application/network/playwright/LiveProviderDispatchGroup.java",
+    "src/main/java/com/bettingproject/sofascorelocal/application/network/playwright/LiveProviderGroupTracker.java",
+    "src/main/java/com/bettingproject/sofascorelocal/application/network/playwright/PlaywrightProviderCampaignFactory.java",
+    "src/main/java/com/bettingproject/sofascorelocal/application/network/playwright/ProviderNetworkStartDelayGate.java",
+    "src/main/java/com/bettingproject/sofascorelocal/port/J5EventDataProviderTransport.java",
+    "src/main/java/com/bettingproject/sofascorelocal/port/LiveCampaignStore.java",
+    "src/main/resources/static/js/live-campaign.js",
+    "src/main/resources/templates/live-campaign.html",
+    "src/provider-playwright-qualification-test/java/com/bettingproject/sofascorelocal/application/network/playwright/ManualJ5GroupedQualificationIT.java",
+    "src/test/java/com/bettingproject/sofascorelocal/adapter/sofascore/transport/ProviderJ5EventDataPlaywrightTransportTest.java",
+    "src/test/java/com/bettingproject/sofascorelocal/adapter/web/LiveCampaignControllerTest.java",
+    "src/test/java/com/bettingproject/sofascorelocal/application/live/LiveCampaignCleanupTest.java",
+    "src/test/java/com/bettingproject/sofascorelocal/application/live/LiveCampaignServiceTest.java",
+    "src/test/java/com/bettingproject/sofascorelocal/application/network/J5RealEventDataServiceTest.java",
+    "src/test/java/com/bettingproject/sofascorelocal/application/network/ManualProviderRequestCoordinatorTest.java",
+    "src/test/java/com/bettingproject/sofascorelocal/application/network/playwright/ChildJvmPlaywrightProviderSupervisorTest.java",
+    "src/test/java/com/bettingproject/sofascorelocal/application/network/playwright/LiveProviderGroupTrackerTest.java",
+    "src/test/java/com/bettingproject/sofascorelocal/integration/LiveCampaignPersistenceIT.java"
+  ],
+  "sourceFingerprints": [
+    {
+      "path": "scripts/Invoke-J5PlaywrightLoopbackQualification.ps1",
+      "sha256": "a4c14e4e2c96d3402a5cf57de55e664e95e4b95013fe5a191be5e6009e3609b5"
+    },
+    {
+      "path": "src/main/java/com/bettingproject/sofascorelocal/adapter/persistence/live/JdbcLiveCampaignStore.java",
+      "sha256": "1603acb4eaffa186ff9a31bb9d4d6017dcb4b30362ddd4018eeb826603ab68b7"
+    },
+    {
+      "path": "src/main/java/com/bettingproject/sofascorelocal/adapter/sofascore/transport/ProviderJ5EventDataPlaywrightTransport.java",
+      "sha256": "36f640f8c6ef4db6a7052db4019783ad946429fcec7272b57ba221ebe86c3cfc"
+    },
+    {
+      "path": "src/main/java/com/bettingproject/sofascorelocal/adapter/web/LiveCampaignController.java",
+      "sha256": "8508d0820a4d482db16c778f912289792e092782fb6e197abe2a92f4fa10efe1"
+    },
+    {
+      "path": "src/main/java/com/bettingproject/sofascorelocal/adapter/web/LiveCampaignPresentation.java",
+      "sha256": "3d62761799780a57db76b9c2fc62e6f5eee08ca2a4045cbb337de0bc57d009b0"
+    },
+    {
+      "path": "src/main/java/com/bettingproject/sofascorelocal/application/live/LiveCampaignService.java",
+      "sha256": "a791874d42aa9c3a490a178440ecb47b4d7e9b8a4c6e9ec99c49e74f4237c2b4"
+    },
+    {
+      "path": "src/main/java/com/bettingproject/sofascorelocal/application/network/J5RealEventDataService.java",
+      "sha256": "ce94485912c85a0f3e9556b824f2dd4e030566c3ea59e1c29673a0b258e2e313"
+    },
+    {
+      "path": "src/main/java/com/bettingproject/sofascorelocal/application/network/ManualProviderRequestCoordinator.java",
+      "sha256": "78189832de1709e02a373c4d06666c6de0ed3f5ec222018215d4f49aa3e600e5"
+    },
+    {
+      "path": "src/main/java/com/bettingproject/sofascorelocal/application/network/playwright/ChildJvmPlaywrightProviderSupervisor.java",
+      "sha256": "d45fea326a7955aa57f6252e124829aace5752cdadd580d76a55ca265f25ea76"
+    },
+    {
+      "path": "src/main/java/com/bettingproject/sofascorelocal/application/network/playwright/LiveProviderDispatchGroup.java",
+      "sha256": "935455025b6b2c2bf5ce876e7f1326aa8175c4fd1a916b5b97e885fe8c14e47b"
+    },
+    {
+      "path": "src/main/java/com/bettingproject/sofascorelocal/application/network/playwright/LiveProviderGroupTracker.java",
+      "sha256": "28a386562f45f924c65727dc6a5938005997f256d19e13830d7a0031b71213da"
+    },
+    {
+      "path": "src/main/java/com/bettingproject/sofascorelocal/application/network/playwright/PlaywrightProviderCampaignFactory.java",
+      "sha256": "7681b76bfa3580df38ab15aec1c0406f7e1e837c87ad7853931510fc675f0697"
+    },
+    {
+      "path": "src/main/java/com/bettingproject/sofascorelocal/application/network/playwright/ProviderNetworkStartDelayGate.java",
+      "sha256": "bc34700e7633f0cc3bb17633f7863dd8bfaf4e4e40b2e7ee742823be365f4ee8"
+    },
+    {
+      "path": "src/main/java/com/bettingproject/sofascorelocal/port/J5EventDataProviderTransport.java",
+      "sha256": "387b91efa0b6eca2f2fd86d0d0d199824943a230a8417d1d47fd3999fdda5522"
+    },
+    {
+      "path": "src/main/java/com/bettingproject/sofascorelocal/port/LiveCampaignStore.java",
+      "sha256": "d65ec8d2d97eee64ea6948be12ceda40cbf10e3bdc40fb9ea002a64e4874ad36"
+    },
+    {
+      "path": "src/main/resources/static/js/live-campaign.js",
+      "sha256": "81b67437a7b26444fca39fd1591cf3733372792420904284145715bdfee1121f"
+    },
+    {
+      "path": "src/main/resources/templates/live-campaign.html",
+      "sha256": "30c8405185c75a223b03c35acc6809b25ca641c134e921196d8fdd8bff11f435"
+    },
+    {
+      "path": "src/provider-playwright-qualification-test/java/com/bettingproject/sofascorelocal/application/network/playwright/ManualJ5GroupedQualificationIT.java",
+      "sha256": "c9395bb03df883e281e378f4bf3caa023e6581c13e581969e9b7211a21e57a8a"
+    },
+    {
+      "path": "src/test/java/com/bettingproject/sofascorelocal/adapter/sofascore/transport/ProviderJ5EventDataPlaywrightTransportTest.java",
+      "sha256": "1bf4b1d73bdfe89a1dacaaa9644656ef38f1020792a928505e5ef396c8c19a7a"
+    },
+    {
+      "path": "src/test/java/com/bettingproject/sofascorelocal/adapter/web/LiveCampaignControllerTest.java",
+      "sha256": "ac5630387ef70abdc3228ce50c04a50ec02995791a2dc793392b0d66c8dc2f42"
+    },
+    {
+      "path": "src/test/java/com/bettingproject/sofascorelocal/application/live/LiveCampaignCleanupTest.java",
+      "sha256": "b9470aac591e8ab62d12c0de142e907cf6b9a0c942188da81d55784bcd71ee0e"
+    },
+    {
+      "path": "src/test/java/com/bettingproject/sofascorelocal/application/live/LiveCampaignServiceTest.java",
+      "sha256": "843824fd50e814cc27f90dbd50e96b09bbb1d896ab1000536bd967b1cc8a9b92"
+    },
+    {
+      "path": "src/test/java/com/bettingproject/sofascorelocal/application/network/J5RealEventDataServiceTest.java",
+      "sha256": "c12b345ed7fdba12bcc19ba1bff461eb53053e66bea0d96d7097f4db6c831435"
+    },
+    {
+      "path": "src/test/java/com/bettingproject/sofascorelocal/application/network/ManualProviderRequestCoordinatorTest.java",
+      "sha256": "4fb78633d32014f297d834f705f20ab5fe791c986edf1e835798fe4a50bf5557"
+    },
+    {
+      "path": "src/test/java/com/bettingproject/sofascorelocal/application/network/playwright/ChildJvmPlaywrightProviderSupervisorTest.java",
+      "sha256": "0cd154361e05e4e79592ec52e71f5bbb32d0a6321acdd2d3403a3dfac14855f1"
+    },
+    {
+      "path": "src/test/java/com/bettingproject/sofascorelocal/application/network/playwright/LiveProviderGroupTrackerTest.java",
+      "sha256": "641fc5156ae9bbcaac84c203a8dcdf1a232b6043867c64090d8ed84f10b07191"
+    },
+    {
+      "path": "src/test/java/com/bettingproject/sofascorelocal/integration/LiveCampaignPersistenceIT.java",
+      "sha256": "de99035f9dace30dcea4ba659a0e10c7437f0b7b3acb4eb71d98d44b0eeb373b"
+    }
+  ]
+}

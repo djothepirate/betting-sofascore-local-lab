@@ -14,7 +14,9 @@ public record J3ManualCallExecutionResult(
     public J3ManualCallExecutionResult {
         if (completedPages < 0
                 || completedPages > ScheduledEventsProviderPageRequest.MAXIMUM_COLLECTION_PAGE) {
-            throw new IllegalArgumentException("completedPages must be between 0 and 25");
+            throw new IllegalArgumentException(
+                    "completedPages must be between 0 and "
+                            + ScheduledEventsProviderPageRequest.MAXIMUM_COLLECTION_PAGE);
         }
         if (providerRequests < 0 || cacheHits < 0 || localJsonImports < 0
                 || cacheHits > completedPages) {

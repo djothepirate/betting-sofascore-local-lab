@@ -48,6 +48,8 @@ public record J5EventDataObservation(
             throw new IllegalArgumentException(
                     "UNAVAILABLE J5 observations cannot contain normalized provider values");
         }
+        if (data instanceof EventLineups lineups && hasEnrichedLineups(lineups))
+            throw new IllegalArgumentException("UNAVAILABLE lineups cannot contain enriched source observations");
     }
 
     private static void requireCompatibleProvenance(
@@ -62,13 +64,25 @@ public record J5EventDataObservation(
             }
             return;
         }
+        if (data instanceof EventLineups lineups) {
+            boolean countries = source.kind() == EventSourceKind.PROVIDER_SNAPSHOT && "event-lineups-v4".equals(source.parserVersion());
+            if (hasCountries(lineups) && !countries)
+                throw new IllegalArgumentException("player countries require the versioned provider V4 parser");
+            boolean current = source.kind() == EventSourceKind.PROVIDER_SNAPSHOT
+                    && ("event-lineups-v3".equals(source.parserVersion()) || countries);
+            if (hasEnrichedLineups(lineups) && !current)
+                throw new IllegalArgumentException("enriched lineups require the versioned provider V3 parser");
+            if (current) return;
+        }
         if (data instanceof EventIncidents incidents
                 && source.kind() == EventSourceKind.PROVIDER_SNAPSHOT) {
             boolean hasReplacementPlayers = incidents.incidents().stream()
                     .anyMatch(EventIncident::hasReplacementPlayers);
             boolean hasComprehensiveDetails = incidents.incidents().stream()
                     .anyMatch(EventIncident::hasComprehensiveDetails);
-            boolean compatible = "event-incidents-v15".equals(source.parserVersion())
+            boolean compatible = "event-incidents-v17".equals(source.parserVersion())
+                    || "event-incidents-v16".equals(source.parserVersion())
+                    || "event-incidents-v15".equals(source.parserVersion())
                     || "event-incidents-v14".equals(source.parserVersion())
                     || "event-incidents-v13".equals(source.parserVersion())
                     || "event-incidents-v12".equals(source.parserVersion())
@@ -135,7 +149,9 @@ public record J5EventDataObservation(
                         data instanceof EventIncidents incidents
                                 && incidents.incidents().stream()
                                         .anyMatch(EventIncident::hasComprehensiveDetails);
-                output.writeUTF(includesComprehensiveIncidentDetails
+                boolean includesLineupDetails = data instanceof EventLineups lineups && hasEnrichedLineups(lineups);
+                boolean includesCountries = data instanceof EventLineups lineups && hasCountries(lineups);
+                output.writeUTF(includesCountries ? "j5-event-data-observation-v6" : includesLineupDetails ? "j5-event-data-observation-v5" : includesComprehensiveIncidentDetails
                         ? "j5-event-data-observation-v4"
                         : includesIncidentDetails
                         ? "j5-event-data-observation-v3"
@@ -152,7 +168,7 @@ public record J5EventDataObservation(
                             includesReplacementPlayers,
                             includesIncidentDetails,
                             includesComprehensiveIncidentDetails);
-                    case EventLineups lineups -> writeLineups(output, lineups);
+                    case EventLineups lineups -> writeLineups(output, lineups, includesLineupDetails, includesCountries);
                 }
             }
             return Sha256.hex(bytes.toByteArray());
@@ -221,15 +237,27 @@ public record J5EventDataObservation(
 
     private static void writeLineups(
             DataOutputStream output,
-            EventLineups lineups) throws IOException {
+            EventLineups lineups, boolean enriched, boolean countries) throws IOException {
         output.writeBoolean(lineups.confirmed());
-        writeTeamLineup(output, lineups.home());
-        writeTeamLineup(output, lineups.away());
+        writeTeamLineup(output, lineups.home(), enriched, countries);
+        writeTeamLineup(output, lineups.away(), enriched, countries);
+    }
+
+    private static boolean hasCountries(EventLineups lineups) {
+        return java.util.stream.Stream.concat(lineups.home().players().stream(), lineups.away().players().stream())
+                .anyMatch(player -> player.country().isPresent())
+                || java.util.stream.Stream.of(lineups.home(), lineups.away())
+                    .flatMap(team -> team.missingPlayers().stream()).flatMap(java.util.List::stream)
+                    .anyMatch(player -> player.country().isPresent());
+    }
+
+    private static boolean hasEnrichedLineups(EventLineups lineups) {
+        return lineups.home().hasEnrichedData() || lineups.away().hasEnrichedData();
     }
 
     private static void writeTeamLineup(
             DataOutputStream output,
-            TeamLineup lineup) throws IOException {
+            TeamLineup lineup, boolean enriched, boolean countries) throws IOException {
         output.writeUTF(lineup.side().name());
         writeOptionalText(output, lineup.formation());
         output.writeInt(lineup.players().size());
@@ -239,6 +267,51 @@ public record J5EventDataObservation(
             writeOptionalInteger(output, player.shirtNumber());
             writeOptionalText(output, player.position());
             output.writeBoolean(player.starter());
+            if (enriched) {
+                writeOptionalBoolean(output, player.captain());
+                output.writeBoolean(player.statistics().isPresent());
+                if (player.statistics().isPresent()) {
+                    writeNumericStatistics(output, player.statistics().orElseThrow().values());
+                    writeNumericStatistics(output, player.statistics().orElseThrow().ratingVersions());
+                }
+            }
+            if (countries) writeCountry(output, player.country());
+        }
+        if (enriched) {
+            output.writeBoolean(lineup.missingPlayers().isPresent());
+            if (lineup.missingPlayers().isPresent()) {
+                output.writeInt(lineup.missingPlayers().orElseThrow().size());
+                for (MissingLineupPlayer player : lineup.missingPlayers().orElseThrow()) {
+                    output.writeLong(player.providerPlayerId());
+                    output.writeUTF(player.name());
+                    writeOptionalInteger(output, player.shirtNumber());
+                    writeOptionalText(output, player.position());
+                    writeOptionalText(output, player.type());
+                    writeOptionalInteger(output, player.reason());
+                    writeOptionalText(output, player.description());
+                    writeOptionalInteger(output, player.externalType());
+                    writeOptionalText(output, player.expectedEndDate().map(Object::toString));
+                    if (countries) writeCountry(output, player.country());
+                }
+            }
+        }
+    }
+
+    private static void writeCountry(DataOutputStream output,
+            Optional<com.bettingproject.sofascorelocal.domain.event.ProviderCountry> country) throws IOException {
+        output.writeBoolean(country.isPresent());
+        if (country.isPresent()) {
+            writeOptionalText(output, country.orElseThrow().name());
+            writeOptionalText(output, country.orElseThrow().alpha2());
+        }
+    }
+
+    private static void writeNumericStatistics(DataOutputStream output,
+            java.util.Map<String, java.math.BigDecimal> values) throws IOException {
+        output.writeInt(values.size());
+        for (var value : values.entrySet()) {
+            output.writeUTF(value.getKey());
+            output.writeUTF(value.getValue().toPlainString());
         }
     }
 

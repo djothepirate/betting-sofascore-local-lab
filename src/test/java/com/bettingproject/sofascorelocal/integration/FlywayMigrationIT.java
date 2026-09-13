@@ -21,6 +21,8 @@ import com.bettingproject.sofascorelocal.adapter.sofascore.eventdata.EventIncide
 import com.bettingproject.sofascorelocal.adapter.sofascore.eventdata.EventIncidentsV13Parser;
 import com.bettingproject.sofascorelocal.adapter.sofascore.eventdata.EventIncidentsV14Parser;
 import com.bettingproject.sofascorelocal.adapter.sofascore.eventdata.EventIncidentsV15Parser;
+import com.bettingproject.sofascorelocal.adapter.sofascore.eventdata.EventIncidentsV16Parser;
+import com.bettingproject.sofascorelocal.adapter.sofascore.eventdata.EventIncidentsV17Parser;
 import com.bettingproject.sofascorelocal.adapter.sofascore.eventdata.EventLineupsV1Parser;
 import com.bettingproject.sofascorelocal.adapter.sofascore.eventdata.EventLineupsV2Parser;
 import com.bettingproject.sofascorelocal.adapter.sofascore.eventdata.EventStatisticsV1Parser;
@@ -338,8 +340,120 @@ class FlywayMigrationIT {
         assertThat(exportTable).isEqualTo("export_manifest");
         assertThat(deliveryTable).isEqualTo("j7_delivery");
         assertThat(networkEnabled).isFalse();
-        assertThat(flywayVersion).isEqualTo("32");
+        assertThat(flywayVersion).isEqualTo("54");
         assertThat(rawColumn).isEqualTo("bytea");
+    }
+
+    @Test
+    void upgradesV52ToV53AndPreservesHistoricalJ3CampaignBounds() {
+        // V31 defines functions explicitly in public, so this upgrade needs a separate database.
+        String database = "upgrade_v52_v53_" + UUID.randomUUID().toString().replace("-", "");
+        var adminDataSource = new DriverManagerDataSource(
+                POSTGRES.getJdbcUrl(), POSTGRES.getUsername(), POSTGRES.getPassword());
+        new JdbcTemplate(adminDataSource).execute("create database " + database);
+        String databaseUrl = POSTGRES.getJdbcUrl().substring(0, POSTGRES.getJdbcUrl().lastIndexOf('/') + 1)
+                + database;
+        String schema = "public";
+        var upgradeDataSource = new DriverManagerDataSource(
+                databaseUrl,
+                POSTGRES.getUsername(),
+                POSTGRES.getPassword());
+        Flyway throughV52 = Flyway.configure()
+                .dataSource(upgradeDataSource)
+                .schemas(schema)
+                .defaultSchema(schema)
+                .createSchemas(true)
+                .locations("classpath:db/migration")
+                .target(MigrationVersion.fromVersion("52"))
+                .load();
+
+        assertThat(throughV52.migrate().migrationsExecuted).isEqualTo(52);
+        JdbcTemplate upgradeJdbc = new JdbcTemplate(upgradeDataSource);
+        LocalDate collectionDate = LocalDate.of(2036, 9, 12);
+        Instant startedAt = Instant.parse("2036-09-12T08:00:00Z");
+        UUID historicalCampaignId = UUID.fromString("53535353-0000-0000-0000-000000000025");
+        upgradeJdbc.update("""
+                insert into j8_benchmark_campaign (
+                    campaign_id, campaign_type, execution_mode, started_at,
+                    maximum_units, collection_date
+                ) values (?, 'J3_SCHEDULED_EVENTS', 'GUARDED_PROVIDER', ?, 25, ?)
+                """, historicalCampaignId, Timestamp.from(startedAt), collectionDate);
+        upgradeJdbc.update("""
+                insert into j8_benchmark_unit (
+                    campaign_id, unit_ordinal, logical_endpoint, request_key, declared_at
+                ) values (?, 25, 'SCHEDULED_EVENTS', ?, ?)
+                """, historicalCampaignId,
+                "SCHEDULED_EVENTS|date=" + collectionDate + "|page=25",
+                Timestamp.from(startedAt.plusSeconds(1)));
+        Map<String, Object> historicalCampaignBefore = upgradeJdbc.queryForMap("""
+                select campaign_id, campaign_type, maximum_units, collection_date
+                from j8_benchmark_campaign
+                where campaign_id = ?
+                """, historicalCampaignId);
+        Map<String, Object> historicalUnitBefore = upgradeJdbc.queryForMap("""
+                select campaign_id, unit_ordinal, logical_endpoint, request_key
+                from j8_benchmark_unit
+                where campaign_id = ? and unit_ordinal = 25
+                """, historicalCampaignId);
+
+        Flyway toV53 = Flyway.configure()
+                .dataSource(upgradeDataSource)
+                .schemas(schema)
+                .defaultSchema(schema)
+                .locations("classpath:db/migration")
+                .target(MigrationVersion.fromVersion("53"))
+                .load();
+
+        assertThat(toV53.migrate().migrationsExecuted).isOne();
+        assertThat(toV53.info().current().getVersion().getVersion()).isEqualTo("53");
+        assertThat(upgradeJdbc.queryForMap("""
+                select campaign_id, campaign_type, maximum_units, collection_date
+                from j8_benchmark_campaign
+                where campaign_id = ?
+                """, historicalCampaignId)).containsAllEntriesOf(historicalCampaignBefore);
+        assertThat(upgradeJdbc.queryForMap("""
+                select campaign_id, unit_ordinal, logical_endpoint, request_key
+                from j8_benchmark_unit
+                where campaign_id = ? and unit_ordinal = 25
+                """, historicalCampaignId)).containsAllEntriesOf(historicalUnitBefore);
+        assertThatThrownBy(() -> upgradeJdbc.update("""
+                insert into j8_benchmark_unit (
+                    campaign_id, unit_ordinal, logical_endpoint, request_key, declared_at
+                ) values (?, 26, 'SCHEDULED_EVENTS', ?, ?)
+                """, historicalCampaignId,
+                "SCHEDULED_EVENTS|date=" + collectionDate + "|page=26",
+                Timestamp.from(startedAt.plusSeconds(2))))
+                .isInstanceOf(RuntimeException.class)
+                .hasStackTraceContaining("J8 benchmark unit exceeds its bounded campaign");
+
+        UUID currentCampaignId = UUID.fromString("53535353-0000-0000-0000-000000000035");
+        upgradeJdbc.update("""
+                insert into j8_benchmark_campaign (
+                    campaign_id, campaign_type, execution_mode, started_at,
+                    maximum_units, collection_date
+                ) values (?, 'J3_SCHEDULED_EVENTS', 'GUARDED_PROVIDER', ?, 35, ?)
+                """, currentCampaignId, Timestamp.from(startedAt.plusSeconds(3)), collectionDate);
+        upgradeJdbc.update("""
+                insert into j8_benchmark_unit (
+                    campaign_id, unit_ordinal, logical_endpoint, request_key, declared_at
+                ) values (?, 35, 'SCHEDULED_EVENTS', ?, ?)
+                """, currentCampaignId,
+                "SCHEDULED_EVENTS|date=" + collectionDate + "|page=35",
+                Timestamp.from(startedAt.plusSeconds(4)));
+        assertThat(upgradeJdbc.queryForObject("""
+                select maximum_units
+                from j8_benchmark_campaign
+                where campaign_id = ?
+                """, Integer.class, currentCampaignId)).isEqualTo(35);
+        assertThatThrownBy(() -> upgradeJdbc.update("""
+                insert into j8_benchmark_unit (
+                    campaign_id, unit_ordinal, logical_endpoint, request_key, declared_at
+                ) values (?, 36, 'SCHEDULED_EVENTS', ?, ?)
+                """, currentCampaignId,
+                "SCHEDULED_EVENTS|date=" + collectionDate + "|page=36",
+                Timestamp.from(startedAt.plusSeconds(5))))
+                .isInstanceOf(RuntimeException.class)
+                .hasStackTraceContaining("J8 benchmark unit exceeds its bounded campaign");
     }
 
     @Test
@@ -970,6 +1084,289 @@ class FlywayMigrationIT {
     }
 
     @Test
+    void upgradesV35ToV36WithoutRewritingHistoricalIncidentsOrTheirProvenance() {
+        // V31 defines functions explicitly in public, so this upgrade needs a separate database.
+        String database = "upgrade_v35_v36_" + UUID.randomUUID().toString().replace("-", "");
+        var adminDataSource = new DriverManagerDataSource(
+                POSTGRES.getJdbcUrl(), POSTGRES.getUsername(), POSTGRES.getPassword());
+        new JdbcTemplate(adminDataSource).execute("create database " + database);
+        String databaseUrl = POSTGRES.getJdbcUrl().substring(0, POSTGRES.getJdbcUrl().lastIndexOf('/') + 1)
+                + database;
+        String schema = "public";
+        var dataSource = new DriverManagerDataSource(
+                databaseUrl,
+                POSTGRES.getUsername(), POSTGRES.getPassword());
+        Flyway before = Flyway.configure().dataSource(dataSource).schemas(schema).defaultSchema(schema)
+                .createSchemas(true).locations("classpath:db/migration")
+                .target(MigrationVersion.fromVersion("35")).load();
+        assertThat(before.migrate().migrationsExecuted).isEqualTo(35);
+        JdbcTemplate upgradeJdbc = new JdbcTemplate(dataSource);
+        assertThat(upgradeJdbc.queryForObject("select current_database()", String.class)).isEqualTo(database);
+        UUID eventId = UUID.fromString("36363636-3636-3636-3636-363636363636");
+        upgradeJdbc.update("""
+                insert into canonical_event (id, provider, provider_event_id, created_at)
+                values (?, 'SOFASCORE', 900036, '2026-09-07T20:30:00Z')
+                """, eventId);
+        String insertObservation = """
+                insert into j5_event_data_observation (
+                    canonical_event_id, endpoint_type, source_kind, source_reference,
+                    source_fixture_id, source_payload_sha256, parser_version, source_received_at,
+                    completeness_status, completeness_score, present_signals, expected_signals,
+                    missing_paths_json, normalized_sha256
+                ) values (?, ?, 'SYNTHETIC_FIXTURE', ?, ?, repeat('a', 64), ?,
+                          '2026-09-07T20:31:00Z', 'COMPLETE', 100, 2, 2, '[]'::jsonb, repeat('b', 64))
+                returning id
+                """;
+        Long historicalId = upgradeJdbc.queryForObject(insertObservation, Long.class, eventId,
+                "EVENT_INCIDENTS", "v15-before-v36", "v15-before-v36", EventIncidentsV15Parser.PARSER_VERSION);
+        upgradeJdbc.update("""
+                insert into j5_event_incident (
+                    observation_id, incident_order, incident_type, minute, is_home,
+                    player_provider_id, player_name, incident_class, reason, description
+                ) values (?, 0, 'inGamePenalty', 74, false, 9001, 'Synthetic taker',
+                          'missed', 'goalkeeperSave', 'Goalkeeper save')
+                """, historicalId);
+        Map<String, Object> observationBefore = upgradeJdbc.queryForMap(
+                "select * from j5_event_data_observation where id = ?", historicalId);
+        Map<String, Object> incidentBefore = upgradeJdbc.queryForMap(
+                "select * from j5_event_incident where observation_id = ?", historicalId);
+        assertThat(parserConstraint(upgradeJdbc, schema)).doesNotContain(EventIncidentsV16Parser.PARSER_VERSION);
+        assertThatThrownBy(() -> upgradeJdbc.queryForObject(insertObservation, Long.class, eventId,
+                "EVENT_INCIDENTS", "v16-before-v36", "v16-before-v36", EventIncidentsV16Parser.PARSER_VERSION))
+                .isInstanceOf(DataIntegrityViolationException.class);
+
+        Flyway after = Flyway.configure().dataSource(dataSource).schemas(schema).defaultSchema(schema)
+                .locations("classpath:db/migration").target(MigrationVersion.fromVersion("36")).load();
+        assertThat(after.migrate().migrationsExecuted).isOne();
+        assertThat(after.info().current().getVersion().getVersion()).isEqualTo("36");
+        assertThat(upgradeJdbc.queryForMap("select * from j5_event_data_observation where id = ?", historicalId))
+                .isEqualTo(observationBefore);
+        assertThat(upgradeJdbc.queryForMap("select * from j5_event_incident where observation_id = ?", historicalId))
+                .isEqualTo(incidentBefore);
+        String constraint = parserConstraint(upgradeJdbc, schema);
+        for (int version = 1; version <= 16; version++) assertThat(constraint).contains("'event-incidents-v" + version + "'");
+        assertThat(constraint).contains("event-incidents-unavailable-v1", "event-statistics-v1",
+                "event-statistics-v2", "event-statistics-unavailable-v1", "event-lineups-v1",
+                "event-lineups-v2", "event-lineups-unavailable-v1");
+        Long awardedId = upgradeJdbc.queryForObject(insertObservation, Long.class, eventId,
+                "EVENT_INCIDENTS", "v16-after-v36", "v16-after-v36", EventIncidentsV16Parser.PARSER_VERSION);
+        upgradeJdbc.update("""
+                insert into j5_event_incident (
+                    observation_id, incident_order, incident_type, minute, is_home, incident_class
+                ) values (?, 0, 'inGamePenalty', 83, true, 'awarded')
+                """, awardedId);
+        assertThat(upgradeJdbc.queryForMap("""
+                select incident_class, player_name, home_score, away_score, reason, description
+                from j5_event_incident where observation_id = ?
+                """, awardedId)).containsEntry("incident_class", "awarded")
+                .containsEntry("player_name", null).containsEntry("home_score", null)
+                .containsEntry("away_score", null).containsEntry("reason", null).containsEntry("description", null);
+        assertThatThrownBy(() -> upgradeJdbc.queryForObject(insertObservation, Long.class, eventId,
+                "EVENT_STATISTICS", "v16-wrong-family", "v16-wrong-family", EventIncidentsV16Parser.PARSER_VERSION))
+                .isInstanceOf(DataIntegrityViolationException.class);
+        assertThatThrownBy(() -> upgradeJdbc.queryForObject(insertObservation, Long.class, eventId,
+                "EVENT_INCIDENTS", "unknown-parser", "unknown-parser", "event-incidents-v17"))
+                .isInstanceOf(DataIntegrityViolationException.class);
+        assertThat(after.migrate().migrationsExecuted).isZero();
+        assertThat(upgradeJdbc.queryForObject("select count(*) from j5_event_data_observation", Long.class)).isEqualTo(2);
+    }
+
+    @Test
+    void upgradesV36ToV37WithoutRewritingHistoricalIncidentsOrTheirProvenance() {
+        // V31 defines functions explicitly in public, so this upgrade needs a separate database.
+        String database = "upgrade_v36_v37_" + UUID.randomUUID().toString().replace("-", "");
+        var adminDataSource = new DriverManagerDataSource(
+                POSTGRES.getJdbcUrl(), POSTGRES.getUsername(), POSTGRES.getPassword());
+        new JdbcTemplate(adminDataSource).execute("create database " + database);
+        String databaseUrl = POSTGRES.getJdbcUrl().substring(0, POSTGRES.getJdbcUrl().lastIndexOf('/') + 1)
+                + database;
+        String schema = "public";
+        var dataSource = new DriverManagerDataSource(
+                databaseUrl,
+                POSTGRES.getUsername(), POSTGRES.getPassword());
+        Flyway before = Flyway.configure().dataSource(dataSource).schemas(schema).defaultSchema(schema)
+                .createSchemas(true).locations("classpath:db/migration")
+                .target(MigrationVersion.fromVersion("36")).load();
+        assertThat(before.migrate().migrationsExecuted).isEqualTo(36);
+        JdbcTemplate upgradeJdbc = new JdbcTemplate(dataSource);
+        assertThat(upgradeJdbc.queryForObject("select current_database()", String.class)).isEqualTo(database);
+        UUID eventId = UUID.fromString("36363636-3636-3636-3636-363636363636");
+        upgradeJdbc.update("""
+                insert into canonical_event (id, provider, provider_event_id, created_at)
+                values (?, 'SOFASCORE', 900036, '2026-09-07T20:30:00Z')
+                """, eventId);
+        String insertObservation = """
+                insert into j5_event_data_observation (
+                    canonical_event_id, endpoint_type, source_kind, source_reference,
+                    source_fixture_id, source_payload_sha256, parser_version, source_received_at,
+                    completeness_status, completeness_score, present_signals, expected_signals,
+                    missing_paths_json, normalized_sha256
+                ) values (?, ?, 'SYNTHETIC_FIXTURE', ?, ?, repeat('a', 64), ?,
+                          '2026-09-07T20:31:00Z', 'COMPLETE', 100, 2, 2, '[]'::jsonb, repeat('b', 64))
+                returning id
+                """;
+        Long historicalId = upgradeJdbc.queryForObject(insertObservation, Long.class, eventId,
+                "EVENT_INCIDENTS", "v16-before-v37", "v16-before-v37", EventIncidentsV16Parser.PARSER_VERSION);
+        upgradeJdbc.update("""
+                insert into j5_event_incident (
+                    observation_id, incident_order, incident_type, minute, is_home,
+                    player_provider_id, player_name, incident_class, reason, description
+                ) values (?, 0, 'inGamePenalty', 74, false, 9001, 'Synthetic taker',
+                          'missed', 'goalkeeperSave', 'Goalkeeper save')
+                """, historicalId);
+        Map<String, Object> observationBefore = upgradeJdbc.queryForMap(
+                "select * from j5_event_data_observation where id = ?", historicalId);
+        Map<String, Object> incidentBefore = upgradeJdbc.queryForMap(
+                "select * from j5_event_incident where observation_id = ?", historicalId);
+        assertThat(parserConstraint(upgradeJdbc, schema)).doesNotContain(EventIncidentsV17Parser.PARSER_VERSION);
+        assertThatThrownBy(() -> upgradeJdbc.queryForObject(insertObservation, Long.class, eventId,
+                "EVENT_INCIDENTS", "v17-before-v37", "v17-before-v37", EventIncidentsV17Parser.PARSER_VERSION))
+                .isInstanceOf(DataIntegrityViolationException.class);
+
+        Flyway after = Flyway.configure().dataSource(dataSource).schemas(schema).defaultSchema(schema)
+                .locations("classpath:db/migration").target(MigrationVersion.fromVersion("37")).load();
+        assertThat(after.migrate().migrationsExecuted).isOne();
+        assertThat(after.info().current().getVersion().getVersion()).isEqualTo("37");
+        assertThat(upgradeJdbc.queryForMap("select * from j5_event_data_observation where id = ?", historicalId))
+                .isEqualTo(observationBefore);
+        assertThat(upgradeJdbc.queryForMap("select * from j5_event_incident where observation_id = ?", historicalId))
+                .isEqualTo(incidentBefore);
+        String constraint = parserConstraint(upgradeJdbc, schema);
+        for (int version = 1; version <= 17; version++) assertThat(constraint).contains("'event-incidents-v" + version + "'");
+        assertThat(constraint).contains("event-incidents-unavailable-v1", "event-statistics-v1",
+                "event-statistics-v2", "event-statistics-unavailable-v1", "event-lineups-v1",
+                "event-lineups-v2", "event-lineups-unavailable-v1");
+        Long handballId = upgradeJdbc.queryForObject(insertObservation, Long.class, eventId,
+                "EVENT_INCIDENTS", "v17-after-v37", "v17-after-v37", EventIncidentsV17Parser.PARSER_VERSION);
+        upgradeJdbc.update("""
+                insert into j5_event_incident (
+                    observation_id, incident_order, incident_type, minute, is_home, incident_class, reason
+                ) values (?, 0, 'card', 64, false, 'red', 'Professional handball')
+                """, handballId);
+        assertThat(upgradeJdbc.queryForMap("""
+                select incident_class, player_name, home_score, away_score, reason, description
+                from j5_event_incident where observation_id = ?
+                """, handballId)).containsEntry("incident_class", "red")
+                .containsEntry("player_name", null).containsEntry("home_score", null)
+                .containsEntry("away_score", null).containsEntry("reason", "Professional handball").containsEntry("description", null);
+        assertThatThrownBy(() -> upgradeJdbc.queryForObject(insertObservation, Long.class, eventId,
+                "EVENT_STATISTICS", "v17-wrong-family", "v17-wrong-family", EventIncidentsV17Parser.PARSER_VERSION))
+                .isInstanceOf(DataIntegrityViolationException.class);
+        assertThatThrownBy(() -> upgradeJdbc.queryForObject(insertObservation, Long.class, eventId,
+                "EVENT_INCIDENTS", "unknown-parser", "unknown-parser", "event-incidents-v18"))
+                .isInstanceOf(DataIntegrityViolationException.class);
+        assertThat(after.migrate().migrationsExecuted).isZero();
+        assertThat(upgradeJdbc.queryForObject("select count(*) from j5_event_data_observation", Long.class)).isEqualTo(2);
+    }
+
+    @Test
+    void persistsAndReplaysV16AwardedPenaltyWithExactSnapshotProvenanceAndNoInventedOutcome() {
+        var j4Import = j4OfflineFixtureImportService.importNominalCorpus();
+        Instant requestedAt = Instant.parse("2026-09-07T20:31:00Z");
+        Instant receivedAt = requestedAt.plusMillis(100);
+        RawPayloadEvidence payload = RawPayloadEvidence.capture("""
+                {"incidents":[{"incidentType":"inGamePenalty","incidentClass":"awarded",
+                               "time":83,"isHome":true}]}
+                """.getBytes(StandardCharsets.UTF_8));
+        var raw = snapshotStore.save(new RawManualCallSnapshot(SofascoreEndpointType.EVENT_INCIDENTS,
+                "EVENT_INCIDENTS|eventId=900001|rules=v16-awarded-penalty", requestedAt, receivedAt,
+                200, "application/json", Duration.ofMillis(100), payload,
+                EventIncidentsV16Parser.PARSER_VERSION, RawSnapshotSchemaStatus.RAW_ONLY, null));
+        var parsed = new EventIncidentsV16Parser().parse(raw.snapshotId(), 900001L, payload, receivedAt);
+        var identity = canonicalEventStore.findLatestByCanonicalId(j4Import.canonicalEventId()).orElseThrow().identity();
+        var observation = J5EventDataObservation.from(identity, parsed.data().orElseThrow(),
+                EventSourceTrace.providerSnapshot(raw.snapshotId(), raw.payloadSha256(),
+                        EventIncidentsV16Parser.PARSER_VERSION, receivedAt), parsed.completeness().orElseThrow());
+
+        var persisted = j5EventDataStore.save(observation);
+        var repeated = j5EventDataStore.save(observation);
+
+        assertThat(persisted.inserted()).isTrue();
+        assertThat(repeated.inserted()).isFalse();
+        assertThat(repeated.observationId()).isEqualTo(persisted.observationId());
+        assertThat(jdbcTemplate.queryForMap("""
+                select source_snapshot_id, source_payload_sha256, parser_version,
+                       source_received_at, normalized_sha256, completeness_status, completeness_score
+                from j5_event_data_observation where id = ?
+                """, persisted.observationId()))
+                .containsEntry("source_snapshot_id", raw.snapshotId())
+                .containsEntry("source_payload_sha256", payload.sha256())
+                .containsEntry("parser_version", EventIncidentsV16Parser.PARSER_VERSION)
+                .containsEntry("source_received_at", Timestamp.from(receivedAt))
+                .containsEntry("normalized_sha256", observation.normalizedSha256())
+                .containsEntry("completeness_status", "COMPLETE")
+                .containsEntry("completeness_score", 100);
+        assertThat(j5EventDataStore.findByObservationId(identity.value(), SofascoreEndpointType.EVENT_INCIDENTS,
+                persisted.observationId())).hasValueSatisfying(read -> {
+            assertThat(read.source()).isEqualTo(observation.source());
+            assertThat(read.normalizedSha256()).isEqualTo(observation.normalizedSha256());
+            assertThat(read.completeness()).isEqualTo(observation.completeness());
+            assertThat(read.data()).isEqualTo(observation.data());
+        });
+        assertThat(jdbcTemplate.queryForList("""
+                select incident_class, player_name, minute, is_home, home_score, away_score, reason, description
+                from j5_event_incident where observation_id = ?
+                """, persisted.observationId())).singleElement().satisfies(row -> assertThat(row)
+                .containsEntry("incident_class", "awarded").containsEntry("minute", 83).containsEntry("is_home", true)
+                .containsEntry("player_name", null).containsEntry("home_score", null).containsEntry("away_score", null)
+                .containsEntry("reason", null).containsEntry("description", null));
+    }
+
+    @Test
+    void persistsAndReplaysV17ProfessionalHandballWithExactSnapshotProvenance() {
+        var j4Import = j4OfflineFixtureImportService.importNominalCorpus();
+        Instant requestedAt = Instant.parse("2026-09-07T20:31:00Z");
+        Instant receivedAt = requestedAt.plusMillis(100);
+        RawPayloadEvidence payload = RawPayloadEvidence.capture("""
+                {"incidents":[{"incidentType":"card","incidentClass":"red",
+                               "time":64,"isHome":false,"reason":"Professional handball",
+                               "player":{"id":9001,"name":"Synthetic defender"},"rescinded":false}]}
+                """.getBytes(StandardCharsets.UTF_8));
+        var raw = snapshotStore.save(new RawManualCallSnapshot(SofascoreEndpointType.EVENT_INCIDENTS,
+                "EVENT_INCIDENTS|eventId=900001|rules=v17-professional-handball", requestedAt, receivedAt,
+                200, "application/json", Duration.ofMillis(100), payload,
+                EventIncidentsV17Parser.PARSER_VERSION, RawSnapshotSchemaStatus.RAW_ONLY, null));
+        var parsed = new EventIncidentsV17Parser().parse(raw.snapshotId(), 900001L, payload, receivedAt);
+        var identity = canonicalEventStore.findLatestByCanonicalId(j4Import.canonicalEventId()).orElseThrow().identity();
+        var observation = J5EventDataObservation.from(identity, parsed.data().orElseThrow(),
+                EventSourceTrace.providerSnapshot(raw.snapshotId(), raw.payloadSha256(),
+                        EventIncidentsV17Parser.PARSER_VERSION, receivedAt), parsed.completeness().orElseThrow());
+
+        var persisted = j5EventDataStore.save(observation);
+        var repeated = j5EventDataStore.save(observation);
+
+        assertThat(persisted.inserted()).isTrue();
+        assertThat(repeated.inserted()).isFalse();
+        assertThat(repeated.observationId()).isEqualTo(persisted.observationId());
+        assertThat(jdbcTemplate.queryForMap("""
+                select source_snapshot_id, source_payload_sha256, parser_version,
+                       source_received_at, normalized_sha256, completeness_status, completeness_score
+                from j5_event_data_observation where id = ?
+                """, persisted.observationId()))
+                .containsEntry("source_snapshot_id", raw.snapshotId())
+                .containsEntry("source_payload_sha256", payload.sha256())
+                .containsEntry("parser_version", EventIncidentsV17Parser.PARSER_VERSION)
+                .containsEntry("source_received_at", Timestamp.from(receivedAt))
+                .containsEntry("normalized_sha256", observation.normalizedSha256())
+                .containsEntry("completeness_status", "COMPLETE")
+                .containsEntry("completeness_score", 100);
+        assertThat(j5EventDataStore.findByObservationId(identity.value(), SofascoreEndpointType.EVENT_INCIDENTS,
+                persisted.observationId())).hasValueSatisfying(read -> {
+            assertThat(read.source()).isEqualTo(observation.source());
+            assertThat(read.normalizedSha256()).isEqualTo(observation.normalizedSha256());
+            assertThat(read.completeness()).isEqualTo(observation.completeness());
+            assertThat(read.data()).isEqualTo(observation.data());
+        });
+        assertThat(jdbcTemplate.queryForList("""
+                select incident_class, player_name, minute, is_home, home_score, away_score, reason, description
+                from j5_event_incident where observation_id = ?
+                """, persisted.observationId())).singleElement().satisfies(row -> assertThat(row)
+                .containsEntry("incident_class", "red").containsEntry("minute", 64).containsEntry("is_home", false)
+                .containsEntry("player_name", "Synthetic defender").containsEntry("home_score", null).containsEntry("away_score", null)
+                .containsEntry("reason", "Professional handball").containsEntry("description", null));
+    }
+
+    @Test
     void upgradesV29ToV30WithoutRewritingTheLedgerAndRemovesOnlyCrossClockOrdering() {
         String schema = "upgrade_v29_to_v30_ack_receipt_time";
         String separator = POSTGRES.getJdbcUrl().contains("?") ? "&" : "?";
@@ -1568,7 +1965,7 @@ class FlywayMigrationIT {
                 J8BenchmarkCampaignType.J3_SCHEDULED_EVENTS,
                 J8BenchmarkExecutionMode.GUARDED_PROVIDER,
                 startedAt,
-                25,
+                J8BenchmarkCampaignType.J3_SCHEDULED_EVENTS.maximumUnits(),
                 Optional.of(collectionDate)));
         assertThatThrownBy(() -> insertJ8Unit(
                 scheduledCampaignId,
@@ -1796,7 +2193,7 @@ class FlywayMigrationIT {
                 J8BenchmarkCampaignType.J3_SCHEDULED_EVENTS,
                 J8BenchmarkExecutionMode.GUARDED_PROVIDER,
                 startedAt,
-                25,
+                J8BenchmarkCampaignType.J3_SCHEDULED_EVENTS.maximumUnits(),
                 Optional.of(collectionDate)));
 
         List<Long> unitIds = new ArrayList<>();
@@ -2115,7 +2512,7 @@ class FlywayMigrationIT {
                 J8BenchmarkCampaignType.J3_SCHEDULED_EVENTS,
                 J8BenchmarkExecutionMode.GUARDED_PROVIDER,
                 startedAt,
-                25,
+                J8BenchmarkCampaignType.J3_SCHEDULED_EVENTS.maximumUnits(),
                 Optional.of(collectionDate)));
 
         List<Long> unitIds = new ArrayList<>();
@@ -2338,7 +2735,7 @@ class FlywayMigrationIT {
                 J8BenchmarkCampaignType.J3_SCHEDULED_EVENTS,
                 J8BenchmarkExecutionMode.GUARDED_PROVIDER,
                 startedAt,
-                25,
+                J8BenchmarkCampaignType.J3_SCHEDULED_EVENTS.maximumUnits(),
                 Optional.of(collectionDate)));
         long unitId = j8BenchmarkEvidenceStore.declareUnit(new J8BenchmarkUnit(
                 campaignId,
@@ -2417,7 +2814,7 @@ class FlywayMigrationIT {
                 J8BenchmarkCampaignType.J3_SCHEDULED_EVENTS,
                 J8BenchmarkExecutionMode.GUARDED_PROVIDER,
                 firstStartedAt,
-                25,
+                J8BenchmarkCampaignType.J3_SCHEDULED_EVENTS.maximumUnits(),
                 Optional.of(collectionDate)));
         long firstUnitId = j8BenchmarkEvidenceStore.declareUnit(new J8BenchmarkUnit(
                 firstCampaignId,
@@ -2479,7 +2876,7 @@ class FlywayMigrationIT {
                 J8BenchmarkCampaignType.J3_SCHEDULED_EVENTS,
                 J8BenchmarkExecutionMode.GUARDED_PROVIDER,
                 secondStartedAt,
-                25,
+                J8BenchmarkCampaignType.J3_SCHEDULED_EVENTS.maximumUnits(),
                 Optional.of(collectionDate)));
         long secondUnitId = j8BenchmarkEvidenceStore.declareUnit(new J8BenchmarkUnit(
                 secondCampaignId,
@@ -6758,7 +7155,7 @@ class FlywayMigrationIT {
 
         assertThat(jdbcTemplate.queryForObject(
                 powerShellHereString(script, "$flywaySql"),
-                String.class)).isEqualTo("32");
+                String.class)).isEqualTo("54");
         assertThat(jdbcTemplate.queryForObject(
                 powerShellHereString(script, "$snapshotFingerprintSql"),
                 String.class)).isNotNull();
@@ -6797,7 +7194,7 @@ class FlywayMigrationIT {
                 .contains("j7ProviderOwnerGoRevocationCount")
                 .contains("j7ProviderOwnerGoConsumptionCount")
                 .contains("j7DeliveryLedgerSha256")
-                .contains("$sourceFlywayVersion -cne '32'");
+                .contains("$sourceFlywayVersion -cne '54'");
     }
 
     @Test
@@ -6825,8 +7222,8 @@ class FlywayMigrationIT {
                     .dataSource(sourceDataSource)
                     .locations("classpath:db/migration")
                     .load();
-            assertThat(sourceFlyway.migrate().migrationsExecuted).isEqualTo(32);
-            assertThat(sourceFlyway.info().current().getVersion().getVersion()).isEqualTo("32");
+            assertThat(sourceFlyway.migrate().migrationsExecuted).isEqualTo(54);
+            assertThat(sourceFlyway.info().current().getVersion().getVersion()).isEqualTo("54");
 
             JdbcTemplate sourceJdbc = new JdbcTemplate(sourceDataSource);
             UUID campaignId = UUID.randomUUID();
@@ -6874,6 +7271,36 @@ class FlywayMigrationIT {
                     insert into canonical_event (id, provider, provider_event_id)
                     values (?, 'SOFASCORE', 19999999)
                     """, canonicalEventId);
+            Long detailObservationId = sourceJdbc.queryForObject("""
+                    insert into event_detail_observation (
+                        canonical_event_id, source_kind, source_reference, source_fixture_id,
+                        source_payload_sha256, parser_version, source_received_at,
+                        starts_at, home_team_provider_id, home_team_name,
+                        away_team_provider_id, away_team_name, status_type,
+                        normalized_sha256, is_awarded, home_display_score, away_display_score
+                    ) values (
+                        ?, 'SYNTHETIC_FIXTURE', 'j6-v38-display-roundtrip', 'j6-v38-display-roundtrip',
+                        repeat('e', 64), 'event-details-v3', ?, ?,
+                        19999991, 'Synthetic Home', 19999992, 'Synthetic Away', 'finished',
+                        repeat('f', 64), true, 0, 3
+                    ) returning id
+                    """, Long.class, canonicalEventId, Timestamp.from(startedAt), Timestamp.from(startedAt));
+            // The manifest fingerprint remains provenance/hash based. Compare the three V38
+            // business values separately so a restored zero cannot silently become null.
+            String j4DisplayEvidenceSql = """
+                    select id, canonical_event_id, source_kind, source_reference,
+                        source_fixture_id, source_snapshot_id, source_payload_sha256,
+                        parser_version, source_received_at, normalized_sha256,
+                        is_awarded, home_display_score, away_display_score
+                    from event_detail_observation where id = ?
+                    """;
+            Map<String, Object> sourceJ4DisplayEvidence =
+                    sourceJdbc.queryForMap(j4DisplayEvidenceSql, detailObservationId);
+            assertThat(sourceJ4DisplayEvidence)
+                    .containsEntry("parser_version", "event-details-v3")
+                    .containsEntry("is_awarded", true)
+                    .containsEntry("home_display_score", 0)
+                    .containsEntry("away_display_score", 3);
             insertJ7Candidate(
                     sourceJdbc,
                     canonicalEventId,
@@ -7045,12 +7472,14 @@ class FlywayMigrationIT {
                     order by installed_rank desc
                     limit 1
                     """,
-                    String.class)).isEqualTo("32");
+                    String.class)).isEqualTo("54");
             assertThat(restoreJdbc.queryForObject(j8FingerprintSql, String.class))
                     .isEqualTo(sourceJ8Fingerprint);
             assertThat(restoreJdbc.queryForObject(
                     j7DeliveryFingerprintSql,
                     String.class)).isEqualTo(sourceJ7DeliveryFingerprint);
+            assertThat(restoreJdbc.queryForMap(j4DisplayEvidenceSql, detailObservationId))
+                    .isEqualTo(sourceJ4DisplayEvidence);
             for (String table : List.of(
                     "j8_benchmark_campaign",
                     "j8_benchmark_unit",
@@ -7143,8 +7572,8 @@ class FlywayMigrationIT {
                 StandardCharsets.UTF_8);
 
         assertThat(script)
-                .contains("$manifest.source.flywayVersion.ToString() -cne '32'")
-                .contains("valid Flyway V32 raw-payload, J8 evidence and metadata-only J7 delivery and owner-go restore");
+                .contains("$manifest.source.flywayVersion.ToString() -cne '54'")
+                .contains("valid Flyway V54 raw-payload, J8, J7 and quiescent live ledger restore");
 
         String qualificationFields = powerShellArray(script, "$qualificationFields");
         assertThat(qualificationFields)
@@ -7154,7 +7583,8 @@ class FlywayMigrationIT {
                 .contains("'j7ProviderOwnerGoGrantCount'")
                 .contains("'j7ProviderOwnerGoRevocationCount'")
                 .contains("'j7ProviderOwnerGoConsumptionCount'")
-                .contains("'j7DeliveryLedgerSha256'");
+                .contains("'j7DeliveryLedgerSha256'")
+                .contains("'providerDepartureAccountingCount'");
 
         String environmentNames = powerShellArray(script, "$environmentNames");
         assertThat(environmentNames)
@@ -8984,7 +9414,7 @@ class FlywayMigrationIT {
                 response.contentType(),
                 response.latency(),
                 response.payload(),
-                EventDetailsV2Parser.PARSER_VERSION,
+                com.bettingproject.sofascorelocal.adapter.sofascore.eventdetails.EventDetailsV4Parser.PARSER_VERSION,
                 RawSnapshotSchemaStatus.RAW_ONLY,
                 null));
         EventDetails details = new EventDetails(
@@ -9014,7 +9444,7 @@ class FlywayMigrationIT {
                             .hasValue(rawPersistence.snapshotId());
                     assertThat(detail.source().fixtureId()).isEmpty();
                     assertThat(detail.source().parserVersion())
-                            .isEqualTo(EventDetailsV2Parser.PARSER_VERSION);
+                            .isEqualTo(com.bettingproject.sofascorelocal.adapter.sofascore.eventdetails.EventDetailsV4Parser.PARSER_VERSION);
                     assertThat(detail.details().homeTeam().name())
                             .isEqualTo("Saint-Etienne");
                 });
@@ -9022,7 +9452,7 @@ class FlywayMigrationIT {
                 request,
                 response.receivedAt(),
                 Duration.ofMinutes(15),
-                EventDetailsV2Parser.PARSER_VERSION))
+                com.bettingproject.sofascorelocal.adapter.sofascore.eventdetails.EventDetailsV4Parser.PARSER_VERSION))
                 .hasValueSatisfying(candidate -> {
                     assertThat(candidate.snapshotId())
                             .isEqualTo(rawPersistence.snapshotId());
@@ -9260,7 +9690,7 @@ class FlywayMigrationIT {
                 .hasSize(2)
                 .allSatisfy(row -> assertThat(row)
                         .containsEntry(
-                                "parser_version", EventIncidentsV15Parser.PARSER_VERSION)
+                                "parser_version", EventIncidentsV17Parser.PARSER_VERSION)
                         .containsEntry("period_text", "Extra time")
                         .containsEntry("minute", 120));
 

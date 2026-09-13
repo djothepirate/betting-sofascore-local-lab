@@ -21,3 +21,20 @@ scripts/wo046/WO046-LaunchPreparation.psm1 text eol=lf
 
 # Frozen SKL-002 installation and evaluation evidence: preserve original bytes.
 docs/skills/evaluations/SKL-002/** -text whitespace=blank-at-eol,space-before-tab,cr-at-eol,-blank-at-eof
+
+# Exact ADR-SS-005 v0.1 proposal accepted by the owner: preserve original bytes.
+docs/validation/ADR-SS-005-v0.1-accepted-proposal-20260907.txt -text
+
+# Capacity evidence referenced by the live manifest: preserve its SHA-256 across checkouts.
+docs/validation/WO058-MULTIMATCH-CAPACITY-PROFILE-20260907.json -text
+docs/validation/WO058-ADAPTIVE-CAPACITY-PROFILE-20260907.json -text
+docs/validation/WO058-GROUPED-LIVE-V4-*-20260908.json -text whitespace=blank-at-eol,blank-at-eof,space-before-tab,cr-at-eol
+docs/validation/WO058-GROUPED-LIVE-V5-*-20260908.json -text whitespace=blank-at-eol,blank-at-eof,space-before-tab,cr-at-eol
+docs/validation/WO058-GROUPED-LIVE-V6-*-20260909.json -text whitespace=blank-at-eol,blank-at-eof,space-before-tab,cr-at-eol
+docs/validation/WO058-GROUPED-LIVE-V7-*-20260909.json -text whitespace=blank-at-eol,blank-at-eof,space-before-tab,cr-at-eol
+docs/validation/WO058-GROUPED-LIVE-V8-*-20260910.json -text whitespace=blank-at-eol,blank-at-eof,space-before-tab,cr-at-eol
+docs/validation/WO058-GROUPED-LIVE-V9-*-20260911.json -text whitespace=blank-at-eol,blank-at-eof,space-before-tab,cr-at-eol
+
+# Vendored SVG assets and their manifest keep the exact upstream/audited bytes.
+# Their audited CRLF is a line terminator, not trailing whitespace.
+src/main/resources/static/images/flags/** -text whitespace=blank-at-eol,space-before-tab,cr-at-eol

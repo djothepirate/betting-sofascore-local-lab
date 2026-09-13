@@ -166,6 +166,77 @@ class ProviderPlaywrightWorkerNetworkObservationTest {
         return new ProviderMainDocumentNetworkObservation(EXACT_URI, MAIN_FRAME_ID, CLOCK);
     }
 
+    @Test
+    void terminalCompletionRequiresTheExactRequestAndARealNetworkResponse() {
+        var observation = observation();
+        observation.onRequestWillBeSent(exactRequestEvent());
+        observation.onResponseReceived(exactResponseEvent());
+        JsonObject unrelated = terminalEvent(); unrelated.addProperty("requestId", "other");
+        observation.onLoadingFinished(unrelated);
+        assertThat(observation.terminalObserved()).isFalse();
+        observation.onLoadingFinished(terminalEvent());
+        assertThat(observation.terminalProofIfObserved()).isEqualTo(
+                new ProviderMainDocumentNetworkObservation.TerminalProof(STARTED_AT, 1));
+        observation.onRequestServedFromCache(terminalEvent());
+        assertThat(observation.terminalProofIfObserved()).isNull();
+    }
+
+    @Test
+    void committedResponseWithoutTerminalNeverProvesEndEvenAfterCancellationWasRequested() {
+        var observation = observation();
+        observation.onRequestWillBeSent(exactRequestEvent());
+        observation.onResponseReceived(exactResponseEvent());
+        assertThat(observation.terminalProofIfObserved()).isNull();
+        observation.beginCancellation();
+        assertThat(observation.terminalObserved()).isFalse();
+        assertThat(observation.terminalProofIfObserved()).isNull();
+        observation.onLoadingFinished(terminalEvent());
+        assertThat(observation.terminalProofIfObserved().reason()).isEqualTo(1);
+    }
+
+    @Test
+    void abortedProofRequiresExplicitCancellationAndCorrelatedCanceledDocument() {
+        for (boolean cancelRequested : new boolean[]{false, true}) {
+            var observation = observation();
+            observation.onRequestWillBeSent(exactRequestEvent());
+            if (cancelRequested) observation.beginCancellation();
+            observation.onLoadingFailed(terminalEvent());
+            assertThat(observation.terminalObserved()).isTrue();
+            if (cancelRequested) assertThat(observation.terminalProofIfObserved()).isEqualTo(
+                    new ProviderMainDocumentNetworkObservation.TerminalProof(STARTED_AT, 2));
+            else assertThat(observation.terminalProofIfObserved()).isNull();
+        }
+        for (String invalid : new String[]{"type", "canceled", "timestamp"}) {
+            var observation = observation(); observation.onRequestWillBeSent(exactRequestEvent());
+            observation.beginCancellation();
+            JsonObject event = terminalEvent(); event.remove(invalid);
+            observation.onLoadingFailed(event);
+            assertThat(observation.terminalProofIfObserved()).isNull();
+        }
+    }
+
+    @Test
+    void rejectsTerminalDuplicatesAndRegressingOrMissingTimes() {
+        for (double timestamp : new double[]{-1, 123_456.0, Double.NaN}) {
+            var observation = observation(); observation.onRequestWillBeSent(exactRequestEvent());
+            observation.onResponseReceived(exactResponseEvent());
+            JsonObject event = terminalEvent(); event.addProperty("timestamp", timestamp);
+            observation.onLoadingFinished(event);
+            assertThat(observation.terminalProofIfObserved()).isNull();
+        }
+        var observation = observation(); observation.onRequestWillBeSent(exactRequestEvent());
+        observation.onResponseReceived(exactResponseEvent());
+        observation.onLoadingFinished(terminalEvent()); observation.onLoadingFinished(terminalEvent());
+        assertThat(observation.terminalProofIfObserved()).isNull();
+    }
+
+    private static JsonObject terminalEvent() {
+        JsonObject event = new JsonObject();
+        event.addProperty("requestId", REQUEST_ID); event.addProperty("timestamp", 123_457.0);
+        event.addProperty("type", "Document"); event.addProperty("canceled", true);
+        return event;
+    }
+
     private static JsonObject exactRequestEvent() {
         return requestEvent(EXACT_URI, "GET", MAIN_FRAME_ID, "Document", REQUEST_ID);
     }

@@ -74,17 +74,17 @@ VPS       : aucune connexion
 | `domain.benchmark` | campagnes, unités, tentatives et résultats J8 à vocabulaire fermé |
 | `application` | politiques réseau, orchestration manuelle et lot J5 hors ligne, normalisation, historique, diff, rétention, export J7 et agrégation J8 |
 | `adapter.sofascore` | catalogue fermé, adaptateurs Playwright bornés J3/J4/J5 et parseurs hors ligne J2/J4/J5/découverte tournoi |
-| `adapter.persistence` | preuves brutes, occurrences, observations normalisées, historique, rétention, manifestes J7 et preuves J8 |
+| `adapter.persistence` | preuves brutes, occurrences, observations normalisées, historique, rétention, manifestes J7, preuves J8 et ledger live V33 |
 | `adapter.file` | publication J7 create-new par lien physique atomique, bornée à la racine locale |
 | `adapter.web` | tableau de bord, recherche, contrôle de lot et vues J4/J5/J6/J7/J8 locales |
-| `resources/db/migration` | schémas V1 à V30, migrations append-only et triggers d’immuabilité |
+| `resources/db/migration` | schémas V1 à V54, migrations append-only et triggers d’immuabilité |
 | `fixtures` | corpus synthétiques hors ligne J2, J4, J5 et J6 |
 
 Le connecteur général demeure bloqué. Le chemin manuel J3 borné délègue ses deux familles
 `SCHEDULED_EVENTS` et `TOURNAMENT_SCHEDULED_EVENTS` à un worker Playwright JVM enfant commun. Le
 worker ne reçoit qu’une requête de domaine validée et ne peut viser que l’origine
 `https://www.sofascore.com`, les deux routes allowlistées, une date ISO explicite et, pour la
-pagination, les pages `1` à `25`. Le profil Maven `provider-playwright-runtime` ajoute le runtime à
+pagination, les pages `1` à `35`. Le profil Maven `provider-playwright-runtime` ajoute le runtime à
 la compilation sans le démarrer ; `SOFASCORE_PLAYWRIGHT_ENABLED=false` maintient l’inertie par
 défaut. Il n’existe aucun fallback `RestClient` ou FlareSolverr.
 Après la confirmation, une action alternative accepte localement un lot complet de corps JSON
@@ -176,16 +176,16 @@ Contrôle opérateur              arrêt global + circuit + confirmation unique
           ▼
 Choix exclusif                  pagination directe OU lot JSON local complet
           │
-          ├── import            1..25, 5 Mio/page, 25 Mio/lot, scan sensible
+          ├── import            1..35, 5 Mio/page, 25 Mio/lot, scan sensible
           │                     parser + hasNextPage validés avant claim, zéro réseau/cache
           ▼ direct
-Requête de domaine              date ISO + pages 1..25 + chemin fermé
+Requête de domaine              date ISO + pages 1..35 + chemin fermé
           │
           ▼
 Transport J3                    sans proxy, redirection, cookie ni jeton
           │
           ▼
-Orchestrateur                   page 1, hasNextPage, délai >= 3 s, plafond 25
+Orchestrateur                   page 1, hasNextPage, délai >= 3 s, plafond 35
 ```
 
 La suppression d’une seule barrière ne permet donc pas un appel accidentel. Le bouton réel reste
@@ -194,6 +194,11 @@ action Web distincte est nécessaire. Le connecteur général, `ConnectorGate` e
 restent bloqués ; le transport loopback simulé conserve par ailleurs sa frontière propre.
 La voie locale n'est pas un retry d'une voie directe terminale : après un `HTTP_FORBIDDEN`, une
 nouvelle préparation et une nouvelle confirmation restent obligatoires.
+
+V53 associe cette borne active aux campagnes J8 : les nouvelles campagnes
+`J3_SCHEDULED_EVENTS` déclarent 35 unités, tandis que les campagnes historiques déclarées à 25
+restent lisibles et gardent leur plafond persistant. Cette compatibilité de lecture ne transforme
+aucune campagne historique en campagne à 35 unités.
 
 Pour la découverte tournoi, les opt-ins général, J3 et découverte doivent être vrais ensemble et
 l'allowlist doit être exactement
@@ -340,6 +345,80 @@ le contrôle et le résultat du lot restent uniquement en mémoire, tandis que s
 observations conservent leur modèle append-only existant. La migration transverse V26 étend
 ultérieurement la version du parseur d'incidents J5 sans créer de stockage propre au lot.
 
+### 5.11 Campagnes live bornées WO-058 — V33
+
+Cette section décrit le socle V33. Les extensions V39 ajoutent les profils groupés, groupes
+et échéances par famille ; V40 lie les nouveaux budgets et la cadence au manifeste v5,
+sans convertir les politiques antérieures. La cible v5 de vingt rencontres à 100 secondes
+dispose de sa qualification synthétique historique. Le premier lot de résilience V42–V44
+est qualifié fonctionnellement hors fournisseur : nouvelles préparations v6 plafonnées à sept,
+protection commune J3/J4/J5 après chaque fin d'échange (2 s, 25/60 s, 1 000/h), suspension
+durable 403/429 et backoff 404 J5. Le [profil temporel v6](../validation/WO058-LIVE-V6-CAPACITY-20260909.md)
+qualifie ensuite sept rencontres en 35 minutes de boucle locale synthétique avec ce wrapper
+et PostgreSQL V44, dont 30 minutes établies : 494 échanges et aucun cycle manqué.
+Les enveloppes portent sur le corpus établi de 64 Kio, avec les pics initiaux de 5 Mio
+mesurés séparément. Le plafond opérateur de six et le timeout de 30 s restent indépendants ;
+la vérification finale du complément réussit et aucune acceptation fournisseur
+n'est déduite de cette mesure.
+Voir l'[architecture live courante](LIVE-J4-J5-CAMPAIGNS.md) et le
+[rapport du lot](../validation/WO-058-provider-resilience-qualification-20260909.md).
+
+V33 ajoute huit tables sans modifier V1 à V32 ni reconstituer de campagnes à partir des anciennes
+collectes. Le périmètre fonctionnel est défini par l'ADR-SS-005 ; le garde est partagé par les
+campagnes manuelles et live.
+
+| Table | Preuve ou état conservé |
+|---|---|
+| `provider_campaign_guard` | propriétaire unique, instance, PID et début du processus, génération, `FREE`/`OWNED`/`CLEANUP_REQUIRED` |
+| `live_campaign` | manifeste immuable, bornes, profil qualifié, état d'exécution, compteurs et révision |
+| `live_event` | sélection immuable et provenance exacte, état individuel, échéance, cycles manqués et complétude finale |
+| `live_call` | tentative réservée, événement, cycle, famille, échéance, finalité et génération propriétaire |
+| `live_call_dispatch` | autorisation de départ unique, sans prétendre mesurer le passage sur le réseau |
+| `live_call_receipt` | snapshot brut et occurrence exacte de la réponse, dates, taille et hash |
+| `live_call_result` | résultat de traitement, parseur, projection métier versionnée et références normalisées |
+| `live_transition` | transitions append-only dans l'ordre de révision de la campagne |
+
+Les quatre tables V42 conservent `provider_resilience_state`, les réservations et fins
+d'échange `provider_departure_reservation`/`provider_departure_completion`, et l'historique
+`provider_resilience_event`. La suspension est distincte de l'exclusion des processus ;
+son réarmement manuel ne crée aucun accès fournisseur et n'efface pas les budgets.
+V43 ajoute `live_attempt_transport_diagnostic` et `live_campaign_diagnostic`, sans payload :
+un statut connu aux en-têtes ne vaut pas réponse complète ni snapshot sauvegardé.
+V44 borne les manifestes v6, sans réécrire les campagnes et observations historiques.
+
+`LiveCampaignStore` expose la préparation, le lancement idempotent, la réservation, la réception,
+la publication et la lecture cohérente. `ProviderCampaignGuardStore` porte l'exclusion durable.
+Le profil d'admission du manifeste conserve les enveloppes de requête et de traitement à la
+nanoseconde, le SHA-256 de qualification et la capacité admise. Il ne peut être modifié après
+préparation. Les instants du manifeste sont normalisés à la microseconde avant leur hash et leur
+stockage PostgreSQL.
+
+Les transactions restent courtes : garde, campagne et événement sont verrouillés pour réserver
+une tentative et débiter ses budgets ; le réseau se déroule ensuite sans transaction SQL. La
+réception committe brut, occurrence et lien live avant parsing. Le parseur travaille hors
+transaction, puis une publication atomique conserve les observations normalisées, leurs
+références, le résultat et la transition. L'échec de publication laisse la réception brute
+committée, sans enfant normalisé partiel. Un arrêt interdit de nouveaux départs sans empêcher la
+conservation d'une réponse déjà engagée.
+
+Les lectures `REPEATABLE_READ` reconstruisent la dernière réception, le dernier succès et le
+dernier changement de chaque famille depuis les tentatives, avec les références du dernier
+succès lisible. La déduplication A→A conserve deux occurrences ; A→B→A peut réutiliser l'ancienne
+observation A sans perdre la nouvelle fraîcheur. Un échec ou un 404 ne remplace pas les dernières
+données lisibles par une fausse absence. Le résultat live conserve la projection score/phase
+versionnée séparément des observations historiques.
+
+Le redémarrage n'autorise aucune reprise automatique et aucun transfert de garde après délai.
+Une disparition du propriétaire prouvée peut produire `UNKNOWN`, `INTERRUPTED` et
+`CLEANUP_REQUIRED` ; la libération attend une preuve de nettoyage exacte. J6 refuse la sauvegarde
+et la rétention lorsque le garde n'est pas libre ou qu'une campagne reste active. La preuve J6
+inclut les sept compteurs live, ceux des six tables V42/V43 et l'empreinte complète du ledger,
+des groupes/échéances et des diagnostics/protections, sous schéma V44. Une purge qualifiée ne
+supprime aucune de leurs lignes. Si une nouvelle réception déduplique vers un brut déjà purgé,
+`LIVE_RAW_PREVIOUSLY_PURGED` annule cette réception et impose l'arrêt ; aucune réhydratation n'est
+introduite. Le détail figure dans
+[`J6-HISTORY-AND-GUARDED-RETENTION.md`](J6-HISTORY-AND-GUARDED-RETENTION.md).
+
 ## 6. Catalogue logique
 
 | Type | Cache initial | Déclenchement prévu | Appelable actuellement |
@@ -379,7 +458,7 @@ canoniques sont écrites dans une transaction unique ; un conflit d'identité ou
 - validation des métadonnées et des preuves brutes ;
 - orchestration et transport HTTP simulé sur boucle locale ;
 - validation du transport fournisseur avec `MockRestServiceServer`, sans connexion réseau ;
-- ordre dynamique depuis la page 1, terminaison par `hasNextPage=false`, plafond 25, délai minimal,
+- ordre dynamique depuis la page 1, terminaison par `hasNextPage=false`, plafond 35, délai minimal,
   persistance avant parsing et arrêt au premier incident ;
 - catalogue tournoi issu des snapshots exacts d'une collecte `COMPLETED`, sélection serveur,
   requête numérique, parser `tournament-scheduled-v1`, cache, projection Paris et atomicité ;
@@ -410,7 +489,7 @@ canoniques sont écrites dans une transaction unique ; un conflit d'identité ou
 ### Intégration
 
 `mvnw -Pintegration-tests verify` démarre PostgreSQL avec Testcontainers et vérifie les migrations
-V1 à V30, les upgrades historiques, la fidélité binaire, les contraintes, la déduplication et
+V1 à V54, les upgrades historiques, la fidélité binaire, les contraintes, la déduplication et
 l'immuabilité. J6 ajoute les occurrences prospectives, les exclusions de rétention, la purge des
 seuls octets dans une base éphémère, l'audit et la conservation de la provenance. Aucun appel
 SofaScore n'est exécuté. J7 ajoute l'upgrade V22→V23 prérempli, ses contraintes de cycle et la
@@ -431,6 +510,11 @@ Elle ne crée aucune table et ne réécrit ni observation, ni snapshot, ni occur
 V30 remplace uniquement le trigger de résultat J7 : l’ordre local entre début et fin de tentative
 reste gardé, tandis que l’instant canonique déclaré par l’horloge indépendante du receiver est
 persisté exactement sans le comparer aux horodatages du Local Lab. Elle ne réécrit aucune donnée.
+V33 ajoute l'installation neuve et l'upgrade V32 prérempli avec égalité des preuves historiques,
+l'immuabilité du manifeste et de son profil, les transactions réception/publication et leurs
+rollbacks, A→A→B→A, les références conservées après 404, les réservations concurrentes et les
+générations du garde. La qualification PostgreSQL synthétique vérifie aussi la rétention gardée,
+le refus d'un brut précédemment purgé et la restauration exacte des huit tables sans réarmement.
 V15 assimile propriété d'actions absente et tableau exactement vide uniquement dans une séance
 terminale non minutée déjà cohérente ; les types erronés, listes non vides incohérentes et séances
 temporellement mixtes restent incompatibles.
@@ -459,8 +543,8 @@ nouvelle recette réelle.
 - ajout d’autres endpoints, sports ou origines au-delà du chemin J3 qualifié ;
 - export de l'historique complet, lots par date ou multi-événements ;
 - push HTTPS vers le Betting Project ;
-- tout polling ou rafraîchissement automatique ; les rappels `EVENT_DETAILS` autorisés restent
-  manuels, unitaires et nouvellement confirmés.
+- les collectes automatiques au-delà des campagnes locales explicitement lancées et bornées de
+  l'ADR-SS-005/WO-058 ; les voies manuelles historiques conservent leurs confirmations unitaires.
 
 Chaque décision doit être introduite par un Work Order, avec critères d’acceptation et tests de non-régression des garde-fous.
 

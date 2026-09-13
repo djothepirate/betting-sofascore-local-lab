@@ -24,6 +24,7 @@ final class ProviderNetworkStartDelayGate {
     private boolean fenced;
     private long previousDispatchFinishedAtNanos;
     private boolean timingEvidenceLost;
+    private LiveProviderGroupTracker previousGroupSession;
 
     ProviderNetworkStartDelayGate(
             Duration minimumDelay,
@@ -39,6 +40,15 @@ final class ProviderNetworkStartDelayGate {
     }
 
     void awaitNextDispatch(Runnable continuationGuard) {
+        awaitNextGroupDispatch(null, continuationGuard);
+    }
+
+    /**
+     * Only consecutive validated groups of the very same qualified live session use
+     * its policy-specific inter-group delay. A new session, legacy call or authority transition keeps the
+     * global fence, including when a campaign UUID is reused after closing.
+     */
+    void awaitNextGroupDispatch(LiveProviderGroupTracker groupSession, Runnable continuationGuard) {
         Objects.requireNonNull(continuationGuard, "continuationGuard");
         while (true) {
             requireUninterrupted();
@@ -56,7 +66,10 @@ final class ProviderNetworkStartDelayGate {
                     timingEvidenceLost = true;
                     throw new TimingEvidenceException();
                 }
-                remaining = minimumDelayNanos - elapsed;
+                Duration groupDelay = groupSession == null ? null : groupSession.interGroupMinimumDelay();
+                long requiredDelay = groupDelay != null && previousGroupSession == groupSession
+                        ? groupDelay.toNanos() : minimumDelayNanos;
+                remaining = requiredDelay - elapsed;
             }
             if (remaining <= 0) {
                 requireUninterrupted();
@@ -88,6 +101,11 @@ final class ProviderNetworkStartDelayGate {
     }
 
     synchronized void recordDispatchFinished(boolean usableResponseEvidence) {
+        recordDispatchFinished(usableResponseEvidence, null);
+    }
+
+    synchronized void recordDispatchFinished(boolean usableResponseEvidence,
+            LiveProviderGroupTracker groupSession) {
         if (!usableResponseEvidence) {
             timingEvidenceLost = true;
         }
@@ -105,6 +123,34 @@ final class ProviderNetworkStartDelayGate {
         }
         previousDispatchFinishedAtNanos = observed;
         fenced = true;
+        previousGroupSession = usableResponseEvidence ? groupSession : null;
+    }
+
+    /** A supervisor-proven v6 timeout end retains the full three-second fence, without a response. */
+    synchronized void recordRecoverableTimeoutFinished(LiveProviderGroupTracker groupSession) {
+        if (groupSession == null || !groupSession.supportsProvenTimeoutRecovery()) {
+            timingEvidenceLost = true;
+            throw new TimingEvidenceException();
+        }
+        // The authenticated terminal/cleanup proof establishes an exchange end.
+        // It cannot repair a previously lost clock or timing proof.
+        recordDispatchFinished(true, null);
+    }
+
+    /** Only a supervisor-validated live-v4/v5/v6 or manual-J5 group continuation can omit a pause. */
+    void admitGroupContinuation(Runnable continuationGuard) {
+        Objects.requireNonNull(continuationGuard, "continuationGuard");
+        requireUninterrupted();
+        continuationGuard.run();
+        synchronized (this) {
+            requireTimingEvidence();
+            if (!fenced || readNanoTime() - previousDispatchFinishedAtNanos < 0) {
+                timingEvidenceLost = true;
+                throw new TimingEvidenceException();
+            }
+        }
+        requireUninterrupted();
+        continuationGuard.run();
     }
 
     synchronized boolean timingEvidenceLost() {

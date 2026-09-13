@@ -4,6 +4,7 @@ import com.bettingproject.sofascorelocal.domain.provider.J3CircuitState;
 import com.bettingproject.sofascorelocal.domain.provider.J3ManualCallControlSnapshot;
 import com.bettingproject.sofascorelocal.domain.provider.J3ManualCallIntentSnapshot;
 import com.bettingproject.sofascorelocal.domain.provider.J3ManualCallIntentState;
+import com.bettingproject.sofascorelocal.domain.provider.ScheduledEventsProviderPageRequest;
 
 import java.util.List;
 
@@ -91,7 +92,8 @@ public record ManualCallControlView(
                     source.date().toString(),
                     source.requestKey(),
                     source.firstPage(),
-                    "1-N (max 25)",
+                    "1-N (max "
+                            + ScheduledEventsProviderPageRequest.MAXIMUM_COLLECTION_PAGE + ")",
                     false,
                     source.state().name(),
                     source.confirmationPhrase(),

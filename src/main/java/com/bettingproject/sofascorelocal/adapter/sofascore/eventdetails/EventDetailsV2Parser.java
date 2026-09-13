@@ -61,6 +61,12 @@ public final class EventDetailsV2Parser {
             long snapshotId,
             RawPayloadEvidence payload,
             Instant receivedAt) {
+        return parseWithPreferredRound(snapshotId, payload, receivedAt, Optional.empty());
+    }
+
+    // V4 supplies a validated preferred name; the public V2 contract always uses the legacy fallback.
+    EventDetailsParseResult parseWithPreferredRound(long snapshotId, RawPayloadEvidence payload,
+            Instant receivedAt, Optional<String> preferredRound) {
         if (snapshotId < 1) {
             throw new IllegalArgumentException("snapshotId must be positive");
         }
@@ -119,7 +125,7 @@ public final class EventDetailsV2Parser {
                 event.get("venue"), "$.event.venue", warnings, problems);
         Optional<EventSeason> season = optionalSeason(
                 event.get("season"), "$.event.season", warnings, problems);
-        Optional<String> round = optionalRound(event, warnings, problems);
+        Optional<String> round = preferredRound.isPresent() ? preferredRound : optionalRound(event, warnings, problems);
 
         if (!problems.isEmpty()) {
             return incompatible(evidence, warnings, problems);

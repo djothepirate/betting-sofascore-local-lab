@@ -108,6 +108,72 @@ class J3LocalJsonImportServiceTest {
     }
 
     @Test
+    void importsTwentySevenContiguousPagesWhenTheLastPageEndsPagination()
+            throws Exception {
+        Clock clock = Clock.fixed(NOW, ZoneOffset.UTC);
+        RecordingStore store = new RecordingStore();
+        J3ManualCallControlService control = readyControl(clock);
+        J3ManualCollectionEvidenceService evidenceService =
+                new J3ManualCollectionEvidenceService();
+        J3LocalJsonImportService service = service(control, store, evidenceService, clock);
+        byte[] providerShape = Files.readAllBytes(
+                Path.of("fixtures/scheduled-events/qualified-provider-shape.json"));
+
+        var result = service.importPages(REQUEST_ID, pageSequence(providerShape, 27));
+
+        assertThat(result.completed()).isTrue();
+        assertThat(result.completedPages()).isEqualTo(27);
+        assertThat(result.localJsonImports()).isEqualTo(27);
+        assertThat(store.saved).hasSize(27);
+        assertThat(evidenceService.latestDocument().orElseThrow().reportText())
+                .contains("LOCAL_JSON_IMPORT_PAGES=1,2,3,4,5,6,7,8,9,10,11,12,13,14,15,16,17,18,19,20,21,22,23,24,25,26,27")
+                .contains("PAGE_27_HAS_NEXT_PAGE=false");
+    }
+
+    @Test
+    void importsTheFullThirtyFivePageLocalBound() throws Exception {
+        Clock clock = Clock.fixed(NOW, ZoneOffset.UTC);
+        RecordingStore store = new RecordingStore();
+        J3ManualCallControlService control = readyControl(clock);
+        J3LocalJsonImportService service = service(
+                control, store, new J3ManualCollectionEvidenceService(), clock);
+        byte[] providerShape = Files.readAllBytes(
+                Path.of("fixtures/scheduled-events/qualified-provider-shape.json"));
+
+        var result = service.importPages(REQUEST_ID, pageSequence(providerShape, 35));
+
+        assertThat(result.completed()).isTrue();
+        assertThat(result.completedPages()).isEqualTo(35);
+        assertThat(result.localJsonImports()).isEqualTo(35);
+        assertThat(store.saved).hasSize(35);
+        assertThat(store.saved.getLast().requestKey())
+                .isEqualTo("SCHEDULED_EVENTS|date=2026-08-21|page=35");
+    }
+
+    @Test
+    void rejectsThirtySixLocalPagesBeforeClaimOrPersistence() throws Exception {
+        Clock clock = Clock.fixed(NOW, ZoneOffset.UTC);
+        RecordingStore store = new RecordingStore();
+        J3ManualCallControlService control = readyControl(clock);
+        J3ManualCollectionEvidenceService evidenceService =
+                new J3ManualCollectionEvidenceService();
+        J3LocalJsonImportService service = service(control, store, evidenceService, clock);
+        byte[] providerShape = Files.readAllBytes(
+                Path.of("fixtures/scheduled-events/qualified-provider-shape.json"));
+
+        assertThatThrownBy(() -> service.importPages(REQUEST_ID, pageSequence(providerShape, 36)))
+                .isInstanceOf(J3LocalJsonImportException.class)
+                .extracting("error")
+                .isEqualTo(J3LocalJsonImportError.TOO_MANY_PAGES);
+
+        assertThat(store.saved).isEmpty();
+        assertThat(evidenceService.latestDocument()).isEmpty();
+        assertThat(control.snapshot().globalStopActive()).isFalse();
+        assertThat(control.snapshot().intent().state())
+                .isEqualTo(J3ManualCallIntentState.CONFIRMED_READY);
+    }
+
+    @Test
     void importsLocallyWhenPlaywrightDefaultsAreDisabledAndWorkerJarIsEmpty()
             throws Exception {
         Clock clock = Clock.fixed(NOW, ZoneOffset.UTC);
@@ -292,6 +358,15 @@ class J3LocalJsonImportServiceTest {
                         "\"hasNextPage\": true",
                         "\"hasNextPage\": " + value)
                 .getBytes(StandardCharsets.UTF_8);
+    }
+
+    private static List<RawPayloadEvidence> pageSequence(byte[] providerShape, int pageCount) {
+        List<RawPayloadEvidence> pages = new ArrayList<>(pageCount);
+        for (int page = 1; page <= pageCount; page++) {
+            pages.add(RawPayloadEvidence.capture(withHasNextPage(
+                    providerShape, page < pageCount)));
+        }
+        return List.copyOf(pages);
     }
 
     private static final class RecordingStore implements RawManualCallSnapshotStore {

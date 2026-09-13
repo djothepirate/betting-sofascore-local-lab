@@ -1,5 +1,129 @@
 # SofaScore Local Lab
 
+**Lot du 9 septembre — qualification hors fournisseur terminée :** les cartes
+affichent buts, passes décisives et drapeaux SVG locaux ; les motifs d’indisponibilité connus
+sont traduits dans la vue française. J4 expose entraîneurs, arbitre et tour nommé, via les
+contrats V4 et V46. Les incidents se replient globalement et par période. Les nouvelles
+préparations v7/V47 utilisent les fenêtres T−60/T−5/T0 puis les quatre familles à 60 s ; un
+J4 `delayed` avec nouvel horaire recale ces fenêtres sans réactiver une campagne historique.
+Les campagnes existantes conservent leurs politiques et leurs preuves. Voir
+[ADR-SS-005 v0.10](ADR-SS-005-bounded-local-live-j4-j5-campaigns.md) et le
+[contrat des personnes/pays](docs/architecture/J4-J5-PEOPLE-V4.md), avec le
+[rapport de qualification](docs/validation/WO058-PEOPLE-AND-LIVE-V7-20260909.md).
+Le profil v7 est plafonné à trois rencontres et sa qualification ne détermine pas un
+seuil d'acceptation SofaScore ; une campagne réelle reste une action manuelle séparée.
+
+La campagne opérateur 4087041a a terminé `COMPLETED` après environ 55 minutes de suivi,
+avec 387 appels et zéro cycle manqué enregistré. Ses sept fins sont confirmées ; deux
+collectes finales restent incomplètes pour statistiques HTTP 404. Le
+[bilan local détaillé](docs/validation/WO058-REAL-CAMPAIGN-4087041A-20260909.md) distingue
+cette observation réelle du profil 60/60 en qualification et de la charge simultanée.
+
+**Réponses lentes et timeouts isolés — correctif du 9 septembre réalisé et qualifié fonctionnellement hors fournisseur :** le propriétaire
+autorise une tolérance bornée pour la seule session live-v6 déjà lancée. Elle exige une
+preuve terminale de fin d'échange et de nettoyage avant de fermer son groupe, différer
+toutes les familles du match d'au moins cinq minutes puis reprendre par J4 ; les autres
+matchs peuvent continuer. Les limites sont trois tolérances par session, un `PARSED` entre
+deux timeouts et un `PARSED` du même couple avant sa récidive. Les refus 403/429 restent
+globalement bloquants et persistants ; les cas incertains ne sont pas récupérés. Le timeout
+configuré et les plafonds ne changent pas. L'autorité v6 corrige aussi `INVALID_REQUEST`
+lorsqu'une famille J5 encore différée est omise d'un groupe. Voir [ADR-SS-005 v0.9](ADR-SS-005-bounded-local-live-j4-j5-campaigns.md)
+et le [rapport de qualification](docs/validation/WO058-SLOW-TIMEOUT-RECOVERY-20260909.md).
+Les résultats des lots ci-dessous restent leurs preuves historiques, sans qualifier ce
+nouveau chemin et sans provoquer de reprise d'une campagne déjà arrêtée.
+
+La preuve de clôture suit deux chemins : avant les en-têtes, annulation immédiate et
+terminal `ABORTED` corrélé ; après les en-têtes, attente naturelle de `FINISHED` dans
+la même grâce de deux secondes, sans `Page.stopLoading`. Le corps après timeout reste
+abandonné, même terminé dans cette grâce. Sans terminal et nettoyage prouvés, l'arrêt
+global et la fermeture restent obligatoires ; cette attente n'étend ni timeout ni budget.
+
+La vérification finale `-Pintegration-tests clean verify` réussit à 17:17:59Z :
+2 068 cas standards, cinq skips explicités, et 213 cas PostgreSQL, sans échec ni erreur.
+Les neuf cas Chromium transport/UI et les deux contrôles natifs de réception réussissent.
+Le smoke de trois minutes est conservé séparément ; la preuve de capacité de 35 minutes
+n'est pas renouvelée. Le WO reste `IN_PROGRESS` pour revue humaine, sans livraison
+Eclipse, démarrage opérateur ou appel fournisseur par ce lot.
+
+**Résilience fournisseur — 9 septembre 2026, profil v6 qualifié en boucle locale synthétique :** le premier lot autorisé
+introduit `live-v6`, avec sept rencontres au maximum et un profil de qualification distinct.
+Les cibles 100/300 s restent subordonnées au budget global persistant : deux secondes après
+chaque fin d'échange, 25 charges par minute glissante et 1 000 par heure, communs aux collectes
+Playwright J3/J4/J5. Les refus 403/429 suspendent les nouveaux accès jusqu'à un réarmement manuel
+sans requête ; les 404 J5 sont espacés par rencontre et famille. Les diagnostics distinguent
+en-têtes reçus et corps complet. Voir [ADR-SS-005 v0.8](ADR-SS-005-bounded-local-live-j4-j5-campaigns.md)
+et le [runbook courant](docs/runbooks/LIVE-J4-J5-CAMPAIGNS.md). Les deux vérifications Maven
+complètes et les 20 scénarios Chromium loopback réussissent :
+[rapport du lot et limites](docs/validation/WO-058-provider-resilience-qualification-20260909.md).
+Le [complément temporel v6](docs/validation/WO058-LIVE-V6-CAPACITY-20260909.md) qualifie désormais
+sept rencontres : 35 minutes Chromium/PostgreSQL isolés, dont 30 établies, 494 échanges
+(420 établis), aucun cycle manqué. Le profil porte sur les corps établis de 64 Kio ; les
+premiers corps de 5 Mio sont mesurés séparément. Lors de cette qualification, le plafond
+opérateur vaut six rencontres et son timeout 30 s ; la mesure n'applique aucun réglage automatiquement.
+La vérification finale du complément et les trois contrôles Chromium de son interface réussissent. Les preuves
+historiques ci-dessous ne qualifient ni ce nouveau profil ni l'acceptation par SofaScore.
+
+**Timeout Playwright local — 9 septembre 2026 :** le profil `local` attend désormais
+jusqu’à vingt secondes par échange Playwright, configurable via
+`SOFASCORE_PLAYWRIGHT_REQUEST_TIMEOUT`. Le lancement live-v5 accepte cette borne ;
+les politiques live-v1 à live-v4 gardent dix secondes. Redémarrer le Lab avant
+une nouvelle préparation. Les enveloppes de cadence et les arrêts sur erreur
+restent distincts : voir le [runbook](docs/runbooks/LIVE-J4-J5-CAMPAIGNS.md) et la
+[validation ciblée](docs/validation/WO058-PLAYWRIGHT-TIMEOUT-20260909.md).
+
+**Détails des joueurs — 9 septembre 2026 :** les nouvelles compositions V3 signalent les capitaines,
+ouvrent les statistiques individuelles depuis les cartes et présentent les joueurs indisponibles
+avec les informations reçues. Flyway V41 conserve ces ajouts sans réécrire les observations
+historiques. Voir le [contrat](docs/architecture/J5-LINEUPS-V3-PLAYER-DETAILS.md) et la
+[qualification](docs/validation/WO058-PLAYER-DETAILS-20260909.md).
+
+**Complément d’interface live — 8–9 septembre 2026 :** les campagnes affichent dix rencontres
+par page et une liste illustrée des incidents, avec tableau technique repliable. L’accueil
+reste lisible lorsque la rétention attend la libération d’une session fournisseur.
+La clôture opérateur de la campagne interrompue et le rattrapage final de quinze rencontres
+sont consignés dans le [rapport de récupération](docs/validation/WO058-RECOVERY-DASHBOARD-20260908.md).
+Voir également la [présentation des incidents](docs/validation/WO058-INCIDENT-GRAPHICS-20260908.md).
+Les groupes et intitulés statistiques connus sont traduits en français ; les cartes joueurs
+gardent le numéro, le nom et le poste sans répéter leur section Titulaires/Remplaçants.
+[Portée et validation des libellés](docs/validation/WO058-UI-LABELS-20260909.md).
+
+**Politique historique live-v5 — 8 septembre 2026 :** les préparations de cette version ciblent J4, incidents et
+statistiques toutes les 100 secondes par match, avec compositions initiales puis réparties sur
+cinq minutes. Le profil synthétique dédié qualifie vingt rencontres après cinq minutes
+d'initialisation et trente minutes établies ; l'observation fournisseur reste distincte.
+Les appels restent séquentiels ; une seconde sépare deux groupes de la même session v5.
+Les plafonds sont de 2 500 appels par rencontre et 20 000 par campagne, avec quatre heures
+au maximum et un plafond brut indépendant. V40 conserve les politiques et preuves historiques.
+Voir [ADR-SS-005 v0.6](ADR-SS-005-bounded-local-live-j4-j5-campaigns.md), le
+[runbook actuel](docs/runbooks/LIVE-J4-J5-CAMPAIGNS.md) et les
+[preuves historiques v4](docs/validation/WO058-GROUPED-LIVE-V4-20260908.md).
+
+**Historique live J4/J5 — 7 septembre 2026 :** le
+[WO-058](docs/work_orders/completed/WO-SS-20260907-058-bounded-live-j4-j5.md) est aligné sur
+[ADR-SS-005 v0.2](ADR-SS-005-bounded-local-live-j4-j5-campaigns.md), après acceptation formelle
+de la v0.1 puis demande explicite d'un plafond paramétrable, y compris 10 et 25 rencontres.
+L'intervalle dépend des seules cibles retenues : 60 s jusqu'à trois, puis 30 s supplémentaires
+par rencontre. Quatre heures, 1 000/3 000 tentatives, J4 sur signaux avec secours et dernier cycle borné restent applicables.
+Un schéma métier incompatible arrête le seul match ; un incident technique/sécurité reste global.
+Le propriétaire a autorisé la clôture documentaire pré-fusion : la PR #35, revue sans remarque majeure au commit `8299722`, a ses quatre checks CI verts et doit être fusionnée vers `feature/V0.1.0-RC01` après le push final.
+La réalisation locale ajoute sélection et manifeste,
+session bornée, ledger V33/V34, arrêt individuel/global et consultation dynamique. Les preuves et
+limites figurent dans le [rapport de capacité adaptative](docs/validation/WO058-ADAPTIVE-CAPACITY-20260907.md),
+le [rapport de réalisation initiale](docs/validation/WO058-LIVE-J4-J5-IMPLEMENTATION-20260907.md),
+l'[architecture](docs/architecture/LIVE-J4-J5-CAMPAIGNS.md) et le
+[runbook live](docs/runbooks/LIVE-J4-J5-CAMPAIGNS.md).
+La [preuve de cadrage](docs/validation/WO058-LIVE-J4-J5-SCOPING-20260907.md) et la
+[copie exacte acceptée](docs/validation/ADR-SS-005-v0.1-accepted-proposal-20260907.txt) restent conservées.
+Le fournisseur reste désactivé par défaut ; migration de la base opérateur et pilote réel sont distincts.
+Le [premier retour fournisseur et les paliers multi-match](docs/validation/WO058-MULTIMATCH-CAPACITY-20260907.md)
+consignent maintenant la campagne opérateur complète sur un match découvert `finished` au premier J4,
+ainsi que la qualification et le paramétrage des paliers deux et trois.
+Le [retour opérateur suivant](docs/validation/WO058-J5-404-AND-SELECTION-20260907.md) confirme
+la finalisation de trois rencontres et les actualisations de matchs en cours. Le correctif traite
+les HTTP 404 des trois familles J5 comme des indisponibilités à réinterroger au prochain cycle
+planifié, et bloque la sélection J4 d'une rencontre déjà suivie, sauf `STOPPED_ERROR`.
+La reprise fournisseur après ce correctif reste à valider par l'opérateur.
+
 **Skills du lot 1 validés — 5 septembre 2026 :** les cinq skills `ss-*` sont livrés avec
 leur [guide et installateur personnel](docs/skills/README.md), sous
 [WO-054](docs/work_orders/completed/WO-SS-20260905-054-skills-lot1.md).
@@ -1205,7 +1329,7 @@ troisième campagne ou décision J9 n'est autorisée.
 - qualification Windows du parcours opérateur local et des politiques simulées, avec preuve explicite
   que l’action fournisseur reste indisponible ;
 - chemin J3 dédié à une collecte manuelle explicite démarrant toujours en page `1`, poursuivie
-  uniquement tant que le parseur retourne `hasNextPage=true` et bornée localement à 25 pages ;
+  uniquement tant que le parseur retourne `hasNextPage=true` et bornée localement à 35 pages ;
 - client fournisseur sans proxy, redirection, cookie, jeton, compte ou donnée de session, avec arrêt
   au premier incident et aucun retry ;
 - parcours répétable uniquement après réarmement, activation, nouvelle intention datée,
@@ -1214,8 +1338,8 @@ troisième campagne ou décision J9 n'est autorisée.
   seuls les snapshots `PARSED` frais selon le TTL de dix minutes et le parseur courant sont relus
   hors ligne ; un cache hit ne déclenche ni transport, ni attente, ni mutation de persistance ;
 - alternative J3 après la même confirmation : import atomique des seuls corps JSON
-  `page-1.json` à `page-N.json`, avec prévalidation de la pagination, 5 Mio maximum par page,
-  25 Mio maximum au total, zéro transport/cache et preuve minimisée v5 portant
+  `page-1.json` à `page-N.json`, avec prévalidation de la pagination de 1 à 35 pages, 5 Mio maximum
+  par page, 25 Mio maximum au total, zéro transport/cache et preuve minimisée v5 portant
   `LOCAL_JSON_IMPORT` ;
 - catalogue de tournoi reconstruit uniquement depuis les snapshots exacts de la dernière preuve J3
   `COMPLETED` du processus courant, avec contrôle pages/clé/hash/parseur et aucune reconstruction
@@ -1879,7 +2003,9 @@ une décision de gouvernance explicite et une qualification humaine dédiée.
 La qualification humaine du `2026-08-14` a collecté dix pages sur dix, après les cinq pages
 observées le `2026-08-13`. Elle confirme que le parcours repart de la page 1, persiste avant
 parsing, continue uniquement sur `hasNextPage=true` et s’arrête normalement sur `false`, sans
-conserver l’ancienne hypothèse fixe de cinq pages. Une barrière locale interdit toute page 26.
+conserver l’ancienne hypothèse fixe de cinq pages. La qualification historique utilisait alors une
+barrière locale avant la page 26 ; le plafond actif du parcours manuel est désormais de 35 pages,
+avec terminaison normale dès qu'une page porte `hasNextPage=false`.
 
 La pagination dynamique est désormais qualifiée dans le périmètre manuel J3. Toute automatisation,
 planification, collecte live ou généralisation à une autre famille reste hors périmètre.

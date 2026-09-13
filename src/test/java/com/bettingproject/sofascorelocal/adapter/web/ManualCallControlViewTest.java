@@ -55,6 +55,7 @@ class ManualCallControlViewTest {
 
         assertThat(confirmedForLocalImport.realCallEnabled()).isFalse();
         assertThat(confirmedForLocalImport.localImportEnabled()).isTrue();
+        assertThat(confirmedForLocalImport.intent().pageRange()).isEqualTo("1-N (max 35)");
         assertThat(confirmedForLocalImport.providerBlockers())
                 .containsExactlyElementsOf(playwrightBlockers);
     }
@@ -63,7 +64,7 @@ class ManualCallControlViewTest {
         return new J3ManualCallIntentSnapshot(
                 UUID.fromString("11f6062f-ab5e-4bcc-bf4e-3647a2823baa"),
                 DATE,
-                "SCHEDULED_EVENTS|date=2026-08-27|pagination=has-next-page|max=25",
+                "SCHEDULED_EVENTS|date=2026-08-27|pagination=has-next-page|max=35",
                 1,
                 J3ManualCallIntentState.CONFIRMED_READY,
                 null,

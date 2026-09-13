@@ -96,7 +96,7 @@ public final class ProviderScheduledEventsPlaywrightTransport
     static ScheduledEventsTransportException translate(
             PlaywrightProviderException exception) {
         ScheduledEventsTransportFailure failure = switch (exception.failure()) {
-            case TIMEOUT -> ScheduledEventsTransportFailure.TIMEOUT;
+            case TIMEOUT, IPC_TIMEOUT -> ScheduledEventsTransportFailure.TIMEOUT;
             case PAYLOAD_TOO_LARGE -> ScheduledEventsTransportFailure.PAYLOAD_TOO_LARGE;
             case SENSITIVE_CONTENT_REJECTED ->
                     ScheduledEventsTransportFailure.SENSITIVE_CONTENT_REJECTED;

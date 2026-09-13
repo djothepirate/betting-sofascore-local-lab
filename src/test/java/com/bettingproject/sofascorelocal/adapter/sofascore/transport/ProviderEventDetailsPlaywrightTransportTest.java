@@ -107,6 +107,7 @@ class ProviderEventDetailsPlaywrightTransportTest {
 
     private static Stream<Arguments> failureMappings() {
         return Stream.of(
+                Arguments.of(PlaywrightProviderFailure.IPC_TIMEOUT, EventDetailsTransportFailure.TIMEOUT),
                 Arguments.of(
                         PlaywrightProviderFailure.TIMEOUT,
                         EventDetailsTransportFailure.TIMEOUT),

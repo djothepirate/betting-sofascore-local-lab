@@ -6,6 +6,8 @@ import com.bettingproject.sofascorelocal.application.network.playwright.Playwrig
 import com.bettingproject.sofascorelocal.application.network.playwright.PlaywrightProviderFailure;
 import com.bettingproject.sofascorelocal.application.network.playwright.PlaywrightProviderRequest;
 import com.bettingproject.sofascorelocal.application.network.playwright.PlaywrightProviderResponse;
+import com.bettingproject.sofascorelocal.application.network.playwright.LiveProviderDispatchGroup;
+import com.bettingproject.sofascorelocal.application.network.playwright.PlaywrightDispatchAdmission;
 import com.bettingproject.sofascorelocal.domain.provider.EventDetailsProviderRequest;
 import com.bettingproject.sofascorelocal.domain.provider.J5EventDataProviderRequest;
 import com.bettingproject.sofascorelocal.domain.provider.RawPayloadEvidence;
@@ -87,6 +89,26 @@ class ProviderJ5EventDataPlaywrightTransportTest {
                 PlaywrightProviderRequest.eventIncidents(EVENT_ID),
                 PlaywrightProviderRequest.eventLineups(EVENT_ID));
         assertThat(campaign.closeCount).isEqualTo(1);
+        assertThat(campaign.groups).hasSize(3).allSatisfy(group -> {
+            assertThat(group.campaignId()).isEqualTo(CAMPAIGN_ID);
+            assertThat(group.providerEventId()).isEqualTo(EVENT_ID);
+            assertThat(group.phase()).isEqualTo(LiveProviderDispatchGroup.Phase.MANUAL_J5);
+        });
+        assertThat(campaign.groups).extracting(LiveProviderDispatchGroup::groupId)
+                .containsOnly(campaign.groups.getFirst().groupId());
+    }
+
+    @Test
+    void propagatesTheFinalClaimGuardBeforeEveryGroupedWorkerDispatch() {
+        RecordingCampaign campaign = successfulCampaign(3);
+        var session = new ProviderJ5EventDataPlaywrightTransport(new RecordingFactory(campaign))
+                .openCampaign(CAMPAIGN_ID);
+        session.execute(request(SofascoreEndpointType.EVENT_STATISTICS), () -> { });
+        assertThatThrownBy(() -> session.execute(request(SofascoreEndpointType.EVENT_INCIDENTS),
+                () -> { throw new IllegalStateException("claim stopped"); }))
+                .isInstanceOf(IllegalStateException.class).hasMessage("claim stopped");
+        assertThat(campaign.requests).containsExactly(PlaywrightProviderRequest.eventStatistics(EVENT_ID));
+        session.close();
     }
 
     @Test
@@ -199,7 +221,7 @@ class ProviderJ5EventDataPlaywrightTransportTest {
     private static J5EventDataTransportFailure expectedFailure(
             PlaywrightProviderFailure failure) {
         return switch (failure) {
-            case TIMEOUT -> J5EventDataTransportFailure.TIMEOUT;
+            case TIMEOUT, IPC_TIMEOUT -> J5EventDataTransportFailure.TIMEOUT;
             case PAYLOAD_TOO_LARGE -> J5EventDataTransportFailure.PAYLOAD_TOO_LARGE;
             case SENSITIVE_CONTENT_REJECTED ->
                     J5EventDataTransportFailure.SENSITIVE_CONTENT_REJECTED;
@@ -296,6 +318,12 @@ class ProviderJ5EventDataPlaywrightTransportTest {
         public PlaywrightProviderCampaign open(
                 UUID requestedCampaignId,
                 Set<SofascoreEndpointType> requestedEndpoints) {
+            throw new AssertionError("manual J5 must open its dedicated grouped authority");
+        }
+
+        @Override
+        public PlaywrightProviderCampaign openManualJ5Grouped(
+                UUID requestedCampaignId, Set<SofascoreEndpointType> requestedEndpoints) {
             openCount++;
             campaignId = requestedCampaignId;
             allowedEndpoints = Set.copyOf(requestedEndpoints);
@@ -311,6 +339,7 @@ class ProviderJ5EventDataPlaywrightTransportTest {
         private final List<PlaywrightProviderResponse> responses;
         private final PlaywrightProviderException executeFailure;
         private final List<PlaywrightProviderRequest> requests = new ArrayList<>();
+        private final List<LiveProviderDispatchGroup> groups = new ArrayList<>();
         private PlaywrightProviderException closeFailure;
         private int responseIndex;
         private int closeCount;
@@ -327,6 +356,16 @@ class ProviderJ5EventDataPlaywrightTransportTest {
 
         @Override
         public PlaywrightProviderResponse execute(PlaywrightProviderRequest request) {
+            throw new AssertionError("manual J5 must dispatch a bounded group context");
+        }
+
+        @Override
+        public PlaywrightProviderResponse executeGrouped(PlaywrightProviderRequest request,
+                LiveProviderDispatchGroup group, PlaywrightDispatchAdmission admission) {
+            admission.check();
+            try (var ignored = admission.acquireDispatchPermit()) {
+                groups.add(group);
+            }
             requests.add(request);
             if (executeFailure != null) {
                 throw executeFailure;

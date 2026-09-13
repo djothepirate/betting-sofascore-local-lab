@@ -12,6 +12,7 @@ import com.bettingproject.sofascorelocal.application.network.J3ProviderCampaignS
 import com.bettingproject.sofascorelocal.application.network.J3ProviderCampaignStopService;
 import com.bettingproject.sofascorelocal.domain.provider.J3ManualCallExecutionResult;
 import com.bettingproject.sofascorelocal.domain.provider.RawPayloadEvidence;
+import com.bettingproject.sofascorelocal.domain.provider.ScheduledEventsProviderPageRequest;
 import com.bettingproject.sofascorelocal.security.LocalFormTokenService;
 import jakarta.servlet.http.HttpSession;
 import org.springframework.format.annotation.DateTimeFormat;
@@ -40,9 +41,9 @@ public class ManualCallController {
 
     private static final String REDIRECT_DASHBOARD = "redirect:/dashboard#manual-call-control";
     private static final Pattern SIMPLE_PAGE_FILENAME = Pattern.compile(
-            "(?i)^(?:page[-_ ]?)?([1-9]|1[0-9]|2[0-5])\\.json$");
+            "(?i)^(?:page[-_ ]?)?([1-9][0-9]*)\\.json$");
     private static final Pattern SUFFIX_PAGE_FILENAME = Pattern.compile(
-            "(?i)^.*[-_ ]page[-_ ]?([1-9]|1[0-9]|2[0-5])\\.json$");
+            "(?i)^.*[-_ ]page[-_ ]?([1-9][0-9]*)\\.json$");
 
     private final J3ManualCallControlService controlService;
     private final J3DynamicManualCallService dynamicManualCallService;
@@ -280,7 +281,8 @@ public class ManualCallController {
     private static String messageFor(J3LocalJsonImportError error) {
         return switch (error) {
             case EMPTY_BATCH -> "Sélectionnez au moins le fichier page-1.json.";
-            case TOO_MANY_PAGES -> "L’import J3 est limité aux pages 1 à 25.";
+            case TOO_MANY_PAGES -> "L’import J3 est limité aux pages 1 à "
+                    + ScheduledEventsProviderPageRequest.MAXIMUM_COLLECTION_PAGE + ".";
             case TOTAL_SIZE_EXCEEDED -> "Le lot JSON J3 dépasse la limite totale de 25 Mio.";
             case SCHEMA_INCOMPATIBLE -> "Une page JSON J3 est incompatible avec le schéma attendu.";
             case UNEXPECTED_CONTENT -> "Une page J3 ne contient pas un document JSON fournisseur exploitable.";
@@ -334,7 +336,8 @@ public class ManualCallController {
                 return null;
             }
         }
-        if (payloadsByPage.size() > 25
+        if (!ScheduledEventsProviderPageRequest.isWithinCollectionPageRange(
+                payloadsByPage.size())
                 || payloadsByPage.firstKey() != 1
                 || payloadsByPage.lastKey() != payloadsByPage.size()) {
             addImportError(redirectAttributes, "Le lot doit contenir exactement les pages contiguës 1 à N.");
@@ -365,13 +368,25 @@ public class ManualCallController {
         String filename = originalFilename.substring(lastSeparator + 1);
         Matcher simple = SIMPLE_PAGE_FILENAME.matcher(filename);
         if (simple.matches()) {
-            return Integer.parseInt(simple.group(1));
+            return boundedCollectionPage(simple.group(1));
         }
         Matcher suffix = SUFFIX_PAGE_FILENAME.matcher(filename);
         if (suffix.matches()) {
-            return Integer.parseInt(suffix.group(1));
+            return boundedCollectionPage(suffix.group(1));
         }
         return null;
+    }
+
+    private static Integer boundedCollectionPage(String value) {
+        try {
+            int page = Integer.parseInt(value);
+            return ScheduledEventsProviderPageRequest.isWithinCollectionPageRange(page)
+                    ? page
+                    : null;
+        }
+        catch (NumberFormatException exception) {
+            return null;
+        }
     }
 
     private static void addImportError(

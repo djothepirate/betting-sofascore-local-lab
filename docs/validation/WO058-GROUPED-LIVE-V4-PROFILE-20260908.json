@@ -1,0 +1,112 @@
+{
+  "schema": "wo058-grouped-live-capacity-evidence-v1",
+  "status": "QUALIFIED_SYNTHETIC_LOOPBACK_WITH_STATED_SCOPE",
+  "labStatus": [
+    "EXPERIMENTAL",
+    "LOCAL_ONLY",
+    "NOT_PRODUCTION_APPROVED",
+    "NO_CRITICAL_DEPENDENCY"
+  ],
+  "completedAt": "2026-09-08T11:22:23Z",
+  "baseCommit": "c972d63",
+  "policyVersion": "live-v4",
+  "flywayVersion": 39,
+  "qualifiedCapacity": 10,
+  "envelopeScope": "STEADY_64_KIB_ONLY",
+  "nativeEvidence": {
+    "path": "WO058-GROUPED-LIVE-V4-NATIVE-20260908.json",
+    "sha256": "51ab31c25b55a6cc5d70895ba0ad339f65b618c2373cadd2b4198ac70998e10a"
+  },
+  "perEventEvidence": "WO058-GROUPED-LIVE-V4-PER-EVENT-20260908.json",
+  "measuredRuntimeEvidence": "WO058-GROUPED-LIVE-V4-MEASURED-RUNTIME-20260908.json",
+  "endpointEnvelopes": {
+    "EVENT_DETAILS": {
+      "requestMillis": 300,
+      "processingMillis": 400
+    },
+    "EVENT_INCIDENTS": {
+      "requestMillis": 350,
+      "processingMillis": 450
+    },
+    "EVENT_STATISTICS": {
+      "requestMillis": 300,
+      "processingMillis": 350
+    },
+    "EVENT_LINEUPS": {
+      "requestMillis": 300,
+      "processingMillis": 350
+    }
+  },
+  "cadence": {
+    "criticalSeconds": 60,
+    "lineupSeconds": 300,
+    "intraGroupDelayMillis": 0,
+    "interGroupDelayMillis": 3000,
+    "maximumEndpointsPerGroup": 4,
+    "maximumUtilization": 0.9
+  },
+  "admission": {
+    "weightedFiveMinuteSecondsAtTenMatches": 264,
+    "availableFiveMinuteSeconds": 270,
+    "calculatedCapacity": 10,
+    "productionSchedulerScenarios": "initial in-play wave, prematch, simultaneous kickoff, staggered and simultaneous finalization, five lineup phases and variable costs",
+    "profileAppliedAutomatically": false
+  },
+  "budgets": {
+    "maximumCallsPerEvent": 1000,
+    "maximumCallsPerCampaign": 3000,
+    "maximumDurationMinutes": 240,
+    "reservedFinalCallsPerActiveEvent": 4
+  },
+  "measurement": {
+    "warmupSeconds": 300,
+    "steadyElapsedSeconds": 1800.0135867,
+    "totalCalls": 1128,
+    "steadyCalls": 960,
+    "missedCycles": 0,
+    "pairsChecked": 40,
+    "criticalReceiptIntervalMaximumSeconds": 60.52,
+    "criticalPublicationIntervalMaximumSeconds": 60.5323906,
+    "lineupNominalLatenessP95Seconds": 1.8736106,
+    "minimumBetweenGroupGapSeconds": 3.0589874,
+    "realProviderCalls": 0,
+    "operatorDatabaseUsed": false
+  },
+  "corpus": {
+    "steadyResponseBytes": 65536,
+    "initialResponseBytes": 5242880,
+    "initialMaximumBodyCalls": 40,
+    "serverDelayPatternMillis": [
+      0,
+      30,
+      80,
+      150
+    ],
+    "statisticMetrics": 135,
+    "statisticSignals": 270,
+    "incidents": 30,
+    "lineupPlayers": 44,
+    "changingAndRepeatedPayloads": true,
+    "statisticsAndLineupsRevisitTwoNormalizedStates": true
+  },
+  "initialWave": {
+    "separatelyMeasured": true,
+    "maximumReceiptLatenessSeconds": 13.2096106,
+    "maximumPublicationLatenessSeconds": 13.4684304,
+    "coveredBySteadyEnvelopes": false
+  },
+  "rejectedCandidate": {
+    "requestMillis": 500,
+    "processingMillis": 200,
+    "reason": "Processing maxima exceed 200 ms for all four families."
+  },
+  "nativeMetadataCorrection": "The preserved native report has candidateCapacityAtInitialWaveBound=9 from the prior descriptive bound. The final admission weights five critical rounds and one lineup round; the measured profile above independently computes capacity 10. This correction does not change samples or the pass result.",
+  "limitations": [
+    "These envelopes cover the measured steady maxima on this Windows/Java25/Chromium/PostgreSQL loopback environment; they are admission assumptions, not a guarantee of future latency.",
+    "The first forty 5 MiB responses are measured and accepted as a separate startup wave. Their costs exceed the constant steady envelopes.",
+    "Recurring 5 MiB responses, continuously novel statistics/lineups, Internet latency, SofaScore quotas and freshness against the provider website are not established by this run.",
+    "Production accepts larger responses within its existing limit; sustained latency beyond this profile can cause displayed lateness and overload stops. Cadence is never silently lengthened.",
+    "No existing operator or historical admission profile is lowered automatically. Activation requires these separate grouped parameters and this file's SHA-256.",
+    "The sustained run uses the production scheduler, supervisor, raw/normalized stores, PostgreSQL publication and Docker df per request; browser rendering is additionally checked by dedicated native UI tests."
+  ]
+}

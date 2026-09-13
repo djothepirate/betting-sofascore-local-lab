@@ -1,6 +1,7 @@
 package com.bettingproject.sofascorelocal.application.history;
 
 import com.bettingproject.sofascorelocal.domain.event.CanonicalEventObservationView;
+import com.bettingproject.sofascorelocal.domain.event.ProviderCountry;
 import com.bettingproject.sofascorelocal.domain.eventdata.EventIncident;
 import com.bettingproject.sofascorelocal.domain.eventdata.EventIncidents;
 import com.bettingproject.sofascorelocal.domain.eventdata.EventLineupPlayer;
@@ -10,8 +11,11 @@ import com.bettingproject.sofascorelocal.domain.eventdata.EventStatistics;
 import com.bettingproject.sofascorelocal.domain.eventdata.J5CompletenessReport;
 import com.bettingproject.sofascorelocal.domain.eventdata.J5EventDataObservationView;
 import com.bettingproject.sofascorelocal.domain.eventdata.LineupSide;
+import com.bettingproject.sofascorelocal.domain.eventdata.MissingLineupPlayer;
+import com.bettingproject.sofascorelocal.domain.eventdata.PlayerMatchStatistics;
 import com.bettingproject.sofascorelocal.domain.eventdata.TeamLineup;
 import com.bettingproject.sofascorelocal.domain.eventdetails.EventDetailObservationView;
+import com.bettingproject.sofascorelocal.domain.eventdetails.EventPerson;
 import com.bettingproject.sofascorelocal.domain.eventdetails.EventSeason;
 import com.bettingproject.sofascorelocal.domain.eventdetails.EventVenue;
 import com.bettingproject.sofascorelocal.domain.history.J6ChangeKind;
@@ -90,7 +94,47 @@ public class J6SemanticDiffService {
         scalar(changes, "round",
                 before.details().round().orElse(null),
                 after.details().round().orElse(null));
+        scalar(changes, "isAwarded",
+                before.details().isAwarded().orElse(null),
+                after.details().isAwarded().orElse(null));
+        scalar(changes, "homeScore.display",
+                before.details().homeDisplayScore().orElse(null),
+                after.details().homeDisplayScore().orElse(null));
+        scalar(changes, "awayScore.display",
+                before.details().awayDisplayScore().orElse(null),
+                after.details().awayDisplayScore().orElse(null));
+        comparePerson(changes, "homeManager",
+                before.details().homeManager(), after.details().homeManager());
+        comparePerson(changes, "awayManager",
+                before.details().awayManager(), after.details().awayManager());
+        comparePerson(changes, "referee",
+                before.details().referee(), after.details().referee());
         return List.copyOf(changes);
+    }
+
+    private static void comparePerson(
+            List<J6SemanticChange> changes,
+            String path,
+            Optional<EventPerson> before,
+            Optional<EventPerson> after) {
+        scalar(changes, path + ".name",
+                before.map(EventPerson::name).orElse(null),
+                after.map(EventPerson::name).orElse(null));
+        compareCountry(changes, path + ".country",
+                before.flatMap(EventPerson::country), after.flatMap(EventPerson::country));
+    }
+
+    private static void compareCountry(
+            List<J6SemanticChange> changes,
+            String path,
+            Optional<ProviderCountry> before,
+            Optional<ProviderCountry> after) {
+        scalar(changes, path + ".name",
+                before.flatMap(ProviderCountry::name).orElse(null),
+                after.flatMap(ProviderCountry::name).orElse(null));
+        scalar(changes, path + ".alpha2",
+                before.flatMap(ProviderCountry::alpha2).orElse(null),
+                after.flatMap(ProviderCountry::alpha2).orElse(null));
     }
 
     public List<J6SemanticChange> compareEventData(
@@ -194,6 +238,7 @@ public class J6SemanticDiffService {
         String side = before.side().name();
         scalar(changes, "lineups[" + side + "].formation",
                 before.formation().orElse(null), after.formation().orElse(null));
+        compareMissingPlayers(changes, side, before.missingPlayers(), after.missingPlayers());
         Map<Long, List<EventLineupPlayer>> beforeById = groupBy(
                 before.players(), EventLineupPlayer::providerPlayerId);
         Map<Long, List<EventLineupPlayer>> afterById = groupBy(
@@ -214,11 +259,93 @@ public class J6SemanticDiffService {
                 scalar(changes, path + ".position",
                         oldValue.position().orElse(null), newValue.position().orElse(null));
                 scalar(changes, path + ".starter", oldValue.starter(), newValue.starter());
+                scalar(changes, path + ".captain",
+                        oldValue.captain().orElse(null), newValue.captain().orElse(null));
+                compareCountry(changes, path + ".country",
+                        oldValue.country(), newValue.country());
+                comparePlayerStatistics(changes, path + ".statistics",
+                        oldValue.statistics(), newValue.statistics());
                 continue;
             }
             removeEntities(changes, path, oldValues, J6SemanticDiffService::lineupSummary);
             addEntities(changes, path, newValues, J6SemanticDiffService::lineupSummary);
         }
+    }
+
+    private static void comparePlayerStatistics(
+            List<J6SemanticChange> changes, String path,
+            Optional<PlayerMatchStatistics> before, Optional<PlayerMatchStatistics> after) {
+        scalar(changes, path + ".present",
+                before.isPresent() ? true : null, after.isPresent() ? true : null);
+        compareNumericValues(changes, path,
+                before.map(PlayerMatchStatistics::values).orElse(Map.of()),
+                after.map(PlayerMatchStatistics::values).orElse(Map.of()));
+        compareNumericValues(changes, path + ".ratingVersions",
+                before.map(PlayerMatchStatistics::ratingVersions).orElse(Map.of()),
+                after.map(PlayerMatchStatistics::ratingVersions).orElse(Map.of()));
+    }
+
+    private static void compareNumericValues(
+            List<J6SemanticChange> changes, String path,
+            Map<String, java.math.BigDecimal> before, Map<String, java.math.BigDecimal> after) {
+        for (String key : orderedUnion(before.keySet(), after.keySet(), String::compareTo)) {
+            scalar(changes, path + "[" + key + "]",
+                    before.containsKey(key) ? before.get(key).toPlainString() : null,
+                    after.containsKey(key) ? after.get(key).toPlainString() : null);
+        }
+    }
+
+    private static void compareMissingPlayers(
+            List<J6SemanticChange> changes, String side,
+            Optional<List<MissingLineupPlayer>> before, Optional<List<MissingLineupPlayer>> after) {
+        String path = "lineups[" + side + "].missingPlayers";
+        scalar(changes, path + ".present",
+                before.isPresent() ? true : null, after.isPresent() ? true : null);
+        Map<Long, List<MissingLineupPlayer>> beforeById = groupBy(
+                before.orElse(List.of()), MissingLineupPlayer::providerPlayerId);
+        Map<Long, List<MissingLineupPlayer>> afterById = groupBy(
+                after.orElse(List.of()), MissingLineupPlayer::providerPlayerId);
+        for (Long id : orderedUnion(beforeById.keySet(), afterById.keySet(), Long::compareTo)) {
+            List<MissingLineupPlayer> oldValues = mutable(beforeById.get(id));
+            List<MissingLineupPlayer> newValues = mutable(afterById.get(id));
+            removeExactMatches(oldValues, newValues);
+            String playerPath = path + "[playerId=" + id + "]";
+            if (oldValues.size() == 1 && newValues.size() == 1) {
+                MissingLineupPlayer oldValue = oldValues.getFirst();
+                MissingLineupPlayer newValue = newValues.getFirst();
+                scalar(changes, playerPath + ".name", oldValue.name(), newValue.name());
+                scalar(changes, playerPath + ".number",
+                        oldValue.shirtNumber().orElse(null), newValue.shirtNumber().orElse(null));
+                scalar(changes, playerPath + ".position",
+                        oldValue.position().orElse(null), newValue.position().orElse(null));
+                scalar(changes, playerPath + ".type",
+                        oldValue.type().orElse(null), newValue.type().orElse(null));
+                scalar(changes, playerPath + ".reason",
+                        oldValue.reason().orElse(null), newValue.reason().orElse(null));
+                scalar(changes, playerPath + ".description",
+                        oldValue.description().orElse(null), newValue.description().orElse(null));
+                scalar(changes, playerPath + ".externalType",
+                        oldValue.externalType().orElse(null), newValue.externalType().orElse(null));
+                scalar(changes, playerPath + ".expectedEndDate",
+                        oldValue.expectedEndDate().orElse(null), newValue.expectedEndDate().orElse(null));
+                compareCountry(changes, playerPath + ".country",
+                        oldValue.country(), newValue.country());
+            } else {
+                removeEntities(changes, playerPath, oldValues, J6SemanticDiffService::missingPlayerSummary);
+                addEntities(changes, playerPath, newValues, J6SemanticDiffService::missingPlayerSummary);
+            }
+        }
+    }
+
+    private static String missingPlayerSummary(MissingLineupPlayer player) {
+        return player.name()
+                + " · number=" + player.shirtNumber().map(Object::toString).orElse("absent")
+                + " · position=" + player.position().orElse("absent")
+                + " · type=" + player.type().orElse("absent")
+                + " · reason=" + player.reason().map(Object::toString).orElse("absent")
+                + " · description=" + player.description().orElse("absent")
+                + " · externalType=" + player.externalType().map(Object::toString).orElse("absent")
+                + " · expectedEndDate=" + player.expectedEndDate().map(Object::toString).orElse("absent");
     }
 
     private static void compareIncidents(
@@ -551,7 +678,10 @@ public class J6SemanticDiffService {
         return player.name()
                 + " · number=" + player.shirtNumber().map(Object::toString).orElse("absent")
                 + " · position=" + player.position().orElse("absent")
-                + " · starter=" + player.starter();
+                + " · starter=" + player.starter()
+                + player.captain().map(value -> " · captain=" + value).orElse("")
+                + player.statistics().map(value -> " · statistics=" + value.values().size()
+                        + " metrics, " + value.ratingVersions().size() + " rating versions").orElse("");
     }
 
     private static String incidentSummary(EventIncident incident) {

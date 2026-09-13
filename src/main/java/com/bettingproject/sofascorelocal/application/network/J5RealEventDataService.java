@@ -1,12 +1,13 @@
 package com.bettingproject.sofascorelocal.application.network;
 
 import com.bettingproject.sofascorelocal.adapter.sofascore.eventdata.EventIncidentsV6Parser;
-import com.bettingproject.sofascorelocal.adapter.sofascore.eventdata.EventIncidentsV15Parser;
-import com.bettingproject.sofascorelocal.adapter.sofascore.eventdata.EventLineupsV2Parser;
+import com.bettingproject.sofascorelocal.adapter.sofascore.eventdata.EventIncidentsV17Parser;
+import com.bettingproject.sofascorelocal.adapter.sofascore.eventdata.EventLineupsV4Parser;
 import com.bettingproject.sofascorelocal.adapter.sofascore.eventdata.EventStatisticsV2Parser;
 import com.bettingproject.sofascorelocal.adapter.sofascore.eventdata.J5ParseResult;
 import com.bettingproject.sofascorelocal.adapter.sofascore.eventdata.J5ParseStatus;
 import com.bettingproject.sofascorelocal.adapter.sofascore.transport.J5EventDataTransportException;
+import com.bettingproject.sofascorelocal.adapter.sofascore.transport.J5EventDataTransportFailure;
 import com.bettingproject.sofascorelocal.application.network.playwright.PlaywrightProviderSupervisor;
 import com.bettingproject.sofascorelocal.domain.benchmark.J8BenchmarkCampaignTerminalState;
 import com.bettingproject.sofascorelocal.domain.benchmark.J8BenchmarkCampaignType;
@@ -57,7 +58,7 @@ public class J5RealEventDataService {
     private final J5EventDataStore eventDataStore;
     private final EventStatisticsV2Parser statisticsParser;
     private final EventIncidentsV6Parser incidentsParser;
-    private final EventLineupsV2Parser lineupsParser;
+    private final EventLineupsV4Parser lineupsParser;
     private final ManualProviderRequestCoordinator requestCoordinator;
     private final PlaywrightProviderSupervisor providerSupervisor;
     private final J8BenchmarkAuditService benchmarkAuditService;
@@ -73,8 +74,8 @@ public class J5RealEventDataService {
             PlaywrightProviderSupervisor providerSupervisor,
             J8BenchmarkAuditService benchmarkAuditService) {
         this(controlService, transport, rawSnapshotStore, canonicalEventStore, eventDataStore,
-                new EventStatisticsV2Parser(), new EventIncidentsV15Parser(),
-                new EventLineupsV2Parser(), requestCoordinator, providerSupervisor,
+                new EventStatisticsV2Parser(), new EventIncidentsV17Parser(),
+                new EventLineupsV4Parser(), requestCoordinator, providerSupervisor,
                 benchmarkAuditService);
     }
 
@@ -86,7 +87,7 @@ public class J5RealEventDataService {
             J5EventDataStore eventDataStore,
             EventStatisticsV2Parser statisticsParser,
             EventIncidentsV6Parser incidentsParser,
-            EventLineupsV2Parser lineupsParser,
+            EventLineupsV4Parser lineupsParser,
             Clock clock,
             Duration minimumDelay,
             Pause pause,
@@ -113,7 +114,7 @@ public class J5RealEventDataService {
             J5EventDataStore eventDataStore,
             EventStatisticsV2Parser statisticsParser,
             EventIncidentsV6Parser incidentsParser,
-            EventLineupsV2Parser lineupsParser,
+            EventLineupsV4Parser lineupsParser,
             ManualProviderRequestCoordinator requestCoordinator,
             PlaywrightProviderSupervisor providerSupervisor) {
         this(
@@ -138,7 +139,7 @@ public class J5RealEventDataService {
             J5EventDataStore eventDataStore,
             EventStatisticsV2Parser statisticsParser,
             EventIncidentsV6Parser incidentsParser,
-            EventLineupsV2Parser lineupsParser,
+            EventLineupsV4Parser lineupsParser,
             ManualProviderRequestCoordinator requestCoordinator,
             PlaywrightProviderSupervisor providerSupervisor,
             J8BenchmarkAuditService benchmarkAuditService) {
@@ -281,7 +282,8 @@ public class J5RealEventDataService {
             }
 
             try {
-                resources.lease = requestCoordinator.acquireCampaign(claim.requestId());
+                resources.lease = requestCoordinator.acquireManualJ5Campaign(
+                        claim.requestId(), claim.eventId());
             }
             catch (ManualProviderRequestCoordinator.CoordinationException exception) {
                 return failAndLock(
@@ -325,7 +327,7 @@ public class J5RealEventDataService {
                         claim.providerOrigin(), claim.eventId(), endpoint);
                 J5EventDataTransportResponse response;
                 try {
-                    resources.lease.beginRequest();
+                    resources.lease.beginManualJ5Request(request);
                     if (!controlService.executionMayContinue(claim.requestId())) {
                         return failAndLock(
                                 claim, "OPERATOR_STOP", attempts, results, resources);
@@ -342,7 +344,13 @@ public class J5RealEventDataService {
                                 resources);
                     }
                     try {
-                        response = resources.campaign.execute(request);
+                        response = resources.campaign.execute(request, () -> {
+                            resources.lease.checkManualJ5Request(request);
+                            if (!controlService.executionMayContinue(claim.requestId())) {
+                                throw new J5EventDataTransportException(
+                                        J5EventDataTransportFailure.OPERATOR_STOP);
+                            }
+                        });
                     }
                     finally {
                         attempts++;
@@ -699,8 +707,8 @@ public class J5RealEventDataService {
     private static String parserVersion(SofascoreEndpointType endpoint) {
         return switch (endpoint) {
             case EVENT_STATISTICS -> EventStatisticsV2Parser.PARSER_VERSION;
-            case EVENT_INCIDENTS -> EventIncidentsV15Parser.PARSER_VERSION;
-            case EVENT_LINEUPS -> EventLineupsV2Parser.PARSER_VERSION;
+            case EVENT_INCIDENTS -> EventIncidentsV17Parser.PARSER_VERSION;
+            case EVENT_LINEUPS -> EventLineupsV4Parser.PARSER_VERSION;
             default -> throw new IllegalArgumentException("unsupported J5 endpoint");
         };
     }

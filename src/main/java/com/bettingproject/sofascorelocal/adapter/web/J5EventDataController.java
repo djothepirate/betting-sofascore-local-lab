@@ -16,6 +16,7 @@ import com.bettingproject.sofascorelocal.application.network.J5RealEventDataServ
 import com.bettingproject.sofascorelocal.domain.eventdata.EventIncidents;
 import com.bettingproject.sofascorelocal.domain.eventdata.EventLineups;
 import com.bettingproject.sofascorelocal.domain.eventdata.EventStatistics;
+import com.bettingproject.sofascorelocal.domain.eventdata.J5CompletenessStatus;
 import com.bettingproject.sofascorelocal.domain.provider.RawPayloadEvidence;
 import com.bettingproject.sofascorelocal.security.LocalFormTokenService;
 import jakarta.servlet.http.HttpServletResponse;
@@ -49,6 +50,7 @@ public class J5EventDataController {
     private final J5LocalJsonImportService localJsonImportService;
     private final J5ProviderCampaignStopService providerCampaignStopService;
     private final LocalFormTokenService formTokenService;
+    private final LineupCountryOverlayResolver lineupCountries;
 
     public J5EventDataController(
             J5EventDataQueryService queryService,
@@ -57,7 +59,8 @@ public class J5EventDataController {
             J5RealEventDataService realEventDataService,
             J5LocalJsonImportService localJsonImportService,
             J5ProviderCampaignStopService providerCampaignStopService,
-            LocalFormTokenService formTokenService) {
+            LocalFormTokenService formTokenService,
+            LineupCountryOverlayResolver lineupCountries) {
         this.queryService = queryService;
         this.fixtureImportService = fixtureImportService;
         this.realControlService = realControlService;
@@ -65,6 +68,7 @@ public class J5EventDataController {
         this.localJsonImportService = localJsonImportService;
         this.providerCampaignStopService = providerCampaignStopService;
         this.formTokenService = formTokenService;
+        this.lineupCountries = lineupCountries == null ? LineupCountryOverlayResolver.none() : lineupCountries;
     }
 
     @GetMapping
@@ -88,14 +92,36 @@ public class J5EventDataController {
                 page.data().statistics().ifPresent(value -> {
                     model.addAttribute("statistics", value);
                     model.addAttribute("statisticsData", (EventStatistics) value.data());
+                    model.addAttribute("statisticsView", StatisticsPresentation.from((EventStatistics) value.data()));
                 });
                 page.data().incidents().ifPresent(value -> {
                     model.addAttribute("incidents", value);
                     model.addAttribute("incidentsData", (EventIncidents) value.data());
+                    model.addAttribute("incidentMotifs", ((EventIncidents) value.data()).incidents().stream()
+                            .map(IncidentPresentation::motifLabel).toList());
+                    if (value.completeness().status() != J5CompletenessStatus.UNAVAILABLE) {
+                        model.addAttribute("incidentsView", IncidentPresentation.from((EventIncidents) value.data(),
+                                page.current().event().homeTeam().name(), page.current().event().awayTeam().name()));
+                    }
                 });
+                // A readable match-statistics family does not establish that a particular lineup
+                // card has a card or substitution fact. Merge independently readable incidents
+                // into lineup cards by their own source and player key.
+                LineupIncidentOverlay incidentOverlay = page.data().incidents()
+                        .filter(value -> value.completeness().status() != J5CompletenessStatus.UNAVAILABLE)
+                        .map(value -> LineupIncidentOverlay.from((EventIncidents) value.data()))
+                        .orElse(LineupIncidentOverlay.empty());
                 page.data().lineups().ifPresent(value -> {
                     model.addAttribute("lineups", value);
                     model.addAttribute("lineupsData", (EventLineups) value.data());
+                    if (value.completeness().status() != J5CompletenessStatus.UNAVAILABLE) {
+                        // J5EventDataPage carries a scheduled J4 observation, not the matching J4 detail
+                        // projection that contains tournament.uniqueTournament.hasEventPlayerStatistics. Do not
+                        // introduce an untraced latest-detail lookup merely to make a card interactive.
+                        model.addAttribute("lineupsView", LineupsPresentation.from((EventLineups) value.data(),
+                                page.current().event().homeTeam().name(), page.current().event().awayTeam().name(),
+                                lineupCountries.resolve(value), incidentOverlay, false));
+                    }
                 });
                 model.addAttribute("localFormToken", formTokenService.issue(session));
                 model.addAttribute("j5RealControl", realControlService.snapshot());

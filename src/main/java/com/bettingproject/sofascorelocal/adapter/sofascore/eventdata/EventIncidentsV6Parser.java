@@ -215,6 +215,8 @@ public class EventIncidentsV6Parser {
 
             if (type != null
                     && (minute != null || allowsMissingMinute(type, item, items))
+                    && (!rejectIncompleteScoreBeforeConstruction()
+                            || homeScore.isPresent() == awayScore.isPresent())
                     && player.valid()
                     && playerIn.valid()
                     && playerOut.valid()
@@ -406,6 +408,22 @@ public class EventIncidentsV6Parser {
         return SUBSTITUTION_CLASSES;
     }
 
+    protected Set<String> inGamePenaltyClasses() {
+        return MISSED_PENALTY_CLASSES;
+    }
+
+    protected boolean expectsPenaltyOutcomeDetails(
+            String type,
+            Optional<String> incidentClass) {
+        return true;
+    }
+
+    protected boolean rejectIncompleteScoreBeforeConstruction() {
+        // Historical versions leave this guard to the EventIncident constructor. A newer
+        // parser can retain the already recorded atomic-field problem as a structured failure.
+        return false;
+    }
+
     protected void validateSubstitution(
             String type,
             Optional<String> incidentClass,
@@ -428,7 +446,7 @@ public class EventIncidentsV6Parser {
             case "goal" -> GOAL_CLASSES;
             case "card" -> CARD_CLASSES;
             case "varDecision" -> VAR_CLASSES;
-            case "inGamePenalty" -> MISSED_PENALTY_CLASSES;
+            case "inGamePenalty" -> inGamePenaltyClasses();
             case "penaltyShootout" -> SHOOTOUT_CLASSES;
             default -> Set.of();
         };
@@ -631,9 +649,11 @@ public class EventIncidentsV6Parser {
             }
             case "inGamePenalty", "penaltyShootout" -> {
                 counter.expect(path + ".incidentClass", incidentClass.isPresent());
-                counter.expect(path + ".player", player.present());
-                counter.expect(path + ".reason", reason.isPresent());
-                counter.expect(path + ".description", description.isPresent());
+                if (expectsPenaltyOutcomeDetails(type, incidentClass)) {
+                    counter.expect(path + ".player", player.present());
+                    counter.expect(path + ".reason", reason.isPresent());
+                    counter.expect(path + ".description", description.isPresent());
+                }
                 if ("penaltyShootout".equals(type)) {
                     counter.expect(path + ".sequence", shootoutSequence.isPresent());
                 }

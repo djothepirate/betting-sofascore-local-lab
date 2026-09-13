@@ -25,7 +25,7 @@ public record J8BenchmarkUnit(
 
     private static final Pattern SCHEDULED_EVENTS_REQUEST_KEY = Pattern.compile(
             "SCHEDULED_EVENTS\\|date=([0-9]{4}-[0-9]{2}-[0-9]{2})"
-                    + "\\|page=([1-9]|1[0-9]|2[0-5])");
+                    + "\\|page=([1-9][0-9]*)");
     private static final Pattern TOURNAMENT_EVENTS_REQUEST_KEY = Pattern.compile(
             "TOURNAMENT_SCHEDULED_EVENTS\\|date=([0-9]{4}-[0-9]{2}-[0-9]{2})"
                     + "\\|uniqueTournamentId=([1-9][0-9]*)");
@@ -38,8 +38,11 @@ public record J8BenchmarkUnit(
         providerEventId = Objects.requireNonNull(providerEventId, "providerEventId");
         declaredAt = Objects.requireNonNull(declaredAt, "declaredAt");
 
-        if (unitOrdinal < 1 || unitOrdinal > 25) {
-            throw new IllegalArgumentException("unitOrdinal must be between 1 and 25");
+        if (unitOrdinal < 1
+                || unitOrdinal > J8BenchmarkCampaignType.MAXIMUM_SUPPORTED_UNITS) {
+            throw new IllegalArgumentException(
+                    "unitOrdinal must be between 1 and "
+                            + J8BenchmarkCampaignType.MAXIMUM_SUPPORTED_UNITS);
         }
         boolean eventEndpoint = endpointType == SofascoreEndpointType.EVENT_DETAILS
                 || endpointType == SofascoreEndpointType.EVENT_STATISTICS
@@ -69,7 +72,7 @@ public record J8BenchmarkUnit(
                         SCHEDULED_EVENTS_REQUEST_KEY,
                         "scheduled-events request key");
                 requireIsoDate(request.group(1), "scheduled-events request date");
-                if (Integer.parseInt(request.group(2)) != unitOrdinal) {
+                if (parseScheduledEventsPage(request.group(2)) != unitOrdinal) {
                     throw new IllegalArgumentException(
                             "scheduled-events page must equal unitOrdinal");
                 }
@@ -125,6 +128,16 @@ public record J8BenchmarkUnit(
         }
         catch (DateTimeParseException exception) {
             throw new IllegalArgumentException(description + " must be an ISO date", exception);
+        }
+    }
+
+    private static int parseScheduledEventsPage(String value) {
+        try {
+            return Integer.parseInt(value);
+        }
+        catch (NumberFormatException exception) {
+            throw new IllegalArgumentException(
+                    "scheduled-events page must be a bounded positive integer", exception);
         }
     }
 

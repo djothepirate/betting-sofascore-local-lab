@@ -1,0 +1,41 @@
+<!DOCTYPE html>
+<html lang="fr" xmlns:th="http://www.thymeleaf.org">
+<body>
+<section th:fragment="view(view)" data-event-details class="event-information">
+  <h4>Informations sur la rencontre</h4>
+  <dl class="detail-grid">
+    <div data-event-person="homeManager">
+      <dt data-event-person-role th:text="${'Entraîneur · ' + view.homeTeam}">Entraîneur à domicile</dt>
+      <dd><span data-event-person-name th:text="${view.homeManager.name}">—</span>
+        <span data-event-person-country th:hidden="${view.homeManager.country == null or !view.homeManager.country.available}">
+          <img data-event-person-flag alt="" width="24" height="18" th:if="${view.homeManager.country != null and view.homeManager.country.available and !view.homeManager.country.flagPath.isEmpty()}" th:src="${view.homeManager.country.flagPath}">
+          <span class="country-fallback-label" data-event-person-nationality><span class="country-accessible-prefix">Pays : </span><span data-event-person-nationality-label th:text="${view.homeManager.country != null ? view.homeManager.country.label : ''}"></span></span>
+        </span>
+      </dd>
+    </div>
+    <div data-event-person="awayManager">
+      <dt data-event-person-role th:text="${'Entraîneur · ' + view.awayTeam}">Entraîneur à l’extérieur</dt>
+      <dd><span data-event-person-name th:text="${view.awayManager.name}">—</span>
+        <span data-event-person-country th:hidden="${view.awayManager.country == null or !view.awayManager.country.available}">
+          <img data-event-person-flag alt="" width="24" height="18" th:if="${view.awayManager.country != null and view.awayManager.country.available and !view.awayManager.country.flagPath.isEmpty()}" th:src="${view.awayManager.country.flagPath}">
+          <span class="country-fallback-label" data-event-person-nationality><span class="country-accessible-prefix">Pays : </span><span data-event-person-nationality-label th:text="${view.awayManager.country != null ? view.awayManager.country.label : ''}"></span></span>
+        </span>
+      </dd>
+    </div>
+    <div data-event-person="referee">
+      <dt data-event-person-role>Arbitre</dt>
+      <dd><span data-event-person-name th:text="${view.referee.name}">—</span>
+        <span data-event-person-country th:hidden="${view.referee.country == null or !view.referee.country.available}">
+          <img data-event-person-flag alt="" width="24" height="18" th:if="${view.referee.country != null and view.referee.country.available and !view.referee.country.flagPath.isEmpty()}" th:src="${view.referee.country.flagPath}">
+          <span class="country-fallback-label" data-event-person-nationality><span class="country-accessible-prefix">Pays : </span><span data-event-person-nationality-label th:text="${view.referee.country != null ? view.referee.country.label : ''}"></span></span>
+        </span>
+      </dd>
+    </div>
+    <div><dt>Compétition</dt><dd data-event-information="competition" th:text="${view.competition}">—</dd></div>
+    <div><dt>Tour</dt><dd data-event-information="round" th:text="${view.round}">—</dd></div>
+    <div><dt>Saison</dt><dd data-event-information="season" th:text="${view.season}">—</dd></div>
+    <div><dt>Stade</dt><dd data-event-information="venue" th:text="${view.venue}">—</dd></div>
+  </dl>
+</section>
+</body>
+</html>

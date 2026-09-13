@@ -1,0 +1,269 @@
+{
+  "schema" : "wo058-grouped-live-capacity-evidence-v2",
+  "status" : "QUALIFIED_SYNTHETIC_LOOPBACK_WITH_STATED_SCOPE",
+  "labStatus" : [ "EXPERIMENTAL", "LOCAL_ONLY", "NOT_PRODUCTION_APPROVED", "NO_CRITICAL_DEPENDENCY" ],
+  "completedAt" : "2026-09-09T14:41:05.048368400Z",
+  "policyVersion" : "live-v6",
+  "flywayVersion" : 44,
+  "qualifiedCapacity" : 7,
+  "envelopeScope" : "STEADY_64_KIB_ONLY",
+  "nativeEvidence" : {
+    "path" : "WO058-GROUPED-LIVE-V6-NATIVE-20260909.json",
+    "sha256" : "07500b848513cf75254eb110112f89a7b7e6d14cda71b4d5ed25d9fcd3da8683"
+  },
+  "endpointEnvelopes" : {
+    "EVENT_DETAILS" : {
+      "processingMillis" : 350,
+      "requestMillis" : 250
+    },
+    "EVENT_INCIDENTS" : {
+      "processingMillis" : 400,
+      "requestMillis" : 300
+    },
+    "EVENT_STATISTICS" : {
+      "processingMillis" : 450,
+      "requestMillis" : 300
+    },
+    "EVENT_LINEUPS" : {
+      "processingMillis" : 450,
+      "requestMillis" : 250
+    }
+  },
+  "initialWave" : {
+    "firstResponseBytesPerPair" : 5242880,
+    "coveredBySteadyEnvelopes" : false,
+    "pairs" : 28,
+    "separatelyMeasured" : true
+  },
+  "cadence" : {
+    "criticalSeconds" : 100,
+    "lineupSeconds" : 300,
+    "intraGroupDelayMillis" : 0,
+    "interGroupDelayMillis" : 1000,
+    "maximumEndpointsPerGroup" : 4,
+    "maximumUtilization" : 0.9,
+    "minimumPostCompletionDelayMillis" : 2000,
+    "maximumDeparturesPer60Seconds" : 25,
+    "maximumDeparturesPerHour" : 1000
+  },
+  "admission" : {
+    "calculatedCapacity" : 7,
+    "productionSchedulerScenarioCount" : 24,
+    "productionSchedulerScenariosExecutedForThisProfile" : true,
+    "profileAppliedAutomatically" : false,
+    "rounding" : "each separate observed steady maximum, rounded upward to the next 50 ms boundary; no v5 floor",
+    "weightedFiveMinuteMillisPerMatch" : 26850,
+    "weightedFiveMinuteMillisAtQualifiedCapacity" : 187950,
+    "availableFiveMinuteMillis" : 270000,
+    "uncappedMeanBoundCapacity" : 10,
+    "hourlyHeadroomCallsAtQualifiedCapacity" : 896,
+    "calculation" : "min(7, floor(900/128), floor(270000/(20000+3*(J4+incidents+statistics)+lineups))) followed by production v6 scheduler replay; all endpoint costs are request plus processing milliseconds"
+  },
+  "budgets" : {
+    "maximumCallsPerCampaign" : 20000,
+    "maximumCallsPerEvent" : 2500,
+    "reservedFinalCallsPerActiveEvent" : 4,
+    "maximumRawBytes" : 15728640000,
+    "maximumDurationMinutes" : 240
+  },
+  "measurement" : {
+    "maximumWireArrivalsPer60Seconds" : 18,
+    "maximumDeparturesPer60Seconds" : 18,
+    "minimumPostCompletionDelaySeconds" : 2.299724000,
+    "steadyCalls" : 420,
+    "totalCalls" : 494,
+    "endpointMetrics" : {
+      "EVENT_DETAILS" : {
+        "steadySamples" : 126,
+        "maximumRequestNanos" : 247137900,
+        "maximumProcessingNanos" : 345814500,
+        "requestSeconds" : {
+          "maximum" : 0.247137900,
+          "count" : 126,
+          "p95" : 0.242624400
+        },
+        "processingSeconds" : {
+          "maximum" : 0.345814500,
+          "count" : 126,
+          "p95" : 0.311480300
+        },
+        "httpSeconds" : {
+          "maximum" : 0.178000000,
+          "count" : 126,
+          "p95" : 0.175000000
+        },
+        "authorizationDelaySeconds" : {
+          "maximum" : 0.022874400,
+          "count" : 126,
+          "p95" : 0.017003300
+        },
+        "limiterSleepSeconds" : {
+          "maximum" : 0E-9,
+          "count" : 126,
+          "p95" : 0E-9
+        },
+        "resilienceSqlSeconds" : {
+          "maximum" : 0.038298700,
+          "count" : 126,
+          "p95" : 0.029407400
+        },
+        "initialRequestSeconds" : {
+          "maximum" : 0.667369300,
+          "count" : 21,
+          "p95" : 0.655905500
+        },
+        "initialProcessingSeconds" : {
+          "maximum" : 0.767143200,
+          "count" : 21,
+          "p95" : 0.455772700
+        }
+      },
+      "EVENT_INCIDENTS" : {
+        "steadySamples" : 126,
+        "maximumRequestNanos" : 258329700,
+        "maximumProcessingNanos" : 374343100,
+        "requestSeconds" : {
+          "maximum" : 0.258329700,
+          "count" : 126,
+          "p95" : 0.244160100
+        },
+        "processingSeconds" : {
+          "maximum" : 0.374343100,
+          "count" : 126,
+          "p95" : 0.358453800
+        },
+        "httpSeconds" : {
+          "maximum" : 0.182000000,
+          "count" : 126,
+          "p95" : 0.175000000
+        },
+        "authorizationDelaySeconds" : {
+          "maximum" : 0.024514700,
+          "count" : 126,
+          "p95" : 0.017461700
+        },
+        "limiterSleepSeconds" : {
+          "maximum" : 0E-9,
+          "count" : 126,
+          "p95" : 0E-9
+        },
+        "resilienceSqlSeconds" : {
+          "maximum" : 0.038680300,
+          "count" : 126,
+          "p95" : 0.032585600
+        },
+        "initialRequestSeconds" : {
+          "maximum" : 0.766318700,
+          "count" : 21,
+          "p95" : 0.707297000
+        },
+        "initialProcessingSeconds" : {
+          "maximum" : 0.597625000,
+          "count" : 21,
+          "p95" : 0.485245000
+        }
+      },
+      "EVENT_STATISTICS" : {
+        "steadySamples" : 126,
+        "maximumRequestNanos" : 251537300,
+        "maximumProcessingNanos" : 428606100,
+        "requestSeconds" : {
+          "maximum" : 0.251537300,
+          "count" : 126,
+          "p95" : 0.241898700
+        },
+        "processingSeconds" : {
+          "maximum" : 0.428606100,
+          "count" : 126,
+          "p95" : 0.348488100
+        },
+        "httpSeconds" : {
+          "maximum" : 0.183000000,
+          "count" : 126,
+          "p95" : 0.175000000
+        },
+        "authorizationDelaySeconds" : {
+          "maximum" : 0.019109600,
+          "count" : 126,
+          "p95" : 0.016348800
+        },
+        "limiterSleepSeconds" : {
+          "maximum" : 0E-9,
+          "count" : 126,
+          "p95" : 0E-9
+        },
+        "resilienceSqlSeconds" : {
+          "maximum" : 0.035596600,
+          "count" : 126,
+          "p95" : 0.031556400
+        },
+        "initialRequestSeconds" : {
+          "maximum" : 0.768366400,
+          "count" : 21,
+          "p95" : 0.694674500
+        },
+        "initialProcessingSeconds" : {
+          "maximum" : 0.519064200,
+          "count" : 21,
+          "p95" : 0.505058000
+        }
+      },
+      "EVENT_LINEUPS" : {
+        "steadySamples" : 42,
+        "maximumRequestNanos" : 249079600,
+        "maximumProcessingNanos" : 405420000,
+        "requestSeconds" : {
+          "maximum" : 0.249079600,
+          "count" : 42,
+          "p95" : 0.243301200
+        },
+        "processingSeconds" : {
+          "maximum" : 0.405420000,
+          "count" : 42,
+          "p95" : 0.376115500
+        },
+        "httpSeconds" : {
+          "maximum" : 0.181000000,
+          "count" : 42,
+          "p95" : 0.176000000
+        },
+        "authorizationDelaySeconds" : {
+          "maximum" : 0.017827000,
+          "count" : 42,
+          "p95" : 0.015794100
+        },
+        "limiterSleepSeconds" : {
+          "maximum" : 0E-9,
+          "count" : 42,
+          "p95" : 0E-9
+        },
+        "resilienceSqlSeconds" : {
+          "maximum" : 0.035947200,
+          "count" : 42,
+          "p95" : 0.031099800
+        },
+        "initialRequestSeconds" : {
+          "maximum" : 0.697100000,
+          "count" : 11,
+          "p95" : 0.697100000
+        },
+        "initialProcessingSeconds" : {
+          "maximum" : 0.531121400,
+          "count" : 11,
+          "p95" : 0.531121400
+        }
+      }
+    },
+    "effectiveRequestTimeoutMillis" : 30000,
+    "pairsChecked" : 28
+  },
+  "productionClassSha256" : {
+    "com.bettingproject.sofascorelocal.application.live.LiveAdmissionPolicy" : "5cc596142077fefb9634a64ea94edb4613e23de49158779d755af23e9230f838",
+    "com.bettingproject.sofascorelocal.application.live.GroupedLiveAdmissionSimulation" : "ea6b87b099e67d26acc070dab30de32738af6999fd95939ac70cf6e635902cc3",
+    "com.bettingproject.sofascorelocal.application.live.GroupedLiveScheduleV4" : "aa0fae752ece0e9f6f9c785c34fc45061873ec0f55b7835c388fb76bc742a265",
+    "com.bettingproject.sofascorelocal.application.live.LiveSchedule" : "e10957d7cdd931577b07353ff305a36707b60d409a9ec1daafe87efb4d2956ce",
+    "com.bettingproject.sofascorelocal.domain.live.LiveCampaignData$GroupedAdmissionProfile" : "4973bbae56cc7ec308cd904a6c4f9f2ed622d0842e4075e7297be82806065f9b"
+  },
+  "profileBuilderSourceSha256" : "262afa61aa078ee1e471eb501baa589877967d25b72a9411cae594a61f6e14f6",
+  "limitations" : [ "Synthetic local loopback only; does not establish provider acceptance or an IP/quota threshold", "Steady 64 KiB response corpus, including LINEUPS V3; initial 5 MiB responses measured separately", "The 35-minute run does not saturate a full hourly window; rolling-hour invariants have separate PostgreSQL replay evidence", "Nominal cadence remains subordinate to the shared persistent budget and previous campaigns", "Operator selection limit is independent and is neither read nor modified by this utility" ]
+}

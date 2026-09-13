@@ -24,7 +24,7 @@ class J6NativeBinaryPipelineQualificationTest {
     }
 
     @Test
-    void retentionAcceptsOnlyAV32QualifiedManifestWithoutRunningNativeTools()
+    void retentionAcceptsOnlyAV54QualifiedManifestWithoutRunningNativeTools()
             throws IOException {
         String retention = Files.readString(
                 Path.of("").toAbsolutePath().normalize()
@@ -33,9 +33,20 @@ class J6NativeBinaryPipelineQualificationTest {
 
         assertThat(retention)
                 .contains(
-                        "$manifest.source.flywayVersion.ToString() -cne '32'",
-                        "valid Flyway V32 raw-payload, J8 evidence and metadata-only J7 delivery and owner-go restore")
+                        "$manifest.source.flywayVersion.ToString() -cne '54'",
+                        "valid Flyway V54 raw-payload, J8, J7 and quiescent live ledger restore",
+                        "'providerResilienceStateCount'", "'providerDepartureReservationCount'",
+                        "'providerDepartureCompletionCount'", "'providerDepartureAccountingCount'", "'providerResilienceEventCount'",
+                        "'liveAttemptTransportDiagnosticCount'", "'liveCampaignDiagnosticCount'",
+                        "[long]$manifest.source.providerResilienceStateCount -ne 1",
+                        "[long]$manifest.source.providerDepartureAccountingCount -lt [long]$manifest.source.providerDepartureCompletionCount",
+                        "'SOFASCORE_LIVE_ENABLED'", "'providerGuardState'", "'liveLedgerSha256'")
                 .doesNotContain(
+                        "$manifest.source.flywayVersion.ToString() -cne '53'",
+                        "valid Flyway V53 raw-payload, J8, J7 and quiescent live ledger restore",
+                        "$manifest.source.flywayVersion.ToString() -cne '47'",
+                        "$manifest.source.flywayVersion.ToString() -cne '41'",
+                        "$manifest.source.flywayVersion.ToString() -cne '40'",
                         "$manifest.source.flywayVersion.ToString() -cne '31'",
                         "valid Flyway V31 raw-payload, J8 evidence and metadata-only J7 delivery and owner-go restore");
     }
@@ -93,17 +104,34 @@ class J6NativeBinaryPipelineQualificationTest {
                         "J6_DOCKER_EXECUTABLE_IDENTITY=AUTHENTICODE_DOCKER_INC",
                         "Get-AuthenticodeSignature",
                         "AggregateException",
-                        "if ($sourceFlywayVersion -cne '32')",
-                        "Flyway V32 must be applied before the J6 backup/restore qualification.",
+                        "if ($sourceFlywayVersion -cne '54')",
+                        "Flyway V54 must be applied before the J6 backup/restore qualification.",
+                        "$liveLedgerFingerprintSql", "provider_campaign_guard", "$providerGuardState -cne 'FREE'",
                         "J6_POSTGRES_SESSION_CLEANUP_IDEMPOTENT_REUSE=PASS",
                         "dropdb --username \"$POSTGRES_USER\" --force --if-exists",
                         "$manifestStagingPath",
                         "$QualificationInjectCleanupFailureAfterSuccessfulCleanup")
                 .doesNotContain(
+                        "if ($sourceFlywayVersion -cne '53')",
+                        "Flyway V53 must be applied before the J6 backup/restore qualification.",
+                        "if ($sourceFlywayVersion -cne '49')",
+                        "Flyway V49 must be applied before the J6 backup/restore qualification.",
+                        "if ($sourceFlywayVersion -cne '47')",
+                        "Flyway V47 must be applied before the J6 backup/restore qualification.",
+                        "if ($sourceFlywayVersion -cne '41')",
                         "if ($sourceFlywayVersion -cne '31')",
                         "Flyway V31 must be applied before the J6 backup/restore qualification.",
                         "'pg_dump --username \"$POSTGRES_USER\" --dbname \"$POSTGRES_DB\" --format=custom --no-owner --no-privileges' |",
                         "& $ageExecutable -d $destinationPath |");
+        // Each new durable table is counted on both sides and included in the ordered full-row hash.
+        for (String table : java.util.List.of("provider_resilience_state", "provider_departure_reservation",
+                "provider_departure_completion", "provider_departure_accounting", "provider_resilience_event", "live_attempt_transport_diagnostic",
+                "live_campaign_diagnostic")) {
+            assertThat(script).contains(
+                    "Invoke-PrimaryScalar -Sql 'select count(*) from " + table + "'",
+                    "Invoke-RestoreScalar -Database $restoreDatabase -Sql 'select count(*) from " + table + "'",
+                    "'" + table.toUpperCase(java.util.Locale.ROOT) + "|' || to_jsonb(t)::text from " + table + " t");
+        }
         assertThat(module)
                 .contains(
                         "CopyToAsync",
@@ -149,7 +177,11 @@ class J6NativeBinaryPipelineQualificationTest {
                         "Invoke-J6BoundedTasklistObservation",
                         "J6_PROCESS_IDENTITY_FINAL_BATCH=PASS",
                         "J6_TASKLIST_OBSERVER_BOUNDED_JOB_CLEANUP=PASS",
+                        "Get-J6LoopbackListenerSnapshot",
+                        "J6_LOOPBACK_LISTENER_MULTI_SOURCE_BASELINE=PASS",
+                        "J6_LOOPBACK_APPLICATION_LISTENER_BASELINE_PRESERVED=PASS",
                         "LOOPBACK_LISTENER_OBSERVATION_FAILED",
+                        "LOOPBACK_LISTENER_SECONDARY_OBSERVATION_FAILED",
                         "LOOPBACK_APPLICATION_LISTENER_RESIDUAL",
                         "PID_REUSED_NOT_OWNED",
                         "J6_SYNTHETIC_TEMP_ROOT_OWNER_V1",
@@ -360,6 +392,8 @@ class J6NativeBinaryPipelineQualificationTest {
                 "J6_PIPELINE_OWNED_IDENTITIES_INACTIVE_MULTI_API=PASS",
                 "J6_PID_ONLY_TERMINATION_USED=NO",
                 "J6_PIPELINE_RESIDUAL_OWNED_PROCESS_COUNT=0",
+                "J6_LOOPBACK_LISTENER_MULTI_SOURCE_BASELINE=PASS",
+                "J6_LOOPBACK_APPLICATION_LISTENER_BASELINE_PRESERVED=PASS",
                 "J6_LOOPBACK_APPLICATION_LISTENER_RESIDUAL_COUNT=0",
                 "PROVIDER_ACCESS_PERFORMED=NO",
                 "J6_BACKUP_RESTORE_LOOPBACK_QUALIFICATION=PASS",

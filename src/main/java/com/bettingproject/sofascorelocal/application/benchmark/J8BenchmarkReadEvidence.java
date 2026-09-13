@@ -51,7 +51,7 @@ public record J8BenchmarkReadEvidence(
             campaignType = Objects.requireNonNull(campaignType, "campaignType");
             executionMode = Objects.requireNonNull(executionMode, "executionMode");
             startedAt = Objects.requireNonNull(startedAt, "startedAt");
-            if (maximumUnits != campaignType.maximumUnits()) {
+            if (!campaignType.acceptsStoredMaximumUnits(maximumUnits)) {
                 throw new IllegalArgumentException("campaign maximum is inconsistent");
             }
             finishedAt = Objects.requireNonNull(finishedAt, "finishedAt");

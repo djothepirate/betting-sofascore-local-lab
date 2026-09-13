@@ -15,6 +15,8 @@ import com.bettingproject.sofascorelocal.domain.eventdata.J5EventDataBundle;
 import com.bettingproject.sofascorelocal.domain.eventdata.J5EventDataObservation;
 import com.bettingproject.sofascorelocal.domain.eventdata.J5EventDataObservationView;
 import com.bettingproject.sofascorelocal.domain.eventdata.LineupSide;
+import com.bettingproject.sofascorelocal.domain.eventdata.MissingLineupPlayer;
+import com.bettingproject.sofascorelocal.domain.eventdata.PlayerMatchStatistics;
 import com.bettingproject.sofascorelocal.domain.eventdata.TeamLineup;
 import com.bettingproject.sofascorelocal.domain.eventdetails.EventDetailObservation;
 import com.bettingproject.sofascorelocal.domain.eventdetails.EventDetailObservationView;
@@ -60,6 +62,55 @@ class J7EnvelopeAssemblerTest {
             new J7JsonSchemaValidator());
 
     @Test
+    void enrichedLineupsKeepTheClosedJ7ProjectionWhileVerifyingTheFullSourceHash() throws Exception {
+        J7CurrentEventSelection previous = completeSyntheticSelection();
+        J5EventDataObservationView previousView = previous.eventData().lineups().orElseThrow();
+        EventLineups original = (EventLineups) previousView.data();
+        var players = original.home().players().stream().map(player -> new EventLineupPlayer(
+                player.providerPlayerId(), player.name(), player.shirtNumber(), player.position(), player.starter(),
+                Optional.of(player.starter()), Optional.of(new PlayerMatchStatistics(
+                        Map.of("goals", java.math.BigDecimal.ZERO, "rating", new java.math.BigDecimal("8.0")),
+                        Map.of("alternative", new java.math.BigDecimal("7.6")))))).toList();
+        EventLineups enriched = new EventLineups(original.providerEventId(), original.confirmed(),
+                new TeamLineup(original.home().side(), original.home().formation(), players,
+                        Optional.of(List.of(new MissingLineupPlayer(777, "Missing Player", Optional.of(42),
+                                Optional.of("D"), Optional.of("missing"), Optional.of(1),
+                                Optional.of("Achilles Tendon Injury"), Optional.of(5),
+                                Optional.of(java.time.OffsetDateTime.parse("2026-09-20T00:00:00Z")))))),
+                original.away());
+        EventSourceTrace trace = EventSourceTrace.providerSnapshot(77L, "9".repeat(64),
+                "event-lineups-v3", RECORDED_AT);
+        J5EventDataObservationView enrichedView = j5View(99, previousView.identity(), enriched, trace,
+                previousView.completeness());
+        var selection = new J7CurrentEventSelection(previous.eventState(), previous.eventDetails(),
+                new J5EventDataBundle(previous.eventData().statistics(), previous.eventData().incidents(),
+                        Optional.of(enrichedView)),
+                Map.of(77L, new J6SnapshotTrace(77L, "9".repeat(64), 1, 0,
+                        J6SnapshotOccurrenceOutcome.BASELINE, Optional.of(RECORDED_AT), J6RawPayloadState.RETAINED)));
+        var before = assembler.assembleCandidate(UUID.randomUUID(), GENERATED_AT, "0.1.0-SNAPSHOT", previous);
+        var after = assembler.assembleCandidate(UUID.randomUUID(), GENERATED_AT, "0.1.0-SNAPSHOT", selection);
+        JsonNode beforeData = JSON_MAPPER.readTree(before.content()).get("data");
+        JsonNode afterRoot = JSON_MAPPER.readTree(after.content());
+
+        assertThat(afterRoot.get("data")).isEqualTo(beforeData);
+        assertThat(after.dataSha256()).isEqualTo(before.dataSha256());
+        assertThat(after.sourceSetSha256()).isNotEqualTo(before.sourceSetSha256());
+        assertThat(enrichedView.normalizedSha256()).isNotEqualTo(previousView.normalizedSha256());
+        assertThat(afterRoot.get("manifest").get("sources").get(4).get("parserVersion").stringValue())
+                .isEqualTo("event-lineups-v3");
+        assertThat(integrityGuard.verify(after.content(), after.canonicalEventId(), after.exportId()).status())
+                .isEqualTo(J7ExportStatus.COHERENCE_CHECKED);
+
+        var tamperedView = new J5EventDataObservationView(99, previousView.identity(), enriched, trace,
+                previousView.completeness(), previousView.normalizedSha256());
+        var tampered = new J7CurrentEventSelection(selection.eventState(), selection.eventDetails(),
+                new J5EventDataBundle(selection.eventData().statistics(), selection.eventData().incidents(),
+                        Optional.of(tamperedView)), selection.snapshotTraces());
+        assertThatThrownBy(() -> assembler.assembleCandidate(UUID.randomUUID(), GENERATED_AT,
+                "0.1.0-SNAPSHOT", tampered)).isInstanceOf(J7ExportException.class);
+    }
+
+    @Test
     void integrityGuardAcceptsTheGeneratedCandidate() {
         J7AssembledEnvelope candidate = assembler.assembleCandidate(
                 UUID.fromString("c124eaac-0a66-48cd-b09d-b86f8a6cb278"),
@@ -101,6 +152,52 @@ class J7EnvelopeAssemblerTest {
                 ((ObjectNode) root.get("manifest").get("sources").get(0))
                         .put("observationId", new java.math.BigInteger(
                                 "9223372036854775808")));
+    }
+
+    @Test
+    void verifiesV3DetailProvenanceWhileKeepingTheFrozenJ7V1DataContract() throws Exception {
+        J7CurrentEventSelection selection = awardedSyntheticSelection();
+        J7AssembledEnvelope candidate = assembler.assembleCandidate(
+                UUID.randomUUID(), GENERATED_AT, "0.1.0-SNAPSHOT", selection);
+
+        J7VerifiedEnvelope verified = integrityGuard.verify(
+                candidate.content(), candidate.canonicalEventId(), candidate.exportId());
+        JsonNode root = JSON_MAPPER.readTree(candidate.content());
+        JsonNode details = root.path("data").path("eventDetails").path("details");
+        assertThat(details.size()).isEqualTo(8);
+        for (String field : List.of("startsAt", "homeTeam", "awayTeam", "status",
+                "tournament", "venue", "season", "round")) {
+            assertThat(details.has(field)).as("J7 v1 detail field %s", field).isTrue();
+        }
+        for (String field : List.of("isAwarded", "homeDisplayScore", "awayDisplayScore",
+                "homeScore", "awayScore")) {
+            assertThat(details.has(field)).as("new J4 field %s excluded from J7 v1", field).isFalse();
+        }
+        JsonNode detailSource = root.path("manifest").path("sources").get(1);
+        assertThat(detailSource.path("parserVersion").asText()).isEqualTo("event-details-v3");
+        assertThat(detailSource.path("normalizedSha256").asText())
+                .isEqualTo(selection.eventDetails().orElseThrow().normalizedSha256());
+        assertThat(verified.status()).isEqualTo(J7ExportStatus.COHERENCE_CHECKED);
+    }
+
+    @Test
+    void rejectsAnAlteredV3DisplayScoreEvenThoughJ7V1DoesNotSerializeIt() {
+        J7CurrentEventSelection valid = awardedSyntheticSelection();
+        var original = valid.eventDetails().orElseThrow();
+        EventDetails details = original.details();
+        EventDetails altered = new EventDetails(
+                details.providerEventId(), details.startsAt(), details.homeTeam(), details.awayTeam(),
+                details.status(), details.tournament(), details.venue(), details.season(), details.round(),
+                details.isAwarded(), Optional.of(2), details.awayDisplayScore());
+        var corrupted = new EventDetailObservationView(original.observationId(), original.identity(),
+                altered, original.source(), original.normalizedSha256());
+        var selection = new J7CurrentEventSelection(valid.eventState(), Optional.of(corrupted),
+                valid.eventData(), valid.snapshotTraces());
+
+        assertThatThrownBy(() -> assembler.assembleCandidate(
+                UUID.randomUUID(), GENERATED_AT, "0.1.0-SNAPSHOT", selection))
+                .isInstanceOfSatisfying(J7ExportException.class, exception ->
+                        assertThat(exception.error()).isEqualTo(J7ExportError.INVALID_HASH));
     }
 
     @Test
@@ -740,6 +837,26 @@ class J7EnvelopeAssemblerTest {
                         Optional.of(incidentsView),
                         Optional.of(lineupsView)),
                 Map.of());
+    }
+
+    private static J7CurrentEventSelection awardedSyntheticSelection() {
+        J7CurrentEventSelection complete = completeSyntheticSelection();
+        var previous = complete.eventDetails().orElseThrow();
+        EventDetails details = previous.details();
+        EventDetails awarded = new EventDetails(
+                details.providerEventId(), details.startsAt(), details.homeTeam(), details.awayTeam(),
+                new ScheduledEventStatus("finished", Optional.of("Ended")),
+                details.tournament(), details.venue(), details.season(), details.round(),
+                Optional.of(true), Optional.of(3), Optional.of(0));
+        EventSourceTrace provenance = synthetic("j7-awarded-details", "6", "event-details-v3");
+        var observation = EventDetailObservation.from(previous.identity(), awarded, provenance);
+        var detailView = new EventDetailObservationView(previous.observationId(), previous.identity(),
+                awarded, provenance, observation.normalizedSha256());
+        var canonical = CanonicalEventObservation.from(awarded.asScheduledEvent(), provenance);
+        var stateView = eventView(complete.eventState().observationId(), awarded.asScheduledEvent(),
+                provenance, canonical);
+        return new J7CurrentEventSelection(stateView, Optional.of(detailView),
+                complete.eventData(), complete.snapshotTraces());
     }
 
     private static ScheduledEvent event() {

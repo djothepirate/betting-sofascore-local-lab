@@ -18,6 +18,7 @@ public record EventDetailObservation(
         String normalizedSha256) {
 
     private static final Pattern SHA_256_PATTERN = Pattern.compile("[0-9a-f]{64}");
+    private static final String DISPLAY_SCORE_PARSER_VERSION = "event-details-v3";
 
     public EventDetailObservation {
         identity = Objects.requireNonNull(identity, "identity");
@@ -28,6 +29,15 @@ public record EventDetailObservation(
             throw new IllegalArgumentException(
                     "event detail provider identity must match its canonical event");
         }
+        if (!DISPLAY_SCORE_PARSER_VERSION.equals(source.parserVersion()) && !"event-details-v4".equals(source.parserVersion())
+                && (details.isAwarded().isPresent() || details.homeDisplayScore().isPresent()
+                    || details.awayDisplayScore().isPresent())) {
+            throw new IllegalArgumentException(
+                    "award and displayed scores require event-details-v3 provenance");
+        }
+        if ((!"event-details-v4".equals(source.parserVersion()) || source.kind() != com.bettingproject.sofascorelocal.domain.event.EventSourceKind.PROVIDER_SNAPSHOT)
+                && (details.homeManager().isPresent() || details.awayManager().isPresent() || details.referee().isPresent()))
+            throw new IllegalArgumentException("event officials require event-details-v4 provenance");
         if (!SHA_256_PATTERN.matcher(normalizedSha256).matches()) {
             throw new IllegalArgumentException("normalizedSha256 must be a lower-case SHA-256");
         }
@@ -54,7 +64,10 @@ public record EventDetailObservation(
                     source).normalizedSha256();
             ByteArrayOutputStream bytes = new ByteArrayOutputStream();
             try (DataOutputStream output = new DataOutputStream(bytes)) {
-                output.writeUTF("event-detail-observation-v1");
+                boolean peopleContract = "event-details-v4".equals(source.parserVersion());
+                boolean displayScoreContract = peopleContract || DISPLAY_SCORE_PARSER_VERSION.equals(source.parserVersion());
+                output.writeUTF(peopleContract ? "event-detail-observation-v3" : displayScoreContract
+                        ? "event-detail-observation-v2" : "event-detail-observation-v1");
                 output.writeUTF(eventHash);
                 output.writeBoolean(details.venue().isPresent());
                 if (details.venue().isPresent()) {
@@ -76,11 +89,45 @@ public record EventDetailObservation(
                 if (details.round().isPresent()) {
                     output.writeUTF(details.round().orElseThrow());
                 }
+                if (displayScoreContract) {
+                    output.writeBoolean(details.isAwarded().isPresent());
+                    if (details.isAwarded().isPresent()) {
+                        output.writeBoolean(details.isAwarded().orElseThrow());
+                    }
+                    output.writeBoolean(details.homeDisplayScore().isPresent());
+                    if (details.homeDisplayScore().isPresent()) {
+                        output.writeInt(details.homeDisplayScore().orElseThrow());
+                    }
+                    output.writeBoolean(details.awayDisplayScore().isPresent());
+                    if (details.awayDisplayScore().isPresent()) {
+                        output.writeInt(details.awayDisplayScore().orElseThrow());
+                    }
+                }
+                if (peopleContract) {
+                    writePerson(output, details.homeManager());
+                    writePerson(output, details.awayManager());
+                    writePerson(output, details.referee());
+                }
             }
             return Sha256.hex(bytes.toByteArray());
         }
         catch (IOException exception) {
             throw new IllegalStateException("unable to hash event detail observation", exception);
+        }
+    }
+
+    private static void writePerson(DataOutputStream out, java.util.Optional<EventPerson> person) throws IOException {
+        out.writeBoolean(person.isPresent());
+        if (person.isEmpty()) return;
+        EventPerson value = person.orElseThrow();
+        out.writeUTF(value.name());
+        out.writeBoolean(value.country().isPresent());
+        if (value.country().isPresent()) {
+            var country = value.country().orElseThrow();
+            out.writeBoolean(country.name().isPresent());
+            if (country.name().isPresent()) out.writeUTF(country.name().orElseThrow());
+            out.writeBoolean(country.alpha2().isPresent());
+            if (country.alpha2().isPresent()) out.writeUTF(country.alpha2().orElseThrow());
         }
     }
 }

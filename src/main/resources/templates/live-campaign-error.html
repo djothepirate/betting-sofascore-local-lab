@@ -1,0 +1,19 @@
+<!DOCTYPE html>
+<html lang="fr" xmlns:th="http://www.thymeleaf.org"><head>
+  <meta charset="UTF-8"><meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Campagne locale indisponible — SofaScore Local Lab</title>
+  <link rel="stylesheet" th:href="@{/css/app.css}" href="/css/app.css">
+</head><body><main class="shell event-page"><section class="panel">
+  <p class="label">Campagne live locale</p><h1>La demande n’a pas pu aboutir</h1>
+  <p class="notice notice-danger" th:text="${liveError}">Demande indisponible.</p>
+  <p class="muted" th:if="${liveErrorCode != null}">Code du contrôle local : <code th:text="${liveErrorCode}">LIVE_REQUEST_REJECTED</code></p>
+  <a class="button" th:if="${cleanupCampaignId != null}"
+     th:href="@{/live-campaigns/{id}(id=${cleanupCampaignId})}">Ouvrir la campagne à clôturer</a>
+  <a class="button" th:if="${manualCleanupRequired}"
+     th:href="@{/provider-access}">Ouvrir l’accès fournisseur pour libérer la garde manuelle</a>
+  <a class="button" th:if="${retryCampaignId != null}"
+     th:href="@{/live-campaigns/{id}(id=${retryCampaignId})}">Revenir à la campagne</a>
+  <a class="button" th:if="${liveErrorCode != null and #strings.startsWith(liveErrorCode, 'PROVIDER_')}"
+     th:href="@{/provider-access}">Consulter l’état de l’accès fournisseur</a>
+  <a class="button button-secondary" th:href="@{/events}">Revenir aux rencontres</a>
+</section></main></body></html>
