@@ -23,8 +23,9 @@ Les évolutions notables du SofaScore Local Lab sont consignées dans ce fichier
   nouvelle campagne ne convertit une campagne V9.
 - Documente ces bornes comme des gardes internes du Local Lab. Elles n'affirment ni quota, ni
   acceptation, ni absence de refus du fournisseur et n'ajoutent aucun proxy, changement d'adresse,
-  contexte persistant, cookie, défi, retry ou reprise automatique. La qualification locale et la
-  validation opérateur de V10 restent à effectuer avant de clôturer WO-058.
+  contexte persistant, cookie, défi, retry ou reprise automatique. La qualification locale, la
+  revue Codex de la PR #35 et les quatre checks CI sont achevés ; la fusion vers le train feature
+  demeure une opération Git autorisée et distincte.
 - Rétablit la qualification CI interplateforme de la chaîne de preuves V5 : le jeu d'archives est
   gelé par `.gitattributes` et les artefacts directement référencés retrouvent leurs octets
   d'origine. Le scanner de secrets reconnaît seulement deux blobs WO-058 audités de canaris
@@ -59,6 +60,12 @@ Les évolutions notables du SofaScore Local Lab sont consignées dans ce fichier
   libérer uniquement cette garde. La trace `LOCAL_PRELAUNCH_CLEANUP_VERIFIED` conserve l’empreinte
   de la preuve; aucun navigateur, appel fournisseur, reprise, retry ou réarmement n’est créé. Voir la
   [preuve de récupération pré-lancement](docs/validation/WO058-PRELAUNCH-GUARD-RECOVERY-20260913.md).
+
+- Clôture documentaire pré-fusion autorisée par le propriétaire : les deux P2 de l'historique J6
+  et les trois P1 de robustesse sont résolus, la revue Codex du commit `8299722` ne relève aucune
+  remarque majeure et les quatre checks CI sont verts. Le WO est classé dans
+  [les Work Orders terminés](docs/work_orders/completed/WO-SS-20260907-058-bounded-live-j4-j5.md) ;
+  la fusion de la PR #35 vers `feature/V0.1.0-RC01` reste l'opération Git autorisée suivante.
 
 ### WO-059 — plafond local de pagination manuelle J3 à 35 pages
 

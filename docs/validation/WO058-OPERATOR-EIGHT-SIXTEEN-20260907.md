@@ -3,7 +3,7 @@
 Statuts : `EXPERIMENTAL`, `LOCAL_ONLY`, `NOT_PRODUCTION_APPROVED`, `NO_CRITICAL_DEPENDENCY`.
 Référentiel relu : commit `c90c6b633c2fedabeaee5858dd9bd9c2039d3ab0`, branche
 `feature/V0.1.0-RC01-CODEX-WO-SS-20260907-058`, worktree `.tmp/wo058-live-j4-j5`.
-[WO-058](../work_orders/active/WO-SS-20260907-058-bounded-live-j4-j5.md) : `READY_FOR_REVIEW`, sans clôture.
+[WO-058](../work_orders/completed/WO-SS-20260907-058-bounded-live-j4-j5.md) : `READY_FOR_REVIEW`, sans clôture.
 
 ## Origine et portée du constat
 

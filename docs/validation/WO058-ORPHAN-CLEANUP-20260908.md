@@ -168,7 +168,7 @@ Empreintes SHA-256 des contrôles et diagnostics :
   `LiveCampaignControllerTest.java`, `LiveCampaignPersistenceIT.java`.
 - Documentation : ce rapport, `CHANGELOG.md`, le
   [runbook](../runbooks/LIVE-J4-J5-CAMPAIGNS.md), l’[architecture](../architecture/LIVE-J4-J5-CAMPAIGNS.md)
-  et le [WO actif](../work_orders/active/WO-SS-20260907-058-bounded-live-j4-j5.md).
+  et le [WO actif](../work_orders/completed/WO-SS-20260907-058-bounded-live-j4-j5.md).
 
 Les chemins Java sont relatifs à `src/main/java/com/bettingproject/sofascorelocal/`, les
 templates à `src/main/resources/` et les tests au paquet homologue sous `src/test/java/`.

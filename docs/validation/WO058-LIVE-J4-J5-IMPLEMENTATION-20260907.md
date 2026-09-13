@@ -10,7 +10,7 @@ explicitement demandé la réalisation du plan J4/J5. Il a libéré le port 8087
 Cette autorité fait suite à « Je valide formellement la v0.1 de l'ADR », datée du 7 septembre
 2026. L'observation administrative `2026-09-07T09:23:14Z` n'est pas l'heure exacte du message.
 
-- [WO-058](../work_orders/active/WO-SS-20260907-058-bounded-live-j4-j5.md), validation acquise ;
+- [WO-058](../work_orders/completed/WO-SS-20260907-058-bounded-live-j4-j5.md), validation acquise ;
   passage à `IN_PROGRESS` enregistré à la reprise.
 - [ADR-SS-005 v0.1 accepté](../../ADR-SS-005-bounded-local-live-j4-j5-campaigns.md), décisions inchangées.
 - [Proposition exacte acceptée](ADR-SS-005-v0.1-accepted-proposal-20260907.txt), SHA-256

@@ -74,5 +74,5 @@ Statuts conservés : `EXPERIMENTAL`, `LOCAL_ONLY`, `NOT_PRODUCTION_APPROVED`, `N
 - `src/main/java/com/bettingproject/sofascorelocal/adapter/web/PlayerStatisticsPresentation.java`
 - `src/main/java/com/bettingproject/sofascorelocal/adapter/web/LineupsPresentation.java`
 - `CHANGELOG.md`
-- `docs/work_orders/active/WO-SS-20260907-058-bounded-live-j4-j5.md`
+- `docs/work_orders/completed/WO-SS-20260907-058-bounded-live-j4-j5.md`
 - `docs/validation/WO058-PLAYER-DISPLAY-LABELS-20260909.md`

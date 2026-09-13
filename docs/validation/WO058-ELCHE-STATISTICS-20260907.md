@@ -214,7 +214,7 @@ Le WO reste en cours, avec revue humaine et fusion à effectuer séparément ; a
 - [docs/runbooks/J6-BACKUP-RESTORE-AND-RETENTION.md](../../docs/runbooks/J6-BACKUP-RESTORE-AND-RETENTION.md)
 - [docs/runbooks/LIVE-J4-J5-CAMPAIGNS.md](../../docs/runbooks/LIVE-J4-J5-CAMPAIGNS.md)
 - [docs/validation/WO058-ELCHE-STATISTICS-20260907.md](../../docs/validation/WO058-ELCHE-STATISTICS-20260907.md)
-- [docs/work_orders/active/WO-SS-20260907-058-bounded-live-j4-j5.md](../../docs/work_orders/active/WO-SS-20260907-058-bounded-live-j4-j5.md)
+- [docs/work_orders/completed/WO-SS-20260907-058-bounded-live-j4-j5.md](../../docs/work_orders/completed/WO-SS-20260907-058-bounded-live-j4-j5.md)
 - [scripts/Backup-Restore-J6.ps1](../../scripts/Backup-Restore-J6.ps1)
 - [scripts/Invoke-J6Retention.ps1](../../scripts/Invoke-J6Retention.ps1)
 - [scripts/Invoke-LivePlaywrightLoopbackQualification.ps1](../../scripts/Invoke-LivePlaywrightLoopbackQualification.ps1)

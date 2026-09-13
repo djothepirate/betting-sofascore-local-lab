@@ -6,7 +6,7 @@
 - **Décideur :** propriétaire du Betting Project.
 - **Acceptation formelle de cette version :** `PENDING` ; aucune acceptation d'ADR enregistrée.
 - **Autorité documentaire :** demande explicite de réaliser le plan ADR-SS-005 après validation des arbitrages.
-- **Work Order :** [WO-SS-20260907-058](docs/work_orders/active/WO-SS-20260907-058-bounded-live-j4-j5.md), cadrage aligné, validation du WO en attente.
+- **Work Order :** [WO-SS-20260907-058](docs/work_orders/completed/WO-SS-20260907-058-bounded-live-j4-j5.md), cadrage aligné, validation du WO en attente.
 - **Branche :** `feature/V0.1.0-RC01-CODEX-WO-SS-20260907-058`.
 - **Base :** `6dfd14286d4f269cbe100bd965257c20298538db`, train `feature/V0.1.0-RC01` vérifié à l'ouverture.
 - **Effet de cette rédaction :** documentation seulement ; aucune activation, implémentation applicative ou campagne fournisseur.

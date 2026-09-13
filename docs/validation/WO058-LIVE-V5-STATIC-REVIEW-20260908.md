@@ -6,7 +6,7 @@ Statuts conservés : **EXPERIMENTAL · LOCAL_ONLY · NOT_PRODUCTION_APPROVED · 
 
 Revue locale effectuée le **8 septembre 2026**, terminée à l'horodatage de l'inventaire ci-dessous, dans le worktree `.tmp/wo058-live-j4-j5`. Base et HEAD observés : `06c7e3d272e8f96873eca822e4bdaa8302cf1b01`. Le candidat est un ensemble de modifications non committées au-dessus de ce HEAD ; les empreintes ci-dessous identifient les octets lus. Cette revue ne décrit pas l'état distant d'une PR.
 
-Le périmètre final comprend 63 fichiers modifiés ou nouveaux, hors présent rapport : 46 fichiers suivis modifiés et 17 fichiers nouveaux. Les 62 fichiers de l'inventaire initial ont été complétés par la modification d'AGENTS.md intervenue pendant la revue : deux libellés de liens ADR-SS-005 passent de v0.5 à v0.6, sans modification du texte des invariants. Les lectures portent sur le diff, les fichiers nouveaux, les configurations et les gardes concernées. Les références sont l'[AGENTS.md](../../AGENTS.md), le [WO-058 actif](../work_orders/active/WO-SS-20260907-058-bounded-live-j4-j5.md), les ADR-SS-001 et ADR-SS-005 ainsi que le skill local `ss-review-closeout`.
+Le périmètre final comprend 63 fichiers modifiés ou nouveaux, hors présent rapport : 46 fichiers suivis modifiés et 17 fichiers nouveaux. Les 62 fichiers de l'inventaire initial ont été complétés par la modification d'AGENTS.md intervenue pendant la revue : deux libellés de liens ADR-SS-005 passent de v0.5 à v0.6, sans modification du texte des invariants. Les lectures portent sur le diff, les fichiers nouveaux, les configurations et les gardes concernées. Les références sont l'[AGENTS.md](../../AGENTS.md), le [WO-058 actif](../work_orders/completed/WO-SS-20260907-058-bounded-live-j4-j5.md), les ADR-SS-001 et ADR-SS-005 ainsi que le skill local `ss-review-closeout`.
 
 Le candidat V5 examiné vise **20 rencontres, une cadence critique de 100 secondes, les compositions à 300 secondes et une seconde entre groupes d'une même session V5**. Il ne reprend pas le candidat antérieur à 75 secondes comme preuve de qualification à 100 secondes. La revue indépendante du comportement de production réalisée avant cette passe n'avait identifié aucun défaut P1/P2 supplémentaire dans l'intégration transport, ordonnanceur, admission, service, persistance ou présentation.
 
@@ -57,7 +57,7 @@ Instantané des chemins et empreintes : **2026-09-08T18:05:08Z**, relevé pendan
 - `docs/architecture/LIVE-J4-J5-CAMPAIGNS.md`
 - `docs/runbooks/J6-BACKUP-RESTORE-AND-RETENTION.md`
 - `docs/runbooks/LIVE-J4-J5-CAMPAIGNS.md`
-- `docs/work_orders/active/WO-SS-20260907-058-bounded-live-j4-j5.md`
+- `docs/work_orders/completed/WO-SS-20260907-058-bounded-live-j4-j5.md`
 - `README.md`
 
 ### Preuves et comptes rendus déjà présents dans le candidat (11)

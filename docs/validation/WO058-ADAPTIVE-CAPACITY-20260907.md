@@ -191,7 +191,7 @@ journaux de travail sous `.tmp` sont ignorés ; les rapports bruts XML restent l
 - `docs/runbooks/LIVE-J4-J5-CAMPAIGNS.md`
 - `docs/validation/WO058-ADAPTIVE-CAPACITY-20260907.md`
 - `docs/validation/WO058-ADAPTIVE-CAPACITY-PROFILE-20260907.json`
-- `docs/work_orders/active/WO-SS-20260907-058-bounded-live-j4-j5.md`
+- `docs/work_orders/completed/WO-SS-20260907-058-bounded-live-j4-j5.md`
 - `README.md`
 - `scripts/Backup-Restore-J6.ps1`
 - `scripts/Invoke-J6Retention.ps1`

@@ -17,7 +17,7 @@ Le propriétaire a explicitement demandé le premier lot diagnostic durable/susp
 persistante après refus, puis lissage des départs et espacement des 404, avec qualification
 hors fournisseur avant une nouvelle campagne réelle. La décision est formalisée dans
 [ADR-SS-005 v0.8](../../ADR-SS-005-bounded-local-live-j4-j5-campaigns.md) et le
-[WO-058](../work_orders/active/WO-SS-20260907-058-bounded-live-j4-j5.md).
+[WO-058](../work_orders/completed/WO-SS-20260907-058-bounded-live-j4-j5.md).
 
 Réalisation dans le worktree `.tmp/wo058-live-j4-j5`, branche
 `feature/V0.1.0-RC01-CODEX-WO-SS-20260907-058`, après le point de reprise local `6f84fba`.
@@ -248,7 +248,7 @@ la livraison Eclipse et toute campagne réelle restent des étapes distinctes.
 - `docs/runbooks/J6-BACKUP-RESTORE-AND-RETENTION.md`
 - `docs/runbooks/LIVE-J4-J5-CAMPAIGNS.md`
 - `docs/validation/WO-058-provider-resilience-qualification-20260909.md`
-- `docs/work_orders/active/WO-SS-20260907-058-bounded-live-j4-j5.md`
+- `docs/work_orders/completed/WO-SS-20260907-058-bounded-live-j4-j5.md`
 - `pom.xml`
 - `README.md`
 - `scripts/Backup-Restore-J6.ps1`

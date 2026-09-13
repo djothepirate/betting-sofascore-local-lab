@@ -167,7 +167,7 @@ Pas de push, fusion, clôture ni appel fournisseur.
 - [docs/architecture/LIVE-J4-J5-CAMPAIGNS.md](../../docs/architecture/LIVE-J4-J5-CAMPAIGNS.md)
 - [docs/runbooks/J6-BACKUP-RESTORE-AND-RETENTION.md](../../docs/runbooks/J6-BACKUP-RESTORE-AND-RETENTION.md)
 - [docs/validation/WO058-J4-AWARDED-POSTPONED-20260908.md](../../docs/validation/WO058-J4-AWARDED-POSTPONED-20260908.md)
-- [docs/work_orders/active/WO-SS-20260907-058-bounded-live-j4-j5.md](../../docs/work_orders/active/WO-SS-20260907-058-bounded-live-j4-j5.md)
+- [docs/work_orders/completed/WO-SS-20260907-058-bounded-live-j4-j5.md](../../docs/work_orders/completed/WO-SS-20260907-058-bounded-live-j4-j5.md)
 - [scripts/Backup-Restore-J6.ps1](../../scripts/Backup-Restore-J6.ps1)
 - [scripts/Invoke-J6Retention.ps1](../../scripts/Invoke-J6Retention.ps1)
 - [src/main/java/com/bettingproject/sofascorelocal/adapter/persistence/JdbcEventDetailsStore.java](../../src/main/java/com/bettingproject/sofascorelocal/adapter/persistence/JdbcEventDetailsStore.java)

@@ -103,6 +103,6 @@ ne constituent pas une nouvelle campagne ni une qualification de contenu fournis
 - [Rendu et conservation de l'état](../../src/main/resources/static/js/statistics.js)
 - [Qualification Chromium existante](../../src/provider-playwright-qualification-test/java/com/bettingproject/sofascorelocal/adapter/web/LiveCampaignStatisticsBrowserQualificationIT.java)
 - [Architecture live](../architecture/LIVE-J4-J5-CAMPAIGNS.md)
-- [Work Order](../work_orders/active/WO-SS-20260907-058-bounded-live-j4-j5.md)
+- [Work Order](../work_orders/completed/WO-SS-20260907-058-bounded-live-j4-j5.md)
 - [Changelog](../../CHANGELOG.md)
 - Ce rapport.

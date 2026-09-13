@@ -157,7 +157,7 @@ Fichiers du lot :
 - [`.gitattributes`](../../.gitattributes) : préservation des octets de la preuve JSON.
 - [`README.md`](../../README.md) et [`CHANGELOG.md`](../../CHANGELOG.md) : orientation et évolution du lot.
 - [Architecture live](../architecture/LIVE-J4-J5-CAMPAIGNS.md) et [runbook live](../runbooks/LIVE-J4-J5-CAMPAIGNS.md) : profils et configuration Eclipse.
-- [WO-058](../work_orders/active/WO-SS-20260907-058-bounded-live-j4-j5.md) : retour propriétaire et qualification des paliers.
+- [WO-058](../work_orders/completed/WO-SS-20260907-058-bounded-live-j4-j5.md) : retour propriétaire et qualification des paliers.
 - [Présent rapport](WO058-MULTIMATCH-CAPACITY-20260907.md) et [preuve JSON](WO058-MULTIMATCH-CAPACITY-PROFILE-20260907.json) : traçabilité et limites des mesures.
 - [Script de qualification](../../scripts/Invoke-LivePlaywrightLoopbackQualification.ps1) : nombre de tests effectifs attendu.
 - [Contrôleur live](../../src/main/java/com/bettingproject/sofascorelocal/adapter/web/LiveCampaignController.java) : refus de capacité explicites et messages contrôlés.

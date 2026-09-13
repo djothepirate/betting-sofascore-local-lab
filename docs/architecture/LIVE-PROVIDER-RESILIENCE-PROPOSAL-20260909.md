@@ -48,7 +48,7 @@ v4/v5 ne qualifient pas v6. La preuve temporelle dédiée conserve 494 échanges
 portent sur le corpus établi de 64 Kio ; les premiers corps de 5 Mio restent séparés.
 Le plafond opérateur six et le timeout 30 s sont à conserver, sans application automatique.
 
-Rattachement : [WO-058](../work_orders/active/WO-SS-20260907-058-bounded-live-j4-j5.md).
+Rattachement : [WO-058](../work_orders/completed/WO-SS-20260907-058-bounded-live-j4-j5.md).
 Base de lecture : `f2b28eca276e49476425ee0a12ed7bdda54d32df`, worktree WO-058.
 La copie Eclipse contient en plus l'évolution opérateur du plafond à trente secondes,
 confirmée pour `3362612a` par le lanceur et le timeout mesuré à 30,081630 s.

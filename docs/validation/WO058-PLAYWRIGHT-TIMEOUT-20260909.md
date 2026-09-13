@@ -101,7 +101,7 @@ applicables ; aucune campagne n’a été relancée par l’agent.
 - `ADR-SS-005-bounded-local-live-j4-j5-campaigns.md`
 - `README.md`
 - `CHANGELOG.md`
-- `docs/work_orders/active/WO-SS-20260907-058-bounded-live-j4-j5.md`
+- `docs/work_orders/completed/WO-SS-20260907-058-bounded-live-j4-j5.md`
 - `docs/runbooks/LIVE-J4-J5-CAMPAIGNS.md`
 - `docs/architecture/LIVE-J4-J5-CAMPAIGNS.md`
 - `docs/validation/WO058-PLAYWRIGHT-TIMEOUT-20260909.md`

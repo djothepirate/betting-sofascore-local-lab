@@ -99,13 +99,13 @@ Voir [ADR-SS-005 v0.6](ADR-SS-005-bounded-local-live-j4-j5-campaigns.md), le
 [preuves historiques v4](docs/validation/WO058-GROUPED-LIVE-V4-20260908.md).
 
 **Historique live J4/J5 — 7 septembre 2026 :** le
-[WO-058](docs/work_orders/active/WO-SS-20260907-058-bounded-live-j4-j5.md) est aligné sur
+[WO-058](docs/work_orders/completed/WO-SS-20260907-058-bounded-live-j4-j5.md) est aligné sur
 [ADR-SS-005 v0.2](ADR-SS-005-bounded-local-live-j4-j5-campaigns.md), après acceptation formelle
 de la v0.1 puis demande explicite d'un plafond paramétrable, y compris 10 et 25 rencontres.
 L'intervalle dépend des seules cibles retenues : 60 s jusqu'à trois, puis 30 s supplémentaires
 par rencontre. Quatre heures, 1 000/3 000 tentatives, J4 sur signaux avec secours et dernier cycle borné restent applicables.
 Un schéma métier incompatible arrête le seul match ; un incident technique/sécurité reste global.
-Le WO a été validé par le propriétaire et est désormais `READY_FOR_REVIEW` pour sa réalisation.
+Le propriétaire a autorisé la clôture documentaire pré-fusion : la PR #35, revue sans remarque majeure au commit `8299722`, a ses quatre checks CI verts et doit être fusionnée vers `feature/V0.1.0-RC01` après le push final.
 La réalisation locale ajoute sélection et manifeste,
 session bornée, ledger V33/V34, arrêt individuel/global et consultation dynamique. Les preuves et
 limites figurent dans le [rapport de capacité adaptative](docs/validation/WO058-ADAPTIVE-CAPACITY-20260907.md),

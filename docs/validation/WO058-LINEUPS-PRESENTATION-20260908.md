@@ -117,8 +117,8 @@ ces chemins utilisent le composant partagé relu, et `UNAVAILABLE` est couvert c
   `LiveCampaignPresentationTest.java`, sous `src/test/java/com/bettingproject/sofascorelocal/adapter/web/`.
 - Qualification : `src/provider-playwright-qualification-test/java/com/bettingproject/sofascorelocal/adapter/web/LiveCampaignLineupsBrowserQualificationIT.java`.
 - Documentation : `CHANGELOG.md`, `docs/runbooks/LIVE-J4-J5-CAMPAIGNS.md`,
-  `docs/work_orders/active/WO-SS-20260907-058-bounded-live-j4-j5.md` et ce rapport.
+  `docs/work_orders/completed/WO-SS-20260907-058-bounded-live-j4-j5.md` et ce rapport.
 
-La [fiche du WO](../work_orders/active/WO-SS-20260907-058-bounded-live-j4-j5.md) et le
+La [fiche du WO](../work_orders/completed/WO-SS-20260907-058-bounded-live-j4-j5.md) et le
 [runbook](../runbooks/LIVE-J4-J5-CAMPAIGNS.md) décrivent le retour et la consultation. Les mesures
 de fraîcheur fournisseur continuent d’appartenir aux campagnes de l’opérateur.

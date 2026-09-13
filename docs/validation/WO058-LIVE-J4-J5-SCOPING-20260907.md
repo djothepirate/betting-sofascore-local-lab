@@ -9,7 +9,7 @@ ne réécrit pas la suite complète non verte conservée ci-dessous.
 
 ## Périmètre et base
 
-- [Work Order](../work_orders/active/WO-SS-20260907-058-bounded-live-j4-j5.md) :
+- [Work Order](../work_orders/completed/WO-SS-20260907-058-bounded-live-j4-j5.md) :
   `IN_PROGRESS` à l'ouverture de réalisation ; ADR et WO acceptés le 7 septembre 2026.
   L'état courant `READY_FOR_REVIEW` et la qualification sont dans le rapport de réalisation.
 - [ADR-SS-005 v0.1](../../ADR-SS-005-bounded-local-live-j4-j5-campaigns.md) :

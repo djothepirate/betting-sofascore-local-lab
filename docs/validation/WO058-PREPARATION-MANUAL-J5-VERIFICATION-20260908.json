@@ -460,7 +460,7 @@
     "docs/runbooks/RUNBOOK-LOCAL.md",
     "docs/validation/WO058-PREPARATION-MANUAL-J5-20260908.md",
     "docs/validation/WO058-PREPARATION-MANUAL-J5-VERIFICATION-20260908.json",
-    "docs/work_orders/active/WO-SS-20260907-058-bounded-live-j4-j5.md",
+    "docs/work_orders/completed/WO-SS-20260907-058-bounded-live-j4-j5.md",
     "scripts/Invoke-J5PlaywrightLoopbackQualification.ps1",
     "src/main/java/com/bettingproject/sofascorelocal/adapter/persistence/live/JdbcLiveCampaignStore.java",
     "src/main/java/com/bettingproject/sofascorelocal/adapter/sofascore/transport/ProviderJ5EventDataPlaywrightTransport.java",

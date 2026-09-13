@@ -188,7 +188,7 @@ complément. La capacité technique mesurée reste distincte de la disponibilit�
 - `docs/validation/WO058-GROUPED-LIVE-V6-NATIVE-20260909.json`
 - `docs/validation/WO058-GROUPED-LIVE-V6-PROFILE-20260909.json`
 - `docs/validation/WO058-LIVE-V6-CAPACITY-20260909.md`
-- `docs/work_orders/active/WO-SS-20260907-058-bounded-live-j4-j5.md`
+- `docs/work_orders/completed/WO-SS-20260907-058-bounded-live-j4-j5.md`
 - `README.md`
 - `scripts/Invoke-LiveGroupedPlaywrightQualification.ps1`
 - `src/main/resources/static/js/live-campaign.js`

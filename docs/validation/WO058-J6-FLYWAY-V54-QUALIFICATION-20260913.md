@@ -2,7 +2,7 @@
 
 **Date :** 13 septembre 2026
 
-**Work Order :** [WO-SS-20260907-058-bounded-live-j4-j5.md](../work_orders/active/WO-SS-20260907-058-bounded-live-j4-j5.md)
+**Work Order :** [WO-SS-20260907-058-bounded-live-j4-j5.md](../work_orders/completed/WO-SS-20260907-058-bounded-live-j4-j5.md)
 
 **Périmètre :** complément de revue de la PR #35
 

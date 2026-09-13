@@ -77,5 +77,5 @@ WO-058 ; la qualification n'effectue ni mise à jour du checkout Eclipse ni publ
 - `src/main/java/com/bettingproject/sofascorelocal/adapter/web/LineupsPresentation.java`
 - `src/main/java/com/bettingproject/sofascorelocal/adapter/web/IncidentPresentation.java`
 - `CHANGELOG.md`
-- `docs/work_orders/active/WO-SS-20260907-058-bounded-live-j4-j5.md`
+- `docs/work_orders/completed/WO-SS-20260907-058-bounded-live-j4-j5.md`
 - `docs/validation/WO058-FRENCH-REASONS-20260909.md`

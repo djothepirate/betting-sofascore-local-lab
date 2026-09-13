@@ -156,7 +156,7 @@ docs/validation/WO058-INCIDENT-GRAPHICS-20260908.md
 docs/validation/WO058-RECOVERY-DASHBOARD-20260908.md
 docs/validation/WO058-LIVE-CLEANUP-INCIDENT-20260908.md
 docs/validation/WO058-LIVE-FAILURE-DIAGNOSTICS-20260908.md
-docs/work_orders/active/WO-SS-20260907-058-bounded-live-j4-j5.md
+docs/work_orders/completed/WO-SS-20260907-058-bounded-live-j4-j5.md
 src/main/java/com/bettingproject/sofascorelocal/adapter/web/DashboardController.java
 src/main/java/com/bettingproject/sofascorelocal/adapter/web/IncidentPresentation.java
 src/main/java/com/bettingproject/sofascorelocal/adapter/web/J5EventDataController.java

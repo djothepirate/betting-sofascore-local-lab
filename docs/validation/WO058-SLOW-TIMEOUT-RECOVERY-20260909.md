@@ -5,7 +5,7 @@ Statuts : `EXPERIMENTAL`, `LOCAL_ONLY`, `NOT_PRODUCTION_APPROVED`, `NO_CRITICAL_
 **État : réalisé et qualifié fonctionnellement hors fournisseur ; vérification complète finale réussie.** Ce document décrit le correctif
 autorisé le 9 septembre, après `7593e36`, dans le worktree `.tmp/wo058-live-j4-j5`.
 L'[ADR-SS-005 v0.9](../../ADR-SS-005-bounded-local-live-j4-j5-campaigns.md) porte la décision ;
-le [WO058](../work_orders/active/WO-SS-20260907-058-bounded-live-j4-j5.md) reste `IN_PROGRESS`.
+le [WO058](../work_orders/completed/WO-SS-20260907-058-bounded-live-j4-j5.md) reste `IN_PROGRESS`.
 Aucun résultat antérieur n'est présenté comme qualification de ces nouveaux chemins.
 
 La commande finale explicite `-Pintegration-tests clean verify` termine le
@@ -335,7 +335,7 @@ README.md
 docs/architecture/LIVE-J4-J5-CAMPAIGNS.md
 docs/architecture/LIVE-PROVIDER-RESILIENCE-PROPOSAL-20260909.md
 docs/runbooks/LIVE-J4-J5-CAMPAIGNS.md
-docs/work_orders/active/WO-SS-20260907-058-bounded-live-j4-j5.md
+docs/work_orders/completed/WO-SS-20260907-058-bounded-live-j4-j5.md
 scripts/Backup-Restore-J6.ps1
 scripts/Invoke-J6Retention.ps1
 src/main/java/com/bettingproject/sofascorelocal/adapter/persistence/live/JdbcLiveDiagnosticStore.java
