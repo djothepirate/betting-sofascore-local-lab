@@ -1135,6 +1135,32 @@ un garde modifié ou une réconciliation SQL incomplète maintient le verrou ave
 Le contrôle après redémarrage est qualifié sous Windows ; les autres systèmes refusent cette
 preuve automatiquement. Aucun processus inspecté n’est arrêté par le bouton.
 
+### Libérer une garde acquise avant le lancement
+
+Ce parcours traite seulement une interruption entre l’acquisition du garde live et le commit du
+lancement. La campagne locale reste alors une préparation sans ownership d’exécution, sans appel,
+sans compteur, sans échéance et sans planification de famille. Au redémarrage, le Lab ne marque pas
+cette préparation comme interrompue : il conserve le garde `CLEANUP_REQUIRED` et attend une action
+opérateur. Il ne libère jamais cette garde par délai, redémarrage ou simple lecture de la page.
+
+1. Ouvrir la campagne préparée qui présente **« Libérer la garde avant lancement »**. Vérifier que
+   le panneau précise qu’aucune collecte n’a été émise.
+2. Cocher la confirmation puis envoyer le formulaire. Le jeton local à usage unique et la
+   génération affichée lient la demande à l’état lu; actualiser la page plutôt que réutiliser un
+   jeton ou une génération périmés.
+3. Le Lab prend l’exclusion locale, refuse toute session ou superviseur actif, puis vérifie
+   l’absence du propriétaire et des processus Playwright associés. Une présence, une identité
+   incertaine ou une inspection indisponible laisse le garde bloqué.
+4. La transaction relit le garde et la préparation sous verrou. Elle libère seulement l’identité
+   exacte encore observée lorsque la préparation n’a ni execution, appel ni planification. Toute
+   acquisition, lancement, modification de garde ou annulation qui ne conserve pas exactement la
+   forme pré-lancement `STOPPED_OPERATOR / PREPARATION_CANCELLED` refuse l’opération.
+
+La réussite ajoute `LOCAL_PRELAUNCH_CLEANUP_VERIFIED` et libère la garde locale; la préparation et
+ses cibles ne sont ni réécrites ni relancées. Après actualisation, un lancement éventuel repasse
+par les contrôles ordinaires et acquiert une nouvelle génération. Cette action ne crée aucun
+navigateur, appel fournisseur, reprise, retry ou réarmement de suspension 403/429.
+
 ### Libérer une garde manuelle J3/J4/J5 orpheline
 
 Ce parcours ne concerne qu'une ancienne collecte manuelle qui n'a **aucune** ligne

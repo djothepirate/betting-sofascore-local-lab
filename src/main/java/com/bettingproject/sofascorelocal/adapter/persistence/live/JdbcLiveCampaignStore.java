@@ -422,6 +422,56 @@ public class JdbcLiveCampaignStore implements LiveCampaignStore {
         if (releasedRows!=1) throw new IllegalStateException("LIVE_ORPHAN_CLEANUP_GUARD_CHANGED");
     }
 
+    @Override
+    @Transactional
+    public void completePreLaunchOrphanCleanup(Guard expectedGuard, Instant verifiedAt) {
+        Objects.requireNonNull(expectedGuard); Objects.requireNonNull(verifiedAt);
+        if (!"CLEANUP_REQUIRED".equals(expectedGuard.state()) || expectedGuard.campaignId()==null
+                || expectedGuard.owner()==null || expectedGuard.generation()<1 || expectedGuard.changedAt()==null
+                || verifiedAt.isBefore(expectedGuard.changedAt()))
+            throw new IllegalArgumentException("LIVE_ORPHAN_CLEANUP_INVALID_GUARD");
+        // Keep the same singleton-then-campaign lock order as acquisition and launch. The caller
+        // has already proved process absence, but this transaction must still reject a launch or
+        // a new generation which wins before the durable commit.
+        Map<String,Object> g=jdbc.queryForMap("select * from provider_campaign_guard where singleton_id=1 for update");
+        String evidence=preLaunchOrphanCleanupEvidence(expectedGuard);
+        boolean sameGeneration=expectedGuard.generation()==number(g,"generation");
+        boolean released="FREE".equals(g.get("state")) && sameGeneration
+                && g.get("campaign_id")==null && g.get("owner_instance_id")==null
+                && g.get("owner_process_id")==null && g.get("owner_process_started_at")==null;
+        if (!released && (!expectedGuard.state().equals(g.get("state")) || !sameGeneration
+                || !expectedGuard.campaignId().equals(uuid(g,"campaign_id"))
+                || !expectedGuard.owner().instanceId().equals(uuid(g,"owner_instance_id"))
+                || expectedGuard.owner().processId()!=number(g,"owner_process_id")
+                || !expectedGuard.owner().processStartedAt().equals(instant(g,"owner_process_started_at"))
+                || !expectedGuard.changedAt().equals(instant(g,"changed_at"))))
+            throw new IllegalStateException("LIVE_ORPHAN_CLEANUP_GUARD_CHANGED");
+        UUID campaignId=expectedGuard.campaignId();
+        Map<String,Object> campaign=campaign(campaignId,true);
+        List<Map<String,Object>> targets=eventRowsForUpdate(campaignId);
+        if (released) {
+            boolean recorded=Boolean.TRUE.equals(jdbc.queryForObject("""
+                select exists(select 1 from live_transition where campaign_id=? and canonical_event_id is null
+                    and state='LOCAL_PRELAUNCH_CLEANUP_VERIFIED' and reason=? and attempt_id is null)
+                """,Boolean.class,campaignId,evidence));
+            if (!recorded || !unlaunchedPreparation(campaign,targets))
+                throw new IllegalStateException("LIVE_ORPHAN_CLEANUP_GUARD_CHANGED");
+            return; // A committed release whose response was lost; never free a later generation.
+        }
+        if (!unlaunchedPreparation(campaign,targets)
+                || Boolean.TRUE.equals(jdbc.queryForObject("select exists(select 1 from live_family_schedule where campaign_id=?)",Boolean.class,campaignId)))
+            throw new IllegalStateException("LIVE_ORPHAN_CLEANUP_INCOMPLETE");
+        Instant at=verifiedAt.truncatedTo(java.time.temporal.ChronoUnit.MICROS);
+        // No execution was ever launched: retain the complete preparation unchanged, record the
+        // process-verified local recovery, and let a later launch acquire a fresh generation.
+        append(campaignId,null,"LOCAL_PRELAUNCH_CLEANUP_VERIFIED",evidence,at,null);
+        int releasedRows=jdbc.update("""
+            update provider_campaign_guard set state='FREE',campaign_id=null,owner_instance_id=null,
+                owner_process_id=null,owner_process_started_at=null,changed_at=? where singleton_id=1
+            """,time(at));
+        if (releasedRows!=1) throw new IllegalStateException("LIVE_ORPHAN_CLEANUP_GUARD_CHANGED");
+    }
+
     private static String orphanCleanupEvidence(Guard expected) {
         String identity=String.join("\n","orphan-cleanup-v1",expected.state(),expected.campaignId().toString(),
                 expected.owner().instanceId().toString(),Long.toString(expected.owner().processId()),
@@ -432,6 +482,34 @@ public class JdbcLiveCampaignStore implements LiveCampaignStore {
         } catch (java.security.NoSuchAlgorithmException impossible) {
             throw new IllegalStateException("SHA-256 unavailable",impossible);
         }
+    }
+
+    private static String preLaunchOrphanCleanupEvidence(Guard expected) {
+        String identity=String.join("\n","prelaunch-orphan-cleanup-v1",expected.state(),expected.campaignId().toString(),
+                expected.owner().instanceId().toString(),Long.toString(expected.owner().processId()),
+                expected.owner().processStartedAt().toString(),Long.toString(expected.generation()),expected.changedAt().toString());
+        try {
+            return "GUARD_"+HexFormat.of().formatHex(java.security.MessageDigest.getInstance("SHA-256")
+                    .digest(identity.getBytes(java.nio.charset.StandardCharsets.UTF_8)));
+        } catch (java.security.NoSuchAlgorithmException impossible) {
+            throw new IllegalStateException("SHA-256 unavailable",impossible);
+        }
+    }
+
+    private boolean unlaunchedPreparation(Map<String,Object> campaign, List<Map<String,Object>> targets) {
+        boolean prepared="PREPARED".equals(campaign.get("state")) && campaign.get("reason")==null;
+        boolean cancelled="STOPPED_OPERATOR".equals(campaign.get("state")) && "PREPARATION_CANCELLED".equals(campaign.get("reason"));
+        if (!prepared && !cancelled) return false;
+        if (campaign.get("started_at")!=null || campaign.get("ends_at")!=null || campaign.get("owner_instance_id")!=null
+                || campaign.get("generation")!=null || number(campaign,"reserved_calls")!=0 || number(campaign,"received_bytes")!=0
+                || targets.size()!=number(campaign,"target_count")
+                || Boolean.TRUE.equals(jdbc.queryForObject("select exists(select 1 from live_call where campaign_id=?)",Boolean.class,
+                        uuid(campaign,"campaign_id")))) return false;
+        return targets.stream().allMatch(event -> (prepared
+                    ? "PREPARED".equals(event.get("state")) && event.get("reason")==null
+                    : "STOPPED_OPERATOR".equals(event.get("state")) && "PREPARATION_CANCELLED".equals(event.get("reason")))
+                && number(event,"reserved_calls")==0 && number(event,"received_bytes")==0 && event.get("next_due_at")==null
+                && number(event,"missed_cycles")==0 && !Boolean.TRUE.equals(event.get("final_complete")));
     }
 
     @Override
@@ -535,6 +613,9 @@ public class JdbcLiveCampaignStore implements LiveCampaignStore {
     private Map<String,Object> campaign(UUID id,boolean lock) { return jdbc.queryForMap("select * from live_campaign where campaign_id=?"+(lock?" for update":""),id); }
     private Map<String,Object> event(UUID campaignId,UUID eventId,boolean lock) { return jdbc.queryForMap("select * from live_event where campaign_id=? and canonical_event_id=?"+(lock?" for update":""),campaignId,eventId); }
     private List<Map<String,Object>> eventRows(UUID id) { return jdbc.queryForList("select * from live_event where campaign_id=? order by target_order",id); }
+    private List<Map<String,Object>> eventRowsForUpdate(UUID id) {
+        return jdbc.queryForList("select * from live_event where campaign_id=? order by target_order for update",id);
+    }
     private Map<String,Object> attempt(Ownership own,UUID id) {
         Map<String,Object> a=jdbc.queryForMap("select * from live_call where attempt_id=?",id);
         if(!own.campaignId().equals(uuid(a,"campaign_id")) || !own.instanceId().equals(uuid(a,"owner_instance_id")) || own.generation()!=number(a,"generation"))

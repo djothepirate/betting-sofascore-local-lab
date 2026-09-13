@@ -48,4 +48,10 @@ public interface LiveCampaignStore {
      * Repetition is accepted only with the same guard evidence and without a newer acquisition.
      */
     void completeOrphanCleanup(Guard expectedGuard, Instant verifiedAt);
+    /**
+     * Caller first proves the former owner and provider processes absent under local recovery
+     * exclusion. The campaign remains an untouched, non-launched preparation; this method only
+     * atomically records that proof and frees the exact guard which was acquired before launch.
+     */
+    void completePreLaunchOrphanCleanup(Guard expectedGuard, Instant verifiedAt);
 }

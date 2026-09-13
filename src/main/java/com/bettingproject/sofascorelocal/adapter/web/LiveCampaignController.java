@@ -73,8 +73,10 @@ public class LiveCampaignController {
         model.addAttribute("campaign", presentPage(campaign, page));
         model.addAttribute("manifest", campaign.manifest());
         var orphanCleanup = campaigns.orphanCleanupGuard(campaignId);
+        var preLaunchCleanup = campaigns.orphanedPreLaunchCleanupGuard(campaignId);
         model.addAttribute("orphanCleanup", orphanCleanup.orElse(null));
-        model.addAttribute("canPrepareAgain", orphanCleanup.isEmpty()
+        model.addAttribute("preLaunchCleanup", preLaunchCleanup.orElse(null));
+        model.addAttribute("canPrepareAgain", orphanCleanup.isEmpty() && preLaunchCleanup.isEmpty()
                 && (campaign.state().equals("INTERRUPTED") || campaign.state().equals("COMPLETED")
                     || campaign.state().startsWith("STOPPED_")));
         model.addAttribute("localFormToken", tokens.issue(session));
@@ -93,6 +95,24 @@ public class LiveCampaignController {
             throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "LIVE_CLEANUP_GENERATION_REQUIRED");
         campaigns.finalizeInterruptedCleanup(campaignId, guardGeneration);
         redirect.addFlashAttribute("liveSuccess", "La session interrompue est clôturée. Son historique est conservé ; aucune collecte n’a été lancée.");
+        return campaignRedirect(campaignId, page);
+    }
+
+    @PostMapping("/live-campaigns/{campaignId}/finalize-prelaunch-interruption")
+    public String finalizePreLaunchInterruption(@PathVariable UUID campaignId,
+                                       @RequestParam(name = "guardGeneration") long guardGeneration,
+                                       @RequestParam(name = "confirmation", defaultValue = "false") boolean confirmation,
+                                       @RequestParam(name = "localFormToken", required = false) String token,
+                                       @RequestParam(name = "page", defaultValue = "1") int page,
+                                       HttpSession session, RedirectAttributes redirect) {
+        requirePage(page);
+        tokens.consume(session, token);
+        if (!confirmation)
+            throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "LIVE_CLEANUP_CONFIRMATION_REQUIRED");
+        if (guardGeneration < 1)
+            throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "LIVE_CLEANUP_GENERATION_REQUIRED");
+        campaigns.finalizeOrphanedPreLaunchCleanup(campaignId, guardGeneration);
+        redirect.addFlashAttribute("liveSuccess", "La garde acquise avant le lancement a été libérée après vérification locale des processus. La préparation est conservée ; aucune collecte n’a été lancée.");
         return campaignRedirect(campaignId, page);
     }
 

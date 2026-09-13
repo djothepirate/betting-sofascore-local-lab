@@ -443,6 +443,19 @@ public final class LiveCampaignService {
                 ? Optional.of(current) : Optional.empty();
     }
 
+    /**
+     * Read-only discovery of a live guard acquired before the corresponding preparation was
+     * launched. It deliberately does not treat the preparation as a terminated execution.
+     */
+    public Optional<Guard> orphanedPreLaunchCleanupGuard(UUID campaignId) {
+        if (active.get() != null) return Optional.empty();
+        Guard current = guard.snapshot();
+        if (current == null || !"CLEANUP_REQUIRED".equals(current.state()) || current.owner() == null
+                || !campaignId.equals(current.campaignId())) return Optional.empty();
+        return store.find(campaignId).filter(LiveCampaignService::unlaunchedPreparation)
+                .map(ignored -> current);
+    }
+
     /** Read-only discovery of a former manual J3/J4/J5 owner, which has no live_campaign row. */
     public Optional<Guard> orphanedManualCleanupGuard() {
         if (active.get() != null) return Optional.empty();
@@ -511,9 +524,51 @@ public final class LiveCampaignService {
         }
     }
 
+    /**
+     * Explicit local release of a guard which was acquired after preparation but before the
+     * durable launch transaction. The preparation is preserved intact: no campaign execution,
+     * browser, provider call, rearm or restart is invented by this recovery path.
+     */
+    public void finalizeOrphanedPreLaunchCleanup(UUID campaignId, long expectedGeneration) {
+        if (campaignId == null || expectedGeneration < 1) throw new IllegalStateException("LIVE_CLEANUP_STATE_CHANGED");
+        try {
+            coordinator.withExclusiveLocalCleanup(() -> {
+                if (active.get() != null || supervisor.activeCampaignId().isPresent())
+                    throw new IllegalStateException("LIVE_CLEANUP_BUSY");
+                Guard current = guard.snapshot();
+                if (current == null || current.generation() != expectedGeneration || !campaignId.equals(current.campaignId())
+                        || !"CLEANUP_REQUIRED".equals(current.state()) || current.owner() == null
+                        || !store.find(campaignId).filter(LiveCampaignService::unlaunchedPreparation).isPresent())
+                    throw new IllegalStateException("LIVE_CLEANUP_STATE_CHANGED");
+                orphanProcesses.requireAbsent(current.owner(), playwright.getWorkerJar());
+                if (active.get() != null || supervisor.activeCampaignId().isPresent())
+                    throw new IllegalStateException("LIVE_CLEANUP_BUSY");
+                // The store locks the guard before the preparation and rechecks the complete
+                // identity. A concurrent launch, cancellation or new acquisition therefore
+                // fails closed rather than turning this recovery into a takeover.
+                store.completePreLaunchOrphanCleanup(current, clock.instant());
+            });
+        } catch (ManualProviderRequestCoordinator.CoordinationException busy) {
+            throw new IllegalStateException("LIVE_CLEANUP_BUSY");
+        }
+    }
+
     private boolean isOrphanedManualCleanupGuard(Guard current) {
         return current != null && "CLEANUP_REQUIRED".equals(current.state()) && current.owner() != null
                 && current.campaignId() != null && store.find(current.campaignId()).isEmpty();
+    }
+
+    private static boolean unlaunchedPreparation(CampaignView campaign) {
+        if (campaign == null || campaign.ownership() != null || campaign.startedAt() != null || campaign.endsAt() != null
+                || campaign.reservedCalls() != 0 || campaign.receivedBytes() != 0 || !campaign.attempts().isEmpty()) return false;
+        boolean prepared = "PREPARED".equals(campaign.state()) && campaign.reason() == null;
+        boolean cancelled = "STOPPED_OPERATOR".equals(campaign.state()) && "PREPARATION_CANCELLED".equals(campaign.reason());
+        if (!prepared && !cancelled) return false;
+        return campaign.events().stream().allMatch(event ->
+                (prepared ? "PREPARED".equals(event.state()) && event.reason() == null
+                        : "STOPPED_OPERATOR".equals(event.state()) && "PREPARATION_CANCELLED".equals(event.reason()))
+                        && event.reservedCalls() == 0 && event.receivedBytes() == 0 && event.nextDueAt() == null
+                        && event.missedCycles() == 0 && !event.finalComplete() && event.families().isEmpty());
     }
 
     private static boolean recoverableTerminal(String state) {
@@ -1088,11 +1143,14 @@ public final class LiveCampaignService {
             if (observedStart.orElseThrow().truncatedTo(java.time.temporal.ChronoUnit.MICROS)
                     .equals(g.owner().processStartedAt().truncatedTo(java.time.temporal.ChronoUnit.MICROS))) return;
         }
-        {
-            // No automatic release: an orphan worker may still exist even when its parent died.
-            if (store.find(g.campaignId()).isPresent()) store.interruptOrphan(g.ownership(), clock.instant(), "OWNER_PROCESS_ABSENT");
-            guard.requireCleanup(g.ownership(), clock.instant());
-        }
+        // No automatic release: an orphan worker may still exist even when its parent died.
+        // A guard may also have been acquired in the small window before store.launch. That
+        // PREPARED row has no execution owner, so it must remain a preparation and is made
+        // available only to the explicit, process-verified pre-launch recovery path.
+        CampaignView campaign = store.find(g.campaignId()).orElse(null);
+        if (!unlaunchedPreparation(campaign) && campaign != null)
+            store.interruptOrphan(g.ownership(), clock.instant(), "OWNER_PROCESS_ABSENT");
+        guard.requireCleanup(g.ownership(), clock.instant());
     }
     @PreDestroy public void shutdown() {
         Session s = active.get();

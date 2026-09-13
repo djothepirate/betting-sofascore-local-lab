@@ -718,6 +718,28 @@ class LiveCampaignServiceTest {
         }
     }
 
+    @ParameterizedTest
+    @ValueSource(booleans = {false, true})
+    void recoveryMarksAnAbsentPreLaunchOwnerForExplicitCleanupWithoutInterruptingItsPreparation(boolean cancelled)
+            throws Exception {
+        try (Harness h = new Harness(); var processes = mockStatic(ProcessHandle.class)) {
+            Owner owner = new Owner(h.ownership.instanceId(), 1234, Instant.now().minusSeconds(60));
+            Guard preLaunch = new Guard("OWNED", h.manifest.campaignId(), owner, h.ownership.generation(), Instant.now());
+            when(h.guard.snapshot()).thenReturn(preLaunch);
+            when(h.store.find(h.manifest.campaignId()))
+                    .thenReturn(Optional.of(unlaunchedPreparation(h.manifest, cancelled)));
+            processes.when(() -> ProcessHandle.of(1234)).thenReturn(Optional.empty());
+
+            h.service.markProvenOrphanWithoutRestart();
+
+            verify(h.store).find(h.manifest.campaignId());
+            verify(h.store, never()).interruptOrphan(any(), any(), any());
+            verify(h.store, never()).completePreLaunchOrphanCleanup(any(), any());
+            verify(h.guard).requireCleanup(eq(preLaunch.ownership()), any());
+            verifyNoInteractions(h.factory, h.coordinator);
+        }
+    }
+
     @Test
     void anIsolatedSchemaStopsItsMatchButTheOtherMatchReachesAllFinalFamilies() throws Exception {
         try (Harness h = new Harness()) {
@@ -1584,6 +1606,16 @@ class LiveCampaignServiceTest {
                 EventSourceTrace.providerSnapshot(23, "b".repeat(64), "event-details-v2", Instant.now()));
         when(event.status()).thenReturn(new ScheduledEventStatus(status, Optional.empty()));
         return event;
+    }
+
+    private static CampaignView unlaunchedPreparation(Manifest manifest, boolean cancelled) {
+        String state = cancelled ? "STOPPED_OPERATOR" : "PREPARED";
+        String reason = cancelled ? "PREPARATION_CANCELLED" : null;
+        List<EventView> events = manifest.targets().stream()
+                .map(target -> new EventView(target, state, reason, 0, 0, null, 0, false, List.of()))
+                .toList();
+        return new CampaignView(manifest, state, reason, null, null, 0, 0, 1,
+                null, events, List.of(), List.of());
     }
 
     @Test

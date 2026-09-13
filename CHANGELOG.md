@@ -51,6 +51,14 @@ Les évolutions notables du SofaScore Local Lab sont consignées dans ce fichier
   l'identité exacte encore observée. Elle ne déclenche aucun navigateur, appel fournisseur, reprise,
   réarmement ou clôture de départ incertain. Voir la
   [preuve de garde manuelle orpheline](docs/validation/WO058-MANUAL-ORPHAN-GUARD-RECOVERY-20260913.md).
+- Corrige la fenêtre d’interruption après l’acquisition durable d’un garde live et avant
+  `store.launch`. Au redémarrage, une préparation intacte sans ownership ni exécution est conservée
+  et placée en `CLEANUP_REQUIRED`, sans appel à `interruptOrphan`. Son panneau de campagne exige une
+  confirmation, une preuve locale d’absence du propriétaire et des processus Playwright, puis une
+  transaction qui revalide l’identité complète du garde et l’absence de toute exécution avant de
+  libérer uniquement cette garde. La trace `LOCAL_PRELAUNCH_CLEANUP_VERIFIED` conserve l’empreinte
+  de la preuve; aucun navigateur, appel fournisseur, reprise, retry ou réarmement n’est créé. Voir la
+  [preuve de récupération pré-lancement](docs/validation/WO058-PRELAUNCH-GUARD-RECOVERY-20260913.md).
 
 ### WO-059 — plafond local de pagination manuelle J3 à 35 pages
 

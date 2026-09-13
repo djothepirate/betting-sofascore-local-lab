@@ -177,6 +177,21 @@
     <p class="muted" th:text="${'L’historique de cette campagne et son état ' + campaign.state + ' sont conservés. Aucune collecte n’est lancée.'}">L’historique de cette campagne et son état INTERRUPTED sont conservés. Aucune collecte n’est lancée.</p>
   </section>
 
+  <section class="panel" th:if="${preLaunchCleanup != null}" aria-labelledby="prelaunch-cleanup-title">
+    <p class="label">Préparation interrompue</p><h2 id="prelaunch-cleanup-title">Libérer la garde avant lancement</h2>
+    <p>L’application s’est interrompue après l’acquisition locale de la garde et avant le lancement de cette campagne.
+      La préparation n’a émis aucune collecte et reste conservée.</p>
+    <p>La clôture vérifie l’absence du processus propriétaire et de ses processus Playwright avant de libérer la garde.
+      Elle ne lance, ne reprend ni ne réarme aucune collecte.</p>
+    <form method="post" th:action="@{/live-campaigns/{id}/finalize-prelaunch-interruption(id=${campaign.campaignId})}">
+      <input type="hidden" name="localFormToken" th:value="${localFormToken}">
+      <input type="hidden" name="page" th:value="${campaign.pagination.number}">
+      <input type="hidden" name="guardGeneration" th:value="${preLaunchCleanup.generation}">
+      <label><input type="checkbox" name="confirmation" value="true" required> Je confirme la libération locale de cette garde après vérification des processus.</label>
+      <button type="submit" class="button">Libérer la garde de préparation</button>
+    </form>
+  </section>
+
   <section class="panel" th:if="${canPrepareAgain == true}" aria-labelledby="prepare-again-title">
     <p class="label">Nouvelle préparation</p><h2 id="prepare-again-title">Réutiliser cette sélection</h2>
     <p>Les rencontres de cette campagne seront vérifiées à nouveau. Les rencontres terminées ou reportées seront exclues.
@@ -188,7 +203,7 @@
     </form>
   </section>
 
-  <section class="panel" th:if="${campaign.state == 'PREPARED'}" data-live-preparation aria-labelledby="manifest-title">
+  <section class="panel" th:if="${campaign.state == 'PREPARED' and preLaunchCleanup == null}" data-live-preparation aria-labelledby="manifest-title">
     <p class="label">Préparation sans réseau</p><h2 id="manifest-title">Vérifier et lancer cette sélection</h2>
     <p>La sélection ci-dessous est figée. Le lancement manuel autorise ses appels automatiques pendant la fenêtre indiquée.</p>
     <dl class="detail-grid">

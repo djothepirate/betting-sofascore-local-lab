@@ -1195,6 +1195,165 @@ class LiveCampaignPersistenceIT {
         assertThat(f.jdbc.queryForList("select to_jsonb(r)::text from live_family_schedule_revision r order by revision",String.class)).isEqualTo(revisions);
     }
 
+    @Test
+    void verifiedPreLaunchOrphanCleanupAtomicallyFreesTheExactGuardWhileKeepingPreparationLaunchable() {
+        // V54 is the current schema and contains live_family_schedule, which the cleanup proof
+        // must inspect even though no family schedule can exist before launch.
+        Fixture f=fixture("54"); Manifest manifest=v10Manifest(List.of(f.seed(EVENT)));
+        f.store.prepare(manifest); Ownership former=f.acquire(manifest);
+        f.guard.requireCleanup(former,T0.plusSeconds(1));
+        Guard expected=f.guard.snapshot(); CampaignView before=f.store.find(manifest.campaignId()).orElseThrow();
+        assertThat(before.state()).isEqualTo("PREPARED"); assertThat(before.ownership()).isNull();
+        assertThat(before.startedAt()).isNull(); assertThat(before.endsAt()).isNull();
+        assertThat(before.reservedCalls()).isZero(); assertThat(before.receivedBytes()).isZero();
+        assertThat(before.attempts()).isEmpty();
+        assertThat(before.events()).singleElement().satisfies(event->{
+            assertThat(event.state()).isEqualTo("PREPARED"); assertThat(event.reason()).isNull();
+            assertThat(event.nextDueAt()).isNull(); assertThat(event.reservedCalls()).isZero();
+            assertThat(event.receivedBytes()).isZero(); assertThat(event.families()).isEmpty();
+        });
+
+        // The audit append and guard release share the transaction: a rejected guard update
+        // leaves the original preparation and no cleanup proof behind.
+        f.jdbc.execute("""
+            create function reject_test_prelaunch_guard_release() returns trigger language plpgsql as $$
+            begin if new.state='FREE' then raise exception 'synthetic prelaunch guard release failure'; end if; return new; end $$
+            """);
+        f.jdbc.execute("create trigger reject_test_prelaunch_guard_release before update on provider_campaign_guard for each row execute function reject_test_prelaunch_guard_release()");
+        assertThatThrownBy(()->f.store.completePreLaunchOrphanCleanup(expected,T0.plusSeconds(2)))
+                .hasMessageContaining("synthetic prelaunch guard release failure");
+        assertThat(f.guard.snapshot()).isEqualTo(expected);
+        assertThat(f.store.find(manifest.campaignId())).contains(before);
+        assertThat(f.jdbc.queryForObject("select count(*) from live_transition where campaign_id=? and state='LOCAL_PRELAUNCH_CLEANUP_VERIFIED'",
+                Long.class,manifest.campaignId())).isZero();
+        f.jdbc.execute("drop trigger reject_test_prelaunch_guard_release on provider_campaign_guard");
+
+        f.store.completePreLaunchOrphanCleanup(expected,T0.plusSeconds(3));
+        CampaignView after=f.store.find(manifest.campaignId()).orElseThrow();
+        assertThat(after).usingRecursiveComparison().ignoringFields("revision","transitions").isEqualTo(before);
+        assertThat(after.transitions()).hasSize(before.transitions().size()+1);
+        assertThat(after.transitions().subList(0,before.transitions().size()))
+                .containsExactlyElementsOf(before.transitions());
+        Transition audit=after.transitions().getLast();
+        assertThat(audit.state()).isEqualTo("LOCAL_PRELAUNCH_CLEANUP_VERIFIED");
+        assertThat(audit.reason()).matches("GUARD_[0-9a-f]{64}");
+        assertThat(audit.changedAt()).isEqualTo(T0.plusSeconds(3));
+        assertThat(audit.canonicalEventId()).isNull(); assertThat(audit.attemptId()).isNull();
+        Guard free=f.guard.snapshot();
+        assertThat(free.state()).isEqualTo("FREE"); assertThat(free.campaignId()).isNull(); assertThat(free.owner()).isNull();
+        assertThat(free.generation()).isEqualTo(expected.generation());
+
+        // A response-loss retry records no second audit and cannot release a later generation.
+        f.store.completePreLaunchOrphanCleanup(expected,T0.plusSeconds(4));
+        assertThat(f.store.find(manifest.campaignId())).contains(after); assertThat(f.guard.snapshot()).isEqualTo(free);
+        Ownership next=f.guard.tryAcquire(manifest.campaignId(),new Owner(UUID.randomUUID(),4321,T0.minusSeconds(40)),T0.plusSeconds(5))
+                .orElseThrow().ownership();
+        assertThat(next.generation()).isEqualTo(expected.generation()+1);
+        assertThat(f.store.launch(manifest.campaignId(),manifest.manifestSha256(),next,T0.plusSeconds(5)).newlyLaunched()).isTrue();
+        assertThat(f.store.find(manifest.campaignId())).hasValueSatisfying(launched->{
+            assertThat(launched.state()).isEqualTo("RUNNING"); assertThat(launched.ownership()).isEqualTo(next);
+            assertThat(launched.startedAt()).isEqualTo(T0.plusSeconds(5));
+        });
+    }
+
+    @Test
+    void preLaunchOrphanCleanupRejectsAnyDivergentGuardAndAnAlreadyLaunchedCampaign() {
+        Fixture f=fixture("54"); Manifest manifest=v10Manifest(List.of(f.seed(EVENT)));
+        f.store.prepare(manifest); Ownership owner=f.acquire(manifest);
+        f.guard.requireCleanup(owner,T0.plusSeconds(1));
+        Guard expected=f.guard.snapshot(); Owner former=expected.owner();
+        CampaignView before=f.store.find(manifest.campaignId()).orElseThrow();
+        List<Guard> collisions=List.of(
+                new Guard(expected.state(),UUID.randomUUID(),former,expected.generation(),expected.changedAt()),
+                new Guard(expected.state(),expected.campaignId(),new Owner(UUID.randomUUID(),former.processId(),former.processStartedAt()),expected.generation(),expected.changedAt()),
+                new Guard(expected.state(),expected.campaignId(),new Owner(former.instanceId(),former.processId()+1,former.processStartedAt()),expected.generation(),expected.changedAt()),
+                new Guard(expected.state(),expected.campaignId(),new Owner(former.instanceId(),former.processId(),former.processStartedAt().plusSeconds(1)),expected.generation(),expected.changedAt()),
+                new Guard(expected.state(),expected.campaignId(),former,expected.generation()+1,expected.changedAt()),
+                new Guard(expected.state(),expected.campaignId(),former,expected.generation(),expected.changedAt().plusSeconds(1)));
+        for(Guard collision:collisions) assertThatThrownBy(()->f.store.completePreLaunchOrphanCleanup(collision,T0.plusSeconds(10)))
+                .hasMessage("LIVE_ORPHAN_CLEANUP_GUARD_CHANGED");
+        assertThat(f.guard.snapshot()).isEqualTo(expected); assertThat(f.store.find(manifest.campaignId())).contains(before);
+        assertThat(f.jdbc.queryForObject("select count(*) from live_transition where campaign_id=? and state='LOCAL_PRELAUNCH_CLEANUP_VERIFIED'",
+                Long.class,manifest.campaignId())).isZero();
+
+        Fixture launched=fixture("54"); Manifest running=v10Manifest(List.of(launched.seed(EVENT+1)));
+        Ownership runningOwner=launched.start(running);
+        launched.guard.requireCleanup(runningOwner,T0.plusSeconds(2));
+        Guard runningGuard=launched.guard.snapshot(); CampaignView launchedBefore=launched.store.find(running.campaignId()).orElseThrow();
+        assertThatThrownBy(()->launched.store.completePreLaunchOrphanCleanup(runningGuard,T0.plusSeconds(3)))
+                .hasMessage("LIVE_ORPHAN_CLEANUP_INCOMPLETE");
+        assertThat(launched.guard.snapshot()).isEqualTo(runningGuard);
+        assertThat(launched.store.find(running.campaignId())).contains(launchedBefore);
+        assertThat(launched.jdbc.queryForObject("select count(*) from live_transition where campaign_id=? and state='LOCAL_PRELAUNCH_CLEANUP_VERIFIED'",
+                Long.class,running.campaignId())).isZero();
+    }
+
+    @Test
+    void preLaunchCleanupWaitsForAConcurrentLaunchAndThenRefusesTheCommittedExecution() throws Exception {
+        Fixture f=fixture("54"); Manifest manifest=v10Manifest(List.of(f.seed(EVENT)));
+        f.store.prepare(manifest); Ownership ownership=f.acquire(manifest);
+        CountDownLatch launchWritten=new CountDownLatch(1),allowLaunchCommit=new CountDownLatch(1),cleanupStarted=new CountDownLatch(1);
+        AtomicInteger launchBackend=new AtomicInteger(),cleanupBackend=new AtomicInteger();
+        JdbcTransactionManager transactions=new JdbcTransactionManager(f.ds);
+
+        try(var pool=Executors.newFixedThreadPool(2)) {
+            try {
+                var launch=pool.submit(()->new TransactionTemplate(transactions).execute(status->{
+                    launchBackend.set(f.jdbc.queryForObject("select pg_backend_pid()",Integer.class));
+                    f.store.launch(manifest.campaignId(),manifest.manifestSha256(),ownership,T0.plusSeconds(1));
+                    launchWritten.countDown();
+                    try {
+                        if(!allowLaunchCommit.await(10,TimeUnit.SECONDS)) throw new IllegalStateException("launch commit timeout");
+                    } catch(InterruptedException interrupted) {
+                        Thread.currentThread().interrupt(); throw new IllegalStateException(interrupted);
+                    }
+                    return true;
+                }));
+                assertThat(launchWritten.await(5,TimeUnit.SECONDS)).isTrue();
+
+                // The normal read remains an MVCC snapshot of PREPARED while launch owns the
+                // guard. The cleanup transaction must not trust this stale projection.
+                CampaignView stale=f.store.find(manifest.campaignId()).orElseThrow();
+                assertThat(stale.state()).isEqualTo("PREPARED"); assertThat(stale.ownership()).isNull();
+                assertThat(stale.startedAt()).isNull(); assertThat(stale.attempts()).isEmpty();
+
+                // Keep the guard transition in its own transaction. The store method is also
+                // transactional, so catching its expected rejection in this transaction would
+                // make Spring roll back the guard transition and conceal the committed state.
+                var cleanup=pool.submit(()->new TransactionTemplate(transactions).execute(status->{
+                    cleanupBackend.set(f.jdbc.queryForObject("select pg_backend_pid()",Integer.class)); cleanupStarted.countDown();
+                    f.guard.requireCleanup(ownership,T0.plusSeconds(2));
+                    return f.guard.snapshot();
+                }));
+                assertThat(cleanupStarted.await(5,TimeUnit.SECONDS)).isTrue();
+                boolean blocked=false; long deadline=System.nanoTime()+TimeUnit.SECONDS.toNanos(5);
+                while(!blocked && System.nanoTime()<deadline) {
+                    blocked=Boolean.TRUE.equals(f.jdbc.queryForObject("select ? = any(pg_blocking_pids(?))",Boolean.class,
+                            launchBackend.get(),cleanupBackend.get()));
+                    if(!blocked) Thread.sleep(10);
+                }
+                assertThat(blocked).as("pre-launch cleanup waits for the unresolved launch guard lock").isTrue();
+                assertThat(cleanup.isDone()).isFalse();
+
+                allowLaunchCommit.countDown();
+                assertThat(launch.get(5,TimeUnit.SECONDS)).isTrue();
+                Guard cleanupGuard=cleanup.get(5,TimeUnit.SECONDS);
+                assertThat(cleanupGuard.state()).isEqualTo("CLEANUP_REQUIRED");
+                assertThatThrownBy(()->f.store.completePreLaunchOrphanCleanup(cleanupGuard,T0.plusSeconds(3)))
+                        .hasMessage("LIVE_ORPHAN_CLEANUP_INCOMPLETE");
+                CampaignView committed=f.store.find(manifest.campaignId()).orElseThrow();
+                assertThat(committed.state()).isEqualTo("RUNNING"); assertThat(committed.ownership()).isEqualTo(ownership);
+                assertThat(committed.startedAt()).isEqualTo(T0.plusSeconds(1));
+                assertThat(f.guard.snapshot().state()).isEqualTo("CLEANUP_REQUIRED");
+                assertThat(f.guard.isOwned(ownership)).isFalse();
+                assertThat(f.jdbc.queryForObject("select count(*) from live_transition where campaign_id=? and state='LOCAL_PRELAUNCH_CLEANUP_VERIFIED'",
+                        Long.class,manifest.campaignId())).isZero();
+            } finally {
+                allowLaunchCommit.countDown();
+            }
+        }
+    }
+
     @ParameterizedTest @ValueSource(strings={"live-v1","live-v2","live-v3","live-v4"})
     void verifiedOrphanCleanupPreservesReceiptsUnknownAttemptsAndHistoryWithAnIdempotentAudit(String policy) {
         Fixture f=fixture("39"); Target target=f.seed(EVENT);

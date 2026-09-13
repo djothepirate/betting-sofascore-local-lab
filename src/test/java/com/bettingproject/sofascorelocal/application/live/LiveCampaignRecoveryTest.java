@@ -54,6 +54,90 @@ class LiveCampaignRecoveryTest {
         verify(guard, never()).releaseAfterVerifiedCleanup(any(), any());
     }
 
+    @ParameterizedTest
+    @ValueSource(booleans = {false, true})
+    void preLaunchReadsExposeOnlyAnUntouchedPreparation(boolean cancelled) {
+        when(store.find(id)).thenReturn(Optional.of(preparation(cancelled)));
+
+        assertThat(service.orphanedPreLaunchCleanupGuard(id)).contains(expected);
+        assertThat(service.orphanCleanupGuard(id)).isEmpty();
+        assertThat(service.orphanedPreLaunchCleanupGuard(UUID.randomUUID())).isEmpty();
+
+        verifyNoInteractions(probe, factory);
+        verify(store, never()).completePreLaunchOrphanCleanup(any(), any());
+        verify(guard, never()).releaseAfterVerifiedCleanup(any(), any());
+    }
+
+    @ParameterizedTest
+    @ValueSource(booleans = {false, true})
+    void explicitPreLaunchClosureProvesAbsenceBeforeAtomicallyReleasingTheExactGuard(boolean cancelled) {
+        when(store.find(id)).thenReturn(Optional.of(preparation(cancelled)));
+
+        service.finalizeOrphanedPreLaunchCleanup(id, 40);
+
+        var order = inOrder(probe, store);
+        order.verify(probe).requireAbsent(former, playwright.getWorkerJar());
+        order.verify(store).completePreLaunchOrphanCleanup(expected, NOW);
+        verify(store, never()).completeOrphanCleanup(any(), any());
+        verify(guard, never()).releaseAfterVerifiedCleanup(any(), any());
+        verify(guard, never()).releaseManualOrphanAfterVerifiedCleanup(any(), any());
+        verifyNoInteractions(factory);
+        verify(supervisor, never()).stopCampaign(any(), any());
+    }
+
+    @ParameterizedTest
+    @ValueSource(strings = {"LIVE_CLEANUP_OWNER_ACTIVE", "LIVE_CLEANUP_PROCESS_ACTIVE", "LIVE_CLEANUP_PROCESS_UNVERIFIED"})
+    void preLaunchClosureKeepsThePreparationAndGuardWhenProcessAbsenceIsNotProved(String failure) {
+        when(store.find(id)).thenReturn(Optional.of(preparation(false)));
+        doThrow(new IllegalStateException(failure)).when(probe).requireAbsent(any(), any());
+
+        assertThatThrownBy(() -> service.finalizeOrphanedPreLaunchCleanup(id, 40)).hasMessage(failure);
+
+        verify(store, never()).completePreLaunchOrphanCleanup(any(), any());
+        verify(store, never()).completeOrphanCleanup(any(), any());
+        verify(guard, never()).releaseAfterVerifiedCleanup(any(), any());
+        verify(guard, never()).releaseManualOrphanAfterVerifiedCleanup(any(), any());
+        verifyNoInteractions(factory);
+    }
+
+    @Test
+    void preLaunchClosureRejectsStaleGenerationOrAnyNonPreparationBeforeProcessInspection() {
+        when(store.find(id)).thenReturn(Optional.of(preparation(false)));
+
+        assertThatThrownBy(() -> service.finalizeOrphanedPreLaunchCleanup(id, 39))
+                .hasMessage("LIVE_CLEANUP_STATE_CHANGED");
+        current.set(new Guard("FREE", null, null, 40, NOW));
+        assertThatThrownBy(() -> service.finalizeOrphanedPreLaunchCleanup(id, 40))
+                .hasMessage("LIVE_CLEANUP_STATE_CHANGED");
+        current.set(expected);
+        when(store.find(id)).thenReturn(Optional.of(campaign("INTERRUPTED", List.of())));
+
+        assertThat(service.orphanedPreLaunchCleanupGuard(id)).isEmpty();
+        assertThatThrownBy(() -> service.finalizeOrphanedPreLaunchCleanup(id, 40))
+                .hasMessage("LIVE_CLEANUP_STATE_CHANGED");
+
+        verifyNoInteractions(probe, factory);
+        verify(store, never()).completePreLaunchOrphanCleanup(any(), any());
+    }
+
+    @Test
+    void preLaunchClosureUsesTheSameExclusiveLocalRecoveryFenceAsOtherManualCleanups() {
+        when(store.find(id)).thenReturn(Optional.of(preparation(false)));
+        when(supervisor.activeCampaignId()).thenReturn(Optional.of(UUID.randomUUID()));
+
+        assertThatThrownBy(() -> service.finalizeOrphanedPreLaunchCleanup(id, 40))
+                .hasMessage("LIVE_CLEANUP_BUSY");
+        when(supervisor.activeCampaignId()).thenReturn(Optional.empty());
+        try (var ignored = coordinator.acquireCampaign(UUID.randomUUID())) {
+            assertThatThrownBy(() -> service.finalizeOrphanedPreLaunchCleanup(id, 40))
+                    .hasMessage("LIVE_CLEANUP_BUSY");
+        }
+
+        verifyNoInteractions(probe, factory);
+        verify(store, never()).completePreLaunchOrphanCleanup(any(), any());
+        verify(guard, never()).releaseAfterVerifiedCleanup(any(), any());
+    }
+
     @Test
     void explicitManualClosureProvesAbsenceThenReleasesOnlyTheExactNonLiveGuard() {
         when(store.find(id)).thenReturn(Optional.empty());
@@ -200,5 +284,14 @@ class LiveCampaignRecoveryTest {
     private CampaignView campaign(String state, List<Transition> transitions) {
         return new CampaignView(mock(Manifest.class), state, "OWNER_PROCESS_ABSENT", NOW.minusSeconds(1800),
                 NOW.plusSeconds(1800), 140, 2819899, 7, expected.ownership(), List.of(), List.of(), transitions);
+    }
+
+    private CampaignView preparation(boolean cancelled) {
+        String state = cancelled ? "STOPPED_OPERATOR" : "PREPARED";
+        String reason = cancelled ? "PREPARATION_CANCELLED" : null;
+        EventView event = new EventView(mock(Target.class), state, reason, 0, 0,
+                null, 0, false, List.of());
+        return new CampaignView(mock(Manifest.class), state, reason, null, null,
+                0, 0, 1, null, List.of(event), List.of(), List.of());
     }
 }

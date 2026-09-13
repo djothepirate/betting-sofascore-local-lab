@@ -185,8 +185,103 @@ class LiveCampaignControllerTest {
         verify(service, times(2)).state(CAMPAIGN_ID);
         verify(service, times(2)).runtimeStatus(CAMPAIGN_ID);
         verify(service, times(2)).orphanCleanupGuard(CAMPAIGN_ID);
+        verify(service, times(2)).orphanedPreLaunchCleanupGuard(CAMPAIGN_ID);
         verify(service).finalizeInterruptedCleanup(CAMPAIGN_ID, 7);
         verifyNoMoreInteractions(service);
+    }
+
+    @Test
+    void preLaunchCleanupFormReleasesOnlyTheExpectedGuardAndRestoresThePreservedPreparation() throws Exception {
+        MockHttpSession session = new MockHttpSession();
+        Guard guard = new Guard("CLEANUP_REQUIRED", CAMPAIGN_ID,
+                new Owner(UUID.randomUUID(), 654321, NOW), 7, NOW);
+        when(service.state(CAMPAIGN_ID)).thenReturn(campaign("PREPARED", 43), campaign("PREPARED", 44));
+        when(service.orphanCleanupGuard(CAMPAIGN_ID)).thenReturn(Optional.empty());
+        when(service.orphanedPreLaunchCleanupGuard(CAMPAIGN_ID)).thenReturn(Optional.of(guard), Optional.empty());
+        String path = "/live-campaigns/" + CAMPAIGN_ID + "/finalize-prelaunch-interruption";
+
+        String page = mvc.perform(get("/live-campaigns/" + CAMPAIGN_ID).header("Host", HOST).session(session))
+                .andExpect(status().isOk())
+                .andExpect(model().attribute("orphanCleanup", nullValue()))
+                .andExpect(model().attribute("preLaunchCleanup", guard))
+                .andExpect(model().attribute("canPrepareAgain", false))
+                .andExpect(content().string(containsString("Libérer la garde avant lancement")))
+                .andExpect(content().string(containsString("La préparation n’a émis aucune collecte et reste conservée")))
+                .andExpect(content().string(containsString("Elle ne lance, ne reprend ni ne réarme aucune collecte")))
+                .andExpect(content().string(not(containsString("Vérifier et lancer cette sélection"))))
+                .andExpect(content().string(not(containsString("654321"))))
+                .andExpect(content().string(not(containsString(guard.owner().instanceId().toString()))))
+                .andReturn().getResponse().getContentAsString();
+        String form = renderedForm(page, path);
+        String token = hiddenValue(form, "localFormToken");
+        assertThat(hiddenValue(form, "guardGeneration")).isEqualTo("7");
+        assertThat(form).contains("name=\"confirmation\"", "required");
+
+        var result = mvc.perform(post(path).header("Host", HOST).header("Origin", ORIGIN).session(session)
+                        .param("localFormToken", token).param("guardGeneration", hiddenValue(form, "guardGeneration"))
+                        .param("confirmation", "true"))
+                .andExpect(status().is3xxRedirection())
+                .andExpect(redirectedUrl("/live-campaigns/" + CAMPAIGN_ID))
+                .andExpect(flash().attribute("liveSuccess", containsString("La garde acquise avant le lancement a été libérée")))
+                .andReturn();
+
+        mvc.perform(get("/live-campaigns/" + CAMPAIGN_ID).header("Host", HOST).session(session)
+                        .flashAttrs(result.getFlashMap()))
+                .andExpect(status().isOk())
+                .andExpect(model().attribute("preLaunchCleanup", nullValue()))
+                .andExpect(content().string(containsString("La garde acquise avant le lancement a été libérée")))
+                .andExpect(content().string(containsString("Vérifier et lancer cette sélection")))
+                .andExpect(content().string(not(containsString(path))));
+
+        mvc.perform(post(path).header("Host", HOST).header("Origin", ORIGIN).session(session)
+                        .param("localFormToken", token).param("guardGeneration", "7").param("confirmation", "true"))
+                .andExpect(status().isBadRequest())
+                .andExpect(resultValue -> assertThat(resultValue.getResolvedException()).isInstanceOf(InvalidLocalFormTokenException.class));
+
+        verify(service, times(2)).state(CAMPAIGN_ID);
+        verify(service, times(2)).runtimeStatus(CAMPAIGN_ID);
+        verify(service, times(2)).orphanCleanupGuard(CAMPAIGN_ID);
+        verify(service, times(2)).orphanedPreLaunchCleanupGuard(CAMPAIGN_ID);
+        verify(service).finalizeOrphanedPreLaunchCleanup(CAMPAIGN_ID, 7);
+        verifyNoMoreInteractions(service);
+    }
+
+    @Test
+    void preLaunchCleanupRequiresPostSameOriginAnUnusedTokenAndExplicitConfirmation() throws Exception {
+        String path = "/live-campaigns/" + CAMPAIGN_ID + "/finalize-prelaunch-interruption";
+        MockHttpSession session = new MockHttpSession();
+        mvc.perform(get(path).header("Host", HOST)).andExpect(status().isMethodNotAllowed());
+        mvc.perform(post(path).header("Host", HOST).header("Origin", ORIGIN).session(session)
+                        .param("guardGeneration", "7").param("confirmation", "true"))
+                .andExpect(status().isBadRequest())
+                .andExpect(result -> assertThat(result.getResolvedException()).isInstanceOf(InvalidLocalFormTokenException.class));
+        mvc.perform(post(path).header("Host", HOST).header("Origin", "https://foreign.invalid").session(session)
+                        .param("guardGeneration", "7").param("confirmation", "true")
+                        .param("localFormToken", tokens.issue(session)))
+                .andExpect(status().isForbidden());
+
+        MockHttpSession confirmationSession = new MockHttpSession();
+        String token = tokens.issue(confirmationSession);
+        mvc.perform(post(path).header("Host", HOST).header("Origin", ORIGIN).session(confirmationSession)
+                        .param("guardGeneration", "7").param("localFormToken", token))
+                .andExpect(status().isBadRequest());
+        mvc.perform(post(path).header("Host", HOST).header("Origin", ORIGIN).session(confirmationSession)
+                        .param("guardGeneration", "7").param("confirmation", "true").param("localFormToken", token))
+                .andExpect(status().isBadRequest())
+                .andExpect(result -> assertThat(result.getResolvedException()).isInstanceOf(InvalidLocalFormTokenException.class));
+        verifyNoInteractions(service);
+    }
+
+    @ParameterizedTest
+    @ValueSource(strings = {"", "invalid", "0", "-1", "9223372036854775808"})
+    void preLaunchCleanupRejectsMissingOrInvalidGenerationBeforeServiceMutation(String generation) throws Exception {
+        MockHttpSession session = new MockHttpSession();
+        var request = post("/live-campaigns/" + CAMPAIGN_ID + "/finalize-prelaunch-interruption")
+                .header("Host", HOST).header("Origin", ORIGIN).session(session)
+                .param("localFormToken", tokens.issue(session)).param("confirmation", "true");
+        if (!generation.isEmpty()) request.param("guardGeneration", generation);
+        mvc.perform(request).andExpect(status().isBadRequest());
+        verifyNoInteractions(service);
     }
 
     @Test
@@ -293,6 +388,7 @@ class LiveCampaignControllerTest {
         verify(service).state(CAMPAIGN_ID);
         verify(service).runtimeStatus(CAMPAIGN_ID);
         verify(service).orphanCleanupGuard(CAMPAIGN_ID);
+        verify(service).orphanedPreLaunchCleanupGuard(CAMPAIGN_ID);
         verifyNoMoreInteractions(service);
     }
 
@@ -310,6 +406,7 @@ class LiveCampaignControllerTest {
         verify(service).state(CAMPAIGN_ID);
         verify(service).runtimeStatus(CAMPAIGN_ID);
         verify(service).orphanCleanupGuard(CAMPAIGN_ID);
+        verify(service).orphanedPreLaunchCleanupGuard(CAMPAIGN_ID);
         verifyNoMoreInteractions(service);
     }
 
@@ -324,6 +421,7 @@ class LiveCampaignControllerTest {
         verify(service).state(CAMPAIGN_ID);
         verify(service).runtimeStatus(CAMPAIGN_ID);
         verify(service).orphanCleanupGuard(CAMPAIGN_ID);
+        verify(service).orphanedPreLaunchCleanupGuard(CAMPAIGN_ID);
         verifyNoMoreInteractions(service);
     }
 
@@ -699,6 +797,7 @@ class LiveCampaignControllerTest {
         verify(service).state(CAMPAIGN_ID);
         verify(service).runtimeStatus(CAMPAIGN_ID);
         verify(service).orphanCleanupGuard(CAMPAIGN_ID);
+        verify(service).orphanedPreLaunchCleanupGuard(CAMPAIGN_ID);
         verifyNoMoreInteractions(service);
     }
 
@@ -888,6 +987,7 @@ class LiveCampaignControllerTest {
         verify(service, times(2)).state(CAMPAIGN_ID);
         verify(service, times(2)).runtimeStatus(CAMPAIGN_ID);
         verify(service).orphanCleanupGuard(CAMPAIGN_ID);
+        verify(service).orphanedPreLaunchCleanupGuard(CAMPAIGN_ID);
         verifyNoMoreInteractions(service);
     }
 
@@ -1261,7 +1361,8 @@ class LiveCampaignControllerTest {
     void everyCampaignActionRetainsPageTwoWithoutChangingItsServiceArguments() throws Exception {
         String base = "/live-campaigns/" + CAMPAIGN_ID;
         MockHttpSession session = new MockHttpSession();
-        for (String suffix : List.of("/launch", "/cancel-preparation", "/stop", "/events/" + EVENT_ID + "/stop", "/finalize-interruption")) {
+        for (String suffix : List.of("/launch", "/cancel-preparation", "/stop", "/events/" + EVENT_ID + "/stop",
+                "/finalize-interruption", "/finalize-prelaunch-interruption")) {
             mvc.perform(post(base + suffix).header("Host", HOST).header("Origin", ORIGIN).session(session)
                             .param("localFormToken", tokens.issue(session)).param("page", "2")
                             .param("manifestHash", HASH).param("confirmation", "true").param("guardGeneration", "7"))
@@ -1272,6 +1373,7 @@ class LiveCampaignControllerTest {
         verify(service).stop(CAMPAIGN_ID, null);
         verify(service).stop(CAMPAIGN_ID, EVENT_ID);
         verify(service).finalizeInterruptedCleanup(CAMPAIGN_ID, 7);
+        verify(service).finalizeOrphanedPreLaunchCleanup(CAMPAIGN_ID, 7);
         mvc.perform(post(base + "/stop").header("Host", HOST).header("Origin", ORIGIN).session(session)
                         .param("localFormToken", tokens.issue(session)).param("page", "1"))
                 .andExpect(status().is3xxRedirection()).andExpect(redirectedUrl(base));

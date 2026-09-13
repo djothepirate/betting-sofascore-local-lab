@@ -624,6 +624,31 @@ les résultats, observations et compteurs restent inchangés. Une répétition a
 accepte seulement une libération prouvée de la même génération. Une nouvelle acquisition interdit
 cette répétition. Les tables existantes portent ce parcours sans migration.
 
+Une interruption peut aussi se produire après l’acquisition du garde live, mais avant le commit
+de `launch`. La ligne locale est alors une préparation strictement non exécutée : elle ne possède
+ni ownership, ni génération d’exécution, ni instant de lancement, appel, octet, échéance ou
+planification de famille. Cette forme ne passe jamais par `interruptOrphan`, qui exige à juste
+titre une ownership d’exécution. Au redémarrage, le Lab conserve la préparation et marque seulement
+la garde `CLEANUP_REQUIRED`; il ne la libère pas automatiquement et ne transforme pas la préparation
+en campagne interrompue.
+
+La page de cette préparation peut afficher l’action distincte **« Libérer la garde avant
+lancement »**. Son formulaire local à usage unique porte la génération observée et exige une
+confirmation. Sous exclusion locale, le Lab refuse toute session ou tout superviseur actif, puis
+`LiveOrphanProcessProbe` doit prouver l’absence du propriétaire et des processus Playwright
+associés. `completePreLaunchOrphanCleanup` verrouille ensuite, dans cet ordre, le garde, la
+préparation et ses cibles. Il compare l’état, l’identifiant de campagne, l’instance, le PID,
+l’instant de démarrage, la génération et `changed_at` de la garde, puis revalide l’absence de toute
+exécution ou planification. Une modification concurrente, une preuve incomplète ou une préparation
+altérée conserve le garde bloqué.
+
+Quand cette preuve est complète, la transaction ajoute seulement
+`LOCAL_PRELAUNCH_CLEANUP_VERIFIED`, avec l’empreinte SHA-256 de la garde vérifiée, puis remet cette
+garde exacte à `FREE`. La préparation, ses cibles et son état `PREPARED` — ou son annulation
+pré-lancement `STOPPED_OPERATOR / PREPARATION_CANCELLED` — restent historiques et inchangés. Une
+nouvelle tentative de lancement doit reprendre l’acquisition normale, avec une génération nouvelle;
+le mécanisme ne lance aucun navigateur, appel fournisseur, reprise, retry ou réarmement.
+
 Une collecte manuelle J3/J4/J5 interrompue ne crée pas de ligne `live_campaign`. Après un crash,
 la page locale `/provider-access` présente donc une action de libération seulement si le garde
 durable est `CLEANUP_REQUIRED`, possède un propriétaire et une identité de campagne, et que cette

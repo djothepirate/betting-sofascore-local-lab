@@ -1814,6 +1814,30 @@ retry, réarmement de suspension ni clôture de départ incertain. Ces opératio
 explicites et soumises à leurs propres gardes. La couverture et les limites sont détaillées dans la
 [preuve de garde manuelle orpheline](../../validation/WO058-MANUAL-ORPHAN-GUARD-RECOVERY-20260913.md).
 
+#### Complément de revue PR #35 — garde live acquise avant lancement
+
+La revue a relevé une fenêtre entre l'acquisition durable du `CampaignLease` live et le commit
+de `store.launch`. Une interruption du JVM dans cette fenêtre laisse une ligne `PREPARED` sans
+ownership/génération d'exécution, mais un garde `OWNED`; la récupération historique appelait
+`interruptOrphan`, qui refuse correctement cette campagne sans propriétaire et empêchait ainsi le
+passage du garde à `CLEANUP_REQUIRED`.
+
+Le démarrage reconnaît maintenant exclusivement la forme pré-lancement intacte et conserve la
+préparation. Il ne crée ni interruption artificielle, ni navigation, ni appel fournisseur. Il
+marque seulement le garde `CLEANUP_REQUIRED`. La campagne propose alors une action distincte,
+liée à un jeton local, à une confirmation et à la génération observée. Sous exclusion locale,
+elle exige la preuve d'absence du propriétaire et des processus Playwright, puis réexamine la
+garde et la préparation dans une transaction sérialisée.
+
+`completePreLaunchOrphanCleanup` ne libère qu'un garde dont l'état, l'identité de campagne,
+l'instance, le PID, l'instant de démarrage, la génération et `changed_at` correspondent encore.
+Elle exige aussi l'absence d'ownership, de lancement, de tentatives, de compteurs, d'échéances et
+de planification J4/J5. La préparation et ses cibles sont conservées; la transition append-only
+`LOCAL_PRELAUNCH_CLEANUP_VERIFIED` enregistre l'empreinte SHA-256 de la garde contrôlée. Une
+nouvelle acquisition produit sa génération propre et reste soumise aux contrôles normaux. Les
+tests unitaires, web et PostgreSQL de cette voie sont consignés dans la
+[preuve de récupération pré-lancement](../../validation/WO058-PRELAUNCH-GUARD-RECOVERY-20260913.md).
+
 ### État et prochaine action
 
 Cette révision reste `IN_PROGRESS`. Le Work Order demeure dans `docs/work_orders/active` : la
