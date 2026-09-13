@@ -340,7 +340,7 @@ class FlywayMigrationIT {
         assertThat(exportTable).isEqualTo("export_manifest");
         assertThat(deliveryTable).isEqualTo("j7_delivery");
         assertThat(networkEnabled).isFalse();
-        assertThat(flywayVersion).isEqualTo("54");
+        assertThat(flywayVersion).isEqualTo("57");
         assertThat(rawColumn).isEqualTo("bytea");
     }
 
@@ -7155,7 +7155,7 @@ class FlywayMigrationIT {
 
         assertThat(jdbcTemplate.queryForObject(
                 powerShellHereString(script, "$flywaySql"),
-                String.class)).isEqualTo("54");
+                String.class)).isEqualTo("57");
         assertThat(jdbcTemplate.queryForObject(
                 powerShellHereString(script, "$snapshotFingerprintSql"),
                 String.class)).isNotNull();
@@ -7194,7 +7194,7 @@ class FlywayMigrationIT {
                 .contains("j7ProviderOwnerGoRevocationCount")
                 .contains("j7ProviderOwnerGoConsumptionCount")
                 .contains("j7DeliveryLedgerSha256")
-                .contains("$sourceFlywayVersion -cne '54'");
+                .contains("$sourceFlywayVersion -cne '57'");
     }
 
     @Test
@@ -7222,8 +7222,8 @@ class FlywayMigrationIT {
                     .dataSource(sourceDataSource)
                     .locations("classpath:db/migration")
                     .load();
-            assertThat(sourceFlyway.migrate().migrationsExecuted).isEqualTo(54);
-            assertThat(sourceFlyway.info().current().getVersion().getVersion()).isEqualTo("54");
+            assertThat(sourceFlyway.migrate().migrationsExecuted).isEqualTo(57);
+            assertThat(sourceFlyway.info().current().getVersion().getVersion()).isEqualTo("57");
 
             JdbcTemplate sourceJdbc = new JdbcTemplate(sourceDataSource);
             UUID campaignId = UUID.randomUUID();
@@ -7472,7 +7472,7 @@ class FlywayMigrationIT {
                     order by installed_rank desc
                     limit 1
                     """,
-                    String.class)).isEqualTo("54");
+                    String.class)).isEqualTo("57");
             assertThat(restoreJdbc.queryForObject(j8FingerprintSql, String.class))
                     .isEqualTo(sourceJ8Fingerprint);
             assertThat(restoreJdbc.queryForObject(
@@ -7572,8 +7572,8 @@ class FlywayMigrationIT {
                 StandardCharsets.UTF_8);
 
         assertThat(script)
-                .contains("$manifest.source.flywayVersion.ToString() -cne '54'")
-                .contains("valid Flyway V54 raw-payload, J8, J7 and quiescent live ledger restore");
+                .contains("$manifest.source.flywayVersion.ToString() -cne '57'")
+                .contains("valid Flyway V57 raw-payload, J3, J8, J7 and quiescent live ledger restore");
 
         String qualificationFields = powerShellArray(script, "$qualificationFields");
         assertThat(qualificationFields)

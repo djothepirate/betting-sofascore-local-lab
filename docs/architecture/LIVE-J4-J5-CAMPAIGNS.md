@@ -1,7 +1,30 @@
 # Campagnes live locales J4/J5 — architecture WO-058
 
+## Révision courante WO-060 — live-v11 et pause J3
+
+[ADR-SS-007 v0.2](../../ADR-SS-007-j3-automation-durable-catalog-and-live-pause.md)
+et ADR-SS-005 v0.12 définissent l'exception. Les nouveaux manifestes sont V11, avec profil de
+replay indépendant, worker de protocole 10 et schéma V57. `LiveSessionSchedule` choisit le
+planificateur V11 ou le planificateur historique sans modifier les empreintes de `LiveSchedule`.
+Les lecteurs et manifestes V1–V10 ne reçoivent aucune nouvelle capacité implicitement.
+
+La demande J3 ferme l'admission live avant le prochain départ ; le propriétaire termine et
+publie l'échange en vol. La sous-opération J3 garde ce propriétaire et sa génération SQL, dans
+un contexte neuf temporaire du même worker. Le contexte live initial est conservé. Les phases
+REQUESTED, QUIESCENT, J3_ACTIVE, CLEANED, RESUMING, RESUMED/STOPPED sont auditées dans deux tables.
+Une collecte entièrement en cache peut passer de QUIESCENT à CLEANED sans ouvrir de contexte.
+L'import local ne demande aucune pause.
+
+CLEANED exige la publication terminale J3 et le nettoyage prouvé ; la reprise crée un groupe
+J4 de revalidation sans modifier les limites, arrêts, faits conditionnels ou échéances finales.
+Les groupes J5 abandonnés sont consignés comme manqués. Les départs restent soumis au garde
+partagé 35/60 s et 2 100/h. Voir le [rapport WO-060](../validation/WO060-J3-IMPLEMENTATION-20260914.md)
+et le [guide opérateur](../runbooks/J3-AUTOMATION-AND-DURABLE-CATALOG.md).
+
+Les sections suivantes décrivent les politiques et preuves historiques WO-058.
+
 Statuts : `EXPERIMENTAL`, `LOCAL_ONLY`, `NOT_PRODUCTION_APPROVED`, `NO_CRITICAL_DEPENDENCY`.
-Décision courante : [ADR-SS-005 v0.11](../../ADR-SS-005-bounded-local-live-j4-j5-campaigns.md). Le correctif de réponses lentes/timeouts isolés et le calendrier v7 restent qualifiés dans leurs périmètres historiques. Le premier lot de résilience et son profil nominal restent également qualifiés dans leur portée : [rapport initial](../validation/WO-058-provider-resilience-qualification-20260909.md), [qualification temporelle v6](../validation/WO058-LIVE-V6-CAPACITY-20260909.md). Le [rapport du correctif](../validation/WO058-SLOW-TIMEOUT-RECOVERY-20260909.md) conserve séparément les validations finales réussies et leurs étapes intermédiaires. La révision V8 est autorisée par la demande propriétaire du 10 septembre et sa [qualification loopback locale](../validation/WO058-LIVE-V8-CAPACITY-20260910.md) est achevée ; elle ne vaut ni acceptation ni seuil du fournisseur. Les preuves v4 à V9 restent historiques.
+Référence historique : [ADR-SS-005 v0.11](../../ADR-SS-005-bounded-local-live-j4-j5-campaigns.md). Le correctif de réponses lentes/timeouts isolés et le calendrier v7 restent qualifiés dans leurs périmètres historiques. Le premier lot de résilience et son profil nominal restent également qualifiés dans leur portée : [rapport initial](../validation/WO-058-provider-resilience-qualification-20260909.md), [qualification temporelle v6](../validation/WO058-LIVE-V6-CAPACITY-20260909.md). Le [rapport du correctif](../validation/WO058-SLOW-TIMEOUT-RECOVERY-20260909.md) conserve séparément les validations finales réussies et leurs étapes intermédiaires. La révision V8 est autorisée par la demande propriétaire du 10 septembre et sa [qualification loopback locale](../validation/WO058-LIVE-V8-CAPACITY-20260910.md) est achevée ; elle ne vaut ni acceptation ni seuil du fournisseur. Les preuves v4 à V9 restent historiques.
 Réalisation : [WO-058](../work_orders/completed/WO-SS-20260907-058-bounded-live-j4-j5.md).
 
 ## Révision live-v10 — huit rencontres et pression locale durable réduite

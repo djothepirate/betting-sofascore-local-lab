@@ -1,14 +1,14 @@
 # SofaScore Local Lab
 
-**Cadrage J3 — 13 septembre 2026 :** le
-[WO-060](docs/work_orders/active/WO-SS-20260913-060-j3-automation-and-durable-catalog.md) et
-[ADR-SS-007 v0.1 proposé](ADR-SS-007-j3-automation-durable-catalog-and-live-pause.md)
-préparent l’automatisation quotidienne et les horaires J3, le manuel simplifié, le dernier succès
-durable par date et la pause/reprise des campagnes live. Le propriétaire a choisi une activation
-initiale par défaut et le maintien des horaires explicites même après un succès de leur date.
-La session est limitée aux documents : l’ADR reste `PROPOSED` et la réalisation n’a pas commencé.
-Les contrôles et leurs limites sont dans la
-[preuve de cadrage](docs/validation/WO060-J3-AUTOMATION-SCOPING-20260913.md).
+**WO-060 — réalisation J3 du 14 septembre 2026 :** la collecte manuelle utilise désormais la date
+et le bouton A, ou les fichiers JSON et le bouton B. Les préférences quotidiennes et horaires sont
+persistantes, activées initialement, et le dernier succès de chaque date alimente le menu et une
+vue paginée. Les nouvelles campagnes `live-v11` permettent la pause J3 et la reprise avec le même
+contexte live. La configuration fournisseur locale reste un prérequis au réseau.
+Voir le [mode d’emploi J3](docs/runbooks/J3-AUTOMATION-AND-DURABLE-CATALOG.md),
+[ADR-SS-007 v0.2 adopté](ADR-SS-007-j3-automation-durable-catalog-and-live-pause.md) et le
+[WO actif](docs/work_orders/active/WO-SS-20260913-060-j3-automation-and-durable-catalog.md).
+La qualification est réalisée hors fournisseur ; revue et fusion restent distinctes.
 
 **Lot du 9 septembre — qualification hors fournisseur terminée :** les cartes
 affichent buts, passes décisives et drapeaux SVG locaux ; les motifs d’indisponibilité connus

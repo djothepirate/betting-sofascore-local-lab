@@ -41,6 +41,11 @@ public class JdbcJ6RawPayloadRetentionStore implements J6RawPayloadRetentionStor
             and snapshot.received_at is not null
             and snapshot.received_at < :cutoffAt
             and snapshot.schema_status in ('PARSED', 'ENDPOINT_UNAVAILABLE')
+            and not exists (
+                select 1 from j3_collection_page page
+                join j3_last_success latest on latest.run_id = page.run_id
+                where page.snapshot_id = snapshot.id
+            )
             and (
                 exists (
                     select 1
@@ -166,6 +171,9 @@ public class JdbcJ6RawPayloadRetentionStore implements J6RawPayloadRetentionStor
         Objects.requireNonNull(backupEvidence, "backupEvidence");
         Objects.requireNonNull(batchId, "batchId");
         requireQuery(retentionDays, executedAt, cutoffAt, maximumCandidates);
+        // Same order as J3 admission/publication; no import can publish a new protected
+        // catalogue between candidate selection and removal of its source bytes.
+        jdbcTemplate.getJdbcTemplate().execute("select pg_advisory_xact_lock(-6060)");
         requireProviderQuiescent(true);
         J6RetentionPreview current = loadPreview(
                 retentionDays,
@@ -248,6 +256,11 @@ public class JdbcJ6RawPayloadRetentionStore implements J6RawPayloadRetentionStor
                 "select count(*) from live_campaign where state in ('RUNNING','CLEANUP_REQUIRED')",
                 new MapSqlParameterSource(), Long.class);
         if (!"FREE".equals(state) || active == null || active != 0)
+            throw new J6RetentionException(J6RetentionError.PROVIDER_CAMPAIGN_ACTIVE);
+        Long activeJ3 = jdbcTemplate.queryForObject(
+                "select count(*) from j3_order where state in ('QUEUED','RUNNING')",
+                new MapSqlParameterSource(), Long.class);
+        if (!"FREE".equals(state) || active == null || active != 0 || activeJ3 == null || activeJ3 != 0)
             throw new J6RetentionException(J6RetentionError.PROVIDER_CAMPAIGN_ACTIVE);
     }
 

@@ -4,7 +4,27 @@ Les évolutions notables du SofaScore Local Lab sont consignées dans ce fichier
 
 ## [Non publié]
 
-### WO-060 — cadrage de l’automatisation J3 et du catalogue durable
+### WO-060 — automatisation J3, résultats durables et pause live
+
+- Adopte ADR-SS-007 v0.2 et réalise R0–R5 : migrations V55–V57, moteur d'ordres commun
+  et publication transactionnelle du catalogue, de la preuve J8 et de l'ordre.
+- Remplace les étapes d'intention J3 par la date et le clic A, ou l'import B validé intégralement ;
+  les anciennes mutations HTTP répondent 410. Les formulaires gardent la protection locale.
+- Active par défaut l'opportunité quotidienne du serveur Web J3 configuré ; conserve le réglage,
+  les heures fixes et les horaires ponctuels. Un succès pour la date empêche un doublon au
+  démarrage ; les horaires explicites restent exécutés, sans rattrapage après indisponibilité.
+- Conserve le dernier succès de chaque date, les tournois, la pagination par collecte exacte,
+  la provenance et la reprise J8 démontrable. Un échec ne remplace pas un succès.
+- Ajoute live-v11 et le protocole worker 10 : pause de J4/J5, contexte J3 temporaire isolé dans
+  le même worker, nettoyage vérifié puis J4 de revalidation dans le contexte live initial.
+  Les politiques historiques et leurs empreintes restent conservées.
+- Étend J6 aux dix tables J3 et à leur empreinte de restauration V57 ; protège les sources des
+  derniers succès sous le verrou de publication. Qualification native sur boucle locale et
+  sauvegarde/restauration sur PostgreSQL jetable, sans fournisseur ni base opérateur.
+- Ajoute le [guide J3](docs/runbooks/J3-AUTOMATION-AND-DURABLE-CATALOG.md), un lecteur de
+  configuration V11 sans mutation, un profil de replay distinct et les preuves de réalisation.
+
+#### Historique du cadrage au commit 9e0d1cb
 
 - Prépare un Work Order et ADR-SS-007 v0.1 `PROPOSED`, conformément au choix propriétaire de
   limiter cette phase au cadrage et aux décisions d’architecture.

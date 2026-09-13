@@ -1,6 +1,6 @@
 # WO-SS-20260913-060 — Automatisation J3 et dernier catalogue durable par date
 
-- **Statut :** `SCOPED — READY_FOR_OWNER_REVIEW` ; réalisation non commencée, clôture et livraison non effectuées.
+- **Statut :** `IN_PROGRESS` — réalisation qualifiée localement le 14 septembre 2026 ; prête pour revue, clôture effective après fusion de la PR.
 - **Date de cadrage :** 2026-09-13.
 - **Jalon :** J3, avec coordination des campagnes live J4/J5 et impacts de persistance/audit J6/J8.
 - **Branche :** `feature/V0.1.0-RC01-CODEX-WO-SS-20260913-060`.
@@ -8,20 +8,44 @@
 - **Base exacte :** `d4c3d8ceeb6c46442f0792d436a3df7e2630f599`, vérifiée sur GitHub le 13 septembre.
 - **Worktree :** `.tmp/wo060-j3-automation-design` sous la racine de travail Codex du Lab.
 - **Version Maven de base :** `0.1.0-rc.1-SNAPSHOT` ; Java 25 LTS, Spring Boot 4.1.0, Flyway V54.
-- **Décision proposée :** [ADR-SS-007 v0.1](../../../ADR-SS-007-j3-automation-durable-catalog-and-live-pause.md), `PROPOSED`.
-- **Autorité actuelle :** demande « Améliorations J3 », puis choix explicite « Work Order et décisions d’architecture » ; préparation documentaire seulement.
+- **Décision de réalisation :** [ADR-SS-007 v0.2](../../../ADR-SS-007-j3-automation-durable-catalog-and-live-pause.md), `ACCEPTED_FOR_IMPLEMENTATION`.
+- **Autorité actuelle :** instruction propriétaire « Commencer l’implémentation du WO-060 », après cadrage au commit `9e0d1cb` ; réalisation et qualification hors fournisseur autorisées.
 - **Statuts conservés :** `EXPERIMENTAL`, `LOCAL_ONLY`, `NOT_PRODUCTION_APPROVED`, `NO_CRITICAL_DEPENDENCY`.
 
 ## 1. Fiche de reprise
+
+**Ouverture de réalisation — 2026-09-13 :** le worktree est propre au commit `9e0d1cb`.
+Les sections de cadrage ci-dessous sont le contrat de réalisation ; les anciennes mentions
+de « réalisation future » ou de phase documentaire décrivent l’étape précédente. L’autorisation
+actuelle couvre R0 à R5, sans autre confirmation des choix déjà présentés. Aucun ordre réel
+ni migration de la base opérateur n’est lancé par l’agent pendant les tests.
+
+**Réalisation au 14 septembre 2026 :** les étapes R0–R5 sont réalisées et qualifiées localement. V55 conserve les
+collections, leurs pages exactes et le dernier succès par date ; V56 conserve les préférences
+et ordres ; V57 ajoute live-v11 et ses transitions de pause. Le moteur commun alimente les
+actions A/B directes, le suivi, la pagination et la sélection de tournoi liée à la collecte exacte.
+Le démarrage et les horaires sont limités au serveur Web local ; les commandes J6 ne les lancent pas.
+
+La qualification Chromium loopback prouve J4 → J3 → J4 dans le même worker, sans transfert de
+cookies et avec nettoyage complet. Une façade V11 indépendante préserve les classes et empreintes
+historiques V8/V9. J6 protège les derniers succès et compare les dix tables J3 lors d'une
+restauration sur PostgreSQL jetable. Les résultats effectifs figurent dans le
+[rapport de réalisation](../../validation/WO060-J3-IMPLEMENTATION-20260914.md).
+La base opérateur et le fournisseur ne participent à aucun de ces essais.
+
+La clôture J8 du nouveau parcours utilise une transaction obligatoire commune à la publication
+du catalogue et de l’ordre. Les transactions autonomes des parcours historiques sont conservées.
+Un test PostgreSQL injecte un échec après cette publication et vérifie l’annulation du succès
+J8 et du nouveau catalogue, avec conservation du précédent succès.
 
 | Élément | État établi |
 |---|---|
 | Objectif | Collecter J3 directement ou selon une configuration locale persistante, retrouver le dernier succès de chaque date, suspendre/reprendre le live autour de J3 |
 | Base | Train GitHub et worktree source propres au même SHA ; worktree WO distinct créé depuis ce train |
-| Actuel | Preuve J3 en mémoire ; catalogue limité au dernier terminal du processus ; garde fournisseur détenu pendant toute la campagne live |
+| Réalisation | Dernier succès SQL par date ; ordres durables ; sous-opération J3 sous le même garde live |
 | Invariants | Origine/endpoint existants, pages 1..35, données et provenance séparées, un échange fournisseur à la fois, aucune donnée de session conservée |
-| Prochaine étape après cadrage | Revue de l’ADR proposé, puis décision de réalisation et qualification hors fournisseur |
-| Incertitudes à lever en réalisation | Reconstructibilité de chaque ancien succès, protocole de contexte J3 isolé et durée réelle de pause/reprise |
+| Prochaine étape | Revue humaine du diff et des preuves ; PR vers le train avant clôture effective |
+| Limites | Sources historiques manquantes signalées ; capacité fournisseur et recette opérateur non mesurées |
 
 La [preuve de cadrage](../../validation/WO060-J3-AUTOMATION-SCOPING-20260913.md) distingue les
 observations du dépôt, les contrôles réellement exécutés et les critères futurs ci-dessous.
@@ -66,17 +90,17 @@ du calendrier demandé, pas par la seule date de réception.
 - Suppression des confirmations de découverte tournoi, J4, J5 ou J7 ; export/livraison J7 automatique.
 - Purge primaire, migration primaire, sauvegarde native opérateur ou campagne fournisseur exécutée par ce cadrage.
 
-### 3.3 Livrables autorisés maintenant
+### 3.3 Livrables réalisés
 
-Le présent WO, l’ADR proposé, une preuve de cadrage et les liens d’orientation README,
-CHANGELOG et architecture. Aucune migration SQL, classe Java, interface, propriété runtime
-ou automatisation réelle n’est modifiée par la phase documentaire.
+Code Java, migrations append-only V55–V57, contrôleurs et vues, protocole worker 10,
+tests standard/PostgreSQL/Chromium local, scripts J6, lecteur de configuration V11,
+ADR amendés, guide opérateur, changelog et rapport. Le cadrage initial est conservé dans Git ;
+l'instruction de réalisation autorise ce périmètre.
 
-## 4. Découpage de réalisation proposé
+## 4. Découpage de réalisation
 
-Les étapes suivantes appartiennent à une réalisation future. Leur ordre résout d’abord la
-durabilité, puis l’admission et enfin l’automatisation fournisseur complète. Aucun jalon
-intermédiaire ne doit activer un horaire qui ne sait pas encore arbitrer une campagne live.
+Les étapes définissent les livrables et leur qualification. L'automatisation n'est raccordée
+qu'au moteur commun capable d'arbitrer le live ; aucun jalon intermédiaire n'est livré à l'exploitation.
 
 | Étape | Travaux | Preuve de sortie attendue |
 |---|---|---|
@@ -89,33 +113,32 @@ intermédiaire ne doit activer un horaire qui ne sait pas encore arbitrer une ca
 
 Le WO reste actif durant ces étapes. Une clôture ne devient effective qu’après fusion de sa
 PR vers le train, conformément à AGENTS. Un push, une PR ou une fusion n’est pas effectué
-par la préparation documentaire présente.
+par la réalisation locale sans publication distante.
 
 ## 5. Points d’intégration constatés
 
-| Zone du dépôt | Intervention attendue |
+| Zone du dépôt | Intervention réalisée |
 |---|---|
 | `application/network/J3ManualCollectionEvidenceService`, `J3DynamicManualCallService`, `J3LocalJsonImportService` | Remplacer la dépendance au seul dernier document mémoire par un résultat durable, commun et transactionnel |
 | `J3ManualCallControlService`, `J3ManualCallPolicy`, `J3ProviderQualificationPolicy` | Autorité de collecte directe/planifiée ; détacher les verrous opérateur supprimés des protections techniques et autres jalons |
 | `J3TournamentCatalogService` | Lire une collecte exacte et son dernier succès par date ; garder intégrité et règles d’éligibilité |
 | `adapter/web/ManualCallController`, `DashboardController`, `templates/dashboard.html` | Parcours A/B direct, configuration, sélection de date, état des ordres et nouvelle vue paginée |
 | `TournamentEventDiscoveryControlService` et contrôleur associé | Transporter/revalider `collectionId`, date et tournoi ; aucune dépendance au dernier résultat d’un autre onglet |
-| `ManualProviderRequestCoordinator`, `LiveCampaignService`, `LiveSchedule`, `LiveProviderSession` | Pause de toutes les familles, même propriétaire, reprise J4 et budgets/échéance maintenus |
+| `ManualProviderRequestCoordinator`, `LiveCampaignService`, `LiveSessionSchedule`, `LiveProviderSession` | Pause de toutes les familles, même propriétaire, reprise J4 et budgets/échéance maintenus |
 | `ChildJvmPlaywrightProviderSupervisor`, protocoles et sources `src/provider-playwright` | Capacité de contexte J3 isolé, sous-autorité bornée, interdiction de dispatch du contexte en pause, nettoyage prouvé |
 | Ports/stores de garde, résilience, J8 et migrations à partir de V54 | Occurrences, runs, succès, pages, projection, transitions et claims cohérents |
 | `JdbcJ6RawPayloadRetentionStore`, scripts/runbook J6 | Protection des derniers succès et empreintes de sauvegarde/restauration étendues sur cible isolée |
 
-Les nouveaux noms de services/tables restent des propositions de conception de l’ADR. Les
-scripts de schéma courant devront être réévalués au moment du développement si un autre WO a
-avancé le train ; aucune migration existante ne sera réécrite.
+Les noms effectifs et V55–V57 sont documentés dans l'architecture et le rapport.
+Aucune migration V1–V54 n'est modifiée ; les politiques historiques restent conservées.
 
-## 6. Matrice de recette à réaliser
+## 6. Matrice de recette et preuves
 
-**Aucun cas ci-dessous n’est qualifié par le seul cadrage.** Les essais standard et PostgreSQL
+**Les preuves effectives sont référencées dans le rapport ; le cadrage seul ne qualifie aucun cas.** Les essais standard et PostgreSQL
 utilisent des fixtures ou transports synthétiques ; Chromium de qualification contacte
 seulement une origine loopback. Aucun essai fournisseur n’est impliqué.
 
-| ID | Situation | Résultat observable attendu | Preuve prévue |
+| ID | Situation | Résultat observable attendu | Type de preuve |
 |---|---|---|---|
 | AC01 | Première mise en service, Lab J3 correctement configuré, aucun succès aujourd’hui | Activé, date du jour, une collecte après disponibilité complète ; aucun geste préparatoire | Application + horloge/transport simulés |
 | AC02 | Manuel A réussi pour D, redémarrage le même jour D | Aucun automatique opportuniste ; catalogue D restauré | PostgreSQL + deux contextes applicatifs |
@@ -161,12 +184,8 @@ automatique. Ce réglage de test ne réintroduit aucune étape de confirmation d
 
 ## 7. Validation et définition de fini
 
-Pour le cadrage présent : relier chaque décision à la demande ou à une proposition explicite,
-vérifier chemins/UTF-8/cohérence/secrets, exécuter la vérification Maven requise par AGENTS et
-consigner son résultat réel dans la preuve. Aucune qualification de la future fonctionnalité
-n’est déduite d’un build de la base documentaire.
-
-Pour la réalisation future :
+La preuve du cadrage reste historique. Ces contrôles portent sur la réalisation courante ;
+les résultats, échecs intermédiaires résolus et limites figurent dans le rapport.
 
 1. `mvnw.cmd clean verify`, puis `mvnw.cmd -Pintegration-tests verify` puisque persistance, migrations et concurrence changent ; contrôler les exécutions effectives Surefire/Failsafe.
 2. Tests ciblés d’ordres et d’horloge, PostgreSQL neuf et upgrade prérempli, rollback et collisions ; aucune substitution H2.
@@ -176,19 +195,22 @@ Pour la réalisation future :
 6. WO, ADR adoptés, architecture, runbooks, changelog et rapport final alignés sur le code réellement livré ; fichiers modifiés et commandes/résultats listés.
 7. Revue humaine, réexécution des tests pertinents et fusion de la PR dans le train avant clôture effective. Toute campagne fournisseur reste une opération opérateur distincte.
 
-## 8. Décisions encore proposées et limites du cadrage
+## 8. Décisions adoptées et limites de qualification
 
-L’activation initiale et le maintien des horaires explicites après un succès ont déjà été
-arbitrés par le propriétaire ; ils ne sont pas à redemander. Le périmètre actuel se termine
-avec des documents prêts à relire, conformément à son choix de ne pas lancer la réalisation.
+L'activation initiale, les horaires explicites après succès et les règles techniques de l'ADR
+v0.2 sont adoptés. Aucun arbitrage déjà donné n'est à redemander.
 
-L’ADR propose concrètement : une tentative opportuniste unique par jour même après échec,
-pas de rattrapage des horaires hors service, une désactivation arrêtant les pages automatiques
-suivantes, les règles de changement d’heure, une borne J3 de 20 minutes à qualifier et un
-contexte J3 neuf isolé dans le runtime live. Ces choix techniques restent soumis à la revue
-de la proposition v0.1 ; leurs tests ne sont pas exécutés par la phase documentaire.
+La tentative opportuniste est unique par jour même après échec ; les horaires hors service ne
+sont pas rattrapés ; la désactivation arrête les pages suivantes. Les changements d'heure et la
+borne de 20 minutes sont explicites. Le contexte J3 est neuf et isolé, puis fermé avant reprise
+à partir du contexte live initial.
 
-L’inventaire historique sur la base concernée et la capacité temporelle du nouveau worker ne
-sont pas encore établis. Un résultat ancien dont les preuves ont disparu ne peut pas être
-reconstitué fidèlement par décret. Ces limites sont des critères de réalisation, pas une
-raison de remplacer la date ou les sources demandées par d’autres données.
+La qualification utilise des données synthétiques et des bases jetables. Elle ne mesure pas
+les performances fournisseur et ne prouve pas la reconstructibilité de chaque ancien succès
+de la base opérateur. Un succès attesté dont les sources ont disparu reste signalé indisponible.
+Après perte d'un processus, une transition de pause non achevée conserve sa dernière phase
+observée ; elle ne prouve pas un nettoyage et n'autorise aucune reprise. L'ordre est interrompu
+et aucune campagne live n'est recréée.
+
+Les profils et lanceurs opérateur ne sont pas modifiés. Le lecteur V11 affiche dix valeurs
+selon le guide J3. La revue précède la fusion ; le WO reste actif jusqu'à la fusion de sa PR vers le train.

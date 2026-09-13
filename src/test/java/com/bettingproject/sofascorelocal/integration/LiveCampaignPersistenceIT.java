@@ -1739,10 +1739,10 @@ class LiveCampaignPersistenceIT {
         f.store.transition(own,m.targets().getFirst().canonicalEventId(),"STOPPED_OPERATOR","OPERATOR_STOP",T0.plusSeconds(12),null);
         f.store.transition(own,null,"COMPLETED","CLEANUP_VERIFIED",T0.plusSeconds(13),null);
         f.guard.releaseAfterVerifiedCleanup(own,T0.plusSeconds(14));
-        // Exercise the historical ledger first, then upgrade it for the current V51 J6 tooling.
+        // Exercise the historical ledger first, then upgrade it for the current V57 J6 tooling.
         var campaignBeforeUpgrade=f.store.find(m.campaignId()).orElseThrow();
         var guardBeforeUpgrade=f.guard.snapshot();
-        assertThat(f.migrate("51").migrationsExecuted).isEqualTo(12);
+        assertThat(f.migrate("57").migrationsExecuted).isEqualTo(18);
         assertThat(f.store.find(m.campaignId())).contains(campaignBeforeUpgrade);
         assertThat(f.guard.snapshot()).isEqualTo(guardBeforeUpgrade);
         String script=Files.readString(Path.of("scripts/Backup-Restore-J6.ps1"),StandardCharsets.UTF_8);
@@ -1901,6 +1901,124 @@ class LiveCampaignPersistenceIT {
             assertThat(List.of(first.get(10,TimeUnit.SECONDS),second.get(10,TimeUnit.SECONDS)).stream().filter(Optional::isPresent).count()).isEqualTo(1);
         }
         assertThat(f.guard.snapshot().generation()).isEqualTo(1);
+    }
+
+
+    @Test
+    void v11PauseKeepsTheSameGuardAndExcludesBothJdbcAndDirectLiveDispatch() throws Exception {
+        Fixture f=fixture("57"); Target target=f.seed(EVENT);
+        Manifest prior=v10Manifest(List.of(target));
+        Manifest manifest=new Manifest(prior.campaignId(),prior.manifestSha256(),"live-v11",prior.preparedAt(),prior.expiresAt(),
+                prior.duration(),prior.maximumCallsPerEvent(),prior.maximumCalls(),prior.maximumBytes(),prior.qualifiedMatchCapacity(),
+                prior.targets(),prior.admissionProfile(),prior.cycleInterval());
+        Ownership own=f.start(manifest);Guard before=f.guard.snapshot();
+        var tx=new JdbcTransactionManager(f.ds);var named=new NamedParameterJdbcTemplate(f.ds);
+        var collections=transactional(new com.bettingproject.sofascorelocal.adapter.persistence.JdbcJ3CollectionStore(named),
+                com.bettingproject.sofascorelocal.port.J3CollectionStore.class,tx);
+        var orders=transactional(new com.bettingproject.sofascorelocal.adapter.persistence.JdbcJ3AutomationStore(named,collections),
+                com.bettingproject.sofascorelocal.port.J3AutomationStore.class,tx);
+        var pauses=transactional(new com.bettingproject.sofascorelocal.adapter.persistence.JdbcJ3LivePauseStore(f.jdbc,
+                new tools.jackson.databind.ObjectMapper()),com.bettingproject.sofascorelocal.port.J3LivePauseStore.class,tx);
+        var orderOwner=new com.bettingproject.sofascorelocal.domain.scheduledevents.J3AutomationData.Owner(UUID.randomUUID(),1234,T0);
+        var queued=orders.manual(UUID.randomUUID(),java.time.LocalDate.parse("2026-09-13"),
+                com.bettingproject.sofascorelocal.domain.scheduledevents.J3CollectionData.Trigger.MANUAL_PROVIDER,null,orderOwner,T0.plusSeconds(2));
+        var order=orders.claim(orderOwner,T0.plusSeconds(3)).orElseThrow();
+        UUID group=UUID.randomUUID();Instant due=T0.plusSeconds(10);
+        var attempt=f.store.reserveAttempt(new AttemptRequest(own,UUID.randomUUID(),target.canonicalEventId(),0,
+                SofascoreEndpointType.EVENT_DETAILS,"J4_INITIAL",due,due,false,group,0,0)).orElseThrow();
+        pauses.request(order.id(),own,T0.plusSeconds(11),order.deadline());
+        assertThatThrownBy(()->f.store.recordDispatch(own,attempt.attemptId(),due)).hasMessage("LIVE_J3_PAUSE_REQUESTED");
+        assertThatThrownBy(()->f.jdbc.update("insert into live_call_dispatch(attempt_id,authorized_at) values (?,?)",
+                attempt.attemptId(),java.sql.Timestamp.from(due))).hasMessageContaining("live dispatch is paused for J3");
+        pauses.transition(order.id(),own,"REQUESTED","QUIESCENT",T0.plusSeconds(11),null,List.of());
+        pauses.transition(order.id(),own,"QUIESCENT","J3_ACTIVE",T0.plusSeconds(12),null,List.of());
+        collections.begin(order.id(),order.date(),order.trigger(),T0.plusSeconds(12));
+        collections.publish(new com.bettingproject.sofascorelocal.domain.scheduledevents.J3CollectionData.Proof(
+                order.id(),order.date(),order.trigger(),T0.plusSeconds(12),T0.plusSeconds(13),
+                com.bettingproject.sofascorelocal.domain.scheduledevents.J3CollectionData.State.FAILED,"SCHEMA_INCOMPATIBLE",List.of()),List.of());
+        orders.finish(order.id(),orderOwner,com.bettingproject.sofascorelocal.domain.scheduledevents.J3AutomationData.OrderState.FAILED,
+                "SCHEMA_INCOMPATIBLE",T0.plusSeconds(13));
+        pauses.transition(order.id(),own,"J3_ACTIVE","CLEANED",T0.plusSeconds(13),"SCHEMA_INCOMPATIBLE",List.of());
+        pauses.transition(order.id(),own,"CLEANED","RESUMING",T0.plusSeconds(14),null,List.of());
+        pauses.transition(order.id(),own,"RESUMING","RESUMED",T0.plusSeconds(15),null,List.of(
+                new com.bettingproject.sofascorelocal.port.J3LivePauseStore.MissedSlot(target.canonicalEventId(),"EVENT_DETAILS",due,1)));
+        assertThat(f.guard.snapshot()).isEqualTo(before);
+        assertThatThrownBy(()->f.store.recordDispatch(own,attempt.attemptId(),T0.plusSeconds(16)))
+                .hasMessageContaining("live group was abandoned for J3");
+        var fresh=f.store.reserveAttempt(new AttemptRequest(own,UUID.randomUUID(),target.canonicalEventId(),1,
+                SofascoreEndpointType.EVENT_DETAILS,"J4_J3_RESUME_RECHECK",T0.plusSeconds(16),T0.plusSeconds(16),
+                false,UUID.randomUUID(),1,0)).orElseThrow();
+        f.store.recordDispatch(own,fresh.attemptId(),T0.plusSeconds(16));
+        assertThat(f.jdbc.queryForObject("select count(*) from j3_live_pause_transition where run_id=?",Integer.class,order.id())).isEqualTo(6);
+        assertThatThrownBy(()->f.jdbc.update("delete from j3_live_pause_transition where run_id=?",order.id()))
+                .hasMessageContaining("append-only");
+        assertThatThrownBy(()->pauses.transition(order.id(),own,"RESUMED","J3_ACTIVE",T0.plusSeconds(17),null,List.of()))
+                .hasMessageContaining("transition is invalid");
+        // Qualify a real pg_dump/pg_restore inside this disposable PostgreSQL container.
+        // No operator database, local application, scheduler or browser is started.
+        f.store.transition(own,target.canonicalEventId(),"STOPPED_OPERATOR","OPERATOR_STOP",T0.plusSeconds(18),null);
+        f.store.transition(own,null,"COMPLETED","CLEANUP_VERIFIED",T0.plusSeconds(19),null);
+        f.guard.releaseAfterVerifiedCleanup(own,T0.plusSeconds(20));
+        var j3=new J3CollectionPersistenceIT.Fixture(f.ds);
+        var date=java.time.LocalDate.parse("2026-09-13");
+        j3.publish(date,List.of(j3.page(date,1,false,1,T0.plusSeconds(21))),T0.plusSeconds(21));
+        var other=j3.publish(date.plusDays(1),List.of(j3.page(date.plusDays(1),1,false,2,T0.plusSeconds(24))),T0.plusSeconds(24));
+        var latest=j3.publish(date,List.of(j3.page(date,1,false,3,T0.plusSeconds(27))),T0.plusSeconds(27));
+        orders.configure(1,false,com.bettingproject.sofascorelocal.domain.scheduledevents.J3AutomationData.Mode.DAILY_AT,
+                java.time.LocalTime.of(8,30),T0.plusSeconds(30));
+        orders.schedule(UUID.randomUUID(),1,date,T0.plusSeconds(7200),T0.plusSeconds(31));
+        String script=Files.readString(Path.of("scripts/Backup-Restore-J6.ps1"),StandardCharsets.UTF_8);
+        String sql=script.split("\\$j3LedgerFingerprintSql = @'\\r?\\n",2)[1].split("\\r?\\n'@",2)[0];
+        String fingerprint=f.jdbc.queryForObject(sql,String.class);
+        assertThat(fingerprint).contains("J3_LIVE_PAUSE_TRANSITION|","J3_LAST_SUCCESS|","J3_AUTOMATION_SETTINGS|");
+        String sourceDatabase=f.ds.getUrl().substring(f.ds.getUrl().lastIndexOf('/')+1);
+        String restoredDatabase="wo060_restored_"+DATABASE.incrementAndGet();
+        String dump="/tmp/wo060-"+UUID.randomUUID()+".dump";
+        try {
+            assertThat(POSTGRES.execInContainer("pg_dump","--username",POSTGRES.getUsername(),"--dbname",sourceDatabase,
+                    "--format=custom","--no-owner","--no-privileges","--file",dump).getExitCode()).isZero();
+            assertThat(POSTGRES.execInContainer("createdb","--username",POSTGRES.getUsername(),restoredDatabase).getExitCode()).isZero();
+            assertThat(POSTGRES.execInContainer("pg_restore","--username",POSTGRES.getUsername(),"--dbname",restoredDatabase,
+                    "--exit-on-error","--no-owner","--no-privileges",dump).getExitCode()).isZero();
+            String url=POSTGRES.getJdbcUrl().substring(0,POSTGRES.getJdbcUrl().lastIndexOf('/')+1)+restoredDatabase;
+            var restored=new J3CollectionPersistenceIT.Fixture(new DriverManagerDataSource(url,POSTGRES.getUsername(),POSTGRES.getPassword()));
+            assertThat(restored.jdbc.queryForObject(sql,String.class)).isEqualTo(fingerprint);
+            assertThat(restored.migrate("57")).isZero();
+            assertThat(restored.store.latest(date)).contains(latest);
+            assertThat(restored.store.latest(date.plusDays(1))).contains(other);
+            assertThat(restored.store.page(latest.id(),date,1,25)).get().satisfies(p->assertThat(p.entries()).hasSize(1));
+            assertThat(restored.jdbc.queryForObject("select enabled from j3_automation_settings",Boolean.class)).isFalse();
+            assertThat(restored.jdbc.queryForObject("select count(*) from j3_live_pause_transition",Long.class)).isEqualTo(6);
+            assertThat(restored.jdbc.queryForObject("select count(*) from j3_order where state='FUTURE'",Long.class)).isEqualTo(1);
+            assertThat(restored.jdbc.queryForObject("select count(*) from provider_snapshot where payload_raw is not null and encode(sha256(payload_raw),'hex')<>payload_sha256",Long.class)).isZero();
+        } finally {
+            POSTGRES.execInContainer("dropdb","--username",POSTGRES.getUsername(),"--if-exists","--force",restoredDatabase);
+            POSTGRES.execInContainer("rm","-f",dump);
+        }
+    }
+
+    @Test
+    void v57UpgradePreservesHistoricalV10WithoutGrantingJ3PauseCapability() {
+        Fixture f=fixture("54");Manifest manifest=v10Manifest(List.of(f.seed(EVENT)));Ownership own=f.start(manifest);
+        CampaignView before=f.store.find(manifest.campaignId()).orElseThrow();Guard guardBefore=f.guard.snapshot();
+        f.migrate("57");
+        assertThat(f.store.find(manifest.campaignId())).contains(before);assertThat(f.guard.snapshot()).isEqualTo(guardBefore);
+        assertThat(f.jdbc.queryForObject("select enabled from j3_automation_settings",Boolean.class)).isTrue();
+        assertThat(f.jdbc.queryForObject("select count(*) from j3_order",Integer.class)).isZero();
+        var named=new NamedParameterJdbcTemplate(f.ds);var tx=new JdbcTransactionManager(f.ds);
+        var collections=transactional(new com.bettingproject.sofascorelocal.adapter.persistence.JdbcJ3CollectionStore(named),
+                com.bettingproject.sofascorelocal.port.J3CollectionStore.class,tx);
+        var orders=transactional(new com.bettingproject.sofascorelocal.adapter.persistence.JdbcJ3AutomationStore(named,collections),
+                com.bettingproject.sofascorelocal.port.J3AutomationStore.class,tx);
+        var pauses=transactional(new com.bettingproject.sofascorelocal.adapter.persistence.JdbcJ3LivePauseStore(f.jdbc,
+                new tools.jackson.databind.ObjectMapper()),com.bettingproject.sofascorelocal.port.J3LivePauseStore.class,tx);
+        var owner=new com.bettingproject.sofascorelocal.domain.scheduledevents.J3AutomationData.Owner(UUID.randomUUID(),1234,T0);
+        orders.manual(UUID.randomUUID(),java.time.LocalDate.parse("2026-09-13"),
+                com.bettingproject.sofascorelocal.domain.scheduledevents.J3CollectionData.Trigger.MANUAL_PROVIDER,null,owner,T0.plusSeconds(2));
+        var order=orders.claim(owner,T0.plusSeconds(3)).orElseThrow();
+        assertThatThrownBy(()->pauses.request(order.id(),own,T0.plusSeconds(4),order.deadline()))
+                .hasMessageContaining("live-v11 owner");
+        assertThat(f.guard.snapshot()).isEqualTo(guardBefore);
     }
 
     private static Fixture fixture(String target) {

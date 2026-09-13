@@ -841,6 +841,22 @@ from (
 ) live_evidence
 '@
 
+$j3LedgerFingerprintSql = @'
+select coalesce(string_agg(value, E'\n' order by value collate "C"), '')
+from (
+    select 'J3_COLLECTION_RUN|' || to_jsonb(t)::text as value from j3_collection_run t
+    union all select 'J3_COLLECTION_PAGE|' || to_jsonb(t)::text as value from j3_collection_page t
+    union all select 'J3_CATALOG_ENTRY|' || to_jsonb(t)::text as value from j3_catalog_entry t
+    union all select 'J3_CATALOG_SOURCE|' || to_jsonb(t)::text as value from j3_catalog_source t
+    union all select 'J3_LAST_SUCCESS|' || to_jsonb(t)::text as value from j3_last_success t
+    union all select 'J3_LEGACY_RECOVERY|' || to_jsonb(t)::text as value from j3_legacy_recovery t
+    union all select 'J3_AUTOMATION_SETTINGS|' || to_jsonb(t)::text as value from j3_automation_settings t
+    union all select 'J3_ORDER|' || to_jsonb(t)::text as value from j3_order t
+    union all select 'J3_LIVE_PAUSE|' || to_jsonb(t)::text as value from j3_live_pause t
+    union all select 'J3_LIVE_PAUSE_TRANSITION|' || to_jsonb(t)::text as value from j3_live_pause_transition t
+) j3_evidence
+'@
+
 Push-Location $repositoryRoot
 $operatorCancellation = New-J6ConsoleCancellationRegistration
 $partialPath = Join-Path $destinationDirectory `
@@ -877,12 +893,13 @@ try {
     }
 
     $sourceFlywayVersion = Invoke-PrimaryScalar -Sql $flywaySql
-    if ($sourceFlywayVersion -cne '54') {
-        throw 'Flyway V54 must be applied before the J6 backup/restore qualification.'
+    if ($sourceFlywayVersion -cne '57') {
+        throw 'Flyway V57 must be applied before the J6 backup/restore qualification.'
     }
     $providerGuardState = Invoke-PrimaryScalar -Sql 'select state from provider_campaign_guard where singleton_id=1'
     $activeLiveCount = [long](Invoke-PrimaryScalar -Sql "select count(*) from live_campaign where state in ('RUNNING','CLEANUP_REQUIRED')")
-    if ($providerGuardState -cne 'FREE' -or $activeLiveCount -ne 0) {
+    $activeJ3Count = [long](Invoke-PrimaryScalar -Sql "select count(*) from j3_order where state in ('QUEUED','RUNNING')")
+    if ($providerGuardState -cne 'FREE' -or $activeLiveCount -ne 0 -or $activeJ3Count -ne 0) {
         throw 'Stop provider campaigns and verify cleanup before J6 backup; the durable provider guard must be FREE.'
     }
     $coverageReceivedSql = @'
@@ -893,6 +910,18 @@ from provider_snapshot
 '@
     $source = [ordered]@{
         flywayVersion = $sourceFlywayVersion
+        j3CollectionCount = [long](Invoke-PrimaryScalar -Sql 'select count(*) from j3_collection_run')
+        j3PageCount = [long](Invoke-PrimaryScalar -Sql 'select count(*) from j3_collection_page')
+        j3CatalogEntryCount = [long](Invoke-PrimaryScalar -Sql 'select count(*) from j3_catalog_entry')
+        j3CatalogSourceCount = [long](Invoke-PrimaryScalar -Sql 'select count(*) from j3_catalog_source')
+        j3LastSuccessCount = [long](Invoke-PrimaryScalar -Sql 'select count(*) from j3_last_success')
+        j3RecoveryCount = [long](Invoke-PrimaryScalar -Sql 'select count(*) from j3_legacy_recovery')
+        j3SettingsCount = [long](Invoke-PrimaryScalar -Sql 'select count(*) from j3_automation_settings')
+        j3OrderCount = [long](Invoke-PrimaryScalar -Sql 'select count(*) from j3_order')
+        j3PauseCount = [long](Invoke-PrimaryScalar -Sql 'select count(*) from j3_live_pause')
+        j3PauseTransitionCount = [long](Invoke-PrimaryScalar -Sql 'select count(*) from j3_live_pause_transition')
+        activeJ3Count = $activeJ3Count
+        j3LedgerSha256 = Get-TextSha256 (Invoke-PrimaryScalar -Sql $j3LedgerFingerprintSql)
         snapshotCount = [long](Invoke-PrimaryScalar -Sql 'select count(*) from provider_snapshot')
         occurrenceCount = [long](Invoke-PrimaryScalar -Sql 'select count(*) from provider_snapshot_occurrence')
         canonicalObservationCount = [long](Invoke-PrimaryScalar -Sql 'select count(*) from canonical_event_observation')
@@ -1044,6 +1073,18 @@ from provider_snapshot
 
     $restored = [ordered]@{
         flywayVersion = Invoke-RestoreScalar -Database $restoreDatabase -Sql $flywaySql
+        j3CollectionCount = [long](Invoke-RestoreScalar -Database $restoreDatabase -Sql 'select count(*) from j3_collection_run')
+        j3PageCount = [long](Invoke-RestoreScalar -Database $restoreDatabase -Sql 'select count(*) from j3_collection_page')
+        j3CatalogEntryCount = [long](Invoke-RestoreScalar -Database $restoreDatabase -Sql 'select count(*) from j3_catalog_entry')
+        j3CatalogSourceCount = [long](Invoke-RestoreScalar -Database $restoreDatabase -Sql 'select count(*) from j3_catalog_source')
+        j3LastSuccessCount = [long](Invoke-RestoreScalar -Database $restoreDatabase -Sql 'select count(*) from j3_last_success')
+        j3RecoveryCount = [long](Invoke-RestoreScalar -Database $restoreDatabase -Sql 'select count(*) from j3_legacy_recovery')
+        j3SettingsCount = [long](Invoke-RestoreScalar -Database $restoreDatabase -Sql 'select count(*) from j3_automation_settings')
+        j3OrderCount = [long](Invoke-RestoreScalar -Database $restoreDatabase -Sql 'select count(*) from j3_order')
+        j3PauseCount = [long](Invoke-RestoreScalar -Database $restoreDatabase -Sql 'select count(*) from j3_live_pause')
+        j3PauseTransitionCount = [long](Invoke-RestoreScalar -Database $restoreDatabase -Sql 'select count(*) from j3_live_pause_transition')
+        activeJ3Count = [long](Invoke-RestoreScalar -Database $restoreDatabase -Sql "select count(*) from j3_order where state in ('QUEUED','RUNNING')")
+        j3LedgerSha256 = Get-TextSha256 (Invoke-RestoreScalar -Database $restoreDatabase -Sql $j3LedgerFingerprintSql)
         snapshotCount = [long](Invoke-RestoreScalar -Database $restoreDatabase -Sql 'select count(*) from provider_snapshot')
         occurrenceCount = [long](Invoke-RestoreScalar -Database $restoreDatabase -Sql 'select count(*) from provider_snapshot_occurrence')
         canonicalObservationCount = [long](Invoke-RestoreScalar -Database $restoreDatabase -Sql 'select count(*) from canonical_event_observation')

@@ -1,5 +1,14 @@
 # Runbook local — SofaScore Local Lab
 
+**Évolution J3 courante — WO-060, 14 septembre 2026 :** le
+[guide J3](J3-AUTOMATION-AND-DURABLE-CATALOG.md) remplace le parcours d'intention historique :
+date + clic A, ou date + import B ; dernier succès durable par date, menu et pagination
+après redémarrage. L'automatisation est initialement activée dans le serveur Web J3 configuré
+puis pilotable dans l'interface. Les heures explicites restent exécutées après succès ;
+le démarrage opportuniste évite ce doublon. J0/J1 restent sans transport.
+Les nouvelles campagnes live utilisent V11 et les scripts J6 exigent V57.
+Les prescriptions historiques suivantes restent applicables hors de ces changements.
+
 ## 1. Objectif
 
 Démarrer, vérifier, exploiter et arrêter les jalons J0 à J8 sur Windows sans exposer de service
@@ -287,6 +296,11 @@ reprise, même après redémarrage. Ne pas effacer ou modifier un snapshot pour 
 L’interrogation complète répétable depuis l’interface demeure hors périmètre.
 
 ### 3.8 Effectuer une collecte manuelle répétable à pagination dynamique
+
+**Procédure courante :** suivre les actions A/B du [guide WO-060](J3-AUTOMATION-AND-DURABLE-CATALOG.md#2-collecte-manuelle-a-ou-b).
+Les barrières et confirmations J3 sont supprimées ; consulter après redémarrage ne demande
+aucune nouvelle collecte. **Les étapes suivantes sont la référence historique avant WO-060**,
+conservée pour relire les anciennes preuves ; ses routes de mutation sont retirées.
 
 Cette procédure remplace fonctionnellement la reprise fixe de la section 3.7. Elle démarre toujours
 à la page 1 et laisse `scheduled-events-v1` décider de la terminaison à partir du booléen
