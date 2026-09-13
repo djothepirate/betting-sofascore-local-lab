@@ -700,6 +700,25 @@ class LiveCampaignServiceTest {
     }
 
     @Test
+    void recoveryMarksAnAbsentManualOwnerForExplicitCleanupWithoutInventingALiveCampaign() throws Exception {
+        try (Harness h = new Harness(); var processes = mockStatic(ProcessHandle.class)) {
+            UUID manualCampaign = UUID.randomUUID();
+            Owner owner = new Owner(UUID.randomUUID(), 1234, Instant.now().minusSeconds(60));
+            Guard manual = new Guard("OWNED", manualCampaign, owner, 1, Instant.now());
+            when(h.guard.snapshot()).thenReturn(manual);
+            when(h.store.find(manualCampaign)).thenReturn(Optional.empty());
+            processes.when(() -> ProcessHandle.of(1234)).thenReturn(Optional.empty());
+
+            h.service.markProvenOrphanWithoutRestart();
+
+            verify(h.store).find(manualCampaign);
+            verify(h.store, never()).interruptOrphan(any(), any(), any());
+            verify(h.guard).requireCleanup(eq(manual.ownership()), any());
+            verifyNoInteractions(h.factory, h.coordinator);
+        }
+    }
+
+    @Test
     void anIsolatedSchemaStopsItsMatchButTheOtherMatchReachesAllFinalFamilies() throws Exception {
         try (Harness h = new Harness()) {
             h.reply = request -> request.eventId() == A

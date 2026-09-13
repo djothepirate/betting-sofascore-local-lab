@@ -55,6 +55,75 @@ class LiveCampaignRecoveryTest {
     }
 
     @Test
+    void explicitManualClosureProvesAbsenceThenReleasesOnlyTheExactNonLiveGuard() {
+        when(store.find(id)).thenReturn(Optional.empty());
+
+        assertThat(service.orphanedManualCleanupGuard()).contains(expected);
+        service.finalizeOrphanedManualCleanup(id, 40);
+
+        var order = inOrder(probe, guard);
+        order.verify(probe).requireAbsent(former, playwright.getWorkerJar());
+        order.verify(guard).releaseManualOrphanAfterVerifiedCleanup(expected, NOW);
+        verify(guard, never()).releaseAfterVerifiedCleanup(any(), any());
+        verify(store, never()).completeOrphanCleanup(any(), any());
+        verifyNoInteractions(factory);
+        verify(supervisor, never()).stopCampaign(any(), any());
+    }
+
+    @ParameterizedTest
+    @ValueSource(strings = {"LIVE_CLEANUP_OWNER_ACTIVE", "LIVE_CLEANUP_PROCESS_ACTIVE", "LIVE_CLEANUP_PROCESS_UNVERIFIED"})
+    void manualClosureKeepsTheGuardWhenProcessAbsenceIsNotProved(String failure) {
+        when(store.find(id)).thenReturn(Optional.empty());
+        doThrow(new IllegalStateException(failure)).when(probe).requireAbsent(any(), any());
+
+        assertThatThrownBy(() -> service.finalizeOrphanedManualCleanup(id, 40)).hasMessage(failure);
+
+        verify(guard, never()).releaseManualOrphanAfterVerifiedCleanup(any(), any());
+        verify(store, never()).completeOrphanCleanup(any(), any());
+        verifyNoInteractions(factory);
+    }
+
+    @Test
+    void manualClosureRejectsAStaleOrLiveGuardBeforeProcessInspection() {
+        when(store.find(id)).thenReturn(Optional.empty());
+        assertThatThrownBy(() -> service.finalizeOrphanedManualCleanup(id, 39)).hasMessage("LIVE_CLEANUP_STATE_CHANGED");
+        current.set(new Guard("FREE", null, null, 40, NOW));
+        assertThatThrownBy(() -> service.finalizeOrphanedManualCleanup(id, 40)).hasMessage("LIVE_CLEANUP_STATE_CHANGED");
+        current.set(expected);
+        when(store.find(id)).thenReturn(Optional.of(campaign("INTERRUPTED", List.of())));
+        assertThat(service.orphanedManualCleanupGuard()).isEmpty();
+        assertThatThrownBy(() -> service.finalizeOrphanedManualCleanup(id, 40)).hasMessage("LIVE_CLEANUP_STATE_CHANGED");
+
+        verifyNoInteractions(probe, factory);
+        verify(guard, never()).releaseManualOrphanAfterVerifiedCleanup(any(), any());
+    }
+
+    @Test
+    void aLiveCampaignAppearingDuringManualProcessProofKeepsTheGuardBlocked() {
+        when(store.find(id)).thenReturn(Optional.empty(), Optional.of(campaign("INTERRUPTED", List.of())));
+
+        assertThatThrownBy(() -> service.finalizeOrphanedManualCleanup(id, 40)).hasMessage("LIVE_CLEANUP_STATE_CHANGED");
+
+        verify(probe).requireAbsent(former, playwright.getWorkerJar());
+        verify(guard, never()).releaseManualOrphanAfterVerifiedCleanup(any(), any());
+        verify(store, never()).completeOrphanCleanup(any(), any());
+    }
+
+    @Test
+    void manualClosureNeedsTheSameExclusiveLocalCleanupAsARecoveredLiveCampaign() {
+        when(store.find(id)).thenReturn(Optional.empty());
+        when(supervisor.activeCampaignId()).thenReturn(Optional.of(UUID.randomUUID()));
+        assertThatThrownBy(() -> service.finalizeOrphanedManualCleanup(id, 40)).hasMessage("LIVE_CLEANUP_BUSY");
+        when(supervisor.activeCampaignId()).thenReturn(Optional.empty());
+        try (var ignored = coordinator.acquireCampaign(UUID.randomUUID())) {
+            assertThatThrownBy(() -> service.finalizeOrphanedManualCleanup(id, 40)).hasMessage("LIVE_CLEANUP_BUSY");
+        }
+
+        verifyNoInteractions(probe, factory);
+        verify(guard, never()).releaseManualOrphanAfterVerifiedCleanup(any(), any());
+    }
+
+    @Test
     void explicitClosureProvesProcessesAbsentBeforeAtomicStoreReconciliation() {
         service.finalizeInterruptedCleanup(id, 40);
         var order = inOrder(probe, store);

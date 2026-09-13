@@ -595,7 +595,8 @@ il n'y a ni minuterie de réessai SQL ni transfert du verrou à un autre thread.
 Si la libération SQL a été validée mais sa réponse perdue, une clôture explicite ultérieure
 n'accepte un garde `FREE` que dans la même génération, avec tous les champs propriétaires vidés
 et aucun superviseur actif. Un garde illisible ou une génération différente conserve le blocage.
-Cette vérification locale ne constitue pas une libération générique de garde orphelin après crash.
+Cette vérification de campagne ne libère jamais un garde dépourvu de campagne : le cas des
+requêtes manuelles est traité par une voie locale strictement distincte décrite ci-dessous.
 
 Après redémarrage, une commande distincte `POST /live-campaigns/{id}/finalize-interruption`
 réalise la clôture explicite du garde orphelin. Le formulaire local lie la campagne et la
@@ -622,6 +623,25 @@ elle est validée dans la même transaction que sa libération. L’état histor
 les résultats, observations et compteurs restent inchangés. Une répétition après réponse perdue
 accepte seulement une libération prouvée de la même génération. Une nouvelle acquisition interdit
 cette répétition. Les tables existantes portent ce parcours sans migration.
+
+Une collecte manuelle J3/J4/J5 interrompue ne crée pas de ligne `live_campaign`. Après un crash,
+la page locale `/provider-access` présente donc une action de libération seulement si le garde
+durable est `CLEANUP_REQUIRED`, possède un propriétaire et une identité de campagne, et que cette
+identité ne correspond à aucune campagne live. Le `POST` exige le jeton de formulaire local à
+usage unique, une confirmation opérateur et la génération observée. Il prend la même exclusion
+locale que les clôtures live, vérifie qu’aucune session ou superviseur n’est actif, puis
+`LiveOrphanProcessProbe` doit prouver l’absence du propriétaire et de ses processus Playwright.
+Une présence, une identité incertaine ou une inspection indisponible conserve le garde bloqué ;
+aucun processus n’est arrêté.
+
+Après cette preuve, le service relit l’absence de `live_campaign`. La transaction verrouille le
+garde et ne le libère que si son état, son identifiant de campagne, son propriétaire complet
+(instance, PID et date de création), sa génération et sa date de changement sont exactement ceux
+lus par le service après validation du formulaire. Une acquisition, une campagne apparue entre-temps
+ou une soumission périmée échoue fermée. Cette voie ne crée aucun navigateur ni appel fournisseur,
+ne reprend aucun échange,
+ne réarme aucune suspension et ne clôture aucun départ incertain : ces décisions restent des
+opérations locales explicites et séparées.
 
 Après la clôture, l’interface propose une nouvelle préparation à partir des identités du
 manifeste historique. Les exclusions `finished`/`postponed`, l’admission et la confirmation

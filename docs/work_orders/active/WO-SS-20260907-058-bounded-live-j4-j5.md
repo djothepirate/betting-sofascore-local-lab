@@ -1794,6 +1794,26 @@ courante ; elle ne lance ni sauvegarde native sur la base opérateur, ni purge, 
 live, ni appel fournisseur. Les résultats et limites sont consignés dans la
 [preuve J6 Flyway V54](../../validation/WO058-J6-FLYWAY-V54-QUALIFICATION-20260913.md).
 
+#### Complément de revue PR #35 — garde manuelle J3/J4/J5 orpheline
+
+La revue a relevé qu'un parcours manuel J3/J4/J5 interrompu peut conserver le garde partagé en
+`CLEANUP_REQUIRED` sans posséder de ligne `live_campaign`, et qu'il ne peut donc pas utiliser la
+clôture d'une campagne live. Le correctif ajoute une seule action locale explicite sur
+`/provider-access`, affichée uniquement pour cet état non-live. Le formulaire exige un jeton local
+à usage unique, une confirmation et la génération affichée.
+
+Avant toute libération, l'exclusion locale est prise, toute session et tout superviseur actifs sont
+refusés, puis `LiveOrphanProcessProbe` doit prouver l'absence du propriétaire et des processus
+Playwright associés. Le garde est relu sous verrou et ne devient `FREE` que si son état, son
+identité, son propriétaire complet, sa génération et sa date de changement correspondent encore
+exactement. Une campagne live apparue pendant la preuve, une garde modifiée ou une preuve de
+processus incomplète conserve le blocage.
+
+Cette action ne crée aucun navigateur, n'émet aucun appel fournisseur et n'effectue ni reprise,
+retry, réarmement de suspension ni clôture de départ incertain. Ces opérations restent séparées,
+explicites et soumises à leurs propres gardes. La couverture et les limites sont détaillées dans la
+[preuve de garde manuelle orpheline](../../validation/WO058-MANUAL-ORPHAN-GUARD-RECOVERY-20260913.md).
+
 ### État et prochaine action
 
 Cette révision reste `IN_PROGRESS`. Le Work Order demeure dans `docs/work_orders/active` : la

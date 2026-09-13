@@ -362,6 +362,7 @@ class LiveCampaignControllerTest {
     void providerCleanupRefusalLinksToTheOtherCampaignThatActuallyOwnsTheGuard() throws Exception {
         UUID previous = UUID.fromString("00000000-0000-0000-0000-000000000057");
         when(service.launch(CAMPAIGN_ID, HASH)).thenThrow(new IllegalStateException("LIVE_PROVIDER_CLEANUP_REQUIRED"));
+        when(service.orphanedManualCleanupGuard()).thenReturn(Optional.empty());
         when(service.providerCleanupCampaignId()).thenReturn(Optional.of(previous));
         MockHttpSession session = new MockHttpSession();
         mvc.perform(post("/live-campaigns/" + CAMPAIGN_ID + "/launch").header("Host", HOST).header("Origin", ORIGIN)
@@ -373,7 +374,29 @@ class LiveCampaignControllerTest {
                 .andExpect(content().string(containsString("Clôturer la session interrompue")))
                 .andExpect(content().string(not(containsString("/finalize-interruption"))));
         verify(service).launch(CAMPAIGN_ID, HASH);
+        verify(service).orphanedManualCleanupGuard();
         verify(service).providerCleanupCampaignId();
+        verifyNoMoreInteractions(service);
+    }
+
+    @Test
+    void providerCleanupRefusalDirectsAnOrphanedManualGuardToProviderAccessInsteadOfAnUnknownCampaign() throws Exception {
+        UUID manual = UUID.fromString("00000000-0000-0000-0000-000000000057");
+        Guard orphan = new Guard("CLEANUP_REQUIRED", manual,
+                new Owner(UUID.randomUUID(), 987654L, NOW.minusSeconds(60)), 9, NOW);
+        when(service.launch(CAMPAIGN_ID, HASH)).thenThrow(new IllegalStateException("LIVE_PROVIDER_CLEANUP_REQUIRED"));
+        when(service.orphanedManualCleanupGuard()).thenReturn(Optional.of(orphan));
+        MockHttpSession session = new MockHttpSession();
+        mvc.perform(post("/live-campaigns/" + CAMPAIGN_ID + "/launch").header("Host", HOST).header("Origin", ORIGIN)
+                        .session(session).param("localFormToken", tokens.issue(session))
+                        .param("manifestHash", HASH).param("confirmation", "true"))
+                .andExpect(status().isConflict()).andExpect(model().attribute("manualCleanupRequired", true))
+                .andExpect(content().string(containsString("href=\"/provider-access\"")))
+                .andExpect(content().string(containsString("libérer la garde manuelle")))
+                .andExpect(content().string(not(containsString("/live-campaigns/" + manual + "\""))));
+        verify(service).launch(CAMPAIGN_ID, HASH);
+        verify(service).orphanedManualCleanupGuard();
+        verify(service, never()).providerCleanupCampaignId();
         verifyNoMoreInteractions(service);
     }
 
@@ -881,7 +904,10 @@ class LiveCampaignControllerTest {
                 .andExpect(model().attribute("liveErrorCode", code))
                 .andExpect(content().string(containsString(message)));
         verify(service).launch(CAMPAIGN_ID, HASH);
-        if (code.equals("LIVE_PROVIDER_CLEANUP_REQUIRED")) verify(service).providerCleanupCampaignId();
+        if (code.equals("LIVE_PROVIDER_CLEANUP_REQUIRED")) {
+            verify(service).orphanedManualCleanupGuard();
+            verify(service).providerCleanupCampaignId();
+        }
         verifyNoMoreInteractions(service);
     }
 

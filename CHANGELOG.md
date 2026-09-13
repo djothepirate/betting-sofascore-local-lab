@@ -44,6 +44,13 @@ Les évolutions notables du SofaScore Local Lab sont consignées dans ce fichier
   manifeste ni donnée persistée n'est réécrit. Les contrats des scripts et
   `FlywayMigrationIT` vérifient ce refus fermé. Voir la
   [preuve J6 Flyway V54](docs/validation/WO058-J6-FLYWAY-V54-QUALIFICATION-20260913.md).
+- Ajoute une libération locale strictement bornée pour une garde manuelle J3/J4/J5 orpheline :
+  elle est proposée sur `/provider-access` seulement pour un garde `CLEANUP_REQUIRED` sans ligne
+  `live_campaign`, exige un jeton à usage unique, une confirmation, la génération observée et la
+  preuve d'absence des processus par `LiveOrphanProcessProbe`. La transaction libère uniquement
+  l'identité exacte encore observée. Elle ne déclenche aucun navigateur, appel fournisseur, reprise,
+  réarmement ou clôture de départ incertain. Voir la
+  [preuve de garde manuelle orpheline](docs/validation/WO058-MANUAL-ORPHAN-GUARD-RECOVERY-20260913.md).
 
 ### WO-059 — plafond local de pagination manuelle J3 à 35 pages
 

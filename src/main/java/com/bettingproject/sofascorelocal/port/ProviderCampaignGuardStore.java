@@ -13,4 +13,9 @@ public interface ProviderCampaignGuardStore {
     void requireCleanup(Ownership ownership, Instant at);
     /** Only invoke after supervisor/process-identity cleanup has been verified. */
     void releaseAfterVerifiedCleanup(Ownership ownership, Instant at);
+    /**
+     * Releases only the exact non-live manual orphan proved absent by the caller. The expected
+     * guard is compared atomically, so a stale form can never free a newer acquisition.
+     */
+    void releaseManualOrphanAfterVerifiedCleanup(Guard expected, Instant at);
 }

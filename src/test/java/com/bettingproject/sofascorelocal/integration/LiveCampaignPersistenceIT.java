@@ -1137,6 +1137,34 @@ class LiveCampaignPersistenceIT {
     }
 
     @Test
+    void verifiedManualOrphanCleanupReleasesOnlyTheExactGuardWithoutCreatingALiveCampaign() {
+        Fixture f=fixture("38");
+        UUID manualCampaign=UUID.randomUUID();
+        Owner former=new Owner(UUID.randomUUID(),1235,T0.minusSeconds(30));
+        Guard owned=f.guard.tryAcquire(manualCampaign,former,T0).orElseThrow();
+        f.guard.requireCleanup(owned.ownership(),T0.plusSeconds(1));
+        Guard expected=f.guard.snapshot();
+
+        assertThat(f.store.find(manualCampaign)).isEmpty();
+        Guard altered=new Guard(expected.state(),expected.campaignId(),
+                new Owner(expected.owner().instanceId(),expected.owner().processId()+1,expected.owner().processStartedAt()),
+                expected.generation(),expected.changedAt());
+        assertThatThrownBy(()->f.guard.releaseManualOrphanAfterVerifiedCleanup(altered,T0.plusSeconds(2)))
+                .hasMessage("LIVE_CLEANUP_STATE_CHANGED");
+        assertThat(f.guard.snapshot()).isEqualTo(expected);
+
+        f.guard.releaseManualOrphanAfterVerifiedCleanup(expected,T0.plusSeconds(3));
+        Guard free=f.guard.snapshot();
+        assertThat(free.state()).isEqualTo("FREE");
+        assertThat(free.campaignId()).isNull();
+        assertThat(free.owner()).isNull();
+        assertThat(free.generation()).isEqualTo(expected.generation());
+        assertThat(f.store.find(manualCampaign)).isEmpty();
+        assertThatThrownBy(()->f.guard.releaseManualOrphanAfterVerifiedCleanup(expected,T0.plusSeconds(4)))
+                .hasMessage("LIVE_CLEANUP_STATE_CHANGED");
+    }
+
+    @Test
     void orphanedV4CancelsOnlyPendingFamilySchedulesAndPreservesTheirRevisionHistory() {
         Fixture f=fixture("39"); Target target=f.seed(EVENT); Manifest manifest=groupedManifest(List.of(target));
         Ownership own=f.start(manifest);

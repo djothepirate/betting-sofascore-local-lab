@@ -35,6 +35,21 @@
       <button type="submit" class="button">Clôturer la réservation</button>
     </form>
   </section>
+  <section class="panel" th:if="${orphanedManualGuard != null}">
+    <h2>Garde manuelle orpheline</h2>
+    <p>Une collecte manuelle J3, J4 ou J5 précédente s’est interrompue avant de libérer son accès partagé.
+      La libération ci-dessous exige une vérification locale que le processus propriétaire et ses processus Playwright
+      ne sont plus présents.</p>
+    <p>Cette action ne lance aucun navigateur, n’effectue aucun appel fournisseur, ne clôture pas un départ incertain
+      et ne lève pas une suspension. Si une réservation incertaine est affichée, elle doit être clôturée séparément.</p>
+    <form method="post" th:action="@{/provider-access/release-orphaned-manual-guard}">
+      <input type="hidden" name="localFormToken" th:value="${localFormToken}">
+      <input type="hidden" name="campaignId" th:value="${orphanedManualGuard.campaignId}">
+      <input type="hidden" name="generation" th:value="${orphanedManualGuard.generation}">
+      <label><input type="checkbox" name="confirmation" value="true" required> Je confirme la libération locale de cette garde manuelle orpheline après vérification des processus.</label>
+      <button type="submit" class="button">Libérer la garde manuelle</button>
+    </form>
+  </section>
   <section class="panel" th:if="${suspended}">
     <h2>Lever la suspension localement</h2>
     <p>Le réarmement ne lance ni test d’accès ni campagne. Un nouveau refus suspendra à nouveau toutes les collectes.</p>

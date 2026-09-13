@@ -346,6 +346,11 @@ départ non résolu. Sa lecture ne contacte pas SofaScore. Un 403 ou 429 confirm
 nouveaux accès, même si le corps de cette réponse n'a pas été reçu complètement. Une
 garde de processus FREE après nettoyage n'efface pas cette suspension.
 
+Lorsque le garde `CLEANUP_REQUIRED` provient d'une collecte manuelle J3/J4/J5 sans campagne live
+persistée, cette même page peut afficher le panneau **« Garde manuelle orpheline »**. Il ne remplace
+ni la clôture d'une campagne live interrompue, ni la clôture d'un départ incertain, ni le
+réarmement d'une suspension ; suivre le parcours dédié ci-dessous.
+
 La page de ce formulaire est servie avec `Referrer-Policy: same-origin` : Chromium/Brave
 conserve ainsi l'origine loopback exacte pour le `POST` de réarmement. La frontière locale
 continue de refuser `Origin: null`, toute origine étrangère et les en-têtes de proxy ; un
@@ -1129,6 +1134,32 @@ Un processus actif de la session, une identité inaccessible, un autre JVM non a
 un garde modifié ou une réconciliation SQL incomplète maintient le verrou avec un message explicite.
 Le contrôle après redémarrage est qualifié sous Windows ; les autres systèmes refusent cette
 preuve automatiquement. Aucun processus inspecté n’est arrêté par le bouton.
+
+### Libérer une garde manuelle J3/J4/J5 orpheline
+
+Ce parcours ne concerne qu'une ancienne collecte manuelle qui n'a **aucune** ligne
+`live_campaign`. Le panneau n'est proposé que si le garde durable est exactement
+`CLEANUP_REQUIRED`, avec un propriétaire, et que l'identité affichée ne désigne pas une campagne
+live. Une campagne interrompue visible conserve le parcours **« Clôturer la session interrompue »**
+décrit ci-dessus.
+
+1. Ouvrir `/provider-access` sur le Lab local. La simple lecture ne contacte pas le fournisseur.
+2. Vérifier que le panneau **« Garde manuelle orpheline »** est présent, puis cocher la confirmation
+   et utiliser **« Libérer la garde manuelle »**. Le formulaire porte un jeton local à usage unique,
+   l'identifiant observé et sa génération ; une page ou un jeton périmé doit être actualisé, jamais
+   réutilisé.
+3. Le Lab obtient l'exclusion locale de nettoyage, vérifie de nouveau qu'aucune session live ou
+   superviseur n'est actif, puis `LiveOrphanProcessProbe` doit prouver l'absence du propriétaire et
+   des processus Playwright associés. Un processus actif, une identité incertaine ou une inspection
+   indisponible laisse le garde bloqué et demande une nouvelle vérification locale.
+4. Après la preuve, l'opération relit l'absence de campagne live et libère atomiquement seulement
+   le garde dont l'état, l'identité, le propriétaire complet, la génération et la date de changement
+   correspondent encore. Une nouvelle acquisition ou une campagne apparue entre-temps est refusée.
+
+Cette opération ne lance ni navigateur ni appel fournisseur, ne reprend ni retry ni campagne,
+ne clôture pas une réservation de départ incertain et ne réarme pas une suspension 403/429. Après
+une libération réussie, clôturer séparément un éventuel départ incertain, puis décider séparément
+d'un éventuel réarmement avec les confirmations et gardes propres à ces deux actions.
 
 Le panneau de rétention de l’accueil peut être temporairement indisponible pendant
 une campagne active ou une clôture non finalisée. Le tableau de bord reste accessible ;

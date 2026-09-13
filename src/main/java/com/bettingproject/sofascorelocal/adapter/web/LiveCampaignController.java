@@ -257,7 +257,7 @@ public class LiveCampaignController {
             case "LIVE_PREPARATION_NOT_CANCELABLE" -> "Cette campagne n’est plus en préparation. Actualiser sa page pour consulter son état actuel.";
             case "LIVE_DISABLED" -> "Le lancement live est désactivé. Activer l’opt-in local dédié avant de lancer une campagne préparée.";
             case "LIVE_PROVIDER_BUSY" -> "Une collecte fournisseur occupe déjà la session locale. Attendre sa fin avant de lancer cette campagne.";
-            case "LIVE_PROVIDER_CLEANUP_REQUIRED" -> "La session fournisseur précédente reste verrouillée en attente de clôture locale. Ouvrir la campagne concernée et utiliser « Clôturer la session interrompue ». La clôture vérifie que les processus précédents sont arrêtés. Revenir ensuite à cette sélection pour préparer ou lancer la campagne. Aucun appel fournisseur n’a été effectué par cette demande.";
+            case "LIVE_PROVIDER_CLEANUP_REQUIRED" -> "La session fournisseur précédente reste verrouillée en attente de clôture locale. Si le verrou appartient à une campagne live, ouvrir cette campagne et utiliser « Clôturer la session interrompue ». S’il provient d’une collecte manuelle orpheline, utiliser l’état de l’accès fournisseur pour vérifier puis libérer la garde. Aucun appel fournisseur n’a été effectué par cette demande.";
             case "LIVE_CLEANUP_OWNER_ACTIVE" -> "La session appartient encore à une application active. Arrêter la campagne depuis cette application avant de demander sa clôture.";
             case "LIVE_CLEANUP_PROCESS_UNVERIFIED" -> "L’arrêt des processus de la session précédente n’a pas pu être vérifié. La session reste verrouillée. Faire vérifier leur arrêt local avant de réessayer.";
             case "LIVE_CLEANUP_PROCESS_ACTIVE" -> "Un processus de la session précédente est encore actif. La session reste verrouillée. Attendre son arrêt avant de réessayer.";
@@ -270,8 +270,10 @@ public class LiveCampaignController {
         };
         model.addAttribute("liveError", message);
         model.addAttribute("liveErrorCode", code);
-        if (code.equals("LIVE_PROVIDER_CLEANUP_REQUIRED"))
-            campaigns.providerCleanupCampaignId().ifPresent(id -> model.addAttribute("cleanupCampaignId", id));
+        if (code.equals("LIVE_PROVIDER_CLEANUP_REQUIRED")) {
+            if (campaigns.orphanedManualCleanupGuard().isPresent()) model.addAttribute("manualCleanupRequired", true);
+            else campaigns.providerCleanupCampaignId().ifPresent(id -> model.addAttribute("cleanupCampaignId", id));
+        }
         if (code.startsWith("LIVE_CLEANUP_") || code.startsWith("LIVE_ORPHAN_CLEANUP_"))
             addCleanupReturnLink(request, model);
         return "live-campaign-error";

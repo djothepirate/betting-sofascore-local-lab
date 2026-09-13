@@ -443,6 +443,13 @@ public final class LiveCampaignService {
                 ? Optional.of(current) : Optional.empty();
     }
 
+    /** Read-only discovery of a former manual J3/J4/J5 owner, which has no live_campaign row. */
+    public Optional<Guard> orphanedManualCleanupGuard() {
+        if (active.get() != null) return Optional.empty();
+        Guard current = guard.snapshot();
+        return isOrphanedManualCleanupGuard(current) ? Optional.of(current) : Optional.empty();
+    }
+
     /** Explicit local closure of an orphan, never a transfer/restart of its provider session. */
     public void finalizeInterruptedCleanup(UUID campaignId, long expectedGeneration) {
         if (expectedGeneration < 1) throw new IllegalStateException("LIVE_CLEANUP_STATE_CHANGED");
@@ -475,6 +482,38 @@ public final class LiveCampaignService {
         } catch (ManualProviderRequestCoordinator.CoordinationException busy) {
             throw new IllegalStateException("LIVE_CLEANUP_BUSY");
         }
+    }
+
+    /**
+     * Explicit local closure of a crashed manual J3/J4/J5 owner. It is deliberately distinct
+     * from the live-campaign closure because manual requests never create a live_campaign row.
+     */
+    public void finalizeOrphanedManualCleanup(UUID campaignId, long expectedGeneration) {
+        if (campaignId == null || expectedGeneration < 1) throw new IllegalStateException("LIVE_CLEANUP_STATE_CHANGED");
+        try {
+            coordinator.withExclusiveLocalCleanup(() -> {
+                if (active.get() != null || supervisor.activeCampaignId().isPresent())
+                    throw new IllegalStateException("LIVE_CLEANUP_BUSY");
+                Guard current = guard.snapshot();
+                if (current == null || current.generation() != expectedGeneration || !campaignId.equals(current.campaignId())
+                        || !isOrphanedManualCleanupGuard(current))
+                    throw new IllegalStateException("LIVE_CLEANUP_STATE_CHANGED");
+                orphanProcesses.requireAbsent(current.owner(), playwright.getWorkerJar());
+                if (active.get() != null || supervisor.activeCampaignId().isPresent())
+                    throw new IllegalStateException("LIVE_CLEANUP_BUSY");
+                // Re-read through the durable store after the proof: a live campaign appearing
+                // concurrently is never treated as a manual orphan.
+                if (store.find(campaignId).isPresent()) throw new IllegalStateException("LIVE_CLEANUP_STATE_CHANGED");
+                guard.releaseManualOrphanAfterVerifiedCleanup(current, clock.instant());
+            });
+        } catch (ManualProviderRequestCoordinator.CoordinationException busy) {
+            throw new IllegalStateException("LIVE_CLEANUP_BUSY");
+        }
+    }
+
+    private boolean isOrphanedManualCleanupGuard(Guard current) {
+        return current != null && "CLEANUP_REQUIRED".equals(current.state()) && current.owner() != null
+                && current.campaignId() != null && store.find(current.campaignId()).isEmpty();
     }
 
     private static boolean recoverableTerminal(String state) {

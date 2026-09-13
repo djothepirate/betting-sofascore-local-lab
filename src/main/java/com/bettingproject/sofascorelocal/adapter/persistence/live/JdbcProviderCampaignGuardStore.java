@@ -58,6 +58,16 @@ public class JdbcProviderCampaignGuardStore implements ProviderCampaignGuardStor
             """, Timestamp.from(at));
     }
 
+    @Override
+    @Transactional
+    public void releaseManualOrphanAfterVerifiedCleanup(Guard expected, Instant at) {
+        if (!matchesManualOrphan(read(true), expected)) throw new IllegalStateException("LIVE_CLEANUP_STATE_CHANGED");
+        jdbc.update("""
+            update provider_campaign_guard set state='FREE',campaign_id=null,owner_instance_id=null,
+                owner_process_id=null,owner_process_started_at=null,changed_at=? where singleton_id=1
+            """, Timestamp.from(at));
+    }
+
     private Guard read(boolean lock) {
         return jdbc.queryForObject("select * from provider_campaign_guard where singleton_id=1" + (lock ? " for update" : ""),
                 (rs, row) -> {
@@ -72,6 +82,13 @@ public class JdbcProviderCampaignGuardStore implements ProviderCampaignGuardStor
         return ownership != null && !guard.state().equals("FREE") && guard.owner() != null
                 && guard.campaignId().equals(ownership.campaignId())
                 && guard.owner().instanceId().equals(ownership.instanceId()) && guard.generation() == ownership.generation();
+    }
+    private static boolean matchesManualOrphan(Guard current, Guard expected) {
+        return expected != null && "CLEANUP_REQUIRED".equals(current.state())
+                && "CLEANUP_REQUIRED".equals(expected.state()) && current.campaignId() != null
+                && current.campaignId().equals(expected.campaignId()) && current.owner() != null
+                && current.owner().equals(expected.owner()) && current.generation() == expected.generation()
+                && current.changedAt().equals(expected.changedAt());
     }
     private static void require(Guard guard, Ownership ownership) {
         if (!matches(guard, ownership)) throw new IllegalStateException("provider campaign ownership is stale");

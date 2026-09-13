@@ -9,6 +9,8 @@
   <p class="muted" th:if="${liveErrorCode != null}">Code du contrôle local : <code th:text="${liveErrorCode}">LIVE_REQUEST_REJECTED</code></p>
   <a class="button" th:if="${cleanupCampaignId != null}"
      th:href="@{/live-campaigns/{id}(id=${cleanupCampaignId})}">Ouvrir la campagne à clôturer</a>
+  <a class="button" th:if="${manualCleanupRequired}"
+     th:href="@{/provider-access}">Ouvrir l’accès fournisseur pour libérer la garde manuelle</a>
   <a class="button" th:if="${retryCampaignId != null}"
      th:href="@{/live-campaigns/{id}(id=${retryCampaignId})}">Revenir à la campagne</a>
   <a class="button" th:if="${liveErrorCode != null and #strings.startsWith(liveErrorCode, 'PROVIDER_')}"
