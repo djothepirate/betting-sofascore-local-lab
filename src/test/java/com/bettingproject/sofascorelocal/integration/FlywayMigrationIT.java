@@ -7194,7 +7194,7 @@ class FlywayMigrationIT {
                 .contains("j7ProviderOwnerGoRevocationCount")
                 .contains("j7ProviderOwnerGoConsumptionCount")
                 .contains("j7DeliveryLedgerSha256")
-                .contains("$sourceFlywayVersion -cne '53'");
+                .contains("$sourceFlywayVersion -cne '54'");
     }
 
     @Test
@@ -7572,8 +7572,8 @@ class FlywayMigrationIT {
                 StandardCharsets.UTF_8);
 
         assertThat(script)
-                .contains("$manifest.source.flywayVersion.ToString() -cne '53'")
-                .contains("valid Flyway V53 raw-payload, J8, J7 and quiescent live ledger restore");
+                .contains("$manifest.source.flywayVersion.ToString() -cne '54'")
+                .contains("valid Flyway V54 raw-payload, J8, J7 and quiescent live ledger restore");
 
         String qualificationFields = powerShellArray(script, "$qualificationFields");
         assertThat(qualificationFields)

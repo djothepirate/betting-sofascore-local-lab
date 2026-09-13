@@ -218,7 +218,7 @@ en outre que la preuve de sauvegarde couvre l'identifiant et l'heure du snapshot
 
 ### 8.1 Couverture des campagnes live et du garde commun
 
-La sauvegarde/restauration courante exige Flyway V50. Ses preuves source et restauration incluent
+La sauvegarde/restauration courante exige Flyway V54. Ses preuves source et restauration incluent
 les sept compteurs des tables `live_campaign`, `live_event`, `live_call`, `live_call_dispatch`,
 `live_call_receipt`, `live_call_result` et `live_transition`, l'état du garde fournisseur et le
 nombre de campagnes `RUNNING` ou `CLEANUP_REQUIRED`. Elles incluent aussi les sept compteurs de
@@ -240,7 +240,7 @@ la capacité et le profil d'admission qualifié : enveloppes de requête et de t
 exactement en nanosecondes, plus SHA-256 de qualification. Les résultats versionnés, leurs liens
 snapshot/occurrence et normalisés, les projections d'état, les compteurs et les générations sont
 ainsi tous comparés à la restauration. Les preuves historiques V32 restent conservées ; elles ne
-remplacent pas la couverture V50 exigée par la rétention courante.
+remplacent pas la couverture V54 exigée par la rétention courante.
 
 Une sauvegarde qualifiée exige `providerGuardState=FREE` et `activeLiveCount=0`. Une restauration
 n'arme aucun worker ni reprise. Un ancien propriétaire de garde, identifié par instance, PID et

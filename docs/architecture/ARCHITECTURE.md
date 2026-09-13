@@ -77,7 +77,7 @@ VPS       : aucune connexion
 | `adapter.persistence` | preuves brutes, occurrences, observations normalisées, historique, rétention, manifestes J7, preuves J8 et ledger live V33 |
 | `adapter.file` | publication J7 create-new par lien physique atomique, bornée à la racine locale |
 | `adapter.web` | tableau de bord, recherche, contrôle de lot et vues J4/J5/J6/J7/J8 locales |
-| `resources/db/migration` | schémas V1 à V53, migrations append-only et triggers d’immuabilité |
+| `resources/db/migration` | schémas V1 à V54, migrations append-only et triggers d’immuabilité |
 | `fixtures` | corpus synthétiques hors ligne J2, J4, J5 et J6 |
 
 Le connecteur général demeure bloqué. Le chemin manuel J3 borné délègue ses deux familles
@@ -489,7 +489,7 @@ canoniques sont écrites dans une transaction unique ; un conflit d'identité ou
 ### Intégration
 
 `mvnw -Pintegration-tests verify` démarre PostgreSQL avec Testcontainers et vérifie les migrations
-V1 à V33, les upgrades historiques, la fidélité binaire, les contraintes, la déduplication et
+V1 à V54, les upgrades historiques, la fidélité binaire, les contraintes, la déduplication et
 l'immuabilité. J6 ajoute les occurrences prospectives, les exclusions de rétention, la purge des
 seuls octets dans une base éphémère, l'audit et la conservation de la provenance. Aucun appel
 SofaScore n'est exécuté. J7 ajoute l'upgrade V22→V23 prérempli, ses contraintes de cycle et la

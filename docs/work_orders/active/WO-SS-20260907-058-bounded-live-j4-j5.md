@@ -1488,7 +1488,8 @@ note ou des minutes de jeu sont déjà présentes. Cette décoration est en lect
 La migration append-only V52 fait accepter le manifeste et le profil V9 tout en gardant le
 ledger de départ sous `admission_profile='live-v8'`, qui désigne l'enveloppe de pression partagée
 et non la version de planification. V48 et V50 ne sont pas réécrites. Les scripts de
-sauvegarde/restauration J6 exigent désormais Flyway V52. Aucune campagne en cours n'est
+sauvegarde/restauration J6 exigeaient, à cette étape V9, Flyway V52. Cette borne historique ne
+détermine pas la garde courante. Aucune campagne en cours n'est
 réarmée, relancée ou modifiée par ce travail.
 
 L'observation opérateur `PROVIDER_CLOCK_REGRESSION` du 11 septembre reste un refus de
@@ -1771,6 +1772,27 @@ pour les joueurs et les indisponibles `event-lineups-v4`, après appariement par
 fournisseur. Le correctif relit uniquement les observations normalisées existantes ; il ne crée
 ni endpoint, ni transport, ni campagne, ni migration. Les scénarios de régression et la
 vérification locale sont consignés dans la [preuve J6 V4](../../validation/WO058-J6-V4-PEOPLE-COUNTRY-DIFFS-20260913.md).
+
+#### Complément de revue PR #35 — garde J6 sur Flyway V54
+
+La revue a relevé que la migration append-only V54 est le schéma courant, alors que la
+qualification J6 de sauvegarde/restauration et le contrôle du manifeste de rétention
+refusaient encore tout numéro différent de V53. Une nouvelle preuve créée sur le schéma
+courant ne pouvait donc pas franchir la garde de rétention.
+
+Les deux gardes exigent maintenant strictement V54 :
+`Backup-Restore-J6.ps1` refuse toute source dont la version Flyway diffère de V54 ;
+`Invoke-J6Retention.ps1` vérifie d'abord l'égalité exhaustive des preuves `source` et
+`restored`, puis refuse un manifeste dont `source.flywayVersion` n'est pas V54. V53
+n'est pas admis en parallèle : une preuve V53 historique ne couvre pas l'état V54 de la
+base courante.
+
+La migration V54 n'est pas modifiée. Les archives, manifests, empreintes, observations et
+preuves historiques restent inchangés et ne sont ni convertis ni réinterprétés. La
+qualification couvre le contrat fail-closed des deux scripts et l'installation Flyway
+courante ; elle ne lance ni sauvegarde native sur la base opérateur, ni purge, ni campagne
+live, ni appel fournisseur. Les résultats et limites sont consignés dans la
+[preuve J6 Flyway V54](../../validation/WO058-J6-FLYWAY-V54-QUALIFICATION-20260913.md).
 
 ### État et prochaine action
 

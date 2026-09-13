@@ -205,7 +205,7 @@ réservation pendant ce délai.
 
 La migration V50 propage la preuve de départ au contrôle J6 de sauvegarde/restauration ; V51
 valide séparément la réserve temporelle inter-groupe V8, sans ajouter de table ni réécrire les
-lignes historiques. Le runbook J6 courant exige donc le schéma V51, sans que cette révision V8
+lignes historiques. Le runbook J6 courant exige donc le schéma V54, sans que cette révision V8
 ne requalifie une exécution J6 :
 `provider_departure_accounting` est inclus dans l'empreinte append-only et comparé entre source
 et restauration. Une ligne `AUTHENTICATED_WORKER_REQUEST` est retenue seulement avec sa preuve ;

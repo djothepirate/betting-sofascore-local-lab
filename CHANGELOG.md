@@ -37,6 +37,13 @@ Les évolutions notables du SofaScore Local Lab sont consignées dans ce fichier
   restent visibles dans l'historique. Cette projection compare exclusivement les observations
   normalisées déjà persistées ; elle n'ajoute ni endpoint, ni collecte, ni migration. Voir la
   [preuve J6 V4](docs/validation/WO058-J6-V4-PEOPLE-COUNTRY-DIFFS-20260913.md).
+- Aligne les gardes J6 de sauvegarde/restauration et de rétention sur le schéma courant
+  Flyway V54. `Backup-Restore-J6.ps1` ne qualifie qu'une source V54 et
+  `Invoke-J6Retention.ps1` n'accepte qu'un manifeste source/restauration V54. V53 reste
+  une preuve historique insuffisante pour la garde courante ; aucune migration, archive,
+  manifeste ni donnée persistée n'est réécrit. Les contrats des scripts et
+  `FlywayMigrationIT` vérifient ce refus fermé. Voir la
+  [preuve J6 Flyway V54](docs/validation/WO058-J6-FLYWAY-V54-QUALIFICATION-20260913.md).
 
 ### WO-059 — plafond local de pagination manuelle J3 à 35 pages
 
