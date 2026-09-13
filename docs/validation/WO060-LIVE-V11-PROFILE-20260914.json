@@ -1,0 +1,62 @@
+{
+  "schema": "wo060-live-v11-qualification-v1",
+  "status": "QUALIFIED_LOCAL_REPLAY_AND_NATIVE_LOOPBACK",
+  "preparedAt": "2026-09-14",
+  "policyVersion": "live-v11",
+  "flywayVersion": 57,
+  "qualifiedCapacity": 8,
+  "workerProtocolVersion": 10,
+  "labStatus": [
+    "EXPERIMENTAL",
+    "LOCAL_ONLY",
+    "NOT_PRODUCTION_APPROVED",
+    "NO_CRITICAL_DEPENDENCY"
+  ],
+  "limits": {
+    "maximumSelectedMatches": 8,
+    "nominalEndpointsPerMinute": 32,
+    "maximumDeparturesPer60Seconds": 35,
+    "maximumDeparturesPerHour": 2100,
+    "maximumCallsPerEvent": 2500,
+    "maximumCallsPerCampaign": 20000,
+    "maximumDurationMinutes": 240,
+    "j3MaximumPages": 35,
+    "j3DeadlineMinutes": 20
+  },
+  "qualification": {
+    "method": "INDEPENDENT_V11_SCHEDULER_REPLAY_AND_J3_CONTEXT_LOOPBACK",
+    "scenarios": 16,
+    "profileAppliedAutomatically": false,
+    "realProviderCalls": 0,
+    "operatorDatabaseUsed": false,
+    "envelopeScope": "Envelopes are explicit hypotheses replayed against V11. Native evidence qualifies J4/J3/J4 context isolation and cleanup, not provider latency or sustained provider capacity.",
+    "nativeEvidence": "WO060-J3-LIVE-WORKER-20260914.json"
+  },
+  "endpointEnvelopes": {
+    "EVENT_DETAILS": {
+      "requestMillis": 300,
+      "processingMillis": 500
+    },
+    "EVENT_INCIDENTS": {
+      "requestMillis": 300,
+      "processingMillis": 400
+    },
+    "EVENT_STATISTICS": {
+      "requestMillis": 350,
+      "processingMillis": 400
+    },
+    "EVENT_LINEUPS": {
+      "requestMillis": 300,
+      "processingMillis": 450
+    }
+  },
+  "productionClassSha256": {
+    "com.bettingproject.sofascorelocal.application.live.LiveAdmissionPolicyV11": "d50aa89566fa2e505970439d8736163a5b184298e3b6654adeeefd6f33b93f05",
+    "com.bettingproject.sofascorelocal.application.live.GroupedLiveAdmissionSimulationV11": "b8f1238a4d8a36b924c7fc5d0a7334da060bd5fcac6aab1fbaccc1444df42160",
+    "com.bettingproject.sofascorelocal.application.live.GroupedLiveScheduleV11": "688308a0ada82c067404518b3c80e752c09a470c10ff9e000341da7a406f6e2a",
+    "com.bettingproject.sofascorelocal.application.live.GroupedLiveScheduleV11$Event": "08a42f7cc185f31592d4eb6e6f5ede568c1e89149818b45d90a057d236d3da8f",
+    "com.bettingproject.sofascorelocal.application.live.LiveSchedule": "38af7cc3e909d88c1f1705487ae505f8f0af6ecd9818630a942af7b81d39acce",
+    "com.bettingproject.sofascorelocal.domain.provider.ProviderResilienceData$DepartureProfile": "f3d353dbb3558fc3566fad20fc06f0acc420d93cb5770582f578ce8920b4526d",
+    "com.bettingproject.sofascorelocal.application.live.LiveSessionSchedule": "d7095447a5a8369877c917f5b964fee8e928f66cf72c2ab6975c5fb8f421931a"
+  }
+}

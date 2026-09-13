@@ -52,6 +52,11 @@ public interface PlaywrightProviderCampaignFactory {
         throw new UnsupportedOperationException("grouped live-v10 dispatch is not implemented by this transport");
     }
 
+    /** V11 preserves V10 pressure and adds the separately qualified J3 pause capability. */
+    default PlaywrightProviderCampaign openLiveGroupedV11(UUID campaignId, Set<SofascoreEndpointType> allowedEndpoints) {
+        throw new UnsupportedOperationException("grouped live-v11 dispatch is not implemented by this transport");
+    }
+
     /** One explicitly launched, single-event J5 manual group in statistics/incidents/lineups order. */
     default PlaywrightProviderCampaign openManualJ5Grouped(
             UUID campaignId, Set<SofascoreEndpointType> allowedEndpoints) {

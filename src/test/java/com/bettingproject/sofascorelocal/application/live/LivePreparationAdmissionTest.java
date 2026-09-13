@@ -68,7 +68,7 @@ class LivePreparationAdmissionTest {
         assertThat(preparation.manifest().preparedAt()).isEqualTo(NOW);
         assertThat(preparation.manifest().expiresAt()).isEqualTo(NOW.plusSeconds(300));
         assertThat(preparation.manifest().maximumBytes()).isEqualTo(V5_RAW_BYTES);
-        assertThat(preparation.manifest().policyVersion()).isEqualTo("live-v10");
+        assertThat(preparation.manifest().policyVersion()).isEqualTo("live-v11");
         assertThat(preparation.manifest().cycleInterval()).isEqualTo(Duration.ofSeconds(60));
         assertThat(capacityReads.get()).isEqualTo(1);
         assertThat(event.status().type()).isEqualTo("notstarted");
@@ -142,8 +142,8 @@ class LivePreparationAdmissionTest {
         assertThat(preparation.manifest().maximumCalls()).isEqualTo(20000);
         assertThat(preparation.manifest().qualifiedMatchCapacity()).isEqualTo(count);
         assertThat(preparation.manifest().admissionProfile().requestEnvelope()).isEqualTo(properties.getRequestEnvelope());
-        assertThat(preparation.manifest().admissionProfile().groupedProfile()).isEqualTo(properties.groupedAdmissionProfileV10());
-        assertThat(preparation.manifest().policyVersion()).isEqualTo("live-v10");
+        assertThat(preparation.manifest().admissionProfile().groupedProfile()).isEqualTo(properties.groupedAdmissionProfileV11());
+        assertThat(preparation.manifest().policyVersion()).isEqualTo("live-v11");
         assertThat(preparation.manifest().cycleInterval()).isEqualTo(Duration.ofSeconds(60));
         verify(h.store).prepare(preparation.manifest());
         verify(h.events, never()).save(any());
@@ -167,7 +167,7 @@ class LivePreparationAdmissionTest {
         assertThat(prepared.manifest().targets()).hasSize(count);
         assertThat(prepared.manifest().qualifiedMatchCapacity()).isEqualTo(Math.min(ceiling,8));
         assertThat(prepared.manifest().cycleInterval()).isEqualTo(Duration.ofSeconds(60));
-        assertThat(prepared.manifest().policyVersion()).isEqualTo("live-v10");
+        assertThat(prepared.manifest().policyVersion()).isEqualTo("live-v11");
         h.verifyNoProviderWork();
     }
 
@@ -230,11 +230,11 @@ class LivePreparationAdmissionTest {
     void aConfiguredCeilingAboveTheQualifiedCapacityDoesNotSilentlyLengthenTheSixtySecondCadence(int ceiling) {
         var properties=qualifiedProperties(); properties.setQualifiedMatchCapacity(ceiling);
         // This deliberately slow profile fails the production replay entirely; it cannot buy more time.
-        properties.getGroupedV10().getEndpoints().values().forEach(budget -> {
+        properties.getGroupedV11().getEndpoints().values().forEach(budget -> {
             budget.setRequestEnvelope(Duration.ofSeconds(10));
             budget.setProcessingEnvelope(Duration.ofSeconds(10));
         });
-        int qualifiedCapacity = LiveAdmissionPolicyV10.qualifiedCapacity(properties.groupedAdmissionProfileV10());
+        int qualifiedCapacity = LiveAdmissionPolicyV10.qualifiedCapacity(properties.groupedAdmissionProfileV11());
         assertThat(qualifiedCapacity).isZero();
         var h=new Harness(properties,()->Long.MAX_VALUE);
         var selected=new ArrayList<UUID>();
@@ -250,7 +250,7 @@ class LivePreparationAdmissionTest {
     }
 
     @ParameterizedTest @CsvSource({"false,false", "true,false", "false,true", "true,true"})
-    void historicalQualificationsDoNotAuthorizeANewV10Preparation(boolean includeV4Profile, boolean includeV5Profile) {
+    void historicalQualificationsDoNotAuthorizeANewV11Preparation(boolean includeV4Profile, boolean includeV5Profile) {
         var properties=new LiveCampaignProperties(); properties.setQualificationSha256("b".repeat(64));
         properties.getGroupedV6().setQualificationSha256("e".repeat(64));
         properties.getGroupedV6().getEndpoints().values().forEach(budget -> {
@@ -284,7 +284,7 @@ class LivePreparationAdmissionTest {
     }
 
     @Test
-    void aQualifiedV9ProfileDoesNotAuthorizeANewV10Preparation() {
+    void aQualifiedV9ProfileDoesNotAuthorizeANewV11Preparation() {
         var properties = new LiveCampaignProperties();
         properties.getGroupedV9().setQualificationSha256("9".repeat(64));
         properties.getGroupedV9().getEndpoints().values().forEach(budget -> {
@@ -310,8 +310,8 @@ class LivePreparationAdmissionTest {
     /** Synthetic test evidence only; it does not qualify operator traffic or lower runtime defaults. */
     private static LiveCampaignProperties qualifiedProperties() {
         var properties=new LiveCampaignProperties();
-        properties.getGroupedV10().setQualificationSha256("c".repeat(64));
-        properties.getGroupedV10().getEndpoints().values().forEach(budget->{
+        properties.getGroupedV11().setQualificationSha256("c".repeat(64));
+        properties.getGroupedV11().getEndpoints().values().forEach(budget->{
             budget.setRequestEnvelope(Duration.ofMillis(500));
             budget.setProcessingEnvelope(Duration.ofMillis(100));
         });

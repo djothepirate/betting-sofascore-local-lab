@@ -63,14 +63,16 @@ public final class ProviderPlaywrightWorkerMain {
              DataInputStream input = new DataInputStream(new BufferedInputStream(socket.getInputStream()));
              DataOutputStream output = new DataOutputStream(new BufferedOutputStream(socket.getOutputStream()))) {
             ProviderPlaywrightWorkerProtocol.writeHandshake(output, configuration.token());
+            boolean j3PauseCapable;
             try {
-                ProviderPlaywrightWorkerProtocol.requireStart(input);
+                j3PauseCapable=ProviderPlaywrightWorkerProtocol.requireStart(input);
             }
             catch (ProviderPlaywrightWorkerProtocol.ProtocolValidationException exception) {
                 ProviderPlaywrightWorkerProtocol.writeFailure(output, exception.failureCode());
                 return 65;
             }
             try (WorkerRuntime runtime = WorkerRuntime.open()) {
+                runtime.j3PauseCapable=j3PauseCapable;
                 ProviderPlaywrightWorkerProtocol.writeReady(output);
                 return commandLoop(configuration, runtime, input, output);
             }
@@ -129,10 +131,27 @@ public final class ProviderPlaywrightWorkerMain {
                 ProviderPlaywrightWorkerProtocol.awaitParentTermination(input);
                 return 0;
             }
+            try {
+                if(command==ProviderPlaywrightWorkerProtocol.BEGIN_J3) {
+                    var scope=ProviderPlaywrightWorkerProtocol.readJ3Scope(input,Instant.now());
+                    runtime.beginJ3(scope);
+                    ProviderPlaywrightWorkerProtocol.writeScopeAcknowledgement(output,ProviderPlaywrightWorkerProtocol.J3_READY,scope.runId());
+                    continue;
+                }
+                if(command==ProviderPlaywrightWorkerProtocol.END_J3) {
+                    var id=ProviderPlaywrightWorkerProtocol.readScopeId(input);runtime.endJ3(id);
+                    ProviderPlaywrightWorkerProtocol.writeScopeAcknowledgement(output,ProviderPlaywrightWorkerProtocol.J3_CLOSED,id);
+                    continue;
+                }
+            } catch(ProviderPlaywrightWorkerProtocol.ProtocolValidationException | IllegalStateException invalid) {
+                ProviderPlaywrightWorkerProtocol.writeFailure(output,ProviderPlaywrightWorkerProtocol.FailureCode.PROTOCOL_ERROR);return 65;
+            }
+            boolean j3=command==ProviderPlaywrightWorkerProtocol.GET_J3;
             boolean liveV6 = command == ProviderPlaywrightWorkerProtocol.GET_LIVE_V6;
             boolean liveV9 = command == ProviderPlaywrightWorkerProtocol.GET_LIVE_V9;
             boolean boundedLive = liveV6 || liveV9;
-            if (command != ProviderPlaywrightWorkerProtocol.GET && !boundedLive) {
+            if ((command != ProviderPlaywrightWorkerProtocol.GET && !boundedLive && !j3)
+                    || j3!=(runtime.j3Scope!=null)) {
                 ProviderPlaywrightWorkerProtocol.writeFailure(
                         output, ProviderPlaywrightWorkerProtocol.FailureCode.PROTOCOL_ERROR);
                 return 65;
@@ -140,12 +159,15 @@ public final class ProviderPlaywrightWorkerMain {
 
             ProviderPlaywrightWorkerProtocol.GetCommand request;
             try {
+                java.util.UUID j3Id=j3?ProviderPlaywrightWorkerProtocol.readScopeId(input):null;
                 request = liveV9
                         ? ProviderPlaywrightWorkerProtocol.readLiveV9GetCommand(input)
                         : ProviderPlaywrightWorkerProtocol.readGetCommand(input);
+                if(j3)runtime.admitJ3(j3Id,request);
             }
-            catch (ProviderPlaywrightWorkerProtocol.ProtocolValidationException exception) {
-                ProviderPlaywrightWorkerProtocol.writeFailure(output, exception.failureCode());
+            catch (ProviderPlaywrightWorkerProtocol.ProtocolValidationException | IllegalStateException exception) {
+                ProviderPlaywrightWorkerProtocol.writeFailure(output, exception instanceof ProviderPlaywrightWorkerProtocol.ProtocolValidationException p
+                        ?p.failureCode():ProviderPlaywrightWorkerProtocol.FailureCode.PROTOCOL_ERROR);
                 return 65;
             }
             if (boundedLive && (request.timeoutMillis() > 30_000
@@ -221,7 +243,11 @@ public final class ProviderPlaywrightWorkerMain {
 
         private final Playwright playwright;
         private final Browser browser;
-        private final BrowserContext context;
+        private final BrowserContext liveContext;
+        private BrowserContext context;
+        private boolean j3PauseCapable;
+        private ProviderPlaywrightWorkerProtocol.J3Scope j3Scope;
+        private int lastJ3Page;
         private final AtomicReference<String> exactAllowedUri = new AtomicReference<>();
         private final AtomicReference<ProviderPlaywrightWorkerProtocol.EntityTag> exactIfNoneMatch =
                 new AtomicReference<>();
@@ -234,12 +260,50 @@ public final class ProviderPlaywrightWorkerMain {
             this.playwright = playwright;
             this.browser = browser;
             this.context = context;
-            context.route("**/*", this::handleRoute);
-            context.routeWebSocket("**/*", route -> {
+            this.liveContext=context;
+            installRoutes(context);
+        }
+
+        private void installRoutes(BrowserContext routedContext) {
+            routedContext.route("**/*", route->{
+                if(routedContext!=context) {
+                    routeFailure.compareAndSet(null,ProviderPlaywrightWorkerProtocol.FailureCode.UNEXPECTED_ROUTE);
+                    route.abort();return;
+                }
+                handleRoute(route);
+            });
+            routedContext.routeWebSocket("**/*", route -> {
                 routeFailure.compareAndSet(null,
                         ProviderPlaywrightWorkerProtocol.FailureCode.UNEXPECTED_ROUTE);
                 route.close();
             });
+        }
+
+        private void beginJ3(ProviderPlaywrightWorkerProtocol.J3Scope scope) {
+            if(!j3PauseCapable || j3Scope!=null || closed.get() || !browser.isConnected()
+                    || browser.contexts().size()!=1 || !browser.contexts().contains(liveContext)
+                    || !liveContext.pages().isEmpty())throw new IllegalStateException("J3_PAUSE_UNAVAILABLE");
+            exactAllowedUri.set(null);exactIfNoneMatch.set(null);exactNavigationAdmission.set(false);
+            BrowserContext temporary=browser.newContext(new Browser.NewContextOptions().setAcceptDownloads(false)
+                    .setJavaScriptEnabled(false).setServiceWorkers(ServiceWorkerPolicy.BLOCK));
+            temporary.clearCookies();installRoutes(temporary);context=temporary;j3Scope=scope;lastJ3Page=0;
+            if(browser.contexts().size()!=2)throw new IllegalStateException("J3_CONTEXT_IDENTITY_MISMATCH");
+        }
+        private void admitJ3(java.util.UUID id,ProviderPlaywrightWorkerProtocol.GetCommand request) {
+            if(j3Scope==null || !j3Scope.runId().equals(id) || request.endpoint()!=ProviderPlaywrightWorkerProtocol.Endpoint.SCHEDULED_EVENTS
+                    || !j3Scope.date().equals(request.date()) || request.page()<=lastJ3Page || request.page()>35
+                    || !Instant.now().plusMillis(request.timeoutMillis()+5000L).isBefore(j3Scope.deadline()))
+                throw new IllegalStateException("J3_SCOPE_MISMATCH");
+            lastJ3Page=request.page();
+        }
+        private void endJ3(java.util.UUID id) {
+            if(j3Scope==null || !j3Scope.runId().equals(id) || context==liveContext)
+                throw new IllegalStateException("J3_SCOPE_MISMATCH");
+            context.clearCookies();context.close();
+            if(!browser.isConnected() || browser.contexts().size()!=1 || !browser.contexts().contains(liveContext))
+                throw new IllegalStateException("J3_CLEANUP_UNVERIFIED");
+            exactAllowedUri.set(null);exactIfNoneMatch.set(null);exactNavigationAdmission.set(false);
+            context=liveContext;j3Scope=null;lastJ3Page=0;
         }
 
         static WorkerRuntime open() throws RuntimeStartException {

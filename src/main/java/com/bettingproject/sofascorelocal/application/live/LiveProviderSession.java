@@ -30,8 +30,9 @@ public final class LiveProviderSession implements AutoCloseable {
         this(factory, campaignId, "live-v3");
     }
     public LiveProviderSession(PlaywrightProviderCampaignFactory factory, UUID campaignId, String policyVersion) {
-        conditionalRevalidation = "live-v9".equals(policyVersion) || "live-v10".equals(policyVersion);
+        conditionalRevalidation = "live-v9".equals(policyVersion) || "live-v10".equals(policyVersion) || "live-v11".equals(policyVersion);
         campaign = switch (policyVersion) {
+            case "live-v11" -> factory.openLiveGroupedV11(campaignId, ENDPOINTS);
             case "live-v10" -> factory.openLiveGroupedV10(campaignId, ENDPOINTS);
             case "live-v9" -> factory.openLiveGroupedV9(campaignId, ENDPOINTS);
             case "live-v8" -> factory.openLiveGroupedV8(campaignId, ENDPOINTS);
@@ -133,6 +134,11 @@ public final class LiveProviderSession implements AutoCloseable {
             throw new IllegalArgumentException("endpoint outside live scope");
         }
         return new ConditionalKey(providerId, endpoint);
+    }
+
+    public PlaywrightProviderCampaign openJ3SubOperation(J3ProviderSubOperation scope) {
+        dispatchedValidators.clear();
+        return campaign.openJ3SubOperation(scope);
     }
 
     @Override public void close() {

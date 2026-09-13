@@ -45,11 +45,17 @@ import java.util.Objects;
 public final class ProviderPlaywrightWorkerProtocol {
 
     public static final int MAGIC = 0x53335057;
-    public static final int VERSION = 9;
+    public static final int VERSION = 10;
 
     public static final byte GET = 1;
     public static final byte CLOSE = 2;
     public static final byte START = 3;
+    public static final byte BEGIN_J3 = 6;
+    public static final byte START_WITH_J3_PAUSE = 7;
+    public static final byte GET_J3 = 8;
+    public static final byte END_J3 = 9;
+    public static final byte J3_READY = 17;
+    public static final byte J3_CLOSED = 18;
     public static final byte GET_LIVE_V6 = 4;
     public static final byte GET_LIVE_V9 = 5;
     public static final byte RESPONSE = 10;
@@ -331,12 +337,39 @@ public final class ProviderPlaywrightWorkerProtocol {
         output.flush();
     }
 
-    public static void requireStart(DataInputStream input)
+    public static boolean requireStart(DataInputStream input)
             throws IOException, ProtocolValidationException {
         Objects.requireNonNull(input, "input");
-        if (input.readUnsignedByte() != START) {
+        int command=input.readUnsignedByte();
+        if (command != START && command != START_WITH_J3_PAUSE) {
             throw new ProtocolValidationException(FailureCode.PROTOCOL_ERROR);
         }
+        return command==START_WITH_J3_PAUSE;
+    }
+
+    public record J3Scope(java.util.UUID runId,LocalDate date,java.time.Instant deadline) { }
+
+    public static J3Scope readJ3Scope(DataInputStream input,java.time.Instant now) throws IOException,ProtocolValidationException {
+        try {
+            java.util.UUID id=readScopeId(input);
+            String text=input.readUTF();LocalDate date=LocalDate.parse(text);
+            if(text.length()!=10 || !date.toString().equals(text))throw new IllegalArgumentException();
+            java.time.Instant deadline=java.time.Instant.ofEpochMilli(input.readLong());
+            if(!deadline.isAfter(now) || deadline.isAfter(now.plusSeconds(1200)))throw new IllegalArgumentException();
+            return new J3Scope(id,date,deadline);
+        } catch(IllegalArgumentException | java.time.DateTimeException invalid) {
+            throw new ProtocolValidationException(FailureCode.PROTOCOL_ERROR);
+        }
+    }
+    public static java.util.UUID readScopeId(DataInputStream input) throws IOException,ProtocolValidationException {
+        try {
+            String value=input.readUTF();java.util.UUID id=java.util.UUID.fromString(value);
+            if(!id.toString().equals(value))throw new IllegalArgumentException();return id;
+        } catch(IllegalArgumentException invalid) {throw new ProtocolValidationException(FailureCode.PROTOCOL_ERROR);}
+    }
+    public static void writeScopeAcknowledgement(DataOutputStream output,byte frame,java.util.UUID id) throws IOException {
+        if(frame!=J3_READY && frame!=J3_CLOSED)throw new IllegalArgumentException("Invalid scope acknowledgement");
+        output.writeByte(frame);output.writeUTF(id.toString());output.flush();
     }
 
     public static void writeReady(DataOutputStream output) throws IOException {

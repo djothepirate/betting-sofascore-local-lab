@@ -35,6 +35,11 @@ docs/validation/WO058-GROUPED-LIVE-V7-*-20260909.json -text whitespace=blank-at-
 docs/validation/WO058-GROUPED-LIVE-V8-*-20260910.json -text whitespace=blank-at-eol,blank-at-eof,space-before-tab,cr-at-eol
 docs/validation/WO058-GROUPED-LIVE-V9-*-20260911.json -text whitespace=blank-at-eol,blank-at-eof,space-before-tab,cr-at-eol
 
+# WO-060 qualification hashes bind the exact bytes on Windows and Linux.
+docs/validation/WO060-LIVE-V11-PROFILE-20260914.json -text whitespace=blank-at-eol,blank-at-eof,space-before-tab,cr-at-eol
+docs/validation/WO060-J3-LIVE-WORKER-20260914.json -text whitespace=blank-at-eol,blank-at-eof,space-before-tab,cr-at-eol
+docs/validation/WO060-J3-IMPLEMENTATION-RESULTS-20260914.json -text whitespace=blank-at-eol,blank-at-eof,space-before-tab,cr-at-eol
+
 # Vendored SVG assets and their manifest keep the exact upstream/audited bytes.
 # Their audited CRLF is a line terminator, not trailing whitespace.
 src/main/resources/static/images/flags/** -text whitespace=blank-at-eol,space-before-tab,cr-at-eol

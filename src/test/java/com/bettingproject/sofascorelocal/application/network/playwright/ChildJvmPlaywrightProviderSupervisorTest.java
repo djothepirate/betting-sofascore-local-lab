@@ -49,6 +49,69 @@ import static org.mockito.Mockito.when;
 
 class ChildJvmPlaywrightProviderSupervisorTest {
 
+    @Test void v11J3ScopeKeepsOneWorkerAndRejectsLiveDispatchUntilVerifiedContextClosure() throws Exception {
+        var properties=enabledProperties("j3-scope.jar");Instant created=Instant.parse("2020-01-01T00:00:00Z");
+        var root=ownedHandle(2_160L,created,true,true);var process=processWithStartInstant(root.handle(),created);
+        var worker=new AtomicReference<Thread>();var failure=new AtomicReference<Throwable>();var starts=new AtomicInteger();
+        var supervisor=new ChildJvmPlaywrightProviderSupervisor(properties,Clock.systemUTC(),new SecureRandom(),builder->{
+            starts.incrementAndGet();worker.set(Thread.ofPlatform().start(()->runJ3ScopeWorker(builder,failure)));return process;
+        },new DelayGateProcessTreeAccess());
+        UUID id=UUID.randomUUID();var endpoints=Set.of(SofascoreEndpointType.EVENT_DETAILS,SofascoreEndpointType.EVENT_STATISTICS,
+                SofascoreEndpointType.EVENT_INCIDENTS,SofascoreEndpointType.EVENT_LINEUPS);
+        var campaign=supervisor.openLiveGroupedV11(id,endpoints);
+        var original=new LiveProviderDispatchGroup(id,UUID.randomUUID(),16_386_245L,LiveProviderDispatchGroup.Phase.CHECK);
+        var scope=new J3ProviderSubOperation(UUID.randomUUID(),LocalDate.parse("2026-09-13"),Instant.now().plusSeconds(600));
+        try {
+            campaign.executeGrouped(PlaywrightProviderRequest.eventDetails(16_386_245L),original,PlaywrightDispatchAdmission.UNRESTRICTED);
+            var j3=campaign.openJ3SubOperation(scope);
+            assertThatThrownBy(()->campaign.executeGrouped(PlaywrightProviderRequest.eventDetails(16_386_245L),original,PlaywrightDispatchAdmission.UNRESTRICTED))
+                    .isInstanceOf(PlaywrightProviderException.class);
+            assertThatThrownBy(()->j3.execute(PlaywrightProviderRequest.scheduledEvents(scope.date().plusDays(1),1)))
+                    .isInstanceOf(PlaywrightProviderException.class);
+            assertThat(j3.execute(PlaywrightProviderRequest.scheduledEvents(scope.date(),1)).httpStatus()).isEqualTo(200);
+            assertThatThrownBy(()->j3.execute(PlaywrightProviderRequest.scheduledEvents(scope.date(),1)))
+                    .isInstanceOf(PlaywrightProviderException.class);
+            j3.close();j3.close();assertThat(supervisor.activeCampaignId()).contains(id);
+            assertThatThrownBy(()->campaign.executeGrouped(PlaywrightProviderRequest.eventDetails(16_386_245L),original,PlaywrightDispatchAdmission.UNRESTRICTED))
+                    .isInstanceOf(PlaywrightProviderException.class);
+            var next=new LiveProviderDispatchGroup(id,UUID.randomUUID(),16_386_245L,LiveProviderDispatchGroup.Phase.CHECK);
+            assertThat(campaign.executeGrouped(PlaywrightProviderRequest.eventDetails(16_386_245L),next,PlaywrightDispatchAdmission.UNRESTRICTED).httpStatus()).isEqualTo(200);
+            assertThat(starts).hasValue(1);campaign.close();
+        } finally {supervisor.stopCampaign(id,endpoints);awaitNoActiveCampaign(supervisor);campaign.close();}
+        worker.get().join(2000);assertThat(worker.get().isAlive()).isFalse();assertThat(failure.get()).isNull();
+    }
+
+    private static void runJ3ScopeWorker(ProcessBuilder builder,AtomicReference<Throwable> failure) {
+        try(var socket=new Socket("127.0.0.1",Integer.parseInt(builder.environment().get("SOFASCORE_PLAYWRIGHT_IPC_PORT")))) {
+            var out=new DataOutputStream(socket.getOutputStream());var in=new DataInputStream(socket.getInputStream());
+            out.writeInt(ChildJvmPlaywrightProviderSupervisor.MAGIC);out.writeInt(ChildJvmPlaywrightProviderSupervisor.VERSION);
+            out.writeUTF(builder.environment().get("SOFASCORE_PLAYWRIGHT_IPC_TOKEN"));out.flush();
+            assertThat(in.readUnsignedByte()).isEqualTo(ChildJvmPlaywrightProviderSupervisor.START_WITH_J3_PAUSE);
+            out.writeByte(ChildJvmPlaywrightProviderSupervisor.READY);out.flush();
+            readJ3TestLiveRequest(in);writeJ3TestResponse(out,true);
+            assertThat(in.readUnsignedByte()).isEqualTo(ChildJvmPlaywrightProviderSupervisor.BEGIN_J3);
+            String id=in.readUTF();assertThat(in.readUTF()).isEqualTo("2026-09-13");assertThat(in.readLong()).isPositive();
+            out.writeByte(ChildJvmPlaywrightProviderSupervisor.J3_READY);out.writeUTF(id);out.flush();
+            assertThat(in.readUnsignedByte()).isEqualTo(ChildJvmPlaywrightProviderSupervisor.GET_J3);assertThat(in.readUTF()).isEqualTo(id);
+            readProviderRequest(in);writeJ3TestResponse(out,false);
+            assertThat(in.readUnsignedByte()).isEqualTo(ChildJvmPlaywrightProviderSupervisor.END_J3);assertThat(in.readUTF()).isEqualTo(id);
+            out.writeByte(ChildJvmPlaywrightProviderSupervisor.J3_CLOSED);out.writeUTF(id);out.flush();
+            readJ3TestLiveRequest(in);writeJ3TestResponse(out,true);
+            assertThat(in.readUnsignedByte()).isEqualTo(ChildJvmPlaywrightProviderSupervisor.CLOSE);
+            out.writeByte(ChildJvmPlaywrightProviderSupervisor.CLOSED);out.flush();assertThat(in.read()).isEqualTo(-1);
+        } catch(Throwable problem) {failure.set(problem);}
+    }
+    private static void readJ3TestLiveRequest(DataInputStream input)throws IOException {
+        assertThat(input.readUnsignedByte()).isEqualTo(ChildJvmPlaywrightProviderSupervisor.GET_LIVE_V9);
+        assertThat(input.readUTF()).isEqualTo("EVENT_DETAILS");assertThat(input.readLong()).isEqualTo(16_386_245L);
+        assertThat(input.readBoolean()).isFalse();assertThat(input.readInt()).isEqualTo(2000);
+    }
+    private static void writeJ3TestResponse(DataOutputStream output,boolean conditional)throws IOException {
+        long now=Instant.now().toEpochMilli();output.writeByte(conditional?ChildJvmPlaywrightProviderSupervisor.RESPONSE_V9:ChildJvmPlaywrightProviderSupervisor.RESPONSE);
+        output.writeLong(now);output.writeLong(now);output.writeInt(200);output.writeUTF("application/json");
+        if(conditional)output.writeBoolean(false);output.writeInt(2);output.write("{}".getBytes(StandardCharsets.UTF_8));output.flush();
+    }
+
     @TempDir
     private Path temporaryDirectory;
 
@@ -282,7 +345,7 @@ class ChildJvmPlaywrightProviderSupervisorTest {
         gate.awaitNextDispatch(() -> { });
 
         assertThat(pauses).isEmpty();
-        assertThat(ChildJvmPlaywrightProviderSupervisor.VERSION).isEqualTo(9);
+        assertThat(ChildJvmPlaywrightProviderSupervisor.VERSION).isEqualTo(10);
     }
 
     @Test

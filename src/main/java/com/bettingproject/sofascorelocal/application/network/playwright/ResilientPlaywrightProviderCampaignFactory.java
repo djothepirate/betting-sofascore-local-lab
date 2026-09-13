@@ -65,6 +65,9 @@ public final class ResilientPlaywrightProviderCampaignFactory implements Playwri
     @Override public PlaywrightProviderCampaign openLiveGroupedV10(UUID id, Set<SofascoreEndpointType> endpoints) {
         return openProtected(id,()->delegate.openLiveGroupedV10(id,endpoints),true,DepartureProfile.LIVE_V10);
     }
+    @Override public PlaywrightProviderCampaign openLiveGroupedV11(UUID id, Set<SofascoreEndpointType> endpoints) {
+        return openProtected(id,()->delegate.openLiveGroupedV11(id,endpoints),true,DepartureProfile.LIVE_V10);
+    }
     @Override public PlaywrightProviderCampaign openManualJ5Grouped(UUID id, Set<SofascoreEndpointType> endpoints) {
         return openProtected(id,()->delegate.openManualJ5Grouped(id,endpoints));
     }
@@ -90,6 +93,12 @@ public final class ResilientPlaywrightProviderCampaignFactory implements Playwri
         PlaywrightProviderCampaign campaign=opening.get();
         return new PlaywrightProviderCampaign() {
             private UUID unfinished;
+            @Override public PlaywrightProviderCampaign openJ3SubOperation(J3ProviderSubOperation scope) {
+                requireOpen();
+                if(unfinished!=null)throw new IllegalStateException("PROVIDER_DEPARTURE_UNRESOLVED");
+                // The same durable counter charges J3 under its original, more restrictive pressure profile.
+                return openProtected(scope.runId(),()->campaign.openJ3SubOperation(scope),false,DepartureProfile.LEGACY_V1);
+            }
             @Override public PlaywrightProviderResponse execute(PlaywrightProviderRequest request) {
                 return execute(request,PlaywrightDispatchAdmission.UNRESTRICTED);
             }
