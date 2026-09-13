@@ -23,6 +23,8 @@
   <nav class="links page-links" aria-label="Navigation locale"><a th:href="@{/events}">← Rencontres</a>
     <a th:href="@{/provider-access}">État de l’accès fournisseur</a></nav>
   <p class="notice" role="status" th:if="${liveSuccess != null}" th:text="${liveSuccess}"></p>
+  <p class="notice notice-warning" role="status" aria-live="polite" data-live-j3-pause
+     th:hidden="${campaign.j3Pause == null}" th:text="${campaign.j3Pause?.label}"></p>
   <section class="panel" th:if="${excludedFinished != null and !#lists.isEmpty(excludedFinished)}" aria-label="Rencontres terminées exclues">
     <p class="notice" role="status">Les rencontres suivantes sont déjà terminées (finished).
       Elles ont été exclues du manifeste ; aucun appel fournisseur ne sera effectué pour elles.</p>

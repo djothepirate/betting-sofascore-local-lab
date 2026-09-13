@@ -117,200 +117,112 @@
   </section>
 
   <section class="panel manual-call-panel" id="manual-call-control" aria-labelledby="manual-call-title">
-    <div class="panel-heading">
-      <div>
-        <p class="label">J3 / Contrôle opérateur local</p>
-        <h2 id="manual-call-title">Confirmation explicite d’une intention manuelle</h2>
-      </div>
-      <span class="chip"
-            th:classappend="${manualCall.globalStopActive} ? ' chip-danger' : ' chip-safe'"
-            th:text="${manualCall.globalStopActive ? 'ARRÊT GLOBAL ACTIF' : 'ARRÊT GLOBAL LEVÉ'}">ARRÊT GLOBAL ACTIF</span>
-    </div>
-
-    <p class="control-intro">Une confirmation ne déclenche rien à elle seule. Chaque collecte repart de la page 1 et continue strictement tant que le JSON parsé indique <span class="mono">hasNextPage=true</span>, dans l’ordre, sans cookie, jeton, compte, session ni retry. Le plafond local est fixé à 35 pages. Après confirmation, l’opérateur choisit une seule voie : transport direct ou import local de toutes les pages JSON 1 à N.</p>
-
-    <div th:if="${manualCallMessage != null}"
-         class="notice"
-         th:classappend="${manualCallMessageKind == 'safe'} ? ' notice-safe' : ' notice-danger'"
-         role="status"
-         aria-live="polite"
-         th:text="${manualCallMessage}">État mis à jour.</div>
-
-    <div class="control-grid">
-      <div class="control-stage">
-        <p class="label">Barrières locales</p>
-        <dl>
-          <div><dt>Arrêt global</dt><dd th:text="${manualCall.globalStopActive ? 'ACTIF' : 'LEVÉ'}">ACTIF</dd></div>
-          <div><dt>Circuit</dt><dd class="mono" th:text="${manualCall.circuitState}">LOCKED</dd></div>
-          <div><dt>Motif</dt><dd class="mono" th:text="${manualCall.circuitReason}">STARTUP_LOCK</dd></div>
-          <div><dt>Activation opérateur</dt><dd th:text="${manualCall.operatorActivated ? 'OUI' : 'NON'}">NON</dd></div>
-          <div><dt>Incident actif</dt><dd th:text="${manualCall.incidentActive ? 'OUI' : 'NON'}">NON</dd></div>
-          <div><dt>Transport fournisseur</dt>
-            <dd th:class="${manualCall.providerTransportAvailable ? 'safe' : 'danger'}"
-                th:text="${manualCall.realCallEnabled ? 'PRÊT POUR COLLECTE MANUELLE' : (manualCall.providerTransportAvailable ? 'PAGINATION DYNAMIQUE — CONFIRMATION REQUISE' : 'INDISPONIBLE')}">INDISPONIBLE</dd>
+    <div class="panel-heading"><div><p class="label">J3 / Calendrier local</p><h2 id="manual-call-title">Collecter et consulter une date</h2></div></div>
+    <p>Le dernier succès de chaque date est conservé après redémarrage. Un échec ultérieur ne remplace pas ces résultats.</p>
+    <p class="notice" role="status" aria-live="polite" th:if="${j3Message != null}" th:text="${j3Message}">État J3</p>
+    <div th:if="${j3Settings != null}">
+      <p class="notice notice-warning" th:if="${j3RuntimeReason != ''}" th:text="${j3RuntimeReason}"></p>
+      <form class="control-form" th:action="@{/j3/collect}" method="post" enctype="multipart/form-data">
+        <input type="hidden" name="localFormToken" th:value="${localFormToken}">
+        <input type="hidden" name="orderId" th:value="${j3OrderId}">
+        <label for="j3-date">Date à collecter</label>
+        <input id="j3-date" name="date" type="date" required th:value="${j3Date}">
+        <div class="discovery-execution-grid">
+          <div class="control-stage">
+            <h3>Option A — Collecte fournisseur</h3>
+            <p>Les pages sont collectées dans l’ordre jusqu’à la dernière page annoncée, avec un maximum de 35 pages.</p>
+            <p th:if="${!j3ProviderReady}" class="notice notice-warning" th:text="${j3ProviderReason}"></p>
+            <button type="submit" class="real-call-button" th:disabled="${!j3ProviderReady}">A. Lancer la collecte paginée — APPELS FOURNISSEUR</button>
           </div>
-        </dl>
-
-        <div class="provider-blockers" th:if="${!manualCall.providerBlockers.isEmpty()}">
-          <p class="label">Verrous du transport fournisseur</p>
-          <ul>
-            <li th:each="blocker : ${manualCall.providerBlockers}"
-                class="mono" th:text="${blocker}">PLAYWRIGHT_RUNTIME_DISABLED</li>
-          </ul>
-        </div>
-
-        <div class="control-actions">
-          <form th:if="${manualCall.canRearm}" th:action="@{/manual-call/rearm}" method="post">
-            <input type="hidden" name="localFormToken" th:value="${localFormToken}">
-            <button class="button-warning" type="submit">1. Lever l’arrêt global</button>
-          </form>
-
-          <form th:if="${manualCall.canActivate}" th:action="@{/manual-call/activate}" method="post">
-            <input type="hidden" name="localFormToken" th:value="${localFormToken}">
-            <button class="button-primary" type="submit">2. Activer le circuit</button>
-          </form>
-
-          <form th:action="@{/manual-call/stop}" method="post">
-            <input type="hidden" name="localFormToken" th:value="${localFormToken}">
-            <button class="button-danger" type="submit" th:disabled="${manualCall.globalStopActive}">Arrêt global immédiat</button>
-          </form>
-        </div>
-      </div>
-
-      <div class="control-stage">
-        <p class="label">Intention SCHEDULED_EVENTS</p>
-
-        <form class="control-form"
-              th:if="${manualCall.canPrepare}"
-              th:action="@{/manual-call/prepare}"
-              method="post">
-          <input type="hidden" name="localFormToken" th:value="${localFormToken}">
-          <label for="manual-call-date">Date à collecter — départ page 1, fin pilotée par hasNextPage</label>
-          <input id="manual-call-date" type="date" name="date" required
-                 th:value="${manualCall.suggestedDate}">
-          <button class="button-primary" type="submit">3. Préparer la collecte</button>
-        </form>
-
-        <div th:if="${manualCall.intent == null}" class="empty-state">
-          <p class="metric muted">AUCUNE INTENTION</p>
-          <p>Le démarrage sûr impose d’abord la levée de l’arrêt global puis l’activation du circuit.</p>
-        </div>
-
-        <div th:if="${manualCall.intent != null}">
-          <dl class="intent-metadata">
-            <div><dt>État</dt><dd class="mono" th:text="${manualCall.intent.state}">AWAITING_CONFIRMATION</dd></div>
-            <div><dt>Clé</dt><dd class="mono" th:text="${manualCall.intent.requestKey}">SCHEDULED_EVENTS|date=2026-08-12</dd></div>
-            <div><dt>Expiration</dt><dd th:text="${manualCall.intent.expiresAt}">—</dd></div>
-            <div th:if="${manualCall.intent.confirmedBlocked}"><dt>Confirmée à</dt><dd th:text="${manualCall.intent.confirmedAt}">—</dd></div>
-          </dl>
-
-          <form class="control-form confirmation-form"
-                th:if="${manualCall.intent.awaitingConfirmation}"
-                th:action="@{/manual-call/confirm}"
-                method="post">
-            <input type="hidden" name="localFormToken" th:value="${localFormToken}">
-            <input type="hidden" name="requestId" th:value="${manualCall.intent.requestId}">
-            <p>Recopiez exactement cette phrase à usage unique avant son expiration :</p>
-            <code class="confirmation-phrase" th:text="${manualCall.intent.confirmationPhrase}">CONFIRMER SCHEDULED_EVENTS 2026-08-14 PAGINATION DYNAMIQUE MAX 35 000042</code>
-            <label for="confirmation-text">Phrase de confirmation</label>
-            <input id="confirmation-text" type="text" name="confirmationText" maxlength="128" autocomplete="off" required>
-            <label class="acknowledgement" for="acknowledged">
-              <input id="acknowledged" type="checkbox" name="acknowledged" value="true" required>
-              Je confirme la date, le départ obligatoire en page 1, la pagination pilotée par hasNextPage, le plafond de 35 pages, l’absence de données de session et comprends que le déclenchement reste une action séparée.
-            </label>
-            <button class="button-primary" type="submit">4. Confirmer l’intention locale</button>
-          </form>
-
-          <div th:if="${manualCall.intent.confirmedBlocked}" class="notice notice-safe">
-            Intention confirmée et arrêtée avant transport. L’action réelle reste désactivée.
-          </div>
-
-          <div th:if="${manualCall.intent.confirmedReady}" class="notice notice-warning">
-            Collecte confirmée. Vérifiez une dernière fois la date puis choisissez une seule action : une séquence fournisseur <span th:text="${manualCall.intent.pageRange}">1-N (max 35)</span>, ou l’import hors réseau des corps JSON de toutes les pages 1 à N.
-          </div>
-
-          <div th:if="${manualCall.intent.executing}" class="notice notice-warning">
-            Collecte en cours. N’actualisez pas la page ; l’arrêt global reste prioritaire entre deux pages.
-          </div>
-
-          <div th:if="${manualCall.intent.completed}" class="notice notice-safe">
-            Collecte terminée : toutes les pages annoncées sont conservées et classées localement.
-          </div>
-
-          <div th:if="${manualCall.intent.failed}" class="notice notice-danger">
-            Collecte arrêtée sans retry avant la page <span th:text="${manualCall.intent.failedPage}">2</span>
-            — <span class="mono" th:text="${manualCall.intent.terminalCode}">INCIDENT</span>.
-          </div>
-
-          <p th:if="${manualCall.intent.executing or manualCall.intent.completed or manualCall.intent.failed}">
-            Pages collectées dans cette séquence : <strong th:text="${manualCall.intent.completedPages}">1</strong>
-          </p>
-
-          <div th:if="${!manualCall.intent.awaitingConfirmation
-                       and !manualCall.intent.confirmedBlocked
-                       and !manualCall.intent.confirmedReady
-                       and !manualCall.intent.executing
-                       and !manualCall.intent.completed
-                       and !manualCall.intent.failed}"
-               class="notice notice-danger">
-            Cette intention n’est plus active. Une nouvelle séquence explicite est nécessaire.
-          </div>
-        </div>
-
-        <div th:if="${manualCall.realCallEnabled or manualCall.localImportEnabled}"
-             class="discovery-execution-grid">
-          <form class="control-form control-stage"
-                th:if="${manualCall.realCallEnabled}"
-                th:action="@{/manual-call/execute}"
-                method="post">
-            <input type="hidden" name="localFormToken" th:value="${localFormToken}">
-            <input type="hidden" name="requestId" th:value="${manualCall.intent.requestId}">
-            <h3>Option A — Collecte fournisseur directe</h3>
-            <p class="fixture-note">Déclenche les GET ordonnés page 1 à N, sans retry, avec arrêt au premier incident.</p>
-            <button type="submit" class="real-call-button">5A. Lancer la collecte paginée — APPELS FOURNISSEUR</button>
-          </form>
-
-          <form class="control-form control-stage"
-                th:if="${manualCall.localImportEnabled}"
-                th:action="@{/manual-call/import-json-pages}"
-                method="post"
-                enctype="multipart/form-data">
-            <input type="hidden" name="localFormToken" th:value="${localFormToken}">
-            <input type="hidden" name="requestId" th:value="${manualCall.intent.requestId}">
-            <h3>Option B — Import J3 paginé sans réseau</h3>
-            <p class="fixture-note">Ouvrez manuellement
-              <code>https://www.sofascore.com/api/v1/sport/football/scheduled-tournaments/<span th:text="${manualCall.intent.date}">2026-08-21</span>/page/1</code>,
-              puis les pages suivantes tant que <code>hasNextPage=true</code>. Enregistrez uniquement
-              chaque corps JSON sous <code>page-1.json</code>, <code>page-2.json</code>, … et sélectionnez
-              tous les fichiers en une fois. Aucun HAR, en-tête, cookie ou export DevTools.</p>
+          <div class="control-stage">
+            <h3>Option B — Import local</h3>
             <label for="j3-page-files">Pages JSON contiguës 1 à N</label>
-            <input id="j3-page-files" type="file" name="pageFiles"
-                   accept="application/json,.json" multiple required>
-            <p class="fixture-note">5 Mio maximum par page, 25 Mio pour le lot, 35 pages maximum. La dernière page doit annoncer <code>hasNextPage=false</code>.</p>
-            <button type="submit" class="button-primary">5B. Importer et valider J3 — ZÉRO APPEL</button>
-          </form>
+            <input id="j3-page-files" type="file" name="pageFiles" accept="application/json,.json" multiple>
+            <p>Fichiers page-1.json à page-N.json. Limites : 5 Mio par page, 25 Mio par lot, 35 pages. La dernière page doit annoncer hasNextPage=false.</p>
+            <button type="submit" th:formaction="@{/j3/import}" class="button-primary">5B. Importer et valider J3 — ZÉRO APPEL</button>
+          </div>
         </div>
-        <button th:if="${!manualCall.realCallEnabled}" type="button" class="real-call-button" disabled>Lancer la collecte fournisseur — BLOQUÉE</button>
+      </form>
+      <form th:if="${j3CleanupPending}" th:action="@{/j3/cleanup}" method="post">
+        <input type="hidden" name="localFormToken" th:value="${localFormToken}">
+        <p class="notice notice-warning">La fin du nettoyage du navigateur J3 reste à vérifier.</p>
+        <button class="button-warning" type="submit">Vérifier et terminer le nettoyage J3</button>
+      </form>
+      <div class="control-stage">
+        <h3>Résultats enregistrés</h3>
+        <form class="control-form" th:action="@{/}" method="get">
+          <label for="j3-saved-date">Date à consulter</label><input id="j3-saved-date" type="date" name="j3Date" required th:value="${j3Date}">
+          <button type="submit" class="button-primary">Consulter cette date</button>
+        </form>
+        <form th:if="${!j3Dates.isEmpty()}" th:action="@{/}" method="get">
+          <label for="j3-date-history">Dates déjà collectées</label>
+          <select id="j3-date-history" name="j3Date">
+            <option th:each="savedDate : ${j3Dates}" th:value="${savedDate.date}" th:selected="${savedDate.date == j3Date}" th:text="${savedDate.date}"></option>
+          </select><button type="submit">Ouvrir</button>
+        </form>
+        <p class="notice notice-warning" th:if="${j3HistoryUnavailable}">Un succès historique est attesté pour cette date, mais ses données ne sont plus disponibles. Un import explicite permet de les remplacer.</p>
+        <div th:if="${j3Collection != null}">
+          <p>Dernière collecte réussie du <strong th:text="${j3Date}"></strong>, enregistrée le <span th:text="${#temporals.format(j3Collection.proof.finishedAt.atZone(T(java.time.ZoneId).of('Europe/Paris')), 'dd/MM/yyyy HH:mm:ss')}"></span>.</p>
+          <a class="button-primary" th:href="@{/j3/collections/{id}(id=${j3Collection.id},date=${j3Date})}">Consulter cette collecte dans la vue paginée</a>
+          <a th:href="@{/j3/collections/{id}/evidence(id=${j3Collection.id},date=${j3Date})}">Télécharger la preuve de collecte</a>
+        </div>
+        <p th:if="${j3Collection == null and !j3HistoryUnavailable}">Aucune collecte réussie enregistrée pour cette date.</p>
       </div>
+      <section class="control-stage" id="j3-automation" aria-labelledby="j3-automation-title">
+        <h3 id="j3-automation-title">Collecte automatique</h3>
+        <p>Les horaires utilisent Europe/Paris. Le laboratoire doit être en service. Les horaires manqués ne sont pas rattrapés.</p>
+        <form class="control-form" th:action="@{/j3/settings}" method="post">
+          <input type="hidden" name="localFormToken" th:value="${localFormToken}">
+          <input type="hidden" name="revision" th:value="${j3Settings.revision}">
+          <label><input type="checkbox" name="enabled" value="true" th:checked="${j3Settings.enabled}">Activer la collecte automatique J3</label>
+          <label for="j3-mode">Collecte quotidienne</label>
+          <select name="mode" id="j3-mode">
+            <option value="STARTUP_OR_DAY_CHANGE" th:selected="${j3Settings.mode.name() == 'STARTUP_OR_DAY_CHANGE'}">Au démarrage ou au changement de jour, si aucun succès ce jour</option>
+            <option value="DAILY_AT" th:selected="${j3Settings.mode.name() == 'DAILY_AT'}">À une heure fixe, même après un succès</option>
+          </select>
+          <label for="j3-daily-time">Heure fixe (si ce mode est choisi)</label>
+          <input type="time" name="time" id="j3-daily-time" step="60" th:value="${j3Settings.dailyTime}">
+          <button type="submit" class="button-primary">Enregistrer l’automatisation</button>
+        </form>
+        <h4>Programmer une prochaine collecte</h4>
+        <p>Chaque horaire explicite reste exécuté même si une collecte a déjà réussi pour sa date cible.</p>
+        <form class="control-form" th:action="@{/j3/plans}" method="post">
+          <input type="hidden" name="localFormToken" th:value="${localFormToken}">
+          <input type="hidden" name="ruleId" th:value="${j3RuleId}"><input type="hidden" name="revision" value="1">
+          <label for="j3-plan-date">Date à collecter</label><input id="j3-plan-date" type="date" name="date" required th:value="${j3Date}">
+          <label for="j3-plan-at">Date et heure de déclenchement à Paris</label><input id="j3-plan-at" type="datetime-local" name="at" required step="60">
+          <label for="j3-plan-offset">Lors du passage à l’heure d’hiver uniquement</label>
+          <select name="offset" id="j3-plan-offset"><option value="">Choix automatique hors heure double</option><option value="+02:00">Première occurrence (+02:00)</option><option value="+01:00">Seconde occurrence (+01:00)</option></select>
+          <button type="submit" class="button-primary">Programmer la collecte</button>
+        </form>
+        <h4>Horaires et dernières exécutions</h4>
+        <div class="table-wrap"><table><thead><tr><th>Date collectée</th><th>Déclenchement à Paris</th><th>Origine</th><th>État</th><th>Action</th></tr></thead>
+          <tbody><tr th:each="order : ${j3Orders}">
+            <td th:text="${order.date}"></td><td th:text="${#temporals.format(order.dueAt.atZone(T(java.time.ZoneId).of('Europe/Paris')), 'dd/MM/yyyy HH:mm')}"></td>
+            <td th:text="${order.trigger.name() == 'SCHEDULED' ? 'Horaire programmé' : (order.automatic() ? 'Quotidienne' : (order.trigger.name() == 'MANUAL_IMPORT' ? 'Import' : 'Manuelle'))}"></td>
+            <td><span th:text="${T(com.bettingproject.sofascorelocal.adapter.web.J3Presentation).state(order.state)}"></span>
+              <p th:text="${T(com.bettingproject.sofascorelocal.adapter.web.J3Presentation).reason(order.reason)}"></p></td>
+            <td>
+              <a th:if="${order.state.name() == 'QUEUED' or order.state.name() == 'RUNNING'}" th:href="@{/j3/orders/{id}(id=${order.id})}">Suivre</a>
+              <form th:if="${order.state.name() == 'FUTURE' or order.state.name() == 'QUEUED'}" th:action="@{/j3/plans/{id}/cancel(id=${order.id})}" method="post">
+                <input type="hidden" name="localFormToken" th:value="${localFormToken}"><button type="submit">Annuler</button>
+              </form>
+              <details th:if="${order.state.name() == 'FUTURE' and order.trigger.name() == 'SCHEDULED'}"><summary>Modifier cet horaire</summary>
+                <form class="control-form" th:action="@{/j3/plans}" method="post">
+                  <input type="hidden" name="localFormToken" th:value="${localFormToken}">
+                  <input type="hidden" name="ruleId" th:value="${order.ruleId}"><input type="hidden" name="revision" th:value="${order.ruleRevision + 1}">
+                  <label>Date à collecter<input name="date" type="date" required th:value="${order.date}"></label>
+                  <label>Nouvel horaire à Paris<input name="at" type="datetime-local" step="60" required></label>
+                  <label>Heure double<select name="offset"><option value="">Automatique</option><option value="+02:00">Première occurrence</option><option value="+01:00">Seconde occurrence</option></select></label>
+                  <button type="submit">Enregistrer cet horaire</button>
+                </form>
+              </details>
+            </td>
+          </tr></tbody>
+        </table></div>
+      </section>
     </div>
-
-    <section class="qualification-evidence"
-             th:if="${collectionEvidence != null}"
-             aria-labelledby="qualification-evidence-title">
-      <div class="panel-heading">
-        <div>
-          <p class="label">J3 / Preuve terminale minimisée</p>
-          <h3 id="qualification-evidence-title">Métadonnées de collecte minimisées</h3>
-        </div>
-        <span class="chip chip-safe">ARRÊT GLOBAL RÉAPPLIQUÉ</span>
-      </div>
-      <p>Cette preuve est produite après la séquence terminale. Elle contient les statuts, horodatages,
-        tailles et empreintes SHA-256 de persistance, sans payload JSON, URI, en-tête ni donnée de session.</p>
-      <pre class="evidence-report" th:text="${collectionEvidence.reportText}">J3_MINIMIZED_EVIDENCE_VERSION=6</pre>
-      <a class="evidence-download" th:href="@{/manual-call/evidence}" href="/manual-call/evidence">
-        Télécharger la preuve minimisée (.txt)
-      </a>
-    </section>
+    <p class="notice notice-warning" th:if="${j3Settings == null}">Les données J3 sont temporairement indisponibles.</p>
   </section>
 
   <section class="panel manual-call-panel"
@@ -327,7 +239,7 @@
     </div>
 
     <p class="control-intro">Le catalogue ci-dessous est reconstruit uniquement depuis les pages
-      exactes de la dernière collecte J3 complète du processus courant. Le libellé associe
+      exactes de la dernière collecte J3 réussie pour la date consultée, conservée après redémarrage. Le libellé associe
       <span class="mono">tournament.name</span> et <span class="mono">tournament.category.name</span>,
       tandis que la route utilise exclusivement
       <span class="mono">uniqueTournament.id</span> numérique. Une occurrence n'est proposée que si
@@ -359,20 +271,17 @@
 
       <div class="empty-state" th:if="${!tournamentCatalog.available}">
         <p class="metric muted">AUCUN CATALOGUE ACTIONNABLE</p>
-        <p>Une collecte J3 terminale <span class="mono">COMPLETED</span> est requise dans ce processus.
-          Après redémarrage, relancez explicitement J3 ; le cache frais peut éviter un transport.</p>
+        <p>Aucun catalogue de tournois n’est disponible pour cette date.
+          Choisissez une date conservée ou lancez une collecte. Les succès conservés restent accessibles après redémarrage.</p>
       </div>
 
       <form class="control-form"
-            th:if="${tournamentCatalog.available
-                     and !tournamentCatalog.options.empty
-                     and tournamentDiscoveryControl.localImportAvailable
-                     and !tournamentDiscoveryControl.awaitingConfirmation()
-                     and !tournamentDiscoveryControl.executing()
-                     and !tournamentDiscoveryControl.terminalLocked()}"
+            th:if="${tournamentCatalog.available and !tournamentCatalog.options.empty}"
             th:action="@{/tournament-event-discovery/prepare}"
             method="post">
         <input type="hidden" name="localFormToken" th:value="${localFormToken}">
+          <input type="hidden" name="collectionId" th:value="${j3Collection?.id}">
+          <input type="hidden" name="date" th:value="${j3Date}">
         <label for="tournament-selection">Tournoi ou phase — libellé fournisseur contrôlé</label>
         <select id="tournament-selection" name="tournamentId" required>
           <option value="" selected disabled>Choisir un tournoi</option>
@@ -382,7 +291,11 @@
         </select>
         <p class="fixture-note">La valeur postée est l’identité de phase. La date, l’identité du tournoi
           unique, les compteurs et les snapshots sources sont toujours résolus à nouveau côté serveur.</p>
-        <button class="button-primary" type="submit">Préparer sans réseau</button>
+        <button class="button-primary" type="submit"
+                th:disabled="${!tournamentDiscoveryControl.localImportAvailable
+                    or tournamentDiscoveryControl.awaitingConfirmation()
+                    or tournamentDiscoveryControl.executing()
+                    or tournamentDiscoveryControl.terminalLocked()}">Préparer sans réseau</button>
       </form>
     </div>
 
@@ -701,9 +614,9 @@
 
   <section class="panel guardrails">
     <p class="label">Limites actives</p>
-    <h2>Ce bootstrap ne fait pas</h2>
+    <h2>Cadre de l’expérimentation locale</h2>
     <ul>
-      <li>aucun polling, live ou rafraîchissement automatique ;</li>
+      <li>les ordres automatiques J3 suivent les réglages locaux ; les cycles live suivent une campagne lancée par l’opérateur ;</li>
       <li>aucune rotation de proxy, simulation de navigateur ou réutilisation de session ;</li>
       <li>aucun envoi vers le VPS ou dépendance du Betting Project principal ;</li>
       <li>aucun test Maven standard ne contacte SofaScore.</li>

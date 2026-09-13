@@ -41,7 +41,6 @@ public class TournamentEventDiscoveryController {
         this.formTokenService = formTokenService;
     }
 
-    @PostMapping("/tournament-event-discovery/prepare")
     public String prepare(
             @RequestParam("localFormToken") String localFormToken,
             @RequestParam("tournamentId") long tournamentId,
@@ -61,6 +60,22 @@ public class TournamentEventDiscoveryController {
             addError(redirectAttributes, safeCode(exception));
         }
         return REDIRECT;
+    }
+
+    @PostMapping("/tournament-event-discovery/prepare")
+    public String prepareCollection(@RequestParam String localFormToken,@RequestParam UUID collectionId,
+            @RequestParam java.time.LocalDate date,@RequestParam long tournamentId,
+            HttpSession session,RedirectAttributes redirectAttributes) {
+        formTokenService.consume(session,localFormToken);
+        try {
+            controlService.prepare(collectionId,date,tournamentId);
+            redirectAttributes.addFlashAttribute("tournamentDiscoveryMessage",
+                    "Tournoi sélectionné dans la collecte enregistrée pour le "+date+". Confirmez la découverte de rencontres ci-dessous.");
+            redirectAttributes.addFlashAttribute("tournamentDiscoveryMessageKind","safe");
+        } catch(TournamentEventDiscoveryControlException | IllegalArgumentException failure) {
+            addError(redirectAttributes,safeCode(failure));
+        }
+        return "redirect:/dashboard?j3Date="+date+"#tournament-event-discovery";
     }
 
     @PostMapping("/tournament-event-discovery/execute")

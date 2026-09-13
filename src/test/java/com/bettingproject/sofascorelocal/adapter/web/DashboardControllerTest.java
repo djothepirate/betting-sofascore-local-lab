@@ -94,8 +94,18 @@ class DashboardControllerTest {
     @MockitoBean
     private J6RawPayloadRetentionService retentionService;
 
+    @MockitoBean private com.bettingproject.sofascorelocal.application.network.J3RuntimeService j3Runtime;
+    @MockitoBean private com.bettingproject.sofascorelocal.port.J3CollectionStore j3Collections;
+
     @BeforeEach
     void snapshotInspectionIsUnavailableByDefault() {
+        when(j3Runtime.settings()).thenReturn(new com.bettingproject.sofascorelocal.domain.scheduledevents.J3AutomationData.Settings(
+                true,com.bettingproject.sofascorelocal.domain.scheduledevents.J3AutomationData.Mode.STARTUP_OR_DAY_CHANGE,null,1,
+                Instant.parse("2026-09-13T08:00:00Z")));
+        when(j3Runtime.orders()).thenReturn(List.of());
+        when(j3Collections.dates(3660)).thenReturn(List.of());
+        when(tournamentCatalogService.forDate(any(LocalDate.class))).thenAnswer(ignored->tournamentCatalogService.latest());
+
         when(tournamentCatalogService.latest()).thenReturn(J3TournamentCatalog.unavailable(
                 J3TournamentCatalogStatus.NO_COLLECTION_EVIDENCE,
                 Optional.empty()));
@@ -342,10 +352,10 @@ class DashboardControllerTest {
                 .andExpect(content().string(containsString("12 / 12 disponibles")))
                 .andExpect(content().string(containsString("scheduled-events-v1")))
                 .andExpect(content().string(containsString("VALIDÉ")))
-                .andExpect(content().string(containsString("ARRÊT GLOBAL ACTIF")))
-                .andExpect(content().string(containsString("REAL_CALL_NOT_AUTHORIZED")))
+                .andExpect(content().string(not(containsString("ARRÊT GLOBAL ACTIF"))))
+                .andExpect(content().string(containsString("Collecte automatique")))
                 .andExpect(content().string(containsString(
-                        "Verrous du transport fournisseur")))
+                        "Consulter cette date")))
                 .andExpect(content().string(containsString(
                         "J3 / Inspection locale en lecture seule")))
                 .andExpect(content().string(containsString(
@@ -355,7 +365,7 @@ class DashboardControllerTest {
                         "SCHEDULED_EVENTS|date=2026-08-14|page=1")))
                 .andExpect(content().string(containsString("Inspecter le JSON")))
                 .andExpect(content().string(containsString(
-                        "Lancer la collecte fournisseur — BLOQUÉE")))
+                        "A. Lancer la collecte paginée — APPELS FOURNISSEUR")))
                 .andExpect(content().string(containsString(
                         "Rencontres datées et accès direct à J5")))
                 .andExpect(content().string(containsString("value=\"119880\"")))
@@ -413,7 +423,7 @@ class DashboardControllerTest {
     }
 
     @Test
-    void rendersTheConfirmedDynamicManualCollectionAction() throws Exception {
+    void rendersBothJ3ActionsWithoutLegacyBarriers() throws Exception {
         DashboardView dashboardView = new DashboardView(
                 "2026-08-14T00:00:00Z",
                 "EXPERIMENTAL",
@@ -471,37 +481,18 @@ class DashboardControllerTest {
         when(manualCallControlService.snapshot()).thenReturn(manualCallSnapshot);
         when(formTokenService.issue(any(HttpSession.class))).thenReturn("local-form-token");
 
-        mockMvc.perform(get("/dashboard"))
+        mockMvc.perform(get("/dashboard").param("j3Date","2026-08-13"))
                 .andExpect(status().isOk())
-                .andExpect(content().string(containsString(
-                        "LOCKED_OFFLINE_J3_POLICY")))
-                .andExpect(content().string(containsString(
-                        "COLLECTE MANUELLE DYNAMIQUE PRÊTE")))
-                .andExpect(content().string(containsString(
-                        "SCHEDULED_EVENTS|date=2026-08-13|pagination=has-next-page|max=35")))
-                .andExpect(content().string(containsString(
-                        "Le plafond local est fixé à 35 pages.")))
-                .andExpect(content().string(containsString(
-                        "5 Mio maximum par page, 25 Mio pour le lot, 35 pages maximum.")))
-                .andExpect(content().string(containsString(
-                        "Option A — Collecte fournisseur directe")))
-                .andExpect(content().string(containsString(
-                        "action=\"/manual-call/execute\"")))
-                .andExpect(content().string(containsString(
-                        "5A. Lancer la collecte paginée — APPELS FOURNISSEUR")))
-                .andExpect(content().string(org.hamcrest.Matchers.not(containsString(
-                        "Lancer la collecte fournisseur — BLOQUÉE"))))
-                .andExpect(content().string(containsString(
-                        "action=\"/manual-call/import-json-pages\"")))
-                .andExpect(content().string(containsString(
-                        "enctype=\"multipart/form-data\"")))
-                .andExpect(content().string(containsString(
-                        "name=\"pageFiles\"")))
-                .andExpect(content().string(containsString(
-                        "Option B — Import J3 paginé sans réseau")))
-                .andExpect(content().string(containsString(
-                        "Importer et valider J3 — ZÉRO APPEL")))
-                .andExpect(content().string(org.hamcrest.Matchers.not(containsString(
-                        "REPRISE PAGES 3-5"))));
+                .andExpect(content().string(containsString("value=\"2026-08-13\"")))
+                .andExpect(content().string(containsString("action=\"/j3/collect\"")))
+                .andExpect(content().string(containsString("formaction=\"/j3/import\"")))
+                .andExpect(content().string(containsString("A. Lancer la collecte paginée — APPELS FOURNISSEUR")))
+                .andExpect(content().string(containsString("5B. Importer et valider J3 — ZÉRO APPEL")))
+                .andExpect(content().string(containsString("enctype=\"multipart/form-data\"")))
+                .andExpect(content().string(containsString("name=\"pageFiles\"")))
+                .andExpect(content().string(not(containsString("Confirmer l’intention locale"))))
+                .andExpect(content().string(not(containsString("Lever l’arrêt global"))))
+                .andExpect(content().string(not(containsString("Activer le circuit"))))
+                .andExpect(content().string(containsString("name=\"enabled\"")));
     }
 }

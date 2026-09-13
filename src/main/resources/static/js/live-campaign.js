@@ -410,6 +410,11 @@
     if (campaign.revision < (revisions.get(campaign.campaignId) ?? -1)) return;
     revisions.set(campaign.campaignId, campaign.revision);
     const runtime = campaign.runtimeStatus;
+    const j3Notice = monitor.querySelector("[data-live-j3-pause]");
+    if (j3Notice) {
+      j3Notice.hidden = !campaign.j3Pause;
+      j3Notice.textContent = campaign.j3Pause?.label || "";
+    }
     const collectionStopped = runtime?.collectionStopped === true;
     const cleanupPending = runtime?.cleanupPending === true;
     const cleanupInProgress = runtime?.cleanupInProgress === true;

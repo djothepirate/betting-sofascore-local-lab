@@ -1,0 +1,71 @@
+<!doctype html>
+<html lang="fr" xmlns:th="http://www.thymeleaf.org">
+<head>
+  <meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Calendriers J3 — SofaScore Local Lab</title>
+  <link rel="stylesheet" th:href="@{/css/app.css}" href="/css/app.css">
+</head>
+<body>
+<header class="topbar"><div class="shell">
+  <p class="eyebrow">SOFASCORE LOCAL LAB</p><h1>Calendriers J3 conservés</h1>
+  <p class="subtitle">La dernière collecte réussie de chaque date reste consultable après redémarrage.</p>
+</div></header>
+<main class="shell">
+  <p class="notice" th:if="${newerCollectionId != null}">Un succès plus récent est disponible pour cette date.
+    <a th:href="@{/j3/collections/{id}(id=${newerCollectionId},date=${selectedDate})}">Consulter cette nouvelle collecte</a>
+  </p>
+  <p><a th:href="@{/(j3Date=${selectedDate})}">Retour au tableau de bord</a></p>
+  <section class="card">
+    <form method="get" th:action="@{/j3/collections}">
+      <label for="collection-date">Date du calendrier</label>
+      <input id="collection-date" name="date" type="date" required th:value="${selectedDate}">
+      <button type="submit" class="button">Consulter le dernier succès</button>
+    </form>
+    <form method="get" th:action="@{/j3/collections}" th:if="${!availableDates.isEmpty()}">
+      <label for="saved-date">Dates conservées</label>
+      <select id="saved-date" name="date">
+        <option th:each="saved : ${availableDates}" th:value="${saved.date}" th:selected="${saved.date == selectedDate}"
+                th:text="${saved.date + (saved.recoveryStatus == 'AVAILABLE' ? '' : ' — contenu indisponible')}"></option>
+      </select>
+      <button type="submit" class="button">Afficher cette date</button>
+    </form>
+  </section>
+  <section class="card" th:if="${catalogPage == null}">
+    <p th:if="${historicalContentUnavailable}">Un succès est attesté pour cette date, mais ses sources historiques ne permettent plus de restituer le catalogue exact.</p>
+    <p th:unless="${historicalContentUnavailable}">Aucune collecte J3 réussie n’est conservée pour cette date.</p>
+  </section>
+  <section class="card" th:if="${catalogPage != null}">
+    <h2 th:text="${'Calendrier du ' + catalogPage.date}"></h2>
+    <p>Collecte <span class="mono" th:text="${catalogPage.runId}"></span> — terminée à <span th:text="${catalogPage.completedAt}"></span> (UTC).</p>
+    <p th:text="${catalogPage.total + ' tournois conservés · page ' + catalogPage.page + ' / ' + catalogPage.pageCount()}"></p>
+    <p th:if="${catalogPage.total == 0}">Collecte complète : aucun tournoi à afficher.</p>
+    <form method="get" th:action="@{/j3/collections/{id}(id=${catalogPage.runId})}">
+      <input type="hidden" name="date" th:value="${catalogPage.date}">
+      <label for="page-size">Tournois par page</label>
+      <select id="page-size" name="size">
+        <option value="25" th:selected="${catalogPage.pageSize == 25}">25</option>
+        <option value="50" th:selected="${catalogPage.pageSize == 50}">50</option>
+        <option value="100" th:selected="${catalogPage.pageSize == 100}">100</option>
+      </select>
+      <button type="submit" class="button">Appliquer</button>
+    </form>
+    <div class="table-wrap" th:if="${catalogPage.total > 0}"><table>
+      <thead><tr><th>Catégorie</th><th>Tournoi / phase</th><th>Compétition</th><th>Disponibilité</th><th>Sources</th></tr></thead>
+      <tbody><tr th:each="entry : ${catalogPage.entries}">
+        <td th:text="${entry.category ?: '—'}"></td>
+        <td><span th:text="${entry.name}"></span><br><small th:text="${'ID ' + entry.tournamentId}"></small></td>
+        <td th:text="${entry.uniqueTournamentName ?: '—'}"></td>
+        <td><span th:if="${entry.eligible()}">Disponible pour la découverte des rencontres</span>
+            <span th:unless="${entry.eligible()}" th:text="${'Exclu : ' + entry.exclusionReason}"></span></td>
+        <td><span th:each="snapshot, loop : ${entry.sourceSnapshotIds}" th:text="${snapshot + (loop.last ? '' : ', ')}"></span></td>
+      </tr></tbody>
+    </table></div>
+    <nav aria-label="Pages du catalogue J3">
+      <a th:if="${catalogPage.page > 1}" th:href="@{/j3/collections/{id}(id=${catalogPage.runId},date=${catalogPage.date},page=${catalogPage.page - 1},size=${catalogPage.pageSize})}">Page précédente</a>
+      <a th:if="${catalogPage.page < catalogPage.pageCount()}" th:href="@{/j3/collections/{id}(id=${catalogPage.runId},date=${catalogPage.date},page=${catalogPage.page + 1},size=${catalogPage.pageSize})}">Page suivante</a>
+    </nav>
+  </section>
+  <p class="muted">EXPERIMENTAL · LOCAL_ONLY · NOT_PRODUCTION_APPROVED · NO_CRITICAL_DEPENDENCY</p>
+</main>
+</body>
+</html>

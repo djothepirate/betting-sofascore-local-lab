@@ -69,13 +69,13 @@ class TournamentEventDiscoveryControllerTest {
     void preparationPostsOnlyThePhaseIdentityAndDoesNotExecuteTransport() throws Exception {
         mockMvc.perform(post("/tournament-event-discovery/prepare")
                         .param("localFormToken", "token")
-                        .param("tournamentId", "119880"))
+                        .param("tournamentId", "119880").param("collectionId",REQUEST_ID.toString()).param("date","2026-09-13"))
                 .andExpect(status().is3xxRedirection())
-                .andExpect(redirectedUrl("/dashboard#tournament-event-discovery"))
+                .andExpect(redirectedUrl("/dashboard?j3Date=2026-09-13#tournament-event-discovery"))
                 .andExpect(flash().attribute("tournamentDiscoveryMessageKind", "safe"));
 
         verify(formTokenService).consume(any(HttpSession.class), org.mockito.ArgumentMatchers.eq("token"));
-        verify(controlService).prepare(119_880);
+        verify(controlService).prepare(REQUEST_ID,LocalDate.parse("2026-09-13"),119_880);
         verify(discoveryService, never()).execute(any());
     }
 

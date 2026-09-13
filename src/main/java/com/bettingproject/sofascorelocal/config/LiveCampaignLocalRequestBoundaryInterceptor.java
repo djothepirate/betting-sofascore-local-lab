@@ -18,7 +18,8 @@ public final class LiveCampaignLocalRequestBoundaryInterceptor implements Handle
     public boolean preHandle(HttpServletRequest request, HttpServletResponse response, Object handler) {
         if (!(handler instanceof HandlerMethod method)
                 || (!LiveCampaignController.class.isAssignableFrom(method.getBeanType())
-                    && !ProviderAccessController.class.isAssignableFrom(method.getBeanType()))) {
+                    && !ProviderAccessController.class.isAssignableFrom(method.getBeanType())
+                    && !com.bettingproject.sofascorelocal.adapter.web.J3AutomationController.class.isAssignableFrom(method.getBeanType()))) {
             return true;
         }
         response.setHeader("Cache-Control", "no-store, no-cache, must-revalidate, max-age=0");

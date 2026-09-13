@@ -1,0 +1,11 @@
+<!doctype html>
+<html lang="fr" xmlns:th="http://www.thymeleaf.org">
+<head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1">
+<meta http-equiv="refresh" content="2"><title>Collecte J3 en cours</title><link rel="stylesheet" th:href="@{/css/app.css}"></head>
+<body><main class="shell"><section class="panel">
+<p class="label">J3 / Collecte</p><h1 th:text="${orderState}">En attente</h1>
+<p>Date collectée : <strong th:text="${order.date}">—</strong></p>
+<p>La page affiche le catalogue dès que la collecte est terminée. Les collectes réseau J3 mettent une campagne live active en pause ; un import local peut être exécuté pendant le live.</p>
+<p>Les résultats déjà enregistrés restent consultables pendant l’exécution.</p>
+<a th:href="@{/(j3Date=${order.date})}">Consulter les données et les paramètres</a>
+</section></main></body></html>

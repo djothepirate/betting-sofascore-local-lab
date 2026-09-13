@@ -44,6 +44,7 @@ public class TournamentEventDiscoveryControlService {
     private Instant preparedAt;
     private Instant expiresAt;
     private LocalDate collectionDate;
+    private UUID sourceCollectionId;
     private J3TournamentCatalogOption selection;
     private String terminalCode;
 
@@ -101,6 +102,9 @@ public class TournamentEventDiscoveryControlService {
     }
 
     public synchronized TournamentEventDiscoveryControlSnapshot prepare(long tournamentId) {
+        return prepare(null,null,tournamentId);
+    }
+    public synchronized TournamentEventDiscoveryControlSnapshot prepare(UUID collectionId,LocalDate date,long tournamentId) {
         Instant now = clock.instant();
         expireIfNecessary(now);
         if (state == TournamentEventDiscoveryState.AWAITING_CONFIRMATION
@@ -119,7 +123,7 @@ public class TournamentEventDiscoveryControlService {
             throw rejected(
                     TournamentEventDiscoveryControlError.PROVIDER_TRANSPORT_UNAVAILABLE);
         }
-        J3TournamentCatalog catalog = catalogService.latest();
+        J3TournamentCatalog catalog = collectionId==null?catalogService.latest():catalogService.forCollection(collectionId,Objects.requireNonNull(date));
         if (!catalog.available() || catalog.collectionDate().isEmpty()) {
             throw rejected(TournamentEventDiscoveryControlError.CATALOG_UNAVAILABLE);
         }
@@ -130,6 +134,7 @@ public class TournamentEventDiscoveryControlService {
         requestId = Objects.requireNonNull(requestIdSupplier.get(), "requestId");
         int code = Math.floorMod(confirmationCodeSupplier.getAsInt(), 1_000_000);
         collectionDate = catalog.collectionDate().orElseThrow();
+        sourceCollectionId=collectionId;
         selection = resolved;
         confirmationPhrase = "CONFIRMER EVENEMENTS TOURNOI " + resolved.tournamentId()
                 + " UNIQUE " + resolved.uniqueTournamentId()
@@ -214,7 +219,7 @@ public class TournamentEventDiscoveryControlService {
         }
         J3TournamentCatalog current;
         try {
-            current = catalogService.latest();
+            current = sourceCollectionId==null?catalogService.latest():catalogService.forCollection(sourceCollectionId,collectionDate);
         }
         catch (RuntimeException exception) {
             lockFailed(now, "CATALOG_REVALIDATION_ERROR");
