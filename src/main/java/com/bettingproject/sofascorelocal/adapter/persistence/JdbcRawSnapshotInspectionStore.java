@@ -22,6 +22,17 @@ import java.util.Optional;
 @Repository
 public class JdbcRawSnapshotInspectionStore implements RawSnapshotInspectionStore {
 
+    @Override @Transactional(readOnly = true)
+    public Optional<RawSnapshotInspectionSource> findOccurrence(long snapshotId, long occurrenceId) {
+        return jdbcTemplate.query("""
+                select s.id,s.acquisition_mode,s.logical_endpoint,s.request_key,o.received_at,o.http_status,
+                    o.content_type,s.payload_size_bytes,s.payload_sha256,o.parser_version,s.schema_status,s.payload_raw
+                from provider_snapshot s join provider_snapshot_occurrence o on o.snapshot_id=s.id
+                where s.id=:snapshot and o.id=:occurrence and s.provider='SOFASCORE' and s.payload_raw is not null
+                """, new MapSqlParameterSource("snapshot",snapshotId).addValue("occurrence",occurrenceId),
+                (rs,n) -> new RawSnapshotInspectionSource(mapSummary(rs),rs.getBytes("payload_raw"))).stream().findFirst();
+    }
+
     private static final String SELECT_RECENT_SQL = """
             select
                 id,

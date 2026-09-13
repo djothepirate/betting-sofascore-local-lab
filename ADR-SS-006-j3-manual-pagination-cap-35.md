@@ -1,6 +1,14 @@
 # ADR-SS-006 — Plafond local de la pagination manuelle J3 à 35 pages
 
-- **Version :** 0.1.
+**Renvoi v0.2 — WO-060, 14 septembre 2026 :**
+[ADR-SS-007 v0.2](ADR-SS-007-j3-automation-durable-catalog-and-live-pause.md) étend le
+moteur borné à la collecte directe, importée et automatique, sans augmenter le plafond de
+35 pages. Le terminal parsé demeure obligatoire ; une page 35 avec suite produit un échec.
+La borne temporelle de l'ordre est 20 minutes depuis son admission, sans modifier les
+anciennes preuves manuelles de 25 ou 35 pages. Les confirmations J3 historiques sont remplacées
+par l'autorité directe/durable du WO ; les contrôles techniques restent applicables.
+
+- **Version :** 0.2 — renvoi WO-060 ; la décision de plafond v0.1 reste inchangée.
 - **Statut :** `ACCEPTED` — décision du propriétaire du Betting Project le 12 septembre 2026 ; la réalisation et sa qualification restent distinctes.
 - **Date :** 2026-09-12.
 - **Décideur :** propriétaire du Betting Project.

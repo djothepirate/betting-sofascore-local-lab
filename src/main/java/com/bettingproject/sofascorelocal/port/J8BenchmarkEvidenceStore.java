@@ -17,4 +17,9 @@ public interface J8BenchmarkEvidenceStore {
     void recordUnitResult(J8BenchmarkUnitResult result);
 
     void finishCampaign(J8BenchmarkCampaignResult result);
+
+    /** WO-060 only: join the J3 catalogue publication transaction; never silently use REQUIRES_NEW. */
+    default void finishCampaignWithCollection(J8BenchmarkCampaignResult result) {
+        throw new UnsupportedOperationException("J3 atomic audit publication is unavailable");
+    }
 }

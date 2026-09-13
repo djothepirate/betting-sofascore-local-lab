@@ -11,4 +11,9 @@ public interface RawSnapshotInspectionStore {
     List<RawSnapshotInspectionSummary> findRecent(int limit);
 
     Optional<RawSnapshotInspectionSource> findById(long snapshotId);
+
+    /** Exact acquisition metadata; never falls back to another occurrence of the same payload. */
+    default Optional<RawSnapshotInspectionSource> findOccurrence(long snapshotId, long occurrenceId) {
+        return Optional.empty();
+    }
 }

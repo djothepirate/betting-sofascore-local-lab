@@ -1,9 +1,20 @@
 # ADR-SS-001 - Expérimentation des endpoints SofaScore depuis Windows
 
-- **Statut :** Accepté pour expérimentation locale contrôlée — amendé le 2026-08-28
-- **Version :** 1.4
-- **Amendement actif :** Playwright retenu comme transport cible local, manuel et opt-in ; décisions J4 `EVENT_DETAILS` de `WO-SS-20260827-014` approuvées ; FlareSolverr écarté
-- **Date :** 2026-08-08
+**Amendement WO-060 adopté — 14 septembre 2026 :**
+[ADR-SS-007 v0.2](ADR-SS-007-j3-automation-durable-catalog-and-live-pause.md) autorise,
+pour J3 uniquement, le clic direct et les ordres quotidiens/planifiés durables du serveur Web
+local configuré. La préférence est initialement activée ; aucun navigateur ne démarre dans les
+tests standards. Cette exception remplace les gestes d'arrêt/circuit/intention du parcours J3
+et la restriction de lancement manuel des paragraphes historiques ci-dessous pour ce seul cas.
+Elle conserve origine, endpoint, limites, absence de contournement, provenance et gardes techniques.
+La sous-opération J3 pendant un live V11 utilise un contexte neuf temporaire dans le même worker ;
+un seul contexte émet, aucun état de session n'est transféré, aucun contexte live n'est recréé.
+L'exception ne démarre ni le Lab, ni une campagne live autonome, ni un autre parcours.
+
+- **Statut :** Accepté pour expérimentation locale contrôlée — amendé le 2026-09-14
+- **Version :** 1.5 — amendement WO-060 ; la v1.4 reste la référence historique du transport.
+- **Amendement actif :** Playwright local, avec l’exception J3 durable de WO-060 / ADR-SS-007 v0.2 adoptée le 13 septembre 2026 ; J4/J5 restent dans leurs parcours autorisés ; FlareSolverr écarté.
+- **Date :** 2026-08-08 ; amendement J3 consigné le 2026-09-14.
 - **Décideur :** Porteur du Betting Project
 - **Portée :** projet séparé `betting-sofascore-local-lab`
 - **Cible Java :** Java 25 LTS

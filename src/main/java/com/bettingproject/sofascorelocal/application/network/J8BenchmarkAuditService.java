@@ -531,6 +531,16 @@ public final class J8BenchmarkAuditService {
         public void finish(
                 J8BenchmarkCampaignTerminalState state,
                 Optional<String> terminalCode) {
+            finish(state,terminalCode,false);
+        }
+
+        public void finishWithCollectionPublication(J8BenchmarkCampaignTerminalState state,Optional<String> terminalCode) {
+            if(campaign.campaignType()!=J8BenchmarkCampaignType.J3_SCHEDULED_EVENTS)
+                throw new IllegalStateException("J3_COLLECTION_AUDIT_REQUIRED");
+            finish(state,terminalCode,true);
+        }
+
+        private void finish(J8BenchmarkCampaignTerminalState state,Optional<String> terminalCode,boolean withCollection) {
             auditOperation(() -> {
                 ensureUsable();
                 Objects.requireNonNull(state, "state");
@@ -564,7 +574,10 @@ public final class J8BenchmarkAuditService {
                     terminalCode,
                     units.size());
             write(() -> {
-                evidenceStore.ifPresent(store -> store.finishCampaign(result));
+                evidenceStore.ifPresent(store -> {
+                    if(withCollection)store.finishCampaignWithCollection(result);
+                    else store.finishCampaign(result);
+                });
                 return null;
             });
                 finished = true;

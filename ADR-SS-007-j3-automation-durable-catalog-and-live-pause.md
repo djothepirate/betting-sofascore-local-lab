@@ -1,15 +1,24 @@
 # ADR-SS-007 — Automatisation J3, catalogue durable par date et pause live
 
-- **Version :** 0.1.
-- **Statut :** `PROPOSED` — choix fonctionnels du propriétaire consignés ; proposition technique à relire, réalisation non commencée.
+- **Version :** 0.2.
+- **Statut :** `ACCEPTED_FOR_IMPLEMENTATION` — instruction propriétaire « Commencer l’implémentation du WO-060 » le 13 septembre 2026 ; qualification distincte et en cours.
 - **Date :** 2026-09-13.
 - **Décideur :** propriétaire du Betting Project.
 - **Work Order :** [WO-SS-20260913-060](docs/work_orders/active/WO-SS-20260913-060-j3-automation-and-durable-catalog.md).
 - **Base inspectée :** `d4c3d8ceeb6c46442f0792d436a3df7e2630f599`, train `feature/V0.1.0-RC01` vérifié sur GitHub.
-- **Portée de la session :** « Work Order et décisions d’architecture », explicitement choisie par le propriétaire. Ce document ne vaut ni implémentation, ni activation du Lab, ni autorisation d’une campagne fournisseur par l’agent.
+- **Portée actuelle :** réalisation du WO-060 autorisée, avec tests hors fournisseur. Le cadrage v0.1 est conservé au commit `9e0d1cb` ; l’instruction de réalisation adopte son périmètre et ses règles techniques. Aucun essai fournisseur ni changement de base opérateur n’est engagé par l’agent.
 - **Statuts conservés :** `EXPERIMENTAL`, `LOCAL_ONLY`, `NOT_PRODUCTION_APPROVED`, `NO_CRITICAL_DEPENDENCY`.
 
 ## 1. Demande et état établi
+
+**Réalisation au 14 septembre 2026 :** V55 porte les collections/projections et la reprise
+historique, V56 les préférences/ordres, V57 live-v11 et les transitions de pause.
+Le moteur est raccordé uniquement au serveur Web local disponible ; les commandes de maintenance
+ne prennent pas le rôle d'ordonnanceur. Le protocole worker est 10. La façade
+`LiveSessionSchedule` isole V11 sans réécrire le bytecode historique `LiveSchedule` ni
+les preuves V8/V9. Voir le [guide J3](docs/runbooks/J3-AUTOMATION-AND-DURABLE-CATALOG.md)
+et le [rapport de réalisation](docs/validation/WO060-J3-IMPLEMENTATION-20260914.md).
+Les constats de base et formulations prospectives qui suivent décrivent le contrat adopté au cadrage.
 
 Le propriétaire demande une collecte quotidienne J3 configurable dans l’interface, par défaut
 pour la date du jour au démarrage, des prochaines collectes à heure déterminée, une commande
@@ -38,9 +47,11 @@ Le code de la base inspectée établit les limites suivantes :
 
 ## 2. Portée de la décision proposée
 
-Les choix fonctionnels ci-dessus sont acquis pour le cadrage. Les règles techniques des sections
-suivantes forment la proposition v0.1. Les ADR acceptés et les règles d’exécution actuelles restent
-en vigueur jusqu’à l’adoption et à la réalisation de cette exception explicitement limitée à J3.
+Les choix fonctionnels et règles techniques de la proposition v0.1 constituent le contrat de
+réalisation autorisé. Cette v0.2 adopte prospectivement les exceptions J3 de la table suivante ;
+les autres règles et les preuves historiques restent en vigueur. Les formulations « proposé »
+dans les sections de conception désignent ce contrat adopté, pas une demande de confirmation
+supplémentaire. Leur réalisation et leur qualification sont suivies séparément dans le WO.
 
 | Référence courante | Adaptation à adopter pour réaliser WO-060 | Limite conservée |
 |---|---|---|

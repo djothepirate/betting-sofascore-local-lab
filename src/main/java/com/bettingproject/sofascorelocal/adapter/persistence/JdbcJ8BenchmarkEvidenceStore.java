@@ -224,6 +224,16 @@ public class JdbcJ8BenchmarkEvidenceStore implements J8BenchmarkEvidenceStore {
     @Override
     @Transactional(propagation = Propagation.REQUIRES_NEW)
     public void finishCampaign(J8BenchmarkCampaignResult result) {
+        persistCampaignResult(result);
+    }
+
+    @Override
+    @Transactional(propagation = Propagation.MANDATORY)
+    public void finishCampaignWithCollection(J8BenchmarkCampaignResult result) {
+        persistCampaignResult(result);
+    }
+
+    private void persistCampaignResult(J8BenchmarkCampaignResult result) {
         Objects.requireNonNull(result, "result");
         MapSqlParameterSource parameters = new MapSqlParameterSource()
                 .addValue("campaignId", result.campaignId())
