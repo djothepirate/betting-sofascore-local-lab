@@ -61,6 +61,14 @@ COMPLETED avec arrêt global réappliqué et circuit verrouillé.
 Cette décision humaine clôt la revue fonctionnelle du candidat 64ef138. Elle ne modifie pas la
 limite documentée des suites globales : l'écart de hash V5 préexistant demeure extérieur au lot.
 
+## Rectificatif CI du 13 septembre
+
+L'écart V5 mentionné dans les suites globales ci-dessus a été corrigé dans la PR de WO-058 : les
+archives V5 sont désormais conservées avec leurs octets d'origine, comme V4 et V6 à V9, au lieu
+d'être normalisées en LF par le checkout Git. La correction ne modifie ni le périmètre J3, ni les
+preuves J3, ni la borne de 35 pages. La cause, les limites et les validations associées sont
+consignées dans [la note de correction CI WO-058](WO058-CI-PR35-CORRECTION-20260913.md).
+
 ## Conclusion de qualification
 
 Le comportement demandé est démontré localement : une date comportant 27 pages peut désormais être collectée jusqu'à sa terminaison normale, et la barrière locale ne s'applique qu'après la page 35. Le lot est clôturé après validation fonctionnelle du propriétaire, avec la limite de la suite globale V5 consignée ci-dessus.

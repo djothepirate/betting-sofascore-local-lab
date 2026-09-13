@@ -26,7 +26,7 @@ public final class LiveOrphanProcessProbe {
     private static final String PROCESS_ACTIVE = "LIVE_CLEANUP_PROCESS_ACTIVE";
     private static final String UNVERIFIED = "LIVE_CLEANUP_PROCESS_UNVERIFIED";
     private static final int MAXIMUM_STDOUT_BYTES = 64;
-    private static final long TIMEOUT_NANOS = TimeUnit.SECONDS.toNanos(10);
+    private static final long TIMEOUT_NANOS = TimeUnit.SECONDS.toNanos(20);
 
     /* Command lines stay inside the local PowerShell helper. Only these three codes
        can cross its stdout boundary. Unknown JVMs not proved older than the former

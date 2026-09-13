@@ -1748,6 +1748,18 @@ l'application ou Playwright, ni lancer une campagne.
 Ces résultats sont des qualifications locales ciblées et ne constituent ni une campagne
 fournisseur, ni une acceptation ou un quota du fournisseur.
 
+#### Correction CI de la PR #35 — 13 septembre
+
+Les exécutions Linux et Windows de la PR ont mis en évidence trois défauts de qualification, sans
+incidence sur le transport fournisseur. Les huit archives V5 étaient versionnées en LF malgré des
+empreintes de preuve calculées sur leurs octets historiques ; elles sont désormais gelées par la
+règle Git V5, à l'image des archives V4 et V6 à V9. Le scanner de secrets garde une allowlist
+fermée sur le même script J5 et accepte seulement deux blobs WO-058 audités dont les canaris
+synthétiques n'ont pas changé. Enfin, la sonde PowerShell locale de processus conserve son délai
+d'opération CIM de cinq secondes mais porte sa borne totale de dix à vingt secondes pour absorber
+le démarrage du processus sur les runners Windows chargés. Les détails et les validations sont
+consignés dans [la note de correction CI](../../validation/WO058-CI-PR35-CORRECTION-20260913.md).
+
 ### État et prochaine action
 
 Cette révision reste `IN_PROGRESS`. Le Work Order demeure dans `docs/work_orders/active` : la

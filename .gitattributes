@@ -29,6 +29,7 @@ docs/validation/ADR-SS-005-v0.1-accepted-proposal-20260907.txt -text
 docs/validation/WO058-MULTIMATCH-CAPACITY-PROFILE-20260907.json -text
 docs/validation/WO058-ADAPTIVE-CAPACITY-PROFILE-20260907.json -text
 docs/validation/WO058-GROUPED-LIVE-V4-*-20260908.json -text whitespace=blank-at-eol,blank-at-eof,space-before-tab,cr-at-eol
+docs/validation/WO058-GROUPED-LIVE-V5-*-20260908.json -text whitespace=blank-at-eol,blank-at-eof,space-before-tab,cr-at-eol
 docs/validation/WO058-GROUPED-LIVE-V6-*-20260909.json -text whitespace=blank-at-eol,blank-at-eof,space-before-tab,cr-at-eol
 docs/validation/WO058-GROUPED-LIVE-V7-*-20260909.json -text whitespace=blank-at-eol,blank-at-eof,space-before-tab,cr-at-eol
 docs/validation/WO058-GROUPED-LIVE-V8-*-20260910.json -text whitespace=blank-at-eol,blank-at-eof,space-before-tab,cr-at-eol

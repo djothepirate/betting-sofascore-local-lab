@@ -43,13 +43,18 @@ is_vetted_synthetic_fixture() {
             # Version historique J5 : les mêmes canaris synthétiques, avant
             # l'extension des tests de délai et d'observation réseau.
             historical_blob=ba6e319cc14b05417157522b8dd90e7abd3e2528
+            # WO-058 : la régression de plage TCP puis sa note de périmètre
+            # n'ont pas modifié les canaris synthétiques audités ci-dessus.
+            port_range_blob=07f3a3230f9ad5b03f2d66fcc16dff2528bf0dcb1
+            scope_note_blob=50376283613e5070c03684b0179b21e257826ed2
             ;;
         *)
             return 1
             ;;
     esac
     actual_blob=$(git rev-parse "$revision:$path" 2>/dev/null || true)
-    [ "$actual_blob" = "$expected_blob" ] || [ "$actual_blob" = "$historical_blob" ]
+    [ "$actual_blob" = "$expected_blob" ] || [ "$actual_blob" = "$historical_blob" ] \
+        || [ "$actual_blob" = "$port_range_blob" ] || [ "$actual_blob" = "$scope_note_blob" ]
 }
 
 scan_blob() {

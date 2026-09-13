@@ -25,6 +25,12 @@ Les évolutions notables du SofaScore Local Lab sont consignées dans ce fichier
   acceptation, ni absence de refus du fournisseur et n'ajoutent aucun proxy, changement d'adresse,
   contexte persistant, cookie, défi, retry ou reprise automatique. La qualification locale et la
   validation opérateur de V10 restent à effectuer avant de clôturer WO-058.
+- Rétablit la qualification CI interplateforme de la chaîne de preuves V5 : le jeu d'archives est
+  gelé par `.gitattributes` et les artefacts directement référencés retrouvent leurs octets
+  d'origine. Le scanner de secrets reconnaît seulement deux blobs WO-058 audités de canaris
+  synthétiques inchangés, et la sonde CIM locale conserve une borne totale de vingt secondes sur
+  les runners Windows chargés. Voir la
+  [note de correction CI](docs/validation/WO058-CI-PR35-CORRECTION-20260913.md).
 
 ### WO-059 — plafond local de pagination manuelle J3 à 35 pages
 
