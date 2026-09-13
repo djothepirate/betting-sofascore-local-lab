@@ -141,8 +141,16 @@ canary_blob=$(git hash-object "$canary_repository/$canary_path")
 printf '# Historical synthetic scanner canary\n%s%s\n' \
     "$private_prefix" "$private_suffix" >"$fixture/historical-canary.txt"
 historical_canary_blob=$(git hash-object "$fixture/historical-canary.txt")
+printf '# TCP port range synthetic scanner canary\n%s%s\n' \
+    "$private_prefix" "$private_suffix" >"$fixture/port-range-canary.txt"
+port_range_canary_blob=$(git hash-object "$fixture/port-range-canary.txt")
+printf '# Scope note synthetic scanner canary\n%s%s\n' \
+    "$private_prefix" "$private_suffix" >"$fixture/scope-note-canary.txt"
+scope_note_canary_blob=$(git hash-object "$fixture/scope-note-canary.txt")
 sed -e "s/62c2eba3fb980d68589a9804d2fa81bcc865a039/$canary_blob/" \
     -e "s/ba6e319cc14b05417157522b8dd90e7abd3e2528/$historical_canary_blob/" \
+    -e "s/07f3a3230f9ad5b03f2d66fcc16dff2528bf0dcb/$port_range_canary_blob/" \
+    -e "s/50376283613e5070c03684b0179b21e257826ed2/$scope_note_canary_blob/" \
     "$repository/ci/check-no-secrets.sh" >"$canary_repository/ci/check-no-secrets.sh"
 git init -q -b main "$canary_repository"
 git -C "$canary_repository" config user.name ci-fixture
@@ -173,6 +181,23 @@ if ! (
 fi
 
 printf 'SECRET_SCAN_CANARY_HISTORY=PASS_TWO_EXACT_VETTED_BLOBS\n'
+
+cp "$fixture/port-range-canary.txt" "$canary_repository/$canary_path"
+git -C "$canary_repository" add "$canary_path"
+git -C "$canary_repository" commit -qm 'TCP port range audited synthetic canary'
+cp "$fixture/scope-note-canary.txt" "$canary_repository/$canary_path"
+git -C "$canary_repository" add "$canary_path"
+git -C "$canary_repository" commit -qm 'scope note audited synthetic canary'
+if ! (
+    cd "$canary_repository"
+    sh ci/check-no-secrets.sh 0000000000000000000000000000000000000000
+) >"$fixture/canary-four-vetted.log" 2>&1; then
+    echo 'FAIL: les quatre blobs audités du canari sont refusés dans l’historique complet.' >&2
+    cat "$fixture/canary-four-vetted.log" >&2
+    exit 1
+fi
+
+printf 'SECRET_SCAN_CANARY_HISTORY=PASS_FOUR_EXACT_VETTED_BLOBS\n'
 
 printf '%s%s\n' "$token_prefix" "$token_suffix" \
     >>"$canary_repository/$canary_path"

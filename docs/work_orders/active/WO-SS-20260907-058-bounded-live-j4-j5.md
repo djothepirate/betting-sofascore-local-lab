@@ -1756,9 +1756,11 @@ empreintes de preuve calculées sur leurs octets historiques ; elles sont désor
 règle Git V5, à l'image des archives V4 et V6 à V9. Le scanner de secrets garde une allowlist
 fermée sur le même script J5 et accepte seulement deux blobs WO-058 audités dont les canaris
 synthétiques n'ont pas changé. Enfin, la sonde PowerShell locale de processus conserve son délai
-d'opération CIM de cinq secondes mais porte sa borne totale de dix à vingt secondes pour absorber
-le démarrage du processus sur les runners Windows chargés. Les détails et les validations sont
-consignés dans [la note de correction CI](../../validation/WO058-CI-PR35-CORRECTION-20260913.md).
+d'opération CIM de cinq secondes et sa borne totale de vingt secondes. Le smoke test d'identité
+réelle ne s'exécute que lorsque `Win32_Process` répond dans cette borne : un timeout de ce service
+sur un runner hébergé est ignoré par ce seul test, tandis que le code applicatif demeure
+fail-closed. Les détails et les validations sont consignés dans [la note de correction
+CI](../../validation/WO058-CI-PR35-CORRECTION-20260913.md).
 
 ### État et prochaine action
 

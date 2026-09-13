@@ -45,7 +45,7 @@ is_vetted_synthetic_fixture() {
             historical_blob=ba6e319cc14b05417157522b8dd90e7abd3e2528
             # WO-058 : la régression de plage TCP puis sa note de périmètre
             # n'ont pas modifié les canaris synthétiques audités ci-dessus.
-            port_range_blob=07f3a3230f9ad5b03f2d66fcc16dff2528bf0dcb1
+            port_range_blob=07f3a3230f9ad5b03f2d66fcc16dff2528bf0dcb
             scope_note_blob=50376283613e5070c03684b0179b21e257826ed2
             ;;
         *)
