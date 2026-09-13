@@ -1,5 +1,14 @@
 # Architecture J0 à J8 — SofaScore Local Lab
 
+**Évolution proposée, sans effet sur l’exécution actuelle — 13 septembre 2026 :**
+[ADR-SS-007 v0.1](../../ADR-SS-007-j3-automation-durable-catalog-and-live-pause.md) et
+[WO-060](../work_orders/active/WO-SS-20260913-060-j3-automation-and-durable-catalog.md)
+cadrent les ordres J3 quotidiens/programmés, le catalogue durable par date et la suspension de
+toutes les familles live pendant J3. La preuve J3 en mémoire et l’exclusivité par campagne
+décrites ci-dessous restent l’architecture implémentée de la base `d4c3d8c`.
+L’ADR proposé précise les exceptions à adopter, les transactions, la reprise historique et
+le protocole de pause/reprise à qualifier ; il ne modifie pas les décisions acceptées.
+
 ## 1. Positionnement
 
 Le laboratoire est un composant expérimental séparé du Betting Project. Il ne partage ni base, ni déploiement, ni responsabilité opérationnelle avec le cœur du projet global.

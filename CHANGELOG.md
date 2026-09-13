@@ -4,6 +4,22 @@ Les évolutions notables du SofaScore Local Lab sont consignées dans ce fichier
 
 ## [Non publié]
 
+### WO-060 — cadrage de l’automatisation J3 et du catalogue durable
+
+- Prépare un Work Order et ADR-SS-007 v0.1 `PROPOSED`, conformément au choix propriétaire de
+  limiter cette phase au cadrage et aux décisions d’architecture.
+- Consigne les deux arbitrages fonctionnels : automatisation activée à la première mise en
+  service et exécution unique des horaires explicites même après un succès de leur date.
+  Le contrôle quotidien au démarrage évite les collectes déjà réussies pour la date du jour.
+- Décrit le manuel A/B sans étapes d’intention J3, la conservation du dernier succès par date,
+  la vue paginée et la sélection de tournoi liée à la collecte exacte, avec reprise historique
+  attestée, transactions, rétention et sauvegarde isolée à qualifier.
+- Propose une pause de toutes les familles live, un contexte J3 neuf isolé dans le runtime
+  propriétaire et une reprise conservant le contexte live, les budgets et l’échéance finale.
+- Prévoit trente scénarios de recette et distingue la qualification future des
+  [contrôles du cadrage](docs/validation/WO060-J3-AUTOMATION-SCOPING-20260913.md).
+  Aucun comportement applicatif ni réglage opérateur n’est modifié dans cette phase.
+
 ### WO-058 — politique locale `live-v10` à huit rencontres et 35 départs par minute
 
 - Introduit `live-v10` pour les **nouvelles** préparations de campagne locale : la sélection est
