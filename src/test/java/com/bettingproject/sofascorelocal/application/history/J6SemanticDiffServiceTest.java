@@ -3,6 +3,7 @@ package com.bettingproject.sofascorelocal.application.history;
 import com.bettingproject.sofascorelocal.domain.event.CanonicalEventIdentity;
 import com.bettingproject.sofascorelocal.domain.event.CanonicalEventObservationView;
 import com.bettingproject.sofascorelocal.domain.event.EventSourceTrace;
+import com.bettingproject.sofascorelocal.domain.event.ProviderCountry;
 import com.bettingproject.sofascorelocal.domain.eventdata.EventIncident;
 import com.bettingproject.sofascorelocal.domain.eventdata.EventIncidents;
 import com.bettingproject.sofascorelocal.domain.eventdata.EventLineupPlayer;
@@ -18,6 +19,7 @@ import com.bettingproject.sofascorelocal.domain.eventdata.TeamLineup;
 import com.bettingproject.sofascorelocal.domain.eventdetails.EventDetailObservationView;
 import com.bettingproject.sofascorelocal.domain.eventdetails.EventDetailObservation;
 import com.bettingproject.sofascorelocal.domain.eventdetails.EventDetails;
+import com.bettingproject.sofascorelocal.domain.eventdetails.EventPerson;
 import com.bettingproject.sofascorelocal.domain.eventdetails.EventSeason;
 import com.bettingproject.sofascorelocal.domain.eventdetails.EventVenue;
 import com.bettingproject.sofascorelocal.domain.history.J6ChangeKind;
@@ -148,6 +150,61 @@ class J6SemanticDiffServiceTest {
     }
 
     @Test
+    void reportsV4OfficialNameAndCountryCorrections() {
+        var before = v4Details(20,
+                Optional.of(person("Home manager before", "France", "FR")),
+                Optional.of(person("Away manager before", "Spain", "ES")),
+                Optional.of(person("Referee before", "Italy", "IT")));
+        var after = v4Details(21,
+                Optional.of(person("Home manager after", "Germany", "DE")),
+                Optional.of(person("Away manager after", "Portugal", "PT")),
+                Optional.of(person("Referee after", "Belgium", "BE")));
+
+        assertThat(SERVICE.compareDetails(before, after))
+                .extracting(change -> change.field(), change -> change.beforeValue(),
+                        change -> change.afterValue(), change -> change.kind())
+                .containsExactly(
+                        tuple("homeManager.name", Optional.of("Home manager before"), Optional.of("Home manager after"), J6ChangeKind.CHANGED),
+                        tuple("homeManager.country.name", Optional.of("France"), Optional.of("Germany"), J6ChangeKind.CHANGED),
+                        tuple("homeManager.country.alpha2", Optional.of("FR"), Optional.of("DE"), J6ChangeKind.CHANGED),
+                        tuple("awayManager.name", Optional.of("Away manager before"), Optional.of("Away manager after"), J6ChangeKind.CHANGED),
+                        tuple("awayManager.country.name", Optional.of("Spain"), Optional.of("Portugal"), J6ChangeKind.CHANGED),
+                        tuple("awayManager.country.alpha2", Optional.of("ES"), Optional.of("PT"), J6ChangeKind.CHANGED),
+                        tuple("referee.name", Optional.of("Referee before"), Optional.of("Referee after"), J6ChangeKind.CHANGED),
+                        tuple("referee.country.name", Optional.of("Italy"), Optional.of("Belgium"), J6ChangeKind.CHANGED),
+                        tuple("referee.country.alpha2", Optional.of("IT"), Optional.of("BE"), J6ChangeKind.CHANGED));
+    }
+
+    @Test
+    void preservesUnknownV4OfficialCountriesWithoutInventingFallbacks() {
+        var before = v4Details(22,
+                Optional.of(person("Home manager", null, null)),
+                Optional.of(person("Away manager", "Spain", "ES")),
+                Optional.empty());
+        var after = v4Details(23,
+                Optional.of(person("Home manager", "France", "FR")),
+                Optional.empty(),
+                Optional.of(person("Referee", "Italy", "IT")));
+
+        assertThat(SERVICE.compareDetails(before, after))
+                .extracting(change -> change.field(), change -> change.beforeValue(),
+                        change -> change.afterValue(), change -> change.kind())
+                .containsExactly(
+                        tuple("homeManager.country.name", Optional.empty(), Optional.of("France"), J6ChangeKind.ADDED),
+                        tuple("homeManager.country.alpha2", Optional.empty(), Optional.of("FR"), J6ChangeKind.ADDED),
+                        tuple("awayManager.name", Optional.of("Away manager"), Optional.empty(), J6ChangeKind.REMOVED),
+                        tuple("awayManager.country.name", Optional.of("Spain"), Optional.empty(), J6ChangeKind.REMOVED),
+                        tuple("awayManager.country.alpha2", Optional.of("ES"), Optional.empty(), J6ChangeKind.REMOVED),
+                        tuple("referee.name", Optional.empty(), Optional.of("Referee"), J6ChangeKind.ADDED),
+                        tuple("referee.country.name", Optional.empty(), Optional.of("Italy"), J6ChangeKind.ADDED),
+                        tuple("referee.country.alpha2", Optional.empty(), Optional.of("IT"), J6ChangeKind.ADDED));
+        assertThat(SERVICE.compareDetails(after, v4Details(24,
+                Optional.of(person("Home manager", "France", "FR")),
+                Optional.empty(),
+                Optional.of(person("Referee", "Italy", "IT"))))).isEmpty();
+    }
+
+    @Test
     void keysStatisticsAndLineupsByTheirStableBusinessIdentities() {
         EventStatistics oldStatistics = new EventStatistics(PROVIDER_EVENT_ID, List.of(
                 metric("ALL", "Match", "possession", "Possession", "48%", "52%"),
@@ -259,6 +316,36 @@ class J6SemanticDiffServiceTest {
         assertThat(SERVICE.compareEventData(enrichedView(35, after), enrichedView(36, after))).isEmpty();
     }
 
+    @Test
+    void tracksV4LineupCountriesForMatchedPlayersAndMissingPlayers() {
+        EventLineups before = v4Lineups("France", "FR");
+        EventLineups after = v4Lineups("Belgium", "BE");
+
+        assertThat(SERVICE.compareEventData(enrichedV4View(37, before), enrichedV4View(38, after)))
+                .extracting(change -> change.field(), change -> change.beforeValue(),
+                        change -> change.afterValue(), change -> change.kind())
+                .containsExactly(
+                        tuple("lineups[HOME].missingPlayers[playerId=500].country.name", Optional.of("France"), Optional.of("Belgium"), J6ChangeKind.CHANGED),
+                        tuple("lineups[HOME].missingPlayers[playerId=500].country.alpha2", Optional.of("FR"), Optional.of("BE"), J6ChangeKind.CHANGED),
+                        tuple("lineups[HOME,playerId=100].country.name", Optional.of("France"), Optional.of("Belgium"), J6ChangeKind.CHANGED),
+                        tuple("lineups[HOME,playerId=100].country.alpha2", Optional.of("FR"), Optional.of("BE"), J6ChangeKind.CHANGED));
+    }
+
+    @Test
+    void reportsNewlyAvailableV4PlayerCountriesWithoutInventingValues() {
+        EventLineups before = v4Lineups(null, null);
+        EventLineups after = v4Lineups("France", "FR");
+
+        assertThat(SERVICE.compareEventData(enrichedV4View(39, before), enrichedV4View(40, after)))
+                .extracting(change -> change.field(), change -> change.beforeValue(),
+                        change -> change.afterValue(), change -> change.kind())
+                .containsExactly(
+                        tuple("lineups[HOME].missingPlayers[playerId=500].country.name", Optional.empty(), Optional.of("France"), J6ChangeKind.ADDED),
+                        tuple("lineups[HOME].missingPlayers[playerId=500].country.alpha2", Optional.empty(), Optional.of("FR"), J6ChangeKind.ADDED),
+                        tuple("lineups[HOME,playerId=100].country.name", Optional.empty(), Optional.of("France"), J6ChangeKind.ADDED),
+                        tuple("lineups[HOME,playerId=100].country.alpha2", Optional.empty(), Optional.of("FR"), J6ChangeKind.ADDED));
+    }
+
     private static MissingLineupPlayer missing(long id, String expectedEndDate) {
         return new MissingLineupPlayer(id, "Absent " + id, Optional.of(42), Optional.of("D"),
                 Optional.of("missing"), Optional.of(1), Optional.of("Achilles Tendon Injury"),
@@ -266,10 +353,17 @@ class J6SemanticDiffServiceTest {
     }
 
     private static J5EventDataObservationView enrichedView(long id, EventLineups lineups) {
-        EventSourceTrace trace = new EventSourceTrace(
-                com.bettingproject.sofascorelocal.domain.event.EventSourceKind.PROVIDER_SNAPSHOT,
-                OptionalLong.of(id), Optional.empty(), hash('a'), "event-lineups-v3",
-                Instant.parse("2026-09-09T00:00:00Z"));
+        return enrichedView(id, lineups, "event-lineups-v3");
+    }
+
+    private static J5EventDataObservationView enrichedV4View(long id, EventLineups lineups) {
+        return enrichedView(id, lineups, "event-lineups-v4");
+    }
+
+    private static J5EventDataObservationView enrichedView(
+            long id, EventLineups lineups, String parserVersion) {
+        EventSourceTrace trace = EventSourceTrace.providerSnapshot(
+                id, hash('a'), parserVersion, Instant.parse("2026-09-09T00:00:00Z"));
         var observation = com.bettingproject.sofascorelocal.domain.eventdata.J5EventDataObservation.from(
                 IDENTITY, lineups, trace, J5CompletenessReport.measured(1, 1, List.of()));
         return new J5EventDataObservationView(id, IDENTITY, lineups, trace,
@@ -378,6 +472,46 @@ class J6SemanticDiffServiceTest {
                 hash('d'));
     }
 
+    private static EventDetailObservationView v4Details(
+            long observationId,
+            Optional<EventPerson> homeManager,
+            Optional<EventPerson> awayManager,
+            Optional<EventPerson> referee) {
+        EventDetails details = new EventDetails(
+                PROVIDER_EVENT_ID,
+                Instant.parse("2026-08-20T18:00:00Z"),
+                new ScheduledTeam(1, "Home"),
+                new ScheduledTeam(2, "Away"),
+                new ScheduledEventStatus("notstarted", Optional.empty()),
+                Optional.empty(),
+                Optional.empty(),
+                Optional.empty(),
+                Optional.empty(),
+                Optional.empty(),
+                Optional.empty(),
+                Optional.empty(),
+                homeManager,
+                awayManager,
+                referee);
+        EventSourceTrace trace = EventSourceTrace.providerSnapshot(
+                observationId, hash('e'), "event-details-v4",
+                Instant.parse("2026-09-13T00:00:00Z").plusSeconds(observationId));
+        EventDetailObservation observation = EventDetailObservation.from(IDENTITY, details, trace);
+        return new EventDetailObservationView(
+                observationId, IDENTITY, details, trace, observation.normalizedSha256());
+    }
+
+    private static EventPerson person(String name, String countryName, String alpha2) {
+        return new EventPerson(name, country(countryName, alpha2));
+    }
+
+    private static Optional<ProviderCountry> country(String name, String alpha2) {
+        if (name == null && alpha2 == null) {
+            return Optional.empty();
+        }
+        return Optional.of(new ProviderCountry(Optional.ofNullable(name), Optional.ofNullable(alpha2)));
+    }
+
     private static EventDetailObservationView awardedDetails(
             long observationId, Boolean awarded, Integer homeDisplay, Integer awayDisplay) {
         EventDetails details = new EventDetails(
@@ -433,6 +567,37 @@ class J6SemanticDiffServiceTest {
                 PROVIDER_EVENT_ID,
                 confirmed,
                 new TeamLineup(LineupSide.HOME, Optional.of(homeFormation), homePlayers),
+                new TeamLineup(LineupSide.AWAY, Optional.empty(), List.of()));
+    }
+
+    private static EventLineups v4Lineups(String countryName, String alpha2) {
+        Optional<ProviderCountry> country = country(countryName, alpha2);
+        return new EventLineups(
+                PROVIDER_EVENT_ID,
+                true,
+                new TeamLineup(
+                        LineupSide.HOME,
+                        Optional.of("4-3-3"),
+                        List.of(new EventLineupPlayer(
+                                100,
+                                "Alice",
+                                Optional.of(9),
+                                Optional.of("F"),
+                                true,
+                                Optional.empty(),
+                                Optional.empty(),
+                                country)),
+                        Optional.of(List.of(new MissingLineupPlayer(
+                                500,
+                                "Unavailable 500",
+                                Optional.of(42),
+                                Optional.of("D"),
+                                Optional.of("missing"),
+                                Optional.of(1),
+                                Optional.of("Synthetic injury"),
+                                Optional.of(5),
+                                Optional.of(OffsetDateTime.parse("2026-09-20T00:00:00Z")),
+                                country)))),
                 new TeamLineup(LineupSide.AWAY, Optional.empty(), List.of()));
     }
 

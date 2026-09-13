@@ -32,6 +32,11 @@ Les évolutions notables du SofaScore Local Lab sont consignées dans ce fichier
   smoke test CIM dépendant de l'hôte est ignoré seulement lorsque `Win32_Process` expire ; le code
   applicatif reste fail-closed dans ce cas. Voir la
   [note de correction CI](docs/validation/WO058-CI-PR35-CORRECTION-20260913.md).
+- Complète le diff sémantique J6 des contrats V4 : les corrections de nom et de pays des
+  entraîneurs/arbitre J4, ainsi que les corrections de pays des joueurs et indisponibles J5,
+  restent visibles dans l'historique. Cette projection compare exclusivement les observations
+  normalisées déjà persistées ; elle n'ajoute ni endpoint, ni collecte, ni migration. Voir la
+  [preuve J6 V4](docs/validation/WO058-J6-V4-PEOPLE-COUNTRY-DIFFS-20260913.md).
 
 ### WO-059 — plafond local de pagination manuelle J3 à 35 pages
 

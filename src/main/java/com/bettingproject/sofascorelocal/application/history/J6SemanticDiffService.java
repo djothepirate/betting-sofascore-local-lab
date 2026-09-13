@@ -1,6 +1,7 @@
 package com.bettingproject.sofascorelocal.application.history;
 
 import com.bettingproject.sofascorelocal.domain.event.CanonicalEventObservationView;
+import com.bettingproject.sofascorelocal.domain.event.ProviderCountry;
 import com.bettingproject.sofascorelocal.domain.eventdata.EventIncident;
 import com.bettingproject.sofascorelocal.domain.eventdata.EventIncidents;
 import com.bettingproject.sofascorelocal.domain.eventdata.EventLineupPlayer;
@@ -14,6 +15,7 @@ import com.bettingproject.sofascorelocal.domain.eventdata.MissingLineupPlayer;
 import com.bettingproject.sofascorelocal.domain.eventdata.PlayerMatchStatistics;
 import com.bettingproject.sofascorelocal.domain.eventdata.TeamLineup;
 import com.bettingproject.sofascorelocal.domain.eventdetails.EventDetailObservationView;
+import com.bettingproject.sofascorelocal.domain.eventdetails.EventPerson;
 import com.bettingproject.sofascorelocal.domain.eventdetails.EventSeason;
 import com.bettingproject.sofascorelocal.domain.eventdetails.EventVenue;
 import com.bettingproject.sofascorelocal.domain.history.J6ChangeKind;
@@ -101,7 +103,38 @@ public class J6SemanticDiffService {
         scalar(changes, "awayScore.display",
                 before.details().awayDisplayScore().orElse(null),
                 after.details().awayDisplayScore().orElse(null));
+        comparePerson(changes, "homeManager",
+                before.details().homeManager(), after.details().homeManager());
+        comparePerson(changes, "awayManager",
+                before.details().awayManager(), after.details().awayManager());
+        comparePerson(changes, "referee",
+                before.details().referee(), after.details().referee());
         return List.copyOf(changes);
+    }
+
+    private static void comparePerson(
+            List<J6SemanticChange> changes,
+            String path,
+            Optional<EventPerson> before,
+            Optional<EventPerson> after) {
+        scalar(changes, path + ".name",
+                before.map(EventPerson::name).orElse(null),
+                after.map(EventPerson::name).orElse(null));
+        compareCountry(changes, path + ".country",
+                before.flatMap(EventPerson::country), after.flatMap(EventPerson::country));
+    }
+
+    private static void compareCountry(
+            List<J6SemanticChange> changes,
+            String path,
+            Optional<ProviderCountry> before,
+            Optional<ProviderCountry> after) {
+        scalar(changes, path + ".name",
+                before.flatMap(ProviderCountry::name).orElse(null),
+                after.flatMap(ProviderCountry::name).orElse(null));
+        scalar(changes, path + ".alpha2",
+                before.flatMap(ProviderCountry::alpha2).orElse(null),
+                after.flatMap(ProviderCountry::alpha2).orElse(null));
     }
 
     public List<J6SemanticChange> compareEventData(
@@ -228,6 +261,8 @@ public class J6SemanticDiffService {
                 scalar(changes, path + ".starter", oldValue.starter(), newValue.starter());
                 scalar(changes, path + ".captain",
                         oldValue.captain().orElse(null), newValue.captain().orElse(null));
+                compareCountry(changes, path + ".country",
+                        oldValue.country(), newValue.country());
                 comparePlayerStatistics(changes, path + ".statistics",
                         oldValue.statistics(), newValue.statistics());
                 continue;
@@ -293,6 +328,8 @@ public class J6SemanticDiffService {
                         oldValue.externalType().orElse(null), newValue.externalType().orElse(null));
                 scalar(changes, playerPath + ".expectedEndDate",
                         oldValue.expectedEndDate().orElse(null), newValue.expectedEndDate().orElse(null));
+                compareCountry(changes, playerPath + ".country",
+                        oldValue.country(), newValue.country());
             } else {
                 removeEntities(changes, playerPath, oldValues, J6SemanticDiffService::missingPlayerSummary);
                 addEntities(changes, playerPath, newValues, J6SemanticDiffService::missingPlayerSummary);

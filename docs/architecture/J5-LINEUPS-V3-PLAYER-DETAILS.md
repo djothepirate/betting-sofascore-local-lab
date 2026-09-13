@@ -71,8 +71,11 @@ source/empreinte peut légitimement retrouver l'ancienne observation V2. Les anc
 ne gagnent donc pas automatiquement des capitaines, statistiques ou indisponibles.
 
 J6 compare les capitaines, les métriques individuelles, les variantes de note et les attributs des
-indisponibles. Il distingue absence et bloc vide. Les indisponibles sont appariés par identité
-fournisseur, sans transformer un simple changement d'ordre en changement de joueur.
+indisponibles. Pour les observations V4, il compare aussi `country.name` et `country.alpha2` des
+joueurs de `lineups[HOME|AWAY,playerId=…]` et des indisponibles de
+`lineups[HOME|AWAY].missingPlayers[playerId=…]`. Il distingue absence et bloc vide. Les joueurs
+et indisponibles sont appariés par identité fournisseur, sans transformer un simple changement
+d'ordre en changement de joueur.
 
 Le contrat d'export J7 v1 reste sa projection fermée existante de la composition : cinq champs par
 joueur, sans capitaine, statistiques individuelles ni indisponibles. J7 vérifie néanmoins

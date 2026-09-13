@@ -1762,6 +1762,16 @@ sur un runner hébergé est ignoré par ce seul test, tandis que le code applica
 fail-closed. Les détails et les validations sont consignés dans [la note de correction
 CI](../../validation/WO058-CI-PR35-CORRECTION-20260913.md).
 
+#### Complément de revue PR #35 — diff sémantique J6 V4
+
+Les deux retours P2 de revue sont pris en compte dans le calcul de l'historique J6 : les
+corrections de nom, de nom de pays et de code alpha-2 des entraîneurs et de l'arbitre
+`event-details-v4` sont comparées séparément. Les mêmes deux champs de pays sont aussi comparés
+pour les joueurs et les indisponibles `event-lineups-v4`, après appariement par identifiant
+fournisseur. Le correctif relit uniquement les observations normalisées existantes ; il ne crée
+ni endpoint, ni transport, ni campagne, ni migration. Les scénarios de régression et la
+vérification locale sont consignés dans la [preuve J6 V4](../../validation/WO058-J6-V4-PEOPLE-COUNTRY-DIFFS-20260913.md).
+
 ### État et prochaine action
 
 Cette révision reste `IN_PROGRESS`. Le Work Order demeure dans `docs/work_orders/active` : la
