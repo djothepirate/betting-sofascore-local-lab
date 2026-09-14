@@ -33,7 +33,7 @@ pour désactiver seulement l'automatisation, utiliser le réglage de l'interface
 2. Pour A, cliquer **A. Lancer la collecte paginée — APPELS FOURNISSEUR**.
    Le moteur utilise le cache admissible puis appelle le fournisseur pour les pages absentes.
 3. Pour B, sélectionner les fichiers JSON `page-1.json` jusqu'à `page-N.json`, puis cliquer
-   **5B. Importer et valider J3 — ZÉRO APPEL**. Leur ordre dans le sélecteur est indifférent.
+   **B. Importer et valider J3 — ZÉRO APPEL**. Leur ordre dans le sélecteur est indifférent.
 4. La page de suivi affiche l'ordre ; à son terme, le tableau de bord revient à la date demandée.
    Un succès complet alimente la liste des tournois et son lien de consultation paginée.
 
@@ -47,6 +47,17 @@ L'import valide tout le lot avant admission : 1 à 35 fichiers contigus, 5 Mio m
 incomplet sont refusés. L'import ne consulte ni transport ni cache et ne suspend pas une campagne live.
 
 ## 3. Automatisation et horaires
+
+Après une mise à jour du Lab, revenir au tableau de bord puis actualiser la page avant de
+soumettre un formulaire. Le message **Préférences J3 enregistrées** confirme l'enregistrement ;
+un horaire accepté apparaît dans **Horaires et dernières exécutions**.
+
+Si les boutons de paramètres, de planification, de collecte A ou d'import B conduisent tous à
+un HTTP 403 dans Chrome, appliquer le [correctif des formulaires WO-060](../validation/WO060-J3-FORMS-403-FIX-20260914.md),
+recompiler et relancer le Lab, puis recharger `/` ou `/dashboard`. La correction conserve
+l'origine locale des formulaires ; aucun réglage de sécurité du navigateur n'est nécessaire.
+Une simple actualisation de la page d'erreur `/j3/settings` ou `/j3/plans` ne charge pas le
+nouveau formulaire. Ce correctif n'ajoute aucune migration ni modification des données J3.
 
 | Réglage ou situation | Comportement |
 |---|---|

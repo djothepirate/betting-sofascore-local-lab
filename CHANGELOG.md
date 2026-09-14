@@ -27,6 +27,11 @@ Les évolutions notables du SofaScore Local Lab sont consignées dans ce fichier
   V10. Il indique les dix paramètres V11 ; son test contrôle la politique réellement utilisée.
   Le [retour opérateur du 14 septembre](docs/validation/WO060-LIVE-V11-LAUNCHER-FIX-20260914.md)
   distingue la correction de l'interface et l'ajout local des paramètres manquants dans Eclipse.
+- Corrige les refus HTTP 403 des formulaires J3 issus du tableau de bord : paramètres,
+  planification, collecte manuelle et import. La page conserve désormais son origine locale
+  pour les POST Chromium ; les contrôles de provenance et le jeton restent exigés.
+  Le bouton d'import devient **B. Importer et valider J3 — ZÉRO APPEL**.
+  Voir le [diagnostic et les vérifications](docs/validation/WO060-J3-FORMS-403-FIX-20260914.md).
 
 #### Historique du cadrage au commit 9e0d1cb
 

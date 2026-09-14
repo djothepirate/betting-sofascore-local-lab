@@ -1,0 +1,278 @@
+{
+  "workOrder": "WO-SS-20260913-060",
+  "result": "PASS",
+  "scope": "NATIVE_CHROMIUM_OFFLINE_SYNTHETIC_FORMS_PRODUCTION_FILTER_AND_INTERCEPTOR",
+  "baseCommit": "43e529b1d1a1e86e5f4b5eb289d83c11e8e5db94",
+  "java": "25.0.4",
+  "playwright": "1.62.0",
+  "browserCacheRevision": "chromium_headless_shell-1234",
+  "browserContextOffline": true,
+  "allResponsesFulfilledInMemory": true,
+  "providerCalls": 0,
+  "runningLabRequests": 0,
+  "databaseMutations": 0,
+  "acceptedBoundaryProbeStatus": 200,
+  "actualControllerRedirectTest": "J3WebApplicationIT",
+  "observations": [
+    {
+      "host": "localhost:8087",
+      "page": "/",
+      "action": "/j3/settings",
+      "referrerPolicy": "no-referrer",
+      "origin": "null",
+      "boundaryResponse": 403
+    },
+    {
+      "host": "localhost:8087",
+      "page": "/",
+      "action": "/j3/settings",
+      "referrerPolicy": "same-origin",
+      "origin": "http://localhost:8087",
+      "boundaryResponse": 200
+    },
+    {
+      "host": "localhost:8087",
+      "page": "/",
+      "action": "/j3/plans",
+      "referrerPolicy": "no-referrer",
+      "origin": "null",
+      "boundaryResponse": 403
+    },
+    {
+      "host": "localhost:8087",
+      "page": "/",
+      "action": "/j3/plans",
+      "referrerPolicy": "same-origin",
+      "origin": "http://localhost:8087",
+      "boundaryResponse": 200
+    },
+    {
+      "host": "localhost:8087",
+      "page": "/",
+      "action": "/j3/collect",
+      "referrerPolicy": "no-referrer",
+      "origin": "null",
+      "boundaryResponse": 403
+    },
+    {
+      "host": "localhost:8087",
+      "page": "/",
+      "action": "/j3/collect",
+      "referrerPolicy": "same-origin",
+      "origin": "http://localhost:8087",
+      "boundaryResponse": 200
+    },
+    {
+      "host": "localhost:8087",
+      "page": "/",
+      "action": "/j3/import",
+      "referrerPolicy": "no-referrer",
+      "origin": "null",
+      "boundaryResponse": 403
+    },
+    {
+      "host": "localhost:8087",
+      "page": "/",
+      "action": "/j3/import",
+      "referrerPolicy": "same-origin",
+      "origin": "http://localhost:8087",
+      "boundaryResponse": 200
+    },
+    {
+      "host": "localhost:8087",
+      "page": "/dashboard",
+      "action": "/j3/settings",
+      "referrerPolicy": "no-referrer",
+      "origin": "null",
+      "boundaryResponse": 403
+    },
+    {
+      "host": "localhost:8087",
+      "page": "/dashboard",
+      "action": "/j3/settings",
+      "referrerPolicy": "same-origin",
+      "origin": "http://localhost:8087",
+      "boundaryResponse": 200
+    },
+    {
+      "host": "localhost:8087",
+      "page": "/dashboard",
+      "action": "/j3/plans",
+      "referrerPolicy": "no-referrer",
+      "origin": "null",
+      "boundaryResponse": 403
+    },
+    {
+      "host": "localhost:8087",
+      "page": "/dashboard",
+      "action": "/j3/plans",
+      "referrerPolicy": "same-origin",
+      "origin": "http://localhost:8087",
+      "boundaryResponse": 200
+    },
+    {
+      "host": "localhost:8087",
+      "page": "/dashboard",
+      "action": "/j3/collect",
+      "referrerPolicy": "no-referrer",
+      "origin": "null",
+      "boundaryResponse": 403
+    },
+    {
+      "host": "localhost:8087",
+      "page": "/dashboard",
+      "action": "/j3/collect",
+      "referrerPolicy": "same-origin",
+      "origin": "http://localhost:8087",
+      "boundaryResponse": 200
+    },
+    {
+      "host": "localhost:8087",
+      "page": "/dashboard",
+      "action": "/j3/import",
+      "referrerPolicy": "no-referrer",
+      "origin": "null",
+      "boundaryResponse": 403
+    },
+    {
+      "host": "localhost:8087",
+      "page": "/dashboard",
+      "action": "/j3/import",
+      "referrerPolicy": "same-origin",
+      "origin": "http://localhost:8087",
+      "boundaryResponse": 200
+    },
+    {
+      "host": "127.0.0.1:8087",
+      "page": "/",
+      "action": "/j3/settings",
+      "referrerPolicy": "no-referrer",
+      "origin": "null",
+      "boundaryResponse": 403
+    },
+    {
+      "host": "127.0.0.1:8087",
+      "page": "/",
+      "action": "/j3/settings",
+      "referrerPolicy": "same-origin",
+      "origin": "http://127.0.0.1:8087",
+      "boundaryResponse": 200
+    },
+    {
+      "host": "127.0.0.1:8087",
+      "page": "/",
+      "action": "/j3/plans",
+      "referrerPolicy": "no-referrer",
+      "origin": "null",
+      "boundaryResponse": 403
+    },
+    {
+      "host": "127.0.0.1:8087",
+      "page": "/",
+      "action": "/j3/plans",
+      "referrerPolicy": "same-origin",
+      "origin": "http://127.0.0.1:8087",
+      "boundaryResponse": 200
+    },
+    {
+      "host": "127.0.0.1:8087",
+      "page": "/",
+      "action": "/j3/collect",
+      "referrerPolicy": "no-referrer",
+      "origin": "null",
+      "boundaryResponse": 403
+    },
+    {
+      "host": "127.0.0.1:8087",
+      "page": "/",
+      "action": "/j3/collect",
+      "referrerPolicy": "same-origin",
+      "origin": "http://127.0.0.1:8087",
+      "boundaryResponse": 200
+    },
+    {
+      "host": "127.0.0.1:8087",
+      "page": "/",
+      "action": "/j3/import",
+      "referrerPolicy": "no-referrer",
+      "origin": "null",
+      "boundaryResponse": 403
+    },
+    {
+      "host": "127.0.0.1:8087",
+      "page": "/",
+      "action": "/j3/import",
+      "referrerPolicy": "same-origin",
+      "origin": "http://127.0.0.1:8087",
+      "boundaryResponse": 200
+    },
+    {
+      "host": "127.0.0.1:8087",
+      "page": "/dashboard",
+      "action": "/j3/settings",
+      "referrerPolicy": "no-referrer",
+      "origin": "null",
+      "boundaryResponse": 403
+    },
+    {
+      "host": "127.0.0.1:8087",
+      "page": "/dashboard",
+      "action": "/j3/settings",
+      "referrerPolicy": "same-origin",
+      "origin": "http://127.0.0.1:8087",
+      "boundaryResponse": 200
+    },
+    {
+      "host": "127.0.0.1:8087",
+      "page": "/dashboard",
+      "action": "/j3/plans",
+      "referrerPolicy": "no-referrer",
+      "origin": "null",
+      "boundaryResponse": 403
+    },
+    {
+      "host": "127.0.0.1:8087",
+      "page": "/dashboard",
+      "action": "/j3/plans",
+      "referrerPolicy": "same-origin",
+      "origin": "http://127.0.0.1:8087",
+      "boundaryResponse": 200
+    },
+    {
+      "host": "127.0.0.1:8087",
+      "page": "/dashboard",
+      "action": "/j3/collect",
+      "referrerPolicy": "no-referrer",
+      "origin": "null",
+      "boundaryResponse": 403
+    },
+    {
+      "host": "127.0.0.1:8087",
+      "page": "/dashboard",
+      "action": "/j3/collect",
+      "referrerPolicy": "same-origin",
+      "origin": "http://127.0.0.1:8087",
+      "boundaryResponse": 200
+    },
+    {
+      "host": "127.0.0.1:8087",
+      "page": "/dashboard",
+      "action": "/j3/import",
+      "referrerPolicy": "no-referrer",
+      "origin": "null",
+      "boundaryResponse": 403
+    },
+    {
+      "host": "127.0.0.1:8087",
+      "page": "/dashboard",
+      "action": "/j3/import",
+      "referrerPolicy": "same-origin",
+      "origin": "http://127.0.0.1:8087",
+      "boundaryResponse": 200
+    }
+  ],
+  "logSha256": "ed202bda6a778810cb3ea4142105fdf675940b703d1cb752c9f49ed427ee3450",
+  "qualificationSourceSha256": "de9adf646880dba86c75166a47fe6a5c74dfe677db6dd810dcd1369d4bb6c60a",
+  "qualificationScriptSha256": "126f2f8b84c07d31de223f45aecbfa0463d3c8104d9c864ea68deb144b8819ed",
+  "qualificationScriptResult": "PASS"
+}

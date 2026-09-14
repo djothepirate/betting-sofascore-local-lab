@@ -487,7 +487,7 @@ class DashboardControllerTest {
                 .andExpect(content().string(containsString("action=\"/j3/collect\"")))
                 .andExpect(content().string(containsString("formaction=\"/j3/import\"")))
                 .andExpect(content().string(containsString("A. Lancer la collecte paginée — APPELS FOURNISSEUR")))
-                .andExpect(content().string(containsString("5B. Importer et valider J3 — ZÉRO APPEL")))
+                .andExpect(content().string(containsString(">B. Importer et valider J3 — ZÉRO APPEL</button>")))
                 .andExpect(content().string(containsString("enctype=\"multipart/form-data\"")))
                 .andExpect(content().string(containsString("name=\"pageFiles\"")))
                 .andExpect(content().string(not(containsString("Confirmer l’intention locale"))))

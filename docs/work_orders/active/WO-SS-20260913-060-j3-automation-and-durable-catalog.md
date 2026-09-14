@@ -42,6 +42,14 @@ Le message `/events` qui renvoyait encore à V10 est corrigé et son test suit l
 Les preuves et la validation du correctif figurent dans
 l'[addendum de mise en service](../../validation/WO060-LIVE-V11-LAUNCHER-FIX-20260914.md).
 
+**Retour opérateur sur les formulaires J3 — 14 septembre :** les POST de paramètres,
+de planification, de collecte A et d'import B sont refusés en HTTP 403 dans Chrome.
+Le tableau de bord envoyait `Referrer-Policy: no-referrer`, ce qui produit `Origin: null`
+sur ces navigations. Le filtre ajoute `/` et `/dashboard` aux pages de formulaires locaux
+utilisant `same-origin`, sans assouplir l'intercepteur ni les jetons. Le bouton « 5B » devient
+« B » à la demande de l'opérateur. La reproduction Chromium et les tests MVC/PostgreSQL
+sont décrits dans le [correctif des formulaires](../../validation/WO060-J3-FORMS-403-FIX-20260914.md).
+
 La clôture J8 du nouveau parcours utilise une transaction obligatoire commune à la publication
 du catalogue et de l’ordre. Les transactions autonomes des parcours historiques sont conservées.
 Un test PostgreSQL injecte un échec après cette publication et vérifie l’annulation du succès
@@ -183,7 +191,7 @@ seulement une origine loopback. Aucun essai fournisseur n’est impliqué.
 ### Recette opérateur manuelle cible
 
 1. Démarrer le Lab et attendre sa disponibilité, puis ouvrir `http://127.0.0.1:8087` ou `http://localhost:8087`.
-2. Pour A : saisir une date ou garder le jour courant, cliquer **A. Lancer la collecte paginée — APPELS FOURNISSEUR**. Pour B : choisir la date, fournir les pages contiguës puis cliquer **5B. Importer et valider J3 — ZÉRO APPEL**.
+2. Pour A : saisir une date ou garder le jour courant, cliquer **A. Lancer la collecte paginée — APPELS FOURNISSEUR**. Pour B : choisir la date, fournir les pages contiguës puis cliquer **B. Importer et valider J3 — ZÉRO APPEL**.
 3. À la réussite, retrouver les tournois dans la liste déroulante et ouvrir la vue paginée de cette même collecte.
 4. Redémarrer, retrouver cette date, effectuer une collecte pour une autre date, puis revenir à la première : la même dernière réussite doit rester accessible.
 5. Constater qu’un nouveau démarrage le même jour ne relance pas la collecte opportuniste déjà réussie ; un horaire explicitement enregistré reste exécuté.

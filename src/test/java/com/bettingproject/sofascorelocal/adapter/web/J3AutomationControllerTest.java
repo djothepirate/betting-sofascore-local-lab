@@ -8,6 +8,7 @@ import com.bettingproject.sofascorelocal.security.LocalFormTokenService;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.params.ParameterizedTest;
 import org.junit.jupiter.params.provider.ValueSource;
+import org.junit.jupiter.params.provider.CsvSource;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.webmvc.test.autoconfigure.WebMvcTest;
 import org.springframework.cache.CacheManager;
@@ -33,10 +34,12 @@ class J3AutomationControllerTest {
     static final LocalDate DATE=LocalDate.parse("2026-09-13");
     @org.junit.jupiter.api.BeforeEach void discardContextLifecycleNotifications() {clearInvocations(runtime);}
 
-    @Test void oneDateAndOneClickSubmitProviderOrderAndDoubleClickCannotSubmitAgain() throws Exception {
+    @ParameterizedTest @ValueSource(strings={"localhost:8087","127.0.0.1:8087"})
+    void oneDateAndOneClickSubmitProviderOrderAndDoubleClickCannotSubmitAgain(String host) throws Exception {
         var session=new MockHttpSession();String token=tokens.issue(session);UUID id=UUID.randomUUID();
         when(runtime.manual(id,DATE,null)).thenReturn(order(id));
-        var request=post("/j3/collect").header("Host","localhost:8087").session(session)
+        var request=multipart("/j3/collect").header("Host",host).header("Origin","http://"+host)
+                .header("Sec-Fetch-Site","same-origin").header("Sec-Fetch-Dest","document").session(session)
                 .param("localFormToken",token).param("orderId",id.toString()).param("date",DATE.toString());
         mvc.perform(request).andExpect(status().is3xxRedirection()).andExpect(redirectedUrl("/j3/orders/"+id));
         mvc.perform(request).andExpect(status().isBadRequest());
@@ -52,7 +55,9 @@ class J3AutomationControllerTest {
             org.assertj.core.api.Assertions.assertThat(pages.getFirst().bytes()).isEqualTo(first.getBytes());
             return order(id);
         });
-        mvc.perform(multipart("/j3/import").file(last).file(first).header("Host","127.0.0.1:8087").session(session)
+        mvc.perform(multipart("/j3/import").file(last).file(first).header("Host","127.0.0.1:8087")
+                .header("Origin","http://127.0.0.1:8087").header("Sec-Fetch-Site","same-origin")
+                .header("Sec-Fetch-Dest","document").session(session)
                 .param("localFormToken",tokens.issue(session)).param("orderId",id.toString()).param("date",DATE.toString()))
                 .andExpect(status().is3xxRedirection()).andExpect(redirectedUrl("/j3/orders/"+id));
     }
@@ -65,9 +70,11 @@ class J3AutomationControllerTest {
                 .andExpect(status().is3xxRedirection()).andExpect(redirectedUrl("/?j3Date="+DATE+"#manual-call-control"));
         verifyNoInteractions(runtime,orders);
     }
-    @Test void foreignOriginAndMissingTokenCannotChangePreferences() throws Exception {
+    @ParameterizedTest
+    @ValueSource(strings={"https://foreign.invalid","null","http://127.0.0.1:8087"})
+    void untrustedOriginAndMissingTokenCannotChangePreferences(String origin) throws Exception {
         var session=new MockHttpSession();String token=tokens.issue(session);
-        mvc.perform(post("/j3/settings").header("Host","localhost:8087").header("Origin","https://foreign.invalid").session(session)
+        mvc.perform(post("/j3/settings").header("Host","localhost:8087").header("Origin",origin).session(session)
                 .param("localFormToken",token).param("revision","1").param("mode","STARTUP_OR_DAY_CHANGE"))
                 .andExpect(status().isForbidden());
         mvc.perform(post("/j3/settings").header("Host","localhost:8087").session(session)
@@ -75,12 +82,61 @@ class J3AutomationControllerTest {
                 .andExpect(status().isBadRequest());
         verifyNoInteractions(runtime,orders);
     }
-    @Test void uncheckedAutomationBoxPersistsDisabledAndFixedTime() throws Exception {
+    @ParameterizedTest @ValueSource(strings={"localhost:8087","127.0.0.1:8087"})
+    void uncheckedAutomationBoxPersistsDisabledAndFixedTime(String host) throws Exception {
         var session=new MockHttpSession();
-        mvc.perform(post("/j3/settings").header("Host","localhost:8087").session(session)
+        mvc.perform(post("/j3/settings").header("Host",host).header("Origin","http://"+host)
+                .header("Sec-Fetch-Site","same-origin").header("Sec-Fetch-Dest","document").session(session)
                 .param("localFormToken",tokens.issue(session)).param("revision","3").param("mode","DAILY_AT").param("time","08:30"))
                 .andExpect(status().is3xxRedirection());
         verify(runtime).configure(3,false,Mode.DAILY_AT,LocalTime.of(8,30));
+    }
+    @ParameterizedTest @ValueSource(strings={"localhost:8087","127.0.0.1:8087"})
+    void uncheckedAutomationBoxAcceptsTheEmptyTimeSubmittedByTheStartupForm(String host) throws Exception {
+        var session=new MockHttpSession();
+        mvc.perform(post("/j3/settings").header("Host",host).header("Origin","http://"+host)
+                .header("Sec-Fetch-Site","same-origin").header("Sec-Fetch-Dest","document").session(session)
+                .param("localFormToken",tokens.issue(session)).param("revision","1")
+                .param("mode","STARTUP_OR_DAY_CHANGE").param("time",""))
+                .andExpect(redirectedUrl("/#j3-automation"));
+        verify(runtime).configure(1,false,Mode.STARTUP_OR_DAY_CHANGE,null);
+    }
+    @ParameterizedTest @CsvSource({
+        "localhost:8087,1", "localhost:8087,2", "127.0.0.1:8087,1", "127.0.0.1:8087,2"
+    })
+    void sameOriginBrowserCanCreateOrReviseAPlannedCollection(String host,int revision) throws Exception {
+        var session=new MockHttpSession();UUID rule=UUID.randomUUID();
+        mvc.perform(post("/j3/plans").header("Host",host).header("Origin","http://"+host)
+                .header("Sec-Fetch-Site","same-origin").header("Sec-Fetch-Dest","document").session(session)
+                .param("localFormToken",tokens.issue(session)).param("ruleId",rule.toString())
+                .param("revision",Integer.toString(revision)).param("date",DATE.toString())
+                .param("at","2026-09-14T18:30").param("offset",""))
+                .andExpect(redirectedUrl("/#j3-automation"));
+        verify(runtime).schedule(rule,revision,DATE,LocalDateTime.parse("2026-09-14T18:30"),null);
+        verifyNoMoreInteractions(runtime);
+    }
+    @ParameterizedTest @ValueSource(strings={"localhost:8087","127.0.0.1:8087"})
+    void sameOriginBrowserCanCancelAPlannedCollection(String host) throws Exception {
+        var session=new MockHttpSession();UUID id=UUID.randomUUID();
+        mvc.perform(post("/j3/plans/"+id+"/cancel").header("Host",host).header("Origin","http://"+host)
+                .header("Sec-Fetch-Site","same-origin").header("Sec-Fetch-Dest","document").session(session)
+                .param("localFormToken",tokens.issue(session)))
+                .andExpect(redirectedUrl("/#j3-automation"));
+        verify(runtime).cancel(id);
+        verifyNoMoreInteractions(runtime);
+    }
+    @ParameterizedTest @ValueSource(strings={"https://foreign.invalid","null"})
+    void untrustedOriginCannotCreateReviseOrCancelPlansEvenWithAValidToken(String origin) throws Exception {
+        var session=new MockHttpSession();String token=tokens.issue(session);UUID id=UUID.randomUUID();
+        for(int revision:List.of(1,2)) {
+            mvc.perform(post("/j3/plans").header("Host","localhost:8087").header("Origin",origin).session(session)
+                    .param("localFormToken",token).param("ruleId",id.toString()).param("revision",Integer.toString(revision))
+                    .param("date",DATE.toString()).param("at","2026-09-14T18:30"))
+                    .andExpect(status().isForbidden());
+        }
+        mvc.perform(post("/j3/plans/"+id+"/cancel").header("Host","localhost:8087").header("Origin",origin)
+                .session(session).param("localFormToken",token)).andExpect(status().isForbidden());
+        verifyNoInteractions(runtime,orders);
     }
     @Test void orderProgressReadsLedgerWithoutRepeatingWork() throws Exception {
         UUID id=UUID.randomUUID();when(orders.find(id)).thenReturn(Optional.of(order(id)));
