@@ -9,6 +9,7 @@ import com.bettingproject.sofascorelocal.application.retention.J6RetentionError;
 import com.bettingproject.sofascorelocal.application.retention.J6RetentionException;
 import com.bettingproject.sofascorelocal.application.snapshot.RawSnapshotJsonInspectionService;
 import com.bettingproject.sofascorelocal.security.LocalFormTokenService;
+import com.bettingproject.sofascorelocal.domain.scheduledevents.J3DatePolicy;
 import jakarta.servlet.http.HttpSession;
 import org.springframework.dao.DataAccessException;
 import org.springframework.stereotype.Controller;
@@ -62,6 +63,12 @@ public class DashboardController {
             @org.springframework.web.bind.annotation.RequestParam(required=false) java.time.LocalDate j3Date) {
         var selectedDate=j3Date==null?java.time.LocalDate.now(
                 com.bettingproject.sofascorelocal.domain.scheduledevents.J3AutomationData.ZONE):j3Date;
+        var now=java.time.Instant.now();
+        model.addAttribute("j3MinimumDate",J3DatePolicy.MINIMUM_COLLECTION_DATE);
+        model.addAttribute("j3MaximumDate",J3DatePolicy.maximumDate(now));
+        model.addAttribute("j3PlanMinimumTime",java.time.LocalDate.ofInstant(now,
+                com.bettingproject.sofascorelocal.domain.scheduledevents.J3AutomationData.ZONE).atStartOfDay());
+        model.addAttribute("j3PlanMaximumTime",J3DatePolicy.maximumDate(now).atTime(23,59));
         model.addAttribute("dashboard", dashboardService.load());
         model.addAttribute(
                 "manualCall",

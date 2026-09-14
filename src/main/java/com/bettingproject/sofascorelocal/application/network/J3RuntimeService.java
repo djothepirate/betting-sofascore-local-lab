@@ -5,6 +5,7 @@ import com.bettingproject.sofascorelocal.application.network.playwright.*;
 import com.bettingproject.sofascorelocal.domain.provider.*;
 import com.bettingproject.sofascorelocal.domain.scheduledevents.J3AutomationData.*;
 import com.bettingproject.sofascorelocal.domain.scheduledevents.J3CollectionData.Trigger;
+import com.bettingproject.sofascorelocal.domain.scheduledevents.J3DatePolicy;
 import com.bettingproject.sofascorelocal.port.*;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.boot.context.event.ApplicationReadyEvent;
@@ -141,6 +142,8 @@ public class J3RuntimeService {
     public Settings settings() {return orders.settings();}
 
     public synchronized Order manual(UUID id,LocalDate date,List<RawPayloadEvidence> pages) {
+        Instant now=Instant.now();
+        J3DatePolicy.requireCollectionDate(date,now);
         requireReady();
         Trigger trigger=pages==null?Trigger.MANUAL_PROVIDER:Trigger.MANUAL_IMPORT;
         String hash=null;
@@ -161,8 +164,11 @@ public class J3RuntimeService {
         return orders.configure(revision,enabled,mode,mode==Mode.DAILY_AT?time:null,Instant.now());
     }
     public Order schedule(UUID rule,int revision,LocalDate date,LocalDateTime at,ZoneOffset offset) {
+        Instant now=Instant.now();
+        J3DatePolicy.requireCollectionDate(date,now);
+        J3DatePolicy.requirePlanTime(at,now);
         return orders.schedule(rule,revision,date,
-                com.bettingproject.sofascorelocal.domain.scheduledevents.J3AutomationData.resolveOneShot(at,offset),Instant.now());
+                com.bettingproject.sofascorelocal.domain.scheduledevents.J3AutomationData.resolveOneShot(at,offset),now);
     }
     public void cancel(UUID id) {orders.cancel(id,Instant.now());synchronized(this) {imports.remove(id);}}
     public void retryCleanup() {

@@ -29,6 +29,10 @@ pour désactiver seulement l'automatisation, utiliser le réglage de l'interface
 
 ## 2. Collecte manuelle A ou B
 
+Les dates à collecter vont du **01/01/2000** au **jour courant à Paris + 12 mois**, bornes
+incluses. La plage exacte est affichée sous le champ ; elle est vérifiée dans le navigateur
+et côté serveur pour A et B. Elle ne limite pas la consultation des collectes déjà conservées.
+
 1. Ouvrir le tableau de bord, saisir **Date à collecter**, ou conserver le jour courant.
 2. Pour A, cliquer **A. Lancer la collecte paginée — APPELS FOURNISSEUR**.
    Le moteur utilise le cache admissible puis appelle le fournisseur pour les pages absentes.
@@ -71,6 +75,29 @@ Les champs absents ou invalides indiquent la date ou l'heure à corriger. Les he
 inexistantes ou doublées lors des changements d'heure ont une explication spécifique.
 Le [correctif de validation](../validation/WO060-J3-DATE-VALIDATION-FIX-20260914.md)
 remplace la page Whitelabel précédemment affichée pour un déclenchement passé.
+
+Depuis le [correctif des bornes](../validation/WO060-J3-DATE-RANGE-FIX-20260914.md), un nouvel
+horaire ou sa modification doit aussi respecter l'horizon de **12 mois calendaires** à partir
+du jour courant à Paris, jusqu'à **23:59 inclus** le dernier jour. Au 14/09/2026, la date à
+collecter va donc du 01/01/2000 au 14/09/2027 et le déclenchement futur peut aller jusqu'au
+14/09/2027 à 23:59. La borne est recalculée lors de chaque affichage et de chaque soumission ;
+un ancien onglet ne contourne pas le contrôle serveur. Un refus ne crée pas d'ordre et ne
+remplace pas une ancienne révision. Les heures doublées gardent leur contrôle par décalage.
+
+Une date impossible comme le **31/02/2028** est invalide. Le contrôle Chromium isolé bloque
+son envoi et le serveur refuse aussi cette chaîne si elle lui est envoyée directement.
+Le **29/02/2028** est une date calendaire valide ; son admissibilité dépend séparément de
+l'horizon courant. La qualification utilise le 01/03/2027 comme horloge synthétique pour
+vérifier cette distinction.
+
+Une annulation volontaire affiche **Annulée à votre demande**. Une ancienne révision remplacée
+affiche **Remplacée par une nouvelle version de cet horaire**. Ces motifs ne signalent pas une
+panne de transport. Les lignes historiques restent conservées, y compris les essais déjà annulés.
+
+La qualification navigateur est manuelle et strictement hors réseau : après compilation,
+exécuter `scripts/Invoke-J3DateFormQualification.ps1 -BrowserCachePath <cache-local-existant>`.
+Elle rend le vrai fragment du tableau de bord avec des données synthétiques, n'accède pas
+au Lab et ne démarre ni base ni fournisseur. Elle ne fait pas partie des tests Maven standards.
 
 | Réglage ou situation | Comportement |
 |---|---|

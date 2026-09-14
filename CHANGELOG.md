@@ -6,6 +6,12 @@ Les évolutions notables du SofaScore Local Lab sont consignées dans ce fichier
 
 ### WO-060 — automatisation J3, résultats durables et pause live
 
+- Borne les nouvelles collectes J3 entre le 01/01/2000 et le jour courant à Paris + 12 mois,
+  et les déclenchements ponctuels jusqu'à la fin de ce dernier jour, selon le choix propriétaire
+  du 14 septembre. Les formulaires et le runtime refusent les années aberrantes sans modifier
+  l'historique ; une révision refusée conserve l'ancien horaire. Les annulations volontaires
+  et les horaires remplacés affichent leur motif exact. Qualification native hors réseau de
+  22 cas sur le fragment réel du tableau de bord et tests PostgreSQL isolés.
 - Adopte ADR-SS-007 v0.2 et réalise R0–R5 : migrations V55–V57, moteur d'ordres commun
   et publication transactionnelle du catalogue, de la preuve J8 et de l'ordre.
 - Remplace les étapes d'intention J3 par la date et le clic A, ou l'import B validé intégralement ;

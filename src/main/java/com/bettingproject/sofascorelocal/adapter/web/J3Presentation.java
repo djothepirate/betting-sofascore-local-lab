@@ -15,6 +15,8 @@ public final class J3Presentation {
     public static String reason(String code) {
         if(code==null || "NONE".equals(code)) return "";
         return switch(code) {
+            case "OPERATOR_CANCELLED" -> "Annulée à votre demande.";
+            case "PLAN_REVISED" -> "Remplacée par une nouvelle version de cet horaire.";
             case "DATE_ALREADY_SUCCESSFUL" -> "Un succès est déjà enregistré pour cette date.";
             case "EXPLICIT_OCCURRENCE_HAS_PRIORITY" -> "L’horaire explicitement programmé prend en charge cette date.";
             case "AUTOMATION_DISABLED" -> "La collecte automatique est désactivée.";
@@ -26,6 +28,8 @@ public final class J3Presentation {
             case "J3_PLAN_DATE_INVALID" -> "La date à collecter est incorrecte. Saisissez une date valide au format jour/mois/année.";
             case "J3_PLAN_TIME_REQUIRED" -> "Renseignez la date et l’heure de déclenchement à Paris.";
             case "J3_PLAN_TIME_INVALID" -> "La date ou l’heure de déclenchement est incorrecte. Saisissez une date et une heure valides à Paris.";
+            case "J3_COLLECTION_DATE_OUT_OF_RANGE" -> "La date à collecter doit être comprise entre le 01/01/2000 et le jour courant à Paris plus 12 mois.";
+            case "J3_PLAN_TIME_OUT_OF_RANGE" -> "La programmation est limitée aux 12 prochains mois à partir du jour courant à Paris.";
             case "J3_TIME_MINUTE_REQUIRED" -> "Saisissez l’heure de déclenchement en heures et minutes, sans secondes.";
             case "J3_PLAN_MUST_BE_FUTURE" -> "La date et l’heure de déclenchement sont déjà passées. Choisissez un horaire futur à Paris.";
             case "J3_SETTINGS_CHANGED","J3_PLAN_REVISION_CONFLICT","J3_PLAN_IDENTITY_CONFLICT" -> "Les paramètres ont changé. Rechargez la page avant de les modifier.";

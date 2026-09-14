@@ -60,6 +60,17 @@ Le formulaire conserve sa saisie et son identité de création/révision ; aucun
 sur refus et une date historique de calendrier reste permise. Les preuves et la liste des
 fichiers figurent dans le [correctif des dates](../../validation/WO060-J3-DATE-VALIDATION-FIX-20260914.md).
 
+**Retour opérateur sur les années aberrantes — 14 septembre à 14 h 19 :** les captures
+montrent une cible en 9999, un déclenchement en 9999 et un message de transport après une
+annulation volontaire. Le propriétaire choisit explicitement **depuis 2000, avec un horizon
+futur de 12 mois**. Les créations A/B et les créations/révisions d'horaires appliquent la même
+borne de date civile Europe/Paris ; le déclenchement doit aussi rester futur en instant UTC.
+Les bornes HTML et serveur sont cohérentes ; les lectures et anciennes lignes ne sont pas
+réécrites. `OPERATOR_CANCELLED` et `PLAN_REVISED` reçoivent une explication précise.
+La saisie native du 31 février et son envoi direct sont refusés dans les qualifications ;
+la conversion en 29 février n'est pas reproduite. Les preuves figurent dans le
+[correctif des bornes et motifs](../../validation/WO060-J3-DATE-RANGE-FIX-20260914.md).
+
 La clôture J8 du nouveau parcours utilise une transaction obligatoire commune à la publication
 du catalogue et de l’ordre. Les transactions autonomes des parcours historiques sont conservées.
 Un test PostgreSQL injecte un échec après cette publication et vérifie l’annulation du succès

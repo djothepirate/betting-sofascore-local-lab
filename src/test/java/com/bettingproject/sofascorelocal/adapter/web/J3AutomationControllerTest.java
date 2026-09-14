@@ -126,6 +126,7 @@ class J3AutomationControllerTest {
             2026-09-14 | '' | '' | Renseignez la date et l’heure de déclenchement à Paris.
             2026-09-14 | 2026-09-14 | '' | La date ou l’heure de déclenchement est incorrecte.
             2026-09-14 | 2026-02-30T18:30 | '' | La date ou l’heure de déclenchement est incorrecte.
+            2026-09-14 | 2028-02-31T10:00 | '' | La date ou l’heure de déclenchement est incorrecte.
             2026-09-14 | 2026-09-14T25:00 | '' | La date ou l’heure de déclenchement est incorrecte.
             2026-09-14 | 2026-09-14T18:30 | invalid | Le décalage choisi ne correspond pas à cet horaire à Paris.
             """)
@@ -166,6 +167,8 @@ class J3AutomationControllerTest {
             J3_TIME_OFFSET_REQUIRED | Cette heure existe deux fois
             J3_TIME_OFFSET_INVALID | Le décalage choisi ne correspond pas
             J3_TIME_MINUTE_REQUIRED | Saisissez l’heure de déclenchement en heures et minutes, sans secondes.
+            J3_COLLECTION_DATE_OUT_OF_RANGE | La date à collecter doit être comprise entre le 01/01/2000
+            J3_PLAN_TIME_OUT_OF_RANGE | La programmation est limitée aux 12 prochains mois
             """)
     void rejectedParisTimeReturnsItsExplanationAndPreservesTheForm(String code,String message) throws Exception {
         var session=new MockHttpSession();UUID rule=UUID.randomUUID();

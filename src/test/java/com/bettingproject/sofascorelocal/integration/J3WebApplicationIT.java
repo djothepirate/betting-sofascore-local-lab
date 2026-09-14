@@ -127,6 +127,7 @@ class J3WebApplicationIT {
         Order revised=orders.recent(200).stream().filter(o->rule.equals(o.ruleId()) && o.ruleRevision()==2)
                 .findFirst().orElseThrow();
         assertThat(orders.find(first.id()).orElseThrow().state()).isEqualTo(OrderState.CANCELLED);
+        assertThat(orders.find(first.id()).orElseThrow().reason()).isEqualTo("PLAN_REVISED");
         assertThat(revised.state()).isEqualTo(OrderState.FUTURE);
         assertThat(revised.dueAt()).isEqualTo(at.plusHours(1).atZone(ZONE).toInstant());
 
@@ -134,6 +135,11 @@ class J3WebApplicationIT {
         mvc.perform(browserPost("/j3/plans/"+revised.id()+"/cancel",host,session,model))
                 .andExpect(redirectedUrl("/#j3-automation"));
         assertThat(orders.find(revised.id()).orElseThrow().state()).isEqualTo(OrderState.CANCELLED);
+        assertThat(orders.find(revised.id()).orElseThrow().reason()).isEqualTo("OPERATOR_CANCELLED");
+        mvc.perform(get("/").header("Host",host).session(session))
+                .andExpect(status().isOk())
+                .andExpect(content().string(containsString("Remplacée par une nouvelle version de cet horaire.")))
+                .andExpect(content().string(containsString("Annulée à votre demande.")));
 
         model=dashboardForm(host,session,"/");
         mvc.perform(browserPost("/j3/settings",host,session,model)
@@ -245,6 +251,7 @@ class J3WebApplicationIT {
         var before=orders.recent(200);
         var settings=orders.settings();
         for(String[] fields:List.of(new String[]{"2026-09-14",""},new String[]{"2026-09-14","2026-02-30T12:35"},
+                new String[]{"2026-09-14","2028-02-31T10:00"},
                 new String[]{"","2026-09-14T12:35"},new String[]{"2026-02-30","2026-09-14T12:35"})) {
             var model=dashboardForm(host,session,"/");
             var rejected=mvc.perform(browserPost("/j3/plans",host,session,model)
@@ -256,6 +263,93 @@ class J3WebApplicationIT {
             assertAutomationAlert(html(mvc.perform(getDashboard).andExpect(status().isOk()).andReturn()));
             assertThat(orders.recent(200)).isEqualTo(before);
             assertThat(orders.settings()).isEqualTo(settings);
+        }
+        verifyNoInteractions(provider);
+    }
+
+    @Test void rangeLimitsProtectNewPlansAndRevisionsBeforeAnyLedgerMutation() throws Exception {
+        String host="localhost:8087";
+        var session=new MockHttpSession();
+        LocalDate today=LocalDate.now(ZONE),last=today.plusMonths(12);
+        LocalDateTime future=today.plusDays(2).atTime(16,15);
+        var settings=orders.settings();
+        var model=dashboardForm(host,session,"/");
+        UUID rule=(UUID)model.get("j3RuleId");
+        var inputs=List.of(new String[]{"9999-01-31",future.toString(),"La date à collecter"},
+                new String[]{"1999-12-31",future.toString(),"La date à collecter"},
+                new String[]{last.plusDays(1).toString(),future.toString(),"La date à collecter"},
+                new String[]{today.toString(),"9999-09-14T15:00","La programmation"},
+                new String[]{today.toString(),last.plusDays(1).atStartOfDay().toString(),"La programmation"});
+        for(int revision:List.of(1,2)) {
+            var before=orders.recent(200);
+            for(String[] input:inputs) {
+                model=dashboardForm(host,session,"/");
+                var rejected=mvc.perform(browserPost("/j3/plans",host,session,model)
+                        .param("ruleId",rule.toString()).param("revision",Integer.toString(revision))
+                        .param("date",input[0]).param("at",input[1]))
+                        .andExpect(status().is3xxRedirection())
+                        .andExpect(flash().attribute("j3AutomationError",org.hamcrest.Matchers.startsWith(input[2])))
+                        .andReturn();
+                var retry=html(mvc.perform(get("/").header("Host",host).session(session)
+                        .flashAttrs(rejected.getFlashMap())).andExpect(status().isOk()).andReturn());
+                assertAutomationAlert(retry);
+                Element form=(Element)element(retry,"input","value",rule.toString()).getParent();
+                assertThat(element(form,"input","name","date").getAttributeValue("value")).isEqualTo(input[0]);
+                assertThat(element(form,"input","name","at").getAttributeValue("value")).isEqualTo(input[1]);
+                assertThat(element(form,"input","name","date").getAttributeValue("min")).isEqualTo("2000-01-01");
+                assertThat(element(form,"input","name","date").getAttributeValue("max")).isEqualTo(last.toString());
+                assertThat(element(form,"input","name","at").getAttributeValue("min")).isEqualTo(today.atStartOfDay().toString());
+                assertThat(element(form,"input","name","at").getAttributeValue("max")).isEqualTo(last.atTime(23,59).toString());
+                if(revision==2)assertThat(((Element)form.getParent()).hasAttribute("open")).isTrue();
+                assertThat(orders.recent(200)).isEqualTo(before);
+                assertThat(orders.settings()).isEqualTo(settings);
+            }
+            if(revision==1) {
+                model=dashboardForm(host,session,"/");
+                // Both upper boundaries are inclusive; subsequent invalid edits must preserve this plan.
+                mvc.perform(browserPost("/j3/plans",host,session,model)
+                        .param("ruleId",rule.toString()).param("revision","1").param("date",last.toString())
+                        .param("at",last.atTime(23,59).toString()))
+                        .andExpect(redirectedUrl("/#j3-automation"));
+            }
+        }
+        var planned=orders.recent(200).stream().filter(o->rule.equals(o.ruleId())).toList();
+        assertThat(planned).hasSize(1);
+        assertThat(planned.getFirst().state()).isEqualTo(OrderState.FUTURE);
+        assertThat(planned.getFirst().date()).isEqualTo(last);
+        assertThat(planned.getFirst().dueAt()).isEqualTo(last.atTime(23,59).atZone(ZONE).toInstant());
+        model=dashboardForm(host,session,"/");
+        mvc.perform(browserPost("/j3/plans/"+planned.getFirst().id()+"/cancel",host,session,model))
+                .andExpect(redirectedUrl("/#j3-automation"));
+        verifyNoInteractions(provider);
+    }
+
+    @Test void manualProviderAndImportRejectOutOfRangeDatesWhileStoredHistoryRemainsReadable() throws Exception {
+        String host="localhost:8087";
+        var session=new MockHttpSession();
+        var before=orders.recent(200);
+        var settings=orders.settings();
+        LocalDate last=LocalDate.now(ZONE).plusMonths(12);
+        for(String path:List.of("/j3/collect","/j3/import")) {
+            for(String date:List.of("1999-12-31",last.plusDays(1).toString(),"9999-01-31")) {
+                var page=mvc.perform(get("/").header("Host",host).session(session)).andExpect(status().isOk()).andReturn();
+                var form=html(page);
+                assertThat(element(form,"input","id","j3-date").getAttributeValue("min")).isEqualTo("2000-01-01");
+                assertThat(element(form,"input","id","j3-date").getAttributeValue("max")).isEqualTo(last.toString());
+                var model=page.getModelAndView().getModel();
+                var request=multipart(path).file(new MockMultipartFile("pageFiles","page-1.json","application/json",
+                        "{\"scheduled\":[],\"hasNextPage\":false}".getBytes(StandardCharsets.UTF_8)))
+                        .header("Host",host).header("Origin","http://"+host).session(session)
+                        .param("localFormToken",model.get("localFormToken").toString())
+                        .param("orderId",model.get("j3OrderId").toString()).param("date",date);
+                mvc.perform(request).andExpect(status().is3xxRedirection())
+                        .andExpect(flash().attribute("j3Message",org.hamcrest.Matchers.startsWith("La date à collecter")));
+                assertThat(orders.recent(200)).isEqualTo(before);
+                assertThat(orders.settings()).isEqualTo(settings);
+                // Consultation is not a request to collect or schedule; no date bound is imposed on a GET.
+                mvc.perform(get("/").header("Host",host).session(session).param("j3Date",date))
+                        .andExpect(status().isOk());
+            }
         }
         verifyNoInteractions(provider);
     }
