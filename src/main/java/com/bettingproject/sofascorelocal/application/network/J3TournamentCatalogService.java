@@ -17,6 +17,7 @@ import java.util.UUID;
 public class J3TournamentCatalogService {
     private final J3ManualCollectionEvidenceService evidence;
     private final J3CatalogProjector projector;
+    private final RawSnapshotInspectionStore snapshots;
     private J3CollectionStore store;
     @Autowired public J3TournamentCatalogService(J3ManualCollectionEvidenceService evidence,
             RawSnapshotInspectionStore snapshots, ObjectProvider<J3CollectionStore> stores) {
@@ -26,7 +27,7 @@ public class J3TournamentCatalogService {
         this(evidence,snapshots,new ScheduledEventsV1Parser());
     }
     J3TournamentCatalogService(J3ManualCollectionEvidenceService evidence,RawSnapshotInspectionStore snapshots,ScheduledEventsV1Parser parser) {
-        this.evidence=Objects.requireNonNull(evidence); this.projector=new J3CatalogProjector(snapshots,parser);
+        this.evidence=Objects.requireNonNull(evidence); this.snapshots=Objects.requireNonNull(snapshots); this.projector=new J3CatalogProjector(snapshots,parser);
     }
     public J3TournamentCatalog latest() {
         if (store!=null) {
@@ -51,6 +52,9 @@ public class J3TournamentCatalogService {
                 .orElseGet(()->unavailable(date,J3TournamentCatalogStatus.NO_COLLECTION_EVIDENCE));
     }
     public Optional<J3TournamentCatalogOption> resolve(long id) { return latest().findByTournamentId(id); }
+    public java.util.List<J3TournamentCatalogOption> menuOptions(J3TournamentCatalog catalog, boolean includeAmateur) {
+        return J3TournamentMenu.options(catalog, snapshots, includeAmateur);
+    }
     private static J3TournamentCatalog unavailable(LocalDate date,J3TournamentCatalogStatus status) {
         return J3TournamentCatalog.unavailable(status,Optional.ofNullable(date));
     }

@@ -200,7 +200,32 @@ empêchent cette reprise. Une campagne live ne redémarre pas après arrêt du L
 Les anciennes politiques sans capacité V11 signalent leur incompatibilité ; aucun manifeste
 historique n'est converti implicitement.
 
-## 6. Sauvegarde et rétention
+## 6. Menu des compétitions : priorité, traduction et amateurs
+
+Le menu J3 → J5 place d'abord les catégories dont `tournament.category.priority` est
+strictement positif, par priorité numérique croissante puis par nom de catégorie affiché.
+Les priorités nulles, absentes ou invalides suivent, par nom de catégorie. Les égalités sont
+départagées par nom de tournoi puis identité de phase. Le tri alphabétique utilise la
+collation française, sans distinction de casse ou d'accent.
+
+Les libellés utilisent une traduction fournisseur française non vide si elle existe.
+Sinon, les noms internationaux des pays reconnus sont traduits avec le dictionnaire local
+Java, complété pour les associations britanniques et quelques alias explicites. Le suffixe
+`Amateur` est conservé pour les pays reconnus. Un nom inconnu reste tel quel : la traduction
+de toutes les catégories n'est pas garantie. Aucun service de traduction réseau n'est appelé.
+
+La case **Afficher les compétitions amateurs** est décochée par défaut. Cocher ou décocher,
+puis utiliser **Appliquer le filtre — lecture locale**. La date consultée est conservée.
+La détection du mot `Amateur`, insensible à la casse, examine les noms sources
+`tournament.category.name` et `tournament.uniqueTournament.category.name`, avant traduction.
+Le compteur « Tournois actionnables » reste celui du catalogue complet. Un filtre vide
+affiche un message et permet toujours de réafficher les amateurs.
+
+Ces métadonnées sont relues dans les pages locales conservées avec contrôle de taille et
+SHA-256. Les anciennes collectes bénéficient donc du menu sans recollecte ni migration.
+Les identités, les observations historiques et les contrôles de préparation restent inchangés.
+
+## 7. Sauvegarde et rétention
 
 Voir le [runbook J6](J6-BACKUP-RESTORE-AND-RETENTION.md). V55–V57 ajoutent les collections,
 préférences, ordres et transitions de pause. Les scripts courants exigent V57 et comparent

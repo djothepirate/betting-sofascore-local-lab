@@ -105,6 +105,8 @@ class DashboardControllerTest {
         when(j3Runtime.orders()).thenReturn(List.of());
         when(j3Collections.dates(3660)).thenReturn(List.of());
         when(tournamentCatalogService.forDate(any(LocalDate.class))).thenAnswer(ignored->tournamentCatalogService.latest());
+        when(tournamentCatalogService.menuOptions(any(), org.mockito.ArgumentMatchers.anyBoolean()))
+                .thenAnswer(call -> ((J3TournamentCatalog) call.getArgument(0)).options());
 
         when(tournamentCatalogService.latest()).thenReturn(J3TournamentCatalog.unavailable(
                 J3TournamentCatalogStatus.NO_COLLECTION_EVIDENCE,
@@ -220,6 +222,35 @@ class DashboardControllerTest {
                 J3CircuitReason.STARTUP_LOCK, Instant.parse("2026-09-08T21:22:49Z"), null, LocalDate.parse("2026-09-08"),
                 null, false, false, List.of("CONNECTOR_GATE_LOCKED")));
         when(formTokenService.issue(any(HttpSession.class))).thenReturn("local-form-token");
+    }
+
+    @Test
+    void amateurFilterIsUncheckedByDefaultAndSubmittedAsLocalGetWithTheConsultedDate() throws Exception {
+        arrangeDashboardForRetention();
+        var date = LocalDate.parse("2026-09-14");
+        var catalog = J3TournamentCatalog.available(date, List.of(1L), List.of(
+                new J3TournamentCatalogOption(1L,"League","France",1L,"League",Map.of(7200,1),List.of(1L))),0);
+        when(tournamentCatalogService.latest()).thenReturn(catalog);
+        var defaultResponse = mockMvc.perform(get("/").param("j3Date",date.toString()))
+                .andExpect(status().isOk())
+                .andExpect(model().attribute("includeAmateur",false))
+                .andReturn().getResponse().getContentAsString();
+        var checkbox = java.util.regex.Pattern.compile("<input[^>]*id=\"include-amateur\"[^>]*>");
+        var unchecked = checkbox.matcher(defaultResponse);
+        org.assertj.core.api.Assertions.assertThat(unchecked.find()).isTrue();
+        org.assertj.core.api.Assertions.assertThat(unchecked.group()).doesNotContain("checked");
+        org.assertj.core.api.Assertions.assertThat(defaultResponse)
+                .contains("method=\"get\" action=\"/#tournament-event-discovery\"")
+                .contains("name=\"j3Date\" value=\"2026-09-14\"");
+        verify(tournamentCatalogService).menuOptions(catalog,false);
+        var filteredResponse = mockMvc.perform(get("/").param("j3Date",date.toString()).param("includeAmateur","true"))
+                .andExpect(status().isOk())
+                .andExpect(model().attribute("includeAmateur",true))
+                .andReturn().getResponse().getContentAsString();
+        var checked = checkbox.matcher(filteredResponse);
+        org.assertj.core.api.Assertions.assertThat(checked.find()).isTrue();
+        org.assertj.core.api.Assertions.assertThat(checked.group()).contains("checked=\"checked\"");
+        verify(tournamentCatalogService).menuOptions(catalog,true);
     }
 
     @Test

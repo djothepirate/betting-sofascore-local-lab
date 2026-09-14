@@ -284,8 +284,19 @@
           Choisissez une date conservée ou lancez une collecte. Les succès conservés restent accessibles après redémarrage.</p>
       </div>
 
+      <form class="control-form" method="get" th:action="@{/#tournament-event-discovery}"
+            th:if="${tournamentCatalog.available}">
+        <input type="hidden" name="j3Date" th:value="${j3MenuDate}">
+        <label for="include-amateur"><input type="checkbox" id="include-amateur" name="includeAmateur"
+               value="true" th:checked="${includeAmateur}"> Afficher les compétitions amateurs</label>
+        <button class="button-primary" type="submit">Appliquer le filtre — lecture locale</button>
+        <p class="fixture-note">Les catégories reconnues sont affichées en français. Les autres noms sont conservés.
+          Les catégories prioritaires apparaissent d’abord, par priorité croissante puis par nom.</p>
+      </form>
+      <p th:if="${tournamentCatalog.available and tournamentMenuOptions != null and tournamentMenuOptions.empty}">
+        Aucune compétition à afficher avec ce filtre.</p>
       <form class="control-form"
-            th:if="${tournamentCatalog.available and !tournamentCatalog.options.empty}"
+            th:if="${tournamentCatalog.available and tournamentMenuOptions != null and !tournamentMenuOptions.empty}"
             th:action="@{/tournament-event-discovery/prepare}"
             method="post">
         <input type="hidden" name="localFormToken" th:value="${localFormToken}">
@@ -294,7 +305,7 @@
         <label for="tournament-selection">Tournoi ou phase — libellé fournisseur contrôlé</label>
         <select id="tournament-selection" name="tournamentId" required>
           <option value="" selected disabled>Choisir un tournoi</option>
-          <option th:each="option : ${tournamentCatalog.options}"
+          <option th:each="option : ${tournamentMenuOptions}"
                   th:value="${option.tournamentId}"
                   th:text="${option.displayLabel}">Nom du tournoi - portée géographique</option>
         </select>

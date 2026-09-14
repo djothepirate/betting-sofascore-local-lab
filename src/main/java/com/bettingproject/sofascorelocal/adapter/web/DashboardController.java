@@ -57,13 +57,19 @@ public class DashboardController {
     public String dashboard(Model model, HttpSession session) {
         return dashboard(model,session,null);
     }
+    public String dashboard(Model model, HttpSession session, java.time.LocalDate j3Date) {
+        return dashboard(model, session, j3Date, false);
+    }
 
     @GetMapping({"/", "/dashboard"})
     public String dashboard(Model model, HttpSession session,
-            @org.springframework.web.bind.annotation.RequestParam(required=false) java.time.LocalDate j3Date) {
+            @org.springframework.web.bind.annotation.RequestParam(required=false) java.time.LocalDate j3Date,
+            @org.springframework.web.bind.annotation.RequestParam(defaultValue="false") boolean includeAmateur) {
         var selectedDate=j3Date==null?java.time.LocalDate.now(
                 com.bettingproject.sofascorelocal.domain.scheduledevents.J3AutomationData.ZONE):j3Date;
         var now=java.time.Instant.now();
+        model.addAttribute("includeAmateur", includeAmateur);
+        model.addAttribute("j3MenuDate", selectedDate);
         model.addAttribute("j3MinimumDate",J3DatePolicy.MINIMUM_COLLECTION_DATE);
         model.addAttribute("j3MaximumDate",J3DatePolicy.maximumDate(now));
         model.addAttribute("j3PlanMinimumTime",java.time.LocalDate.ofInstant(now,
@@ -77,7 +83,9 @@ public class DashboardController {
                 "collectionEvidence",
                 collectionEvidenceService.latestDocument().orElse(null));
         try {
-            model.addAttribute("tournamentCatalog", j3Collections==null?tournamentCatalogService.latest():tournamentCatalogService.forDate(selectedDate));
+            var catalog = j3Collections==null?tournamentCatalogService.latest():tournamentCatalogService.forDate(selectedDate);
+            model.addAttribute("tournamentCatalog", catalog);
+            model.addAttribute("tournamentMenuOptions", tournamentCatalogService.menuOptions(catalog, includeAmateur));
             if(j3Runtime!=null) {
                 var saved=j3Collections.latest(selectedDate).orElse(null);
                 model.addAttribute("j3Date",selectedDate);

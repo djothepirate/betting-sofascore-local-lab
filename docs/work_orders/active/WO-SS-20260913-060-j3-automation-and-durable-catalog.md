@@ -252,3 +252,21 @@ et aucune campagne live n'est recréée.
 
 Les profils et lanceurs opérateur ne sont pas modifiés. Le lecteur V11 affiche dix valeurs
 selon le guide J3. La revue précède la fusion ; le WO reste actif jusqu'à la fusion de sa PR vers le train.
+
+## 9. Complément propriétaire du 14 septembre : menu J3 → J5
+
+L'opérateur déclare les tests de concurrence concluants. Ce constat est un retour opérateur,
+distinct des qualifications automatisées du présent complément.
+
+Demande adoptée : catégories de priorité positive en premier, priorité croissante puis nom ;
+catégories de priorité zéro ensuite par nom. Le menu masque les amateurs par défaut et permet
+de les afficher par case à cocher. La détection utilise le mot source `Amateur` dans les deux
+catégories (tournoi et tournoi unique), indépendamment de la traduction.
+
+La précision propriétaire sur l'absence habituelle de `fieldTranslations.nameTranslation.fr`
+est prise en compte : un dictionnaire local traduit les pays internationaux reconnus. Les noms
+inconnus sont conservés ; le tri utilise le libellé affiché avec collation française.
+La vue relit les snapshots protégés pour appliquer aussi ces règles aux succès historiques,
+sans migration, appel fournisseur ou modification de leurs identités. Le filtre s'applique
+par GET local et conserve la date. La preuve est consignée dans
+[le rapport du menu](../../validation/WO060-J3-TOURNAMENT-MENU-20260914.md).

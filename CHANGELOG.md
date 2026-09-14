@@ -6,6 +6,11 @@ Les évolutions notables du SofaScore Local Lab sont consignées dans ce fichier
 
 ### WO-060 — automatisation J3, résultats durables et pause live
 
+- Trie le menu J3 → J5 par catégories prioritaires (`priority > 0`, ordre croissant),
+  puis catégories non prioritaires, avec tri alphabétique français dans chaque niveau.
+  Ajoute le filtre amateur décoché par défaut, appliqué par GET local sur les deux noms
+  sources de catégorie. Traduit les pays reconnus localement, sans dépendre de la présence
+  d'une traduction fournisseur ; les noms inconnus restent inchangés.
 - Borne les nouvelles collectes J3 entre le 01/01/2000 et le jour courant à Paris + 12 mois,
   et les déclenchements ponctuels jusqu'à la fin de ce dernier jour, selon le choix propriétaire
   du 14 septembre. Les formulaires et le runtime refusent les années aberrantes sans modifier
