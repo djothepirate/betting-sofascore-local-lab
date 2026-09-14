@@ -14,11 +14,16 @@ import java.util.regex.Pattern;
 /** Display-only metadata from the preserved source pages; never changes selection identities. */
 final class J3TournamentMenu {
     private static final Pattern AMATEUR = Pattern.compile("(?iu)(?<![\\p{L}\\p{N}])amateur(?![\\p{L}\\p{N}])");
-    private record Metadata(int priority, boolean amateur, String category) {}
-    private static final Metadata DEFAULT = new Metadata(0, false, null);
+    private record Metadata(int priority, boolean amateur, boolean qualification, String category) {}
+    private static final Metadata DEFAULT = new Metadata(0, false, false, null);
 
     static List<J3TournamentCatalogOption> options(J3TournamentCatalog catalog,
             RawSnapshotInspectionStore snapshots, boolean includeAmateur) {
+        return options(catalog, snapshots, includeAmateur, false);
+    }
+
+    static List<J3TournamentCatalogOption> options(J3TournamentCatalog catalog,
+            RawSnapshotInspectionStore snapshots, boolean includeAmateur, boolean includeQualification) {
         if (!catalog.available()) return List.of();
         var metadata = new HashMap<Long, Metadata>();
         var mapper = JsonMapper.builder().build();
@@ -42,10 +47,13 @@ final class J3TournamentMenu {
                 int value = priority.isIntegralNumber() && priority.canConvertToInt() && priority.asInt() > 0
                         ? priority.asInt() : 0;
                 var next = new Metadata(value, amateur(category.path("name"))
-                        || amateur(tournament.path("uniqueTournament").path("category").path("name")), translation(category));
+                        || amateur(tournament.path("uniqueTournament").path("category").path("name")),
+                        tournament.path("qualificationOrPreliminary").isBoolean()
+                                && tournament.path("qualificationOrPreliminary").asBoolean(), translation(category));
                 long tournamentId = tournament.path("id").asLong();
                 metadata.merge(tournamentId, next, (a,b) -> new Metadata(
-                        Math.min(a.priority(), b.priority()), a.amateur() || b.amateur(), a.category()));
+                        Math.min(a.priority(), b.priority()), a.amateur() || b.amateur(),
+                        a.qualification() || b.qualification(), a.category()));
             }
         }
         var collator = Collator.getInstance(Locale.FRENCH);
@@ -59,6 +67,7 @@ final class J3TournamentMenu {
         return catalog.options().stream().filter(o -> includeAmateur
                 || !(AMATEUR.matcher(o.tournamentCategoryName()).find()
                 || metadata.getOrDefault(o.tournamentId(), DEFAULT).amateur()))
+                .filter(o -> includeQualification || !metadata.getOrDefault(o.tournamentId(), DEFAULT).qualification())
                 .map(o -> {
                     String translated = metadata.getOrDefault(o.tournamentId(), DEFAULT).category();
                     String label = translated == null ? J3CategoryLabels.french(o.tournamentCategoryName()) : translated;

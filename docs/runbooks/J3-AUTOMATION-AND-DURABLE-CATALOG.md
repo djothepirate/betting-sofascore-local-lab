@@ -214,12 +214,19 @@ Java, complété pour les associations britanniques et quelques alias explicites
 `Amateur` est conservé pour les pays reconnus. Un nom inconnu reste tel quel : la traduction
 de toutes les catégories n'est pas garantie. Aucun service de traduction réseau n'est appelé.
 
-La case **Afficher les compétitions amateurs** est décochée par défaut. Cocher ou décocher,
-puis utiliser **Appliquer le filtre — lecture locale**. La date consultée est conservée.
+Les cases **Afficher les compétitions amateurs** et **Afficher les phases qualificatives**
+sont décochées par défaut. Chaque clic recharge immédiatement le menu par GET local,
+sans bouton de confirmation. La date consultée et l'état des deux cases sont conservés.
+JavaScript doit être activé ; le script servi localement ne soumet que ce formulaire de lecture.
 La détection du mot `Amateur`, insensible à la casse, examine les noms sources
 `tournament.category.name` et `tournament.uniqueTournament.category.name`, avant traduction.
 Le compteur « Tournois actionnables » reste celui du catalogue complet. Un filtre vide
 affiche un message et permet toujours de réafficher les amateurs.
+
+Une phase qualificative est identifiée uniquement par le booléen JSON
+`tournament.qualificationOrPreliminary: true`. Champ absent, `null`, `false` ou chaîne
+`"true"` ne répondent pas à ce critère. Les filtres se cumulent : un tournoi amateur et
+qualificatif exige que les deux cases soient cochées pour apparaître.
 
 Ces métadonnées sont relues dans les pages locales conservées avec contrôle de taille et
 SHA-256. Les anciennes collectes bénéficient donc du menu sans recollecte ni migration.

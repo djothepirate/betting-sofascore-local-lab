@@ -21,6 +21,30 @@ class J3TournamentMenuTest {
     private final RawSnapshotInspectionStore snapshots = mock(RawSnapshotInspectionStore.class);
 
     @Test
+    void qualificationRequiresBooleanTrueAndBothFiltersCombineIndependently() {
+        source("""
+                {"scheduled":[
+                  {"tournament":{"id":1}},
+                  {"tournament":{"id":2,"qualificationOrPreliminary":true}},
+                  {"tournament":{"id":3,"qualificationOrPreliminary":false}},
+                  {"tournament":{"id":4,"qualificationOrPreliminary":"true"}},
+                  {"tournament":{"id":5,"qualificationOrPreliminary":true}},
+                  {"tournament":{"id":6,"qualificationOrPreliminary":null}}
+                ]}
+                """);
+        var catalog = catalog(option(1,"France"),option(2,"France"),option(3,"France"),
+                option(4,"France"),option(5,"France Amateur"),option(6,"France"));
+        assertThat(J3TournamentMenu.options(catalog,snapshots,false,false))
+                .extracting(J3TournamentCatalogOption::tournamentId).containsExactly(1L,3L,4L,6L);
+        assertThat(J3TournamentMenu.options(catalog,snapshots,true,false))
+                .extracting(J3TournamentCatalogOption::tournamentId).containsExactly(1L,3L,4L,6L);
+        assertThat(J3TournamentMenu.options(catalog,snapshots,false,true))
+                .extracting(J3TournamentCatalogOption::tournamentId).containsExactly(1L,2L,3L,4L,6L);
+        assertThat(J3TournamentMenu.options(catalog,snapshots,true,true))
+                .extracting(J3TournamentCatalogOption::tournamentId).containsExactly(1L,2L,3L,4L,6L,5L);
+    }
+
+    @Test
     void positivePrioritiesPrecedeZeroAndUseFrenchAlphabeticOrderWithinEachPriority() {
         var catalog = catalog(option(1, "Austria"), option(2, "Germany"), option(3, "Zimbabwe"),
                 option(4, "France"), option(5, "England"));

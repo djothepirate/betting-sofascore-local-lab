@@ -284,12 +284,15 @@
           Choisissez une date conservée ou lancez une collecte. Les succès conservés restent accessibles après redémarrage.</p>
       </div>
 
-      <form class="control-form" method="get" th:action="@{/#tournament-event-discovery}"
+      <form id="tournament-menu-filters" class="control-form" method="get" th:action="@{/#tournament-event-discovery}"
             th:if="${tournamentCatalog.available}">
         <input type="hidden" name="j3Date" th:value="${j3MenuDate}">
         <label for="include-amateur"><input type="checkbox" id="include-amateur" name="includeAmateur"
                value="true" th:checked="${includeAmateur}"> Afficher les compétitions amateurs</label>
-        <button class="button-primary" type="submit">Appliquer le filtre — lecture locale</button>
+        <label for="include-qualification"><input type="checkbox" id="include-qualification" name="includeQualification"
+               value="true" th:checked="${includeQualification}"> Afficher les phases qualificatives</label>
+        <p class="fixture-note">La liste est mise à jour dès le clic sur une case.</p>
+        <noscript>JavaScript doit être activé pour modifier ces filtres au clic.</noscript>
         <p class="fixture-note">Les catégories reconnues sont affichées en français. Les autres noms sont conservés.
           Les catégories prioritaires apparaissent d’abord, par priorité croissante puis par nom.</p>
       </form>
@@ -649,5 +652,6 @@
 <footer>
   <div class="shell">SofaScore Local Lab v0.1.0-rc.1-SNAPSHOT — J6 Historique local et rétention gardée</div>
 </footer>
+<script th:src="@{/js/tournament-menu-filters.js}" defer></script>
 </body>
 </html>

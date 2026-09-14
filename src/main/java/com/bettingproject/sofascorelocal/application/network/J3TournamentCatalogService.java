@@ -55,6 +55,10 @@ public class J3TournamentCatalogService {
     public java.util.List<J3TournamentCatalogOption> menuOptions(J3TournamentCatalog catalog, boolean includeAmateur) {
         return J3TournamentMenu.options(catalog, snapshots, includeAmateur);
     }
+    public java.util.List<J3TournamentCatalogOption> menuOptions(J3TournamentCatalog catalog,
+            boolean includeAmateur, boolean includeQualification) {
+        return J3TournamentMenu.options(catalog, snapshots, includeAmateur, includeQualification);
+    }
     private static J3TournamentCatalog unavailable(LocalDate date,J3TournamentCatalogStatus status) {
         return J3TournamentCatalog.unavailable(status,Optional.ofNullable(date));
     }

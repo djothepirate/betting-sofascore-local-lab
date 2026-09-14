@@ -94,7 +94,8 @@ class SecurityHeadersFilterTest {
         assertThat(response.getHeader("Referrer-Policy")).isEqualTo("same-origin");
         assertThat(response.getHeader("Cache-Control")).contains("no-store");
         assertThat(response.getHeader("Content-Security-Policy"))
-                .contains("script-src 'none'", "form-action 'self'", "frame-ancestors 'none'");
+                .contains("script-src 'self'", "form-action 'self'", "frame-ancestors 'none'")
+                .doesNotContain("unsafe-inline", "unsafe-eval");
     }
 
     @Test

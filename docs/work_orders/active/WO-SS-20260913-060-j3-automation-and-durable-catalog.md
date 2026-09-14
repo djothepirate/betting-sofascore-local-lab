@@ -270,3 +270,9 @@ La vue relit les snapshots protégés pour appliquer aussi ces règles aux succ�
 sans migration, appel fournisseur ou modification de leurs identités. Le filtre s'applique
 par GET local et conserve la date. La preuve est consignée dans
 [le rapport du menu](../../validation/WO060-J3-TOURNAMENT-MENU-20260914.md).
+
+Complément suivant : suppression du bouton d'application, filtres appliqués au clic par script
+local et GET de lecture. Ajout d'une seconde case décochée par défaut pour les tournois dont
+`tournament.qualificationOrPreliminary` est le booléen `true`. Les deux exclusions se cumulent.
+La CSP du tableau de bord autorise les scripts de même origine, sans script inline ni eval.
+Voir [la validation des filtres immédiats](../../validation/WO060-J3-INSTANT-FILTERS-20260914.md).

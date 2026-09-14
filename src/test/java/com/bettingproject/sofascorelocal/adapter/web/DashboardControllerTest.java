@@ -105,7 +105,7 @@ class DashboardControllerTest {
         when(j3Runtime.orders()).thenReturn(List.of());
         when(j3Collections.dates(3660)).thenReturn(List.of());
         when(tournamentCatalogService.forDate(any(LocalDate.class))).thenAnswer(ignored->tournamentCatalogService.latest());
-        when(tournamentCatalogService.menuOptions(any(), org.mockito.ArgumentMatchers.anyBoolean()))
+        when(tournamentCatalogService.menuOptions(any(), org.mockito.ArgumentMatchers.anyBoolean(), org.mockito.ArgumentMatchers.anyBoolean()))
                 .thenAnswer(call -> ((J3TournamentCatalog) call.getArgument(0)).options());
 
         when(tournamentCatalogService.latest()).thenReturn(J3TournamentCatalog.unavailable(
@@ -242,7 +242,10 @@ class DashboardControllerTest {
         org.assertj.core.api.Assertions.assertThat(defaultResponse)
                 .contains("method=\"get\" action=\"/#tournament-event-discovery\"")
                 .contains("name=\"j3Date\" value=\"2026-09-14\"");
-        verify(tournamentCatalogService).menuOptions(catalog,false);
+        org.assertj.core.api.Assertions.assertThat(defaultResponse)
+                .doesNotContain("Appliquer le filtre")
+                .contains("/js/tournament-menu-filters.js", "id=\"include-qualification\"");
+        verify(tournamentCatalogService).menuOptions(catalog,false,false);
         var filteredResponse = mockMvc.perform(get("/").param("j3Date",date.toString()).param("includeAmateur","true"))
                 .andExpect(status().isOk())
                 .andExpect(model().attribute("includeAmateur",true))
@@ -250,7 +253,12 @@ class DashboardControllerTest {
         var checked = checkbox.matcher(filteredResponse);
         org.assertj.core.api.Assertions.assertThat(checked.find()).isTrue();
         org.assertj.core.api.Assertions.assertThat(checked.group()).contains("checked=\"checked\"");
-        verify(tournamentCatalogService).menuOptions(catalog,true);
+        verify(tournamentCatalogService).menuOptions(catalog,true,false);
+        mockMvc.perform(get("/").param("j3Date",date.toString())
+                        .param("includeAmateur","true").param("includeQualification","true"))
+                .andExpect(status().isOk()).andExpect(model().attribute("includeAmateur",true))
+                .andExpect(model().attribute("includeQualification",true));
+        verify(tournamentCatalogService).menuOptions(catalog,true,true);
     }
 
     @Test

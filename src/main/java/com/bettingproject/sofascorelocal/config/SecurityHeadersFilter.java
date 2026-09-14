@@ -59,6 +59,7 @@ public class SecurityHeadersFilter extends OncePerRequestFilter {
                 "Content-Security-Policy",
                 CONTENT_SECURITY_POLICY_PREFIX
                         + (isJ5OfflineBatchRequest(request) || isJ5ManualViewRequest(request) || isLivePageRequest(request)
+                                || DASHBOARD_PAGE_PATH.matcher(applicationPath(request)).matches()
                                 ? "script-src 'self'"
                                 : "script-src 'none'")
                         + CONTENT_SECURITY_POLICY_SUFFIX);
