@@ -2,6 +2,7 @@ package com.bettingproject.sofascorelocal.config;
 
 import com.bettingproject.sofascorelocal.adapter.web.LiveCampaignController;
 import com.bettingproject.sofascorelocal.adapter.web.ProviderAccessController;
+import com.bettingproject.sofascorelocal.adapter.web.TournamentEventDiscoveryController;
 import jakarta.servlet.http.HttpServletRequest;
 import jakarta.servlet.http.HttpServletResponse;
 import org.springframework.web.method.HandlerMethod;
@@ -19,6 +20,7 @@ public final class LiveCampaignLocalRequestBoundaryInterceptor implements Handle
         if (!(handler instanceof HandlerMethod method)
                 || (!LiveCampaignController.class.isAssignableFrom(method.getBeanType())
                     && !ProviderAccessController.class.isAssignableFrom(method.getBeanType())
+                    && !TournamentEventDiscoveryController.class.isAssignableFrom(method.getBeanType())
                     && !com.bettingproject.sofascorelocal.adapter.web.J3AutomationController.class.isAssignableFrom(method.getBeanType()))) {
             return true;
         }

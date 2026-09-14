@@ -81,8 +81,13 @@ class J3WebApplicationIT {
         while(orders.find(id).map(o->!o.terminal()).orElse(true) && System.nanoTime()<end) Thread.sleep(25);
         assertThat(orders.find(id).orElseThrow().state()).isEqualTo(OrderState.COMPLETED);
         assertThat(collections.latest(LocalDate.of(2026,9,13)).orElseThrow().id()).isEqualTo(id);
-        mvc.perform(get("/").param("j3Date","2026-09-13").session(session)).andExpect(status().isOk())
-                .andExpect(content().string(containsString("J3 Web synthetic")));
+        var saved=mvc.perform(get("/").param("j3Date","2026-09-13").session(session)).andExpect(status().isOk())
+                .andExpect(content().string(containsString("J3 Web synthetic"))).andReturn();
+        var discoveryForm=element(html(saved),"form","id","tournament-collection-form");
+        assertThat(discoveryForm.getAttributeValue("action")).isEqualTo("/tournament-event-discovery/collect");
+        assertThat(discoveryForm.getAttributeValue("enctype")).isEqualTo("multipart/form-data");
+        assertThat(element(discoveryForm,"input","name","collectionId").getAttributeValue("value")).isEqualTo(id.toString());
+        assertThat(element(discoveryForm,"input","name","date").getAttributeValue("value")).isEqualTo("2026-09-13");
         mvc.perform(get("/j3/collections/"+id).param("date","2026-09-13"))
                 .andExpect(status().isOk()).andExpect(content().string(containsString("J3 Web synthetic")));
         mvc.perform(get("/j3/collections/"+id+"/evidence").param("date","2026-09-13"))

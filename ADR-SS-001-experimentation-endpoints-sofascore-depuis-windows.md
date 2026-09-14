@@ -1,5 +1,17 @@
 # ADR-SS-001 - Expérimentation des endpoints SofaScore depuis Windows
 
+**Complément propriétaire WO-060 adopté — 15 septembre 2026 :** le parcours Web
+« Évolution J3 → J5 / Tournoi sélectionné » passe également au clic direct, conformément
+à la demande explicite du propriétaire. Après choix de la phase, le bouton de collecte
+constitue l'autorité pour au plus un GET `TOURNAMENT_SCHEDULED_EVENTS` (ou son cache),
+et le bouton d'import pour un seul corps JSON local. La préparation, la phrase et
+l'acquittement de ce parcours Web sont retirés. Le serveur résout la collecte J3 exacte,
+sa date et sa phase au clic, consomme un jeton de formulaire à usage unique et réserve
+l'exécution atomiquement. Origine, allowlist, opt-in de configuration, provenance,
+limites, sérialisation, suspensions et nettoyage restent applicables. Cette décision
+n'ajoute aucun endpoint fournisseur et n'autorise aucun déclenchement automatique de
+découverte tournoi ni de campagne J5. Voir [ADR-SS-007 v0.3](ADR-SS-007-j3-automation-durable-catalog-and-live-pause.md).
+
 **Amendement WO-060 adopté — 14 septembre 2026 :**
 [ADR-SS-007 v0.2](ADR-SS-007-j3-automation-durable-catalog-and-live-pause.md) autorise,
 pour J3 uniquement, le clic direct et les ordres quotidiens/planifiés durables du serveur Web
@@ -11,8 +23,8 @@ La sous-opération J3 pendant un live V11 utilise un contexte neuf temporaire da
 un seul contexte émet, aucun état de session n'est transféré, aucun contexte live n'est recréé.
 L'exception ne démarre ni le Lab, ni une campagne live autonome, ni un autre parcours.
 
-- **Statut :** Accepté pour expérimentation locale contrôlée — amendé le 2026-09-14
-- **Version :** 1.5 — amendement WO-060 ; la v1.4 reste la référence historique du transport.
+- **Statut :** Accepté pour expérimentation locale contrôlée — amendé le 2026-09-15
+- **Version :** 1.6 — complément du clic tournoi WO-060 ; la v1.4 reste la référence historique du transport.
 - **Amendement actif :** Playwright local, avec l’exception J3 durable de WO-060 / ADR-SS-007 v0.2 adoptée le 13 septembre 2026 ; J4/J5 restent dans leurs parcours autorisés ; FlareSolverr écarté.
 - **Date :** 2026-08-08 ; amendement J3 consigné le 2026-09-14.
 - **Décideur :** Porteur du Betting Project

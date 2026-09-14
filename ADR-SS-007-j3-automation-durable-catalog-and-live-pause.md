@@ -1,6 +1,6 @@
 # ADR-SS-007 — Automatisation J3, catalogue durable par date et pause live
 
-- **Version :** 0.2.
+- **Version :** 0.3 — complément propriétaire du 15 septembre 2026 pour le clic direct tournoi.
 - **Statut :** `ACCEPTED_FOR_IMPLEMENTATION` — instruction propriétaire « Commencer l’implémentation du WO-060 » le 13 septembre 2026 ; qualification distincte et en cours.
 - **Date :** 2026-09-13.
 - **Décideur :** propriétaire du Betting Project.
@@ -10,6 +10,20 @@
 - **Statuts conservés :** `EXPERIMENTAL`, `LOCAL_ONLY`, `NOT_PRODUCTION_APPROVED`, `NO_CRITICAL_DEPENDENCY`.
 
 ## 1. Demande et état établi
+
+**Complément adopté le 15 septembre 2026 :** le propriétaire demande le même geste direct
+pour « Évolution J3 → J5 / Tournoi sélectionné ». Après sélection dans le catalogue de la
+date consultée, un clic collecte les rencontres ; après choix du fichier, un clic les importe.
+La préparation Web, la phrase et l'acquittement disparaissent. Les nouveaux POST
+`/tournament-event-discovery/collect` et `/tournament-event-discovery/import` consomment
+le jeton local et admettent atomiquement l'action après résolution de `collectionId`,
+date et `tournamentId`. Les anciens POST `prepare`, `execute` et `import-json` répondent 410.
+Les contrôles historiques internes restent disponibles pour les parcours de qualification
+qui les utilisent, sans être simulés par les nouveaux POST. Une sélection ou un filtre GET
+n'exécute rien. Un succès autorise un nouveau clic volontaire ; un échec ou un arrêt conserve
+son verrou. L'import vérifie son fichier avant admission et ne dépend pas du transport.
+Cette exception complète la v0.2 et prévaut sur les mentions de confirmation tournoi
+ci-dessous ; les confirmations propres aux campagnes J4/J5 et à J7 restent hors périmètre.
 
 **Réalisation au 14 septembre 2026 :** V55 porte les collections/projections et la reprise
 historique, V56 les préférences/ordres, V57 live-v11 et les transitions de pause.

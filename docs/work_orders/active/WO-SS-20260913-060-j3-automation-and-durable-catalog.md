@@ -125,7 +125,8 @@ du calendrier demandé, pas par la seule date de réception.
 - Nouvel endpoint, autre sport/origine, URL fournisseur libre, modification des quotas locaux pour accélérer J3.
 - Collecte autonome J4/J5 hors campagne live lancée par l’opérateur, reprise live après redémarrage ou perte de contexte, navigateur persistant.
 - Tâche Windows, tâche Codex récurrente, lancement automatique du Lab, VPS ou dépendance du Betting Project principal.
-- Suppression des confirmations de découverte tournoi, J4, J5 ou J7 ; export/livraison J7 automatique.
+- Suppression des confirmations J4, J5 ou J7 ; export/livraison J7 automatique.
+  La découverte tournoi, initialement exclue, est ajoutée par la décision propriétaire du §10.
 - Purge primaire, migration primaire, sauvegarde native opérateur ou campagne fournisseur exécutée par ce cadrage.
 
 ### 3.3 Livrables réalisés
@@ -276,3 +277,20 @@ local et GET de lecture. Ajout d'une seconde case décochée par défaut pour le
 `tournament.qualificationOrPreliminary` est le booléen `true`. Les deux exclusions se cumulent.
 La CSP du tableau de bord autorise les scripts de même origine, sans script inline ni eval.
 Voir [la validation des filtres immédiats](../../validation/WO060-J3-INSTANT-FILTERS-20260914.md).
+
+## 10. Complément propriétaire du 15 septembre : collecte tournoi en un clic
+
+Demande explicite adoptée : comme J3, les collectes de « Évolution J3 → J5 / Tournoi sélectionné »
+ne doivent plus exiger de case ni de phrase copiée. Le formulaire propose donc directement A
+après choix du tournoi, ou B après choix du tournoi et du fichier. Les deux actions portent la
+collecte J3 et sa date exactes. Le serveur ne remplit pas les anciennes confirmations en secret :
+le clic protégé devient l'autorité et l'admission atomique résout la phase côté serveur.
+
+Critères : aucun formulaire de préparation/phrase/acquittement ; un GET fournisseur maximum ou
+un import sans transport/cache ; refus des doubles soumissions et des demandes concurrentes ;
+identité/date invalides refusées ; fichier vide, sensible ou >5 Mio refusé avant admission ;
+aucune levée des verrous d'erreur/arrêt. Les routes historiques répondent 410.
+L'ADR-SS-001 v1.6 et l'ADR-SS-007 v0.3 consignent cette décision. Pas de migration, pas d'appel
+réel ni de redémarrage du Lab opérateur pour cette réalisation.
+
+Voir [la validation de la collecte directe](../../validation/WO060-TOURNAMENT-DIRECT-20260915.md).

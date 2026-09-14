@@ -449,15 +449,20 @@ class DashboardControllerTest {
         mockMvc.perform(get("/dashboard"))
                 .andExpect(status().isOk())
                 .andExpect(content().string(containsString(
-                        "action=\"/tournament-event-discovery/import-json\"")))
+                        "formaction=\"/tournament-event-discovery/import\"")))
+                .andExpect(content().string(containsString(
+                        "action=\"/tournament-event-discovery/collect\"")))
+                .andExpect(content().string(not(containsString("Préparer sans réseau"))))
+                .andExpect(content().string(not(containsString("CONFIRMER EVENEMENTS TOURNOI"))))
                 .andExpect(content().string(not(containsString(
                         "action=\"/tournament-event-discovery/execute\""))))
                 .andExpect(content().string(containsString(
                         "enctype=\"multipart/form-data\"")))
                 .andExpect(content().string(containsString("name=\"jsonFile\"")))
-                .andExpect(content().string(containsString(preparedRequestId.toString())))
+                .andExpect(content().string(not(containsString("id=\"tournament-confirmation-text\""))))
+                .andExpect(content().string(not(containsString("id=\"tournament-acknowledged\""))))
                 .andExpect(content().string(containsString(
-                        "Importer, valider et relier à J5")));
+                        "Importer et relier à J5")));
 
     }
 

@@ -101,11 +101,51 @@ public class TournamentEventDiscoveryControlService {
         return toSnapshot();
     }
 
-    public synchronized TournamentEventDiscoveryControlSnapshot prepare(long tournamentId) {
-        return prepare(null,null,tournamentId);
+    /** The explicit local form submission is the authority; no legacy intent is fabricated. */
+    public synchronized TournamentEventDiscoveryExecutionClaim claimDirect(
+            UUID collectionId, LocalDate date, long tournamentId) {
+        var qualification = admitDirect(collectionId, date, tournamentId, true);
+        return new TournamentEventDiscoveryExecutionClaim(
+                requestId, qualification.providerOrigin(), collectionDate, selection);
     }
-    public synchronized TournamentEventDiscoveryControlSnapshot prepare(UUID collectionId,LocalDate date,long tournamentId) {
+
+    public synchronized TournamentEventDiscoveryLocalImportClaim claimDirectLocalImport(
+            UUID collectionId, LocalDate date, long tournamentId) {
+        var qualification = admitDirect(collectionId, date, tournamentId, false);
+        return new TournamentEventDiscoveryLocalImportClaim(
+                requestId, qualification.providerOrigin(), collectionDate, selection);
+    }
+
+    private TournamentEventDiscoveryQualificationSnapshot admitDirect(
+            UUID collectionId, LocalDate date, long tournamentId, boolean provider) {
+        Objects.requireNonNull(collectionId, "collectionId");
+        Objects.requireNonNull(date, "date");
         Instant now = clock.instant();
+        requireAdmission(now);
+        var localQualification = localImportQualificationSupplier.get();
+        var qualification = provider ? qualificationSupplier.get() : localQualification;
+        if (!localQualification.available() || !qualification.available()) {
+            throw rejected(TournamentEventDiscoveryControlError.PROVIDER_TRANSPORT_UNAVAILABLE);
+        }
+        // Resolve the exact saved collection again at the click, never the latest global result.
+        J3TournamentCatalog catalog = catalogService.forCollection(collectionId, date);
+        if (!catalog.available() || !catalog.collectionDate().equals(java.util.Optional.of(date))) {
+            throw rejected(TournamentEventDiscoveryControlError.CATALOG_UNAVAILABLE);
+        }
+        var resolved = catalog.findByTournamentId(tournamentId).orElseThrow(() ->
+                rejected(TournamentEventDiscoveryControlError.TOURNAMENT_SELECTION_NOT_ALLOWED));
+        UUID newRequestId = Objects.requireNonNull(requestIdSupplier.get(), "requestId");
+        requestId = newRequestId;
+        sourceCollectionId = collectionId;
+        collectionDate = date;
+        selection = resolved;
+        preparedAt = null;
+        terminalCode = null;
+        beginExecution(now);
+        return qualification;
+    }
+
+    private void requireAdmission(Instant now) {
         expireIfNecessary(now);
         if (state == TournamentEventDiscoveryState.AWAITING_CONFIRMATION
                 || state == TournamentEventDiscoveryState.EXECUTING) {
@@ -114,9 +154,16 @@ public class TournamentEventDiscoveryControlService {
         if (state == TournamentEventDiscoveryState.FAILED_LOCKED
                 || state == TournamentEventDiscoveryState.STOPPED_LOCKED
                 || state == TournamentEventDiscoveryState.EXPIRED_LOCKED) {
-            throw rejected(
-                    TournamentEventDiscoveryControlError.TERMINAL_LOCK_REQUIRES_RESTART);
+            throw rejected(TournamentEventDiscoveryControlError.TERMINAL_LOCK_REQUIRES_RESTART);
         }
+    }
+
+    public synchronized TournamentEventDiscoveryControlSnapshot prepare(long tournamentId) {
+        return prepare(null,null,tournamentId);
+    }
+    public synchronized TournamentEventDiscoveryControlSnapshot prepare(UUID collectionId,LocalDate date,long tournamentId) {
+        Instant now = clock.instant();
+        requireAdmission(now);
         TournamentEventDiscoveryQualificationSnapshot qualification =
                 localImportQualificationSupplier.get();
         if (!qualification.available()) {

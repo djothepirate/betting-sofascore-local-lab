@@ -6,6 +6,13 @@ Les évolutions notables du SofaScore Local Lab sont consignées dans ce fichier
 
 ### WO-060 — automatisation J3, résultats durables et pause live
 
+- Réduit la découverte des rencontres d'un tournoi sélectionné à un clic de collecte ou
+  d'import JSON : retrait de la préparation Web, de la phrase et de l'acquittement.
+  La collecte/date/phase est résolue au clic, le jeton est à usage unique et les deux voies
+  partagent une admission atomique. Le contrôleur applique la même frontière Host/Origin
+  que J3. Les anciens formulaires répondent 410 ; le résultat
+  revient à la date consultée. Aucun changement de transport, de limite ou de persistance.
+
 - Applique le filtre amateur au clic, sans bouton de confirmation, et ajoute une case
   indépendante pour les phases qualificatives (`qualificationOrPreliminary: true`).
   Les deux filtres sont décochés par défaut et se cumulent ; le rechargement reste un GET local.

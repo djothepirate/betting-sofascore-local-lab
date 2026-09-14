@@ -3,7 +3,7 @@
 Statuts : `EXPERIMENTAL`, `LOCAL_ONLY`, `NOT_PRODUCTION_APPROVED`, `NO_CRITICAL_DEPENDENCY`.
 
 Cette procédure correspond à [WO-060](../work_orders/active/WO-SS-20260913-060-j3-automation-and-durable-catalog.md)
-et à [ADR-SS-007 v0.2](../../ADR-SS-007-j3-automation-durable-catalog-and-live-pause.md).
+et à [ADR-SS-007 v0.3](../../ADR-SS-007-j3-automation-durable-catalog-and-live-pause.md).
 L'application reste accessible uniquement sur `http://127.0.0.1:8087` ou `http://localhost:8087`.
 
 ## 1. Première mise en service
@@ -43,12 +43,27 @@ et côté serveur pour A et B. Elle ne limite pas la consultation des collectes 
 
 Aucune levée d'arrêt global, activation de circuit, phrase ou confirmation d'intention J3 n'est
 nécessaire. Les anciennes routes de mutation J3 répondent `410 Gone` : actualiser un ancien onglet.
-Les confirmations des autres parcours restent celles de leurs décisions propres.
+Le parcours tournoi dispose lui aussi des boutons directs décrits ci-dessous.
 
 L'import valide tout le lot avant admission : 1 à 35 fichiers contigus, 5 Mio maximum par fichier,
 25 Mio pour le lot, structure J3 de tournois, `hasNextPage=true` jusqu'à l'avant-dernière page puis
 `false` sur la dernière. Trou, doublon, page sensible, JSON invalide, 36e fichier ou terminal
 incomplet sont refusés. L'import ne consulte ni transport ni cache et ne suspend pas une campagne live.
+
+### Rencontres du tournoi sélectionné
+
+1. Consulter la date J3 voulue, puis choisir un tournoi dans « Évolution J3 → J5 ».
+2. Cliquer **A. Collecter les rencontres — UN GET MAXIMUM** pour utiliser le cache admissible
+   ou collecter les rencontres avec un appel au maximum.
+3. Pour l'import, choisir le corps JSON correspondant au tournoi et à la date, puis cliquer
+   **B. Importer et relier à J5 — ZÉRO APPEL**. Un fichier est obligatoire, limité à 5 Mio.
+
+Les étapes 2 et 3 sont deux possibilités indépendantes. Aucune préparation intermédiaire,
+phrase ou case d'acceptation n'est demandée. Les cases amateur et qualification restent
+des filtres de la liste. Le résultat revient sur la date consultée et propose les liens J5.
+Cliquer un lien J5 ne lance pas une campagne. Les blocages du transport et les arrêts restent
+affichés et appliqués. Après mise à jour du logiciel, recharger un ancien onglet : ses formulaires
+de confirmation répondent 410 et ne lancent aucune opération.
 
 ## 3. Automatisation et horaires
 

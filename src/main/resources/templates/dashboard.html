@@ -253,8 +253,8 @@
       tandis que la route utilise exclusivement
       <span class="mono">uniqueTournament.id</span> numérique. Une occurrence n'est proposée que si
       <span class="mono">timezoneEventCount</span> contient l'offset applicable à la date J3 dans
-      <span class="mono">Europe/Paris</span>. Sélectionner ou préparer ne produit aucun trafic réseau.
-      Après préparation, l’opérateur choisit une seule action : le GET protégé ou l’import local du
+      <span class="mono">Europe/Paris</span>. Sélectionner un tournoi ne produit aucun trafic réseau.
+      Le bouton A lance directement la collecte des rencontres ; le bouton B importe le
       seul corps JSON obtenu manuellement.</p>
 
     <div th:if="${tournamentDiscoveryMessage != null}"
@@ -298,13 +298,13 @@
       </form>
       <p th:if="${tournamentCatalog.available and tournamentMenuOptions != null and tournamentMenuOptions.empty}">
         Aucune compétition à afficher avec ce filtre.</p>
-      <form class="control-form"
+      <form id="tournament-collection-form" class="control-form"
             th:if="${tournamentCatalog.available and tournamentMenuOptions != null and !tournamentMenuOptions.empty}"
-            th:action="@{/tournament-event-discovery/prepare}"
-            method="post">
+            th:action="@{/tournament-event-discovery/collect}"
+            method="post" enctype="multipart/form-data">
         <input type="hidden" name="localFormToken" th:value="${localFormToken}">
-          <input type="hidden" name="collectionId" th:value="${j3Collection?.id}">
-          <input type="hidden" name="date" th:value="${j3Date}">
+        <input type="hidden" name="collectionId" th:value="${j3Collection?.id}">
+        <input type="hidden" name="date" th:value="${j3Date}">
         <label for="tournament-selection">Tournoi ou phase — libellé fournisseur contrôlé</label>
         <select id="tournament-selection" name="tournamentId" required>
           <option value="" selected disabled>Choisir un tournoi</option>
@@ -314,11 +314,30 @@
         </select>
         <p class="fixture-note">La valeur postée est l’identité de phase. La date, l’identité du tournoi
           unique, les compteurs et les snapshots sources sont toujours résolus à nouveau côté serveur.</p>
-        <button class="button-primary" type="submit"
-                th:disabled="${!tournamentDiscoveryControl.localImportAvailable
-                    or tournamentDiscoveryControl.awaitingConfirmation()
-                    or tournamentDiscoveryControl.executing()
-                    or tournamentDiscoveryControl.terminalLocked()}">Préparer sans réseau</button>
+        <div class="discovery-execution-grid">
+          <div class="control-stage">
+            <h3>Option A — Collecte fournisseur</h3>
+            <p>Collecter les rencontres du tournoi sélectionné pour la date consultée,
+              avec un appel fournisseur au maximum et sans relance automatique.</p>
+            <button class="real-call-button" type="submit"
+                    th:disabled="${!tournamentDiscoveryControl.providerTransportAvailable
+                        or tournamentDiscoveryControl.awaitingConfirmation()
+                        or tournamentDiscoveryControl.executing()
+                        or tournamentDiscoveryControl.terminalLocked()}">A. Collecter les rencontres — UN GET MAXIMUM</button>
+          </div>
+          <div class="control-stage">
+            <h3>Option B — Import JSON local sans réseau</h3>
+            <p class="fixture-note">Sélectionnez le seul corps JSON de la réponse du tournoi et de la date choisis.
+              Taille maximale : 5 Mio. N’importez pas de HAR, d’en-têtes, de cookies ou de données de session.</p>
+            <label for="tournament-import-file">Fichier JSON local</label>
+            <input id="tournament-import-file" type="file" name="jsonFile" accept="application/json,.json">
+            <button class="button-primary" type="submit" th:formaction="@{/tournament-event-discovery/import}"
+                    th:disabled="${!tournamentDiscoveryControl.localImportAvailable
+                        or tournamentDiscoveryControl.awaitingConfirmation()
+                        or tournamentDiscoveryControl.executing()
+                        or tournamentDiscoveryControl.terminalLocked()}">B. Importer et relier à J5 — ZÉRO APPEL</button>
+          </div>
+        </div>
       </form>
     </div>
 
@@ -330,59 +349,7 @@
         <div><dt>Tournoi unique</dt><dd th:text="${tournamentDiscoveryControl.selection.uniqueTournamentName}">Tournoi unique</dd></div>
         <div><dt>ID de route</dt><dd class="mono" th:text="${tournamentDiscoveryControl.selection.uniqueTournamentId}">7</dd></div>
         <div><dt>Date</dt><dd th:text="${tournamentDiscoveryControl.collectionDate}">2026-08-18</dd></div>
-        <div><dt>Expiration</dt><dd th:text="${tournamentDiscoveryControl.expiresAt}">—</dd></div>
       </dl>
-    </div>
-
-    <div th:if="${tournamentDiscoveryControl.awaitingConfirmation()}">
-      <p>Recopiez exactement la phrase à usage unique dans l’action choisie :</p>
-      <code class="confirmation-phrase" th:text="${tournamentDiscoveryControl.confirmationPhrase}">CONFIRMER EVENEMENTS TOURNOI 119880 UNIQUE 7 DATE 2026-08-18 000042</code>
-
-      <div class="discovery-execution-grid">
-        <form class="control-form confirmation-form control-stage"
-              th:if="${tournamentDiscoveryControl.providerTransportAvailable}"
-              th:action="@{/tournament-event-discovery/execute}"
-              method="post">
-          <input type="hidden" name="localFormToken" th:value="${localFormToken}">
-          <input type="hidden" name="requestId" th:value="${tournamentDiscoveryControl.requestId}">
-          <h3>Option A — Appel fournisseur direct</h3>
-          <label for="tournament-confirmation-text">Phrase de confirmation</label>
-          <input id="tournament-confirmation-text" type="text" name="confirmationText"
-                 maxlength="200" autocomplete="off" required>
-          <label class="acknowledgement" for="tournament-acknowledged">
-            <input id="tournament-acknowledged" type="checkbox" name="acknowledged" value="true" required>
-            Je confirme la phase, l’ID numérique du tournoi unique, la date, un GET au maximum,
-            l’absence de retry et la création locale d’identités permettant ensuite une campagne J5 séparée.
-          </label>
-          <button class="real-call-button" type="submit">Confirmer et résoudre — UN GET MAXIMUM</button>
-        </form>
-
-        <form class="control-form confirmation-form control-stage"
-              th:if="${tournamentDiscoveryControl.localImportAvailable}"
-              th:action="@{/tournament-event-discovery/import-json}"
-              method="post"
-              enctype="multipart/form-data">
-          <input type="hidden" name="localFormToken" th:value="${localFormToken}">
-          <input type="hidden" name="requestId" th:value="${tournamentDiscoveryControl.requestId}">
-          <h3>Option B — Import JSON local sans réseau</h3>
-          <p class="fixture-note">Enregistrez uniquement le corps JSON de la réponse. N’importez
-            jamais une capture HAR, des en-têtes, des cookies ou des données de session. Taille
-            maximale : 5 Mio.</p>
-          <label for="tournament-import-file">Fichier JSON local</label>
-          <input id="tournament-import-file" type="file" name="jsonFile"
-                 accept="application/json,.json" required>
-          <label for="tournament-import-confirmation-text">Phrase de confirmation</label>
-          <input id="tournament-import-confirmation-text" type="text" name="confirmationText"
-                 maxlength="200" autocomplete="off" required>
-          <label class="acknowledgement" for="tournament-import-acknowledged">
-            <input id="tournament-import-acknowledged" type="checkbox" name="acknowledged"
-                   value="true" required>
-            Je confirme la phase, la date, un import local sans appel fournisseur, le contrôle du
-            fichier et la création d’identités permettant ensuite une campagne J5 séparée.
-          </label>
-          <button class="button-primary" type="submit">Importer, valider et relier à J5 — ZÉRO APPEL</button>
-        </form>
-      </div>
     </div>
 
     <form th:if="${tournamentDiscoveryControl.awaitingConfirmation() or tournamentDiscoveryControl.executing()}"
@@ -613,7 +580,7 @@
       <p class="label">Actions réseau</p>
       <h2>Connecteur général toujours verrouillé</h2>
       <p>Seuls le formulaire J3 à pagination dynamique et la découverte manuelle de rencontres par
-        tournoi peuvent ouvrir leurs chemins dédiés après confirmation. Aucun profil réel ni
+        tournoi peuvent ouvrir leurs chemins dédiés au clic de collecte. Aucun profil réel ni
         adaptateur général n’est activé.</p>
       <div class="actions">
         <button type="button" disabled>Configurer une URI réelle</button>

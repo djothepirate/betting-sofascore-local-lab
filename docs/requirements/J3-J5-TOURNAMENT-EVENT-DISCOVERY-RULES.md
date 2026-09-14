@@ -9,6 +9,16 @@
 
 ## 1. Statut et portée
 
+**Amendement WO-060 du 15 septembre 2026 :** le catalogue J3 est durable par date ; les
+actions Web J3 et découverte tournoi sont directes. Après choix du tournoi, le clic A
+autorise au plus un GET (ou le cache), et le clic B un corps JSON local. Aucun texte,
+acquittement ou préparation Web intermédiaire n'est exigé. La collecte, la date et la phase
+sont résolues à nouveau côté serveur sous admission atomique ; le jeton du formulaire est
+à usage unique. Les références historiques à une confirmation J3/tournoi dans cette fiche
+sont remplacées par ce contrat (ADR-SS-007 v0.3). Les campagnes J4/J5 et J7 restent régies
+par leurs décisions propres. Le complément n'ajoute ni endpoint fournisseur, ni retry,
+ni découverte tournoi automatique.
+
 La fonctionnalité conserve les statuts du dépôt :
 
 ```text
@@ -606,10 +616,10 @@ document et ne doit pas être appliquée au contrôle multi-match de WO-010.
 - endpoint logique distinct `TOURNAMENT_SCHEDULED_EVENTS` ;
 - opt-in distinct, désactivé par défaut, et dépendant de l'opt-in J3 ;
 - catalogue général toujours `manualOnly=true`, `callable=false`, sans URI ;
-- sélection et préparation sans transport ;
-- phrase exacte, acquittement et expiration après cinq minutes ;
-- une confirmation autorise une seule action : au plus un GET **ou** un import JSON local ;
-- la confirmation J3 autorise soit la pagination directe, soit un lot JSON local complet 1 à N,
+- sélection sans transport ;
+- clic Web protégé, relecture collecte/date/phase, admission atomique et jeton unique ;
+- un clic autorise une seule action : au plus un GET **ou** un import JSON local ;
+- le clic J3 autorise soit la pagination directe, soit un lot JSON local complet 1 à N,
   jamais les deux ;
 - la confirmation J5 autorise soit la campagne directe ordonnée, soit l'import atomique des trois
   corps JSON, jamais un mélange des deux ;
