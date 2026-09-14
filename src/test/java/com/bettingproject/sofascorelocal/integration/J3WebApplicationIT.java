@@ -3,6 +3,8 @@ package com.bettingproject.sofascorelocal.integration;
 import com.bettingproject.sofascorelocal.application.network.playwright.PlaywrightProviderCampaignFactory;
 import com.bettingproject.sofascorelocal.domain.scheduledevents.J3AutomationData.*;
 import com.bettingproject.sofascorelocal.port.*;
+import org.attoparser.config.ParseConfiguration;
+import org.attoparser.dom.*;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.params.ParameterizedTest;
 import org.junit.jupiter.params.provider.ValueSource;
@@ -148,6 +150,134 @@ class J3WebApplicationIT {
                 .param("mode","STARTUP_OR_DAY_CHANGE").param("time",""))
                 .andExpect(redirectedUrl("/#j3-automation"));
         verifyNoInteractions(provider);
+    }
+
+    @ParameterizedTest @ValueSource(strings={"localhost:8087","127.0.0.1:8087"})
+    void invalidPastPlanReturnsToDashboardWithoutChangingOrders(String host) throws Exception {
+        var session=new MockHttpSession();
+        var model=dashboardForm(host,session,"/");
+        var before=orders.recent(200);
+        var settings=orders.settings();
+        LocalDate target=LocalDate.now(ZONE).minusDays(12);
+        var latest=collections.latest(target);
+        UUID rule=(UUID)model.get("j3RuleId");
+        LocalDateTime past=LocalDateTime.now(ZONE).minusHours(1).withSecond(0).withNano(0);
+        var rejected=mvc.perform(browserPost("/j3/plans",host,session,model)
+                .param("ruleId",rule.toString()).param("revision","1")
+                .param("date",target.toString()).param("at",past.toString()).param("offset",""))
+                .andExpect(status().is3xxRedirection())
+                .andExpect(redirectedUrl("/?j3Date="+target+"#j3-automation"))
+                .andExpect(flash().attribute("j3AutomationError",
+                        "La date et l’heure de déclenchement sont déjà passées. Choisissez un horaire futur à Paris."))
+                .andReturn();
+        assertThat(orders.recent(200)).isEqualTo(before);
+        assertThat(orders.settings()).isEqualTo(settings);
+        assertThat(collections.latest(target)).isEqualTo(latest);
+        var retryPage=mvc.perform(get("/").header("Host",host).session(session).param("j3Date",target.toString())
+                .flashAttrs(rejected.getFlashMap()))
+                .andExpect(status().isOk())
+                .andExpect(content().string(containsString("Choisissez un horaire futur à Paris.")))
+                .andReturn();
+        var html=html(retryPage);
+        assertAutomationAlert(html);
+        var dateField=element(html,"input","id","j3-plan-date");
+        assertThat(dateField.getAttributeValue("value")).isEqualTo(target.toString());
+        assertThat(element(html,"input","id","j3-plan-at").getAttributeValue("value")).isEqualTo(past.toString());
+        assertThat(element(dateField.getParent(),"input","name","ruleId").getAttributeValue("value")).isEqualTo(rule.toString());
+        var retry=retryPage.getModelAndView().getModel();
+        assertThat(retry.get("localFormToken")).isNotEqualTo(model.get("localFormToken"));
+
+        // Correct only the trigger: collecting a historical calendar remains allowed.
+        LocalDateTime future=LocalDate.now(ZONE).plusDays(2).atTime(12,35);
+        mvc.perform(browserPost("/j3/plans",host,session,retry)
+                .param("ruleId",rule.toString()).param("revision","1").param("date",target.toString())
+                .param("at",future.toString()).param("offset",""))
+                .andExpect(redirectedUrl("/#j3-automation"));
+        Order first=orders.recent(200).stream().filter(o->rule.equals(o.ruleId())).findFirst().orElseThrow();
+        assertThat(first.date()).isEqualTo(target);
+        assertThat(first.dueAt()).isEqualTo(future.atZone(ZONE).toInstant());
+        assertThat(first.state()).isEqualTo(OrderState.FUTURE);
+
+        // A rejected edit must not cancel/replace the existing valid plan.
+        var beforeEdit=orders.recent(200);
+        model=dashboardForm(host,session,"/");
+        String offset=past.atZone(ZONE).getOffset().toString();
+        var rejectedEdit=mvc.perform(browserPost("/j3/plans",host,session,model)
+                .param("ruleId",rule.toString()).param("revision","2").param("date",target.plusDays(1).toString())
+                .param("at",past.toString()).param("offset",offset))
+                .andExpect(redirectedUrl("/?j3Date="+target.plusDays(1)+"#j3-automation"))
+                .andExpect(flash().attributeExists("j3AutomationError")).andReturn();
+        assertThat(orders.recent(200)).isEqualTo(beforeEdit);
+        retryPage=mvc.perform(get("/").header("Host",host).session(session).param("j3Date",target.plusDays(1).toString())
+                .flashAttrs(rejectedEdit.getFlashMap()))
+                .andExpect(status().isOk())
+                .andReturn();
+        html=html(retryPage);
+        var edit=elements(html).stream().filter(e->e.elementNameMatches("details") && e.hasAttribute("open")).toList();
+        assertThat(edit).hasSize(1);
+        assertThat(element(edit.getFirst(),"input","name","ruleId").getAttributeValue("value")).isEqualTo(rule.toString());
+        assertThat(element(edit.getFirst(),"input","name","date").getAttributeValue("value")).isEqualTo(target.plusDays(1).toString());
+        assertThat(element(edit.getFirst(),"input","name","at").getAttributeValue("value")).isEqualTo(past.toString());
+        assertThat(element(edit.getFirst(),"option","value",offset).hasAttribute("selected")).isTrue();
+        assertThat(element(html,"input","id","j3-plan-at").getAttributeValue("value")).isNullOrEmpty();
+        retry=retryPage.getModelAndView().getModel();
+        mvc.perform(browserPost("/j3/plans",host,session,retry)
+                .param("ruleId",rule.toString()).param("revision","2").param("date",target.plusDays(1).toString())
+                .param("at",future.plusHours(1).toString()).param("offset",""))
+                .andExpect(redirectedUrl("/#j3-automation"));
+        assertThat(orders.find(first.id()).orElseThrow().state()).isEqualTo(OrderState.CANCELLED);
+        var revised=orders.recent(200).stream().filter(o->rule.equals(o.ruleId()) && o.ruleRevision()==2).findFirst().orElseThrow();
+        assertThat(revised.state()).isEqualTo(OrderState.FUTURE);
+        assertThat(revised.date()).isEqualTo(target.plusDays(1));
+        assertThat(revised.dueAt()).isEqualTo(future.plusHours(1).atZone(ZONE).toInstant());
+        model=dashboardForm(host,session,"/");
+        mvc.perform(browserPost("/j3/plans/"+revised.id()+"/cancel",host,session,model))
+                .andExpect(redirectedUrl("/#j3-automation"));
+        assertThat(orders.find(revised.id()).orElseThrow().state()).isEqualTo(OrderState.CANCELLED);
+        assertThat(orders.settings()).isEqualTo(settings);
+        assertThat(collections.latest(target)).isEqualTo(latest);
+        verifyNoInteractions(provider);
+    }
+
+    @Test void invalidCalendarOrTriggerRendersAnAlertWithoutAnyDatabaseWrite() throws Exception {
+        String host="localhost:8087";
+        var session=new MockHttpSession();
+        var before=orders.recent(200);
+        var settings=orders.settings();
+        for(String[] fields:List.of(new String[]{"2026-09-14",""},new String[]{"2026-09-14","2026-02-30T12:35"},
+                new String[]{"","2026-09-14T12:35"},new String[]{"2026-02-30","2026-09-14T12:35"})) {
+            var model=dashboardForm(host,session,"/");
+            var rejected=mvc.perform(browserPost("/j3/plans",host,session,model)
+                    .param("ruleId",model.get("j3RuleId").toString()).param("revision","1")
+                    .param("date",fields[0]).param("at",fields[1]))
+                    .andExpect(status().is3xxRedirection()).andExpect(flash().attributeExists("j3AutomationError")).andReturn();
+            var getDashboard=get("/").header("Host",host).session(session).flashAttrs(rejected.getFlashMap());
+            if(fields[0].equals("2026-09-14"))getDashboard.param("j3Date",fields[0]);
+            assertAutomationAlert(html(mvc.perform(getDashboard).andExpect(status().isOk()).andReturn()));
+            assertThat(orders.recent(200)).isEqualTo(before);
+            assertThat(orders.settings()).isEqualTo(settings);
+        }
+        verifyNoInteractions(provider);
+    }
+
+    private static Document html(org.springframework.test.web.servlet.MvcResult response) throws Exception {
+        return new DOMMarkupParser(ParseConfiguration.htmlConfiguration())
+                .parse(response.getResponse().getContentAsString(StandardCharsets.UTF_8));
+    }
+    private static List<Element> elements(INestableNode node) {
+        var elements=new ArrayList<Element>();
+        for(var child:node.getChildren())if(child instanceof Element element) {
+            elements.add(element);elements.addAll(elements(element));
+        }
+        return elements;
+    }
+    private static Element element(INestableNode node,String tag,String attribute,String value) {
+        return elements(node).stream().filter(e->e.elementNameMatches(tag) && value.equals(e.getAttributeValue(attribute)))
+                .findFirst().orElseThrow(()->new AssertionError("Missing HTML element: "+tag+"["+attribute+"="+value+"]"));
+    }
+    private static void assertAutomationAlert(Document html) {
+        var section=element(html,"section","id","j3-automation");
+        assertThat(element(section,"p","role","alert").getAttributeValue("id")).isEqualTo("j3-automation-error");
     }
 
     private Map<String,Object> dashboardForm(String host,MockHttpSession session,String path) throws Exception {

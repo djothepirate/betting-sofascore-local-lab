@@ -50,6 +50,16 @@ utilisant `same-origin`, sans assouplir l'intercepteur ni les jetons. Le bouton 
 « B » à la demande de l'opérateur. La reproduction Chromium et les tests MVC/PostgreSQL
 sont décrits dans le [correctif des formulaires](../../validation/WO060-J3-FORMS-403-FIX-20260914.md).
 
+**Retour opérateur sur une date incorrecte — 14 septembre à 13 h 31 :** la programmation
+d'un déclenchement à 12 h 35 le même jour produit Whitelabel HTTP 500. Le scénario est reproduit
+dans le contexte Spring complet sur PostgreSQL jetable : la traduction d'exception JPA
+enveloppe le refus métier JDBC `J3_PLAN_MUST_BE_FUTURE`, qui échappait au contrôleur.
+Les seuls refus métier connus de programmation sont reconnus ; la saisie des dates/heures
+est validée après le jeton et le refus revient dans **Collecte automatique** avec une alerte.
+Le formulaire conserve sa saisie et son identité de création/révision ; aucun ordre ne change
+sur refus et une date historique de calendrier reste permise. Les preuves et la liste des
+fichiers figurent dans le [correctif des dates](../../validation/WO060-J3-DATE-VALIDATION-FIX-20260914.md).
+
 La clôture J8 du nouveau parcours utilise une transaction obligatoire commune à la publication
 du catalogue et de l’ordre. Les transactions autonomes des parcours historiques sont conservées.
 Un test PostgreSQL injecte un échec après cette publication et vérifie l’annulation du succès

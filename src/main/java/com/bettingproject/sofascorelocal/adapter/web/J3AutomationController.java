@@ -6,6 +6,7 @@ import com.bettingproject.sofascorelocal.domain.scheduledevents.J3AutomationData
 import com.bettingproject.sofascorelocal.port.J3AutomationStore;
 import com.bettingproject.sofascorelocal.security.LocalFormTokenService;
 import jakarta.servlet.http.HttpSession;
+import org.springframework.dao.InvalidDataAccessApiUsageException;
 import org.springframework.http.HttpStatus;
 import org.springframework.stereotype.Controller;
 import org.springframework.ui.Model;
@@ -71,14 +72,58 @@ public class J3AutomationController {
     }
     @PostMapping("/plans")
     public String plan(@RequestParam String localFormToken,@RequestParam UUID ruleId,@RequestParam int revision,
-                       @RequestParam LocalDate date,@RequestParam LocalDateTime at,
+                       @RequestParam(required=false) String date,@RequestParam(required=false) String at,
                        @RequestParam(required=false) String offset,HttpSession session,RedirectAttributes flash) {
         tokens.consume(session,localFormToken);
+        var input=new PlanInput(ruleId,revision,date,at,offset);
+        LocalDate target=null;
         try {
-            runtime.schedule(ruleId,revision,date,at,offset==null || offset.isBlank()?null:ZoneOffset.of(offset));
+            target=planDate(date);
+            runtime.schedule(ruleId,revision,target,planTime(at),planOffset(offset));
             flash.addFlashAttribute("j3Message","Horaire enregistré. Il sera exécuté si le laboratoire est en service et l’automatisation activée.");
             return "redirect:/#j3-automation";
-        } catch(IllegalArgumentException | IllegalStateException failure) {return error(failure,flash,date);}
+        } catch(IllegalArgumentException | IllegalStateException failure) {
+            return planError(failure,flash,input,target);
+        } catch(InvalidDataAccessApiUsageException failure) {
+            return planError(planRejection(failure),flash,input,target);
+        }
+    }
+
+    /** Only this submitted form is restored, including the rule/revision of an edited plan. */
+    public record PlanInput(UUID ruleId,int revision,String date,String at,String offset) { }
+
+    private static LocalDate planDate(String value) {
+        if(value==null || value.isBlank())throw new IllegalArgumentException("J3_PLAN_DATE_REQUIRED");
+        try {return LocalDate.parse(value);}
+        catch(DateTimeException invalid) {throw new IllegalArgumentException("J3_PLAN_DATE_INVALID");}
+    }
+    private static LocalDateTime planTime(String value) {
+        if(value==null || value.isBlank())throw new IllegalArgumentException("J3_PLAN_TIME_REQUIRED");
+        try {return LocalDateTime.parse(value);}
+        catch(DateTimeException invalid) {throw new IllegalArgumentException("J3_PLAN_TIME_INVALID");}
+    }
+    private static ZoneOffset planOffset(String value) {
+        if(value==null || value.isBlank())return null;
+        try {return ZoneOffset.of(value);}
+        catch(DateTimeException invalid) {throw new IllegalArgumentException("J3_TIME_OFFSET_INVALID");}
+    }
+    private static RuntimeException planRejection(InvalidDataAccessApiUsageException failure) {
+        // Spring's JPA translator also wraps argument/state rejections from the JDBC repository.
+        // Recognize only the plan's business codes; unrelated persistence failures must propagate.
+        Throwable cause=failure.getCause();
+        if(cause instanceof IllegalArgumentException || cause instanceof IllegalStateException) {
+            switch(String.valueOf(cause.getMessage())) {
+                case "J3_PLAN_MUST_BE_FUTURE","J3_PLAN_IDENTITY_CONFLICT","J3_PLAN_REVISION_CONFLICT",
+                     "J3_PLAN_ALREADY_ADMITTED","J3_PLAN_LIMIT" -> {return (RuntimeException)cause;}
+                default -> { }
+            }
+        }
+        throw failure;
+    }
+    private static String planError(RuntimeException failure,RedirectAttributes flash,PlanInput input,LocalDate date) {
+        flash.addFlashAttribute("j3AutomationError",J3Presentation.reason(failure.getMessage()));
+        flash.addFlashAttribute("j3PlanInput",input);
+        return "redirect:/"+(date==null?"":"?j3Date="+date)+"#j3-automation";
     }
     @PostMapping("/plans/{id}/cancel")
     public String cancel(@PathVariable UUID id,@RequestParam String localFormToken,HttpSession session,RedirectAttributes flash) {

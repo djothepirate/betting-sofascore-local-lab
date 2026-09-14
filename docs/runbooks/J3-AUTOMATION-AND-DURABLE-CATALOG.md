@@ -59,6 +59,19 @@ l'origine locale des formulaires ; aucun réglage de sécurité du navigateur n'
 Une simple actualisation de la page d'erreur `/j3/settings` ou `/j3/plans` ne charge pas le
 nouveau formulaire. Ce correctif n'ajoute aucune migration ni modification des données J3.
 
+La **date à collecter** désigne le calendrier et peut être passée. La **date et l'heure de
+déclenchement à Paris** doivent former un instant futur. Par exemple, à 13 h 31, programmer
+12 h 35 le même jour affiche : **La date et l’heure de déclenchement sont déjà passées.
+Choisissez un horaire futur à Paris.** Le tableau de bord revient au bloc **Collecte automatique**.
+Les champs de programmation sont conservés pour correction ; si un horaire existant était
+modifié, son formulaire reste ouvert et l'ancien ordre reste intact. Le bouton d'enregistrement
+permet de soumettre l'horaire corrigé. Le refus de saisie ne crée aucun ordre.
+
+Les champs absents ou invalides indiquent la date ou l'heure à corriger. Les heures
+inexistantes ou doublées lors des changements d'heure ont une explication spécifique.
+Le [correctif de validation](../validation/WO060-J3-DATE-VALIDATION-FIX-20260914.md)
+remplace la page Whitelabel précédemment affichée pour un déclenchement passé.
+
 | Réglage ou situation | Comportement |
 |---|---|
 | Démarrage / changement de jour | Une opportunité pour le jour courant, seulement sans succès connu pour cette date |

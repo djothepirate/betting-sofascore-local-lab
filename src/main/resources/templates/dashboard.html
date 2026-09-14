@@ -170,6 +170,7 @@
       </div>
       <section class="control-stage" id="j3-automation" aria-labelledby="j3-automation-title">
         <h3 id="j3-automation-title">Collecte automatique</h3>
+        <p id="j3-automation-error" class="notice notice-danger" role="alert" th:if="${j3AutomationError != null}" th:text="${j3AutomationError}"></p>
         <p>Les horaires utilisent Europe/Paris. Le laboratoire doit être en service. Les horaires manqués ne sont pas rattrapés.</p>
         <form class="control-form" th:action="@{/j3/settings}" method="post">
           <input type="hidden" name="localFormToken" th:value="${localFormToken}">
@@ -186,13 +187,15 @@
         </form>
         <h4>Programmer une prochaine collecte</h4>
         <p>Chaque horaire explicite reste exécuté même si une collecte a déjà réussi pour sa date cible.</p>
-        <form class="control-form" th:action="@{/j3/plans}" method="post">
+        <p id="j3-plan-help">Choisissez une date et une heure de déclenchement futures à Paris. La date du calendrier à collecter peut être passée.</p>
+        <form class="control-form" th:action="@{/j3/plans}" method="post"
+              th:with="input=${j3PlanInput != null and j3PlanInput.revision == 1 ? j3PlanInput : null}">
           <input type="hidden" name="localFormToken" th:value="${localFormToken}">
-          <input type="hidden" name="ruleId" th:value="${j3RuleId}"><input type="hidden" name="revision" value="1">
-          <label for="j3-plan-date">Date à collecter</label><input id="j3-plan-date" type="date" name="date" required th:value="${j3Date}">
-          <label for="j3-plan-at">Date et heure de déclenchement à Paris</label><input id="j3-plan-at" type="datetime-local" name="at" required step="60">
+          <input type="hidden" name="ruleId" th:value="${input != null ? input.ruleId : j3RuleId}"><input type="hidden" name="revision" value="1">
+          <label for="j3-plan-date">Date à collecter</label><input id="j3-plan-date" type="date" name="date" required th:value="${input != null ? input.date : j3Date}">
+          <label for="j3-plan-at">Date et heure de déclenchement à Paris</label><input id="j3-plan-at" type="datetime-local" name="at" required step="60" aria-describedby="j3-plan-help" th:value="${input != null ? input.at : null}">
           <label for="j3-plan-offset">Lors du passage à l’heure d’hiver uniquement</label>
-          <select name="offset" id="j3-plan-offset"><option value="">Choix automatique hors heure double</option><option value="+02:00">Première occurrence (+02:00)</option><option value="+01:00">Seconde occurrence (+01:00)</option></select>
+          <select name="offset" id="j3-plan-offset"><option value="">Choix automatique hors heure double</option><option value="+02:00" th:selected="${input != null and input.offset == '+02:00'}">Première occurrence (+02:00)</option><option value="+01:00" th:selected="${input != null and input.offset == '+01:00'}">Seconde occurrence (+01:00)</option></select>
           <button type="submit" class="button-primary">Programmer la collecte</button>
         </form>
         <h4>Horaires et dernières exécutions</h4>
@@ -207,13 +210,15 @@
               <form th:if="${order.state.name() == 'FUTURE' or order.state.name() == 'QUEUED'}" th:action="@{/j3/plans/{id}/cancel(id=${order.id})}" method="post">
                 <input type="hidden" name="localFormToken" th:value="${localFormToken}"><button type="submit">Annuler</button>
               </form>
-              <details th:if="${order.state.name() == 'FUTURE' and order.trigger.name() == 'SCHEDULED'}"><summary>Modifier cet horaire</summary>
+              <details th:if="${order.state.name() == 'FUTURE' and order.trigger.name() == 'SCHEDULED'}"
+                       th:with="input=${j3PlanInput != null and j3PlanInput.ruleId == order.ruleId and j3PlanInput.revision == order.ruleRevision + 1 ? j3PlanInput : null}"
+                       th:open="${input != null}"><summary>Modifier cet horaire</summary>
                 <form class="control-form" th:action="@{/j3/plans}" method="post">
                   <input type="hidden" name="localFormToken" th:value="${localFormToken}">
                   <input type="hidden" name="ruleId" th:value="${order.ruleId}"><input type="hidden" name="revision" th:value="${order.ruleRevision + 1}">
-                  <label>Date à collecter<input name="date" type="date" required th:value="${order.date}"></label>
-                  <label>Nouvel horaire à Paris<input name="at" type="datetime-local" step="60" required></label>
-                  <label>Heure double<select name="offset"><option value="">Automatique</option><option value="+02:00">Première occurrence</option><option value="+01:00">Seconde occurrence</option></select></label>
+                  <label>Date à collecter<input name="date" type="date" required th:value="${input != null ? input.date : order.date}"></label>
+                  <label>Nouvel horaire à Paris<input name="at" type="datetime-local" step="60" required aria-describedby="j3-plan-help" th:value="${input != null ? input.at : null}"></label>
+                  <label>Heure double<select name="offset"><option value="">Automatique</option><option value="+02:00" th:selected="${input != null and input.offset == '+02:00'}">Première occurrence</option><option value="+01:00" th:selected="${input != null and input.offset == '+01:00'}">Seconde occurrence</option></select></label>
                   <button type="submit">Enregistrer cet horaire</button>
                 </form>
               </details>

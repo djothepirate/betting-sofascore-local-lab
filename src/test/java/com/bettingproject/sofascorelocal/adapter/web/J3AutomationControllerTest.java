@@ -9,6 +9,7 @@ import org.junit.jupiter.api.Test;
 import org.junit.jupiter.params.ParameterizedTest;
 import org.junit.jupiter.params.provider.ValueSource;
 import org.junit.jupiter.params.provider.CsvSource;
+import org.springframework.dao.InvalidDataAccessApiUsageException;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.webmvc.test.autoconfigure.WebMvcTest;
 import org.springframework.cache.CacheManager;
@@ -114,6 +115,91 @@ class J3AutomationControllerTest {
                 .andExpect(redirectedUrl("/#j3-automation"));
         verify(runtime).schedule(rule,revision,DATE,LocalDateTime.parse("2026-09-14T18:30"),null);
         verifyNoMoreInteractions(runtime);
+    }
+
+    @ParameterizedTest @CsvSource(delimiter='|',nullValues="ABSENT",textBlock="""
+            ABSENT | 2026-09-14T18:30 | '' | Renseignez la date du calendrier à collecter.
+            '' | 2026-09-14T18:30 | '' | Renseignez la date du calendrier à collecter.
+            2026-02-30 | 2026-09-14T18:30 | '' | La date à collecter est incorrecte.
+            14/09/2026 | 2026-09-14T18:30 | '' | La date à collecter est incorrecte.
+            2026-09-14 | ABSENT | '' | Renseignez la date et l’heure de déclenchement à Paris.
+            2026-09-14 | '' | '' | Renseignez la date et l’heure de déclenchement à Paris.
+            2026-09-14 | 2026-09-14 | '' | La date ou l’heure de déclenchement est incorrecte.
+            2026-09-14 | 2026-02-30T18:30 | '' | La date ou l’heure de déclenchement est incorrecte.
+            2026-09-14 | 2026-09-14T25:00 | '' | La date ou l’heure de déclenchement est incorrecte.
+            2026-09-14 | 2026-09-14T18:30 | invalid | Le décalage choisi ne correspond pas à cet horaire à Paris.
+            """)
+    void invalidPlanFieldsReturnAnExplanationWithoutCallingRuntime(String date,String at,String offset,String message) throws Exception {
+        var session=new MockHttpSession();UUID rule=UUID.randomUUID();
+        var request=post("/j3/plans").header("Host","localhost:8087").header("Origin","http://localhost:8087")
+                .session(session).param("localFormToken",tokens.issue(session))
+                .param("ruleId",rule.toString()).param("revision","1").param("offset",offset);
+        if(date!=null)request.param("date",date);
+        if(at!=null)request.param("at",at);
+        mvc.perform(request).andExpect(status().is3xxRedirection())
+                .andExpect(redirectedUrlPattern("/*#j3-automation"))
+                .andExpect(flash().attribute("j3AutomationError",org.hamcrest.Matchers.startsWith(message)))
+                .andExpect(flash().attribute("j3PlanInput",new J3AutomationController.PlanInput(rule,1,date,at,offset)));
+        verifyNoInteractions(runtime,orders);
+    }
+
+    @ParameterizedTest @CsvSource(delimiter='|',textBlock="""
+            J3_PLAN_MUST_BE_FUTURE | Choisissez un horaire futur à Paris.
+            J3_PLAN_REVISION_CONFLICT | Les paramètres ont changé.
+            J3_PLAN_IDENTITY_CONFLICT | Les paramètres ont changé.
+            J3_PLAN_ALREADY_ADMITTED | Cet ordre est déjà pris en charge
+            J3_PLAN_LIMIT | La file J3 est pleine.
+            """)
+    void translatedRepositoryPlanRejectionsKeepTheirUserExplanation(String code,String message) throws Exception {
+        var session=new MockHttpSession();
+        when(runtime.schedule(any(),anyInt(),any(),any(),any())).thenThrow(
+                new InvalidDataAccessApiUsageException(code,new IllegalArgumentException(code)));
+        mvc.perform(post("/j3/plans").header("Host","localhost:8087").session(session)
+                .param("localFormToken",tokens.issue(session)).param("ruleId",UUID.randomUUID().toString())
+                .param("revision","2").param("date",DATE.toString()).param("at","2026-09-14T18:30"))
+                .andExpect(redirectedUrl("/?j3Date="+DATE+"#j3-automation"))
+                .andExpect(flash().attribute("j3AutomationError",containsString(message)));
+    }
+
+    @ParameterizedTest @CsvSource(delimiter='|',textBlock="""
+            J3_TIME_DOES_NOT_EXIST | Cette heure n’existe pas à Paris
+            J3_TIME_OFFSET_REQUIRED | Cette heure existe deux fois
+            J3_TIME_OFFSET_INVALID | Le décalage choisi ne correspond pas
+            J3_TIME_MINUTE_REQUIRED | Saisissez l’heure de déclenchement en heures et minutes, sans secondes.
+            """)
+    void rejectedParisTimeReturnsItsExplanationAndPreservesTheForm(String code,String message) throws Exception {
+        var session=new MockHttpSession();UUID rule=UUID.randomUUID();
+        when(runtime.schedule(any(),anyInt(),any(),any(),any())).thenThrow(new IllegalArgumentException(code));
+        mvc.perform(post("/j3/plans").header("Host","localhost:8087").session(session)
+                .param("localFormToken",tokens.issue(session)).param("ruleId",rule.toString())
+                .param("revision","2").param("date",DATE.toString()).param("at","2026-10-25T02:30").param("offset","+01:00"))
+                .andExpect(redirectedUrl("/?j3Date="+DATE+"#j3-automation"))
+                .andExpect(flash().attribute("j3AutomationError",containsString(message)))
+                .andExpect(flash().attribute("j3PlanInput",new J3AutomationController.PlanInput(rule,2,DATE.toString(),"2026-10-25T02:30","+01:00")));
+    }
+
+    @Test void unrelatedPersistenceFailureIsNotMisreportedAsInvalidUserInput() {
+        var session=new MockHttpSession();
+        var failure=new InvalidDataAccessApiUsageException("unrelated",new IllegalStateException("unrelated"));
+        when(runtime.schedule(any(),anyInt(),any(),any(),any())).thenThrow(failure);
+        org.assertj.core.api.Assertions.assertThatThrownBy(()->mvc.perform(
+                post("/j3/plans").header("Host","localhost:8087").session(session)
+                        .param("localFormToken",tokens.issue(session)).param("ruleId",UUID.randomUUID().toString())
+                        .param("revision","1").param("date",DATE.toString()).param("at","2026-09-14T18:30")))
+                .hasCause(failure);
+    }
+
+    @Test void malformedDateStillRequiresTrustedOriginAndAValidFormToken() throws Exception {
+        var session=new MockHttpSession();String token=tokens.issue(session);
+        mvc.perform(post("/j3/plans").header("Host","localhost:8087").header("Origin","null").session(session)
+                .param("localFormToken",token).param("ruleId",UUID.randomUUID().toString())
+                .param("revision","1").param("date","invalid").param("at",""))
+                .andExpect(status().isForbidden());
+        mvc.perform(post("/j3/plans").header("Host","localhost:8087").header("Origin","http://localhost:8087").session(session)
+                .param("localFormToken","invalid").param("ruleId",UUID.randomUUID().toString())
+                .param("revision","1").param("date","invalid").param("at",""))
+                .andExpect(status().isBadRequest());
+        verifyNoInteractions(runtime,orders);
     }
     @ParameterizedTest @ValueSource(strings={"localhost:8087","127.0.0.1:8087"})
     void sameOriginBrowserCanCancelAPlannedCollection(String host) throws Exception {

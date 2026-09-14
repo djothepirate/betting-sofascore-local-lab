@@ -32,6 +32,11 @@ Les évolutions notables du SofaScore Local Lab sont consignées dans ce fichier
   pour les POST Chromium ; les contrôles de provenance et le jeton restent exigés.
   Le bouton d'import devient **B. Importer et valider J3 — ZÉRO APPEL**.
   Voir le [diagnostic et les vérifications](docs/validation/WO060-J3-FORMS-403-FIX-20260914.md).
+- Affiche les erreurs de date et d'heure de programmation dans **Collecte automatique**,
+  au lieu de la page Whitelabel. Un déclenchement passé, un champ absent, une date impossible
+  ou une heure parisienne invalide conserve la saisie ; une modification refusée laisse
+  l'ancien horaire intact. La date du calendrier à collecter peut toujours être passée.
+  Voir le [correctif de validation des horaires](docs/validation/WO060-J3-DATE-VALIDATION-FIX-20260914.md).
 
 #### Historique du cadrage au commit 9e0d1cb
 

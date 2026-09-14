@@ -22,8 +22,13 @@ public final class J3Presentation {
             case "J3_TIME_DOES_NOT_EXIST" -> "Cette heure n’existe pas à Paris lors du passage à l’heure d’été.";
             case "J3_TIME_OFFSET_REQUIRED" -> "Cette heure existe deux fois : choisissez le décalage +02:00 ou +01:00.";
             case "J3_TIME_OFFSET_INVALID" -> "Le décalage choisi ne correspond pas à cet horaire à Paris.";
-            case "J3_PLAN_MUST_BE_FUTURE" -> "Choisissez une date et une heure de déclenchement futures.";
-            case "J3_SETTINGS_CHANGED","J3_PLAN_REVISION_CONFLICT" -> "Les paramètres ont changé. Rechargez la page avant de les modifier.";
+            case "J3_PLAN_DATE_REQUIRED" -> "Renseignez la date du calendrier à collecter.";
+            case "J3_PLAN_DATE_INVALID" -> "La date à collecter est incorrecte. Saisissez une date valide au format jour/mois/année.";
+            case "J3_PLAN_TIME_REQUIRED" -> "Renseignez la date et l’heure de déclenchement à Paris.";
+            case "J3_PLAN_TIME_INVALID" -> "La date ou l’heure de déclenchement est incorrecte. Saisissez une date et une heure valides à Paris.";
+            case "J3_TIME_MINUTE_REQUIRED" -> "Saisissez l’heure de déclenchement en heures et minutes, sans secondes.";
+            case "J3_PLAN_MUST_BE_FUTURE" -> "La date et l’heure de déclenchement sont déjà passées. Choisissez un horaire futur à Paris.";
+            case "J3_SETTINGS_CHANGED","J3_PLAN_REVISION_CONFLICT","J3_PLAN_IDENTITY_CONFLICT" -> "Les paramètres ont changé. Rechargez la page avant de les modifier.";
             case "J3_PLAN_ALREADY_ADMITTED" -> "Cet ordre est déjà pris en charge et son horaire ne peut plus être modifié.";
             case "J3_IMPORT_QUEUE_FULL","J3_PLAN_LIMIT","J3_MANUAL_QUEUE_FULL" -> "La file J3 est pleine. Attendez la fin d’une collecte.";
             case "J3_LIVE_POLICY_UNSUPPORTED" -> "La campagne live active ne dispose pas de la capacité de pause J3.";
