@@ -33,6 +33,15 @@ restauration sur PostgreSQL jetable. Les résultats effectifs figurent dans le
 [rapport de réalisation](../../validation/WO060-J3-IMPLEMENTATION-20260914.md).
 La base opérateur et le fournisseur ne participent à aucun de ces essais.
 
+**Retour opérateur du 14 septembre, après mise en service :** les captures montrent un succès
+J3 quotidien de 19 pages, mais une sélection live à zéro. Le lanceur Eclipse LIVE conservait
+les neuf paramètres V10 et aucun paramètre V11 ; sa capacité déclarée était déjà huit.
+Les neuf paramètres V11 manquants sont ajoutés avec sauvegarde, sans modifier les autres valeurs.
+La lecture isolée des dix paramètres par Spring et le calcul d'admission donnent huit rencontres.
+Le message `/events` qui renvoyait encore à V10 est corrigé et son test suit la politique courante.
+Les preuves et la validation du correctif figurent dans
+l'[addendum de mise en service](../../validation/WO060-LIVE-V11-LAUNCHER-FIX-20260914.md).
+
 La clôture J8 du nouveau parcours utilise une transaction obligatoire commune à la publication
 du catalogue et de l’ordre. Les transactions autonomes des parcours historiques sont conservées.
 Un test PostgreSQL injecte un échec après cette publication et vérifie l’annulation du succès

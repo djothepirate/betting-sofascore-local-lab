@@ -23,6 +23,10 @@ Les évolutions notables du SofaScore Local Lab sont consignées dans ce fichier
   sauvegarde/restauration sur PostgreSQL jetable, sans fournisseur ni base opérateur.
 - Ajoute le [guide J3](docs/runbooks/J3-AUTOMATION-AND-DURABLE-CATALOG.md), un lecteur de
   configuration V11 sans mutation, un profil de replay distinct et les preuves de réalisation.
+- Corrige le message de capacité indisponible sur `/events`, qui renvoyait encore au lanceur
+  V10. Il indique les dix paramètres V11 ; son test contrôle la politique réellement utilisée.
+  Le [retour opérateur du 14 septembre](docs/validation/WO060-LIVE-V11-LAUNCHER-FIX-20260914.md)
+  distingue la correction de l'interface et l'ajout local des paramètres manquants dans Eclipse.
 
 #### Historique du cadrage au commit 9e0d1cb
 

@@ -122,6 +122,14 @@ les classes de la simulation et du planificateur. Sa capacité de huit rencontre
 contre des hypothèses d'enveloppes explicites en replay local. La mesure Chromium prouve
 l'isolation des contextes ; elle ne mesure ni la latence ni une capacité soutenue du fournisseur.
 
+Si `/events` affiche une capacité de zéro après passage au WO-060, vérifier les **dix paramètres
+V11** de la configuration Eclipse réellement utilisée : la capacité, l'empreinte de qualification
+et les huit durées. La présence des paramètres V10 et d'une capacité déclarée de huit ne renseigne
+pas le profil V11 indépendant. Reporter les valeurs du lecteur V11 et relancer le Lab avec cette
+configuration. Le calcul du profil V11 fourni admet alors huit rencontres, sous réserve des
+autres conditions de préparation. Un ancien message mentionnant V10 est corrigé par
+l'[addendum de mise en service du WO-060](../validation/WO060-LIVE-V11-LAUNCHER-FIX-20260914.md).
+
 Lors d'un ordre J3 fournisseur, la campagne enregistre la demande de pause avant tout nouveau
 départ live. L'échange J4 ou J5 déjà en vol achève sa réception et sa publication. Le même thread
 propriétaire et le même garde ouvrent ensuite un contexte J3 neuf dans le worker existant.
