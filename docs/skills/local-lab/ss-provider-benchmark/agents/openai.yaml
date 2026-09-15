@@ -1,0 +1,4 @@
+interface:
+  display_name: "Local Lab — Benchmark fournisseur"
+  short_description: "Comparer les mesures fournisseur et leurs limites"
+  default_prompt: "Utilise $ss-provider-benchmark pour établir un benchmark du SofaScore Local Lab à partir des preuves disponibles, avec populations, coûts et limites explicites."
