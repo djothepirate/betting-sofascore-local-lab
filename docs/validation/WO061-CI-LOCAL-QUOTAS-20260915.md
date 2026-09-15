@@ -75,7 +75,8 @@ Windows enregistré dans ce worktree, donc ses commandes Git ne servent pas de p
 | `pwsh -NoProfile -File scripts/wo056/Test-WO056WorkerArtifact.ps1` | PASS, `WO056_WORKER_ARTIFACT=PASS_OFFLINE` |
 | Chargement YAML des deux workflows | PASS, PyYAML 6.0.3 |
 | Validateur GitLab, éditeur de pipeline | `Pipeline syntax is correct` sur le candidat collé dans l'éditeur, configuration complète résolue avec le template Secret Detection ; aucun commit ni pipeline lancé par cet éditeur |
-| Diff, localité et références documentaires | PASS, `git diff --check`, `LOCAL_ONLY_POLICY=PASS`, liens Markdown locaux et UTF-8 ; scan des blobs du commit à consigner après création |
+| Diff, localité et références documentaires | PASS, `git diff --check`, `LOCAL_ONLY_POLICY=PASS`, liens Markdown locaux et UTF-8 |
+| `sh ci/check-no-secrets.sh 59b4daedd089b778d1fd2560799f20dd16658cf1` | PASS_HIGH_CONFIDENCE ; scan complet des 1 769 fichiers versionnés et du commit d'implémentation `a3ed5e7c854369f82d74291255fdcefdb3727792` |
 
 Le premier lancement standard dans le bac à sable a échoué à résoudre le POM parent depuis
 Maven Central, avant les tests (accès réseau interdit). La réexécution autorisée hors de cette
@@ -99,8 +100,20 @@ pas le résultat du script réussi : [référence GitLab](https://docs.gitlab.co
 
 ## Fichiers du lot et activation
 
-Workflows GitHub/GitLab ; gardes et tests dans `ci/` ; AGENTS, ADR-SS-004, README, changelog,
-modèle de PR, guide CI, présent rapport et Work Order. Aucun fichier applicatif ni migration.
+Les 16 fichiers du lot sont :
+
+- `.github/workflows/ci.yml`, `.gitlab-ci.yml`, `.github/pull_request_template.md` ;
+- `ci/VerifyTestReports.java`, `ci/TestVerifyTestReports.java` ;
+- `ci/check-branch-version.sh`, `ci/test-branch-version.sh` ;
+- `ci/test-package-guards.sh`, `ci/test-dependency-check.sh` ;
+- `AGENTS.md`, `ADR-SS-004-integration-continue-et-distribution-locale-uniquement.md` ;
+- `README.md`, `CHANGELOG.md` ;
+- `docs/runbooks/CI-LOCAL-QUOTAS.md` ;
+- `docs/validation/WO061-CI-LOCAL-QUOTAS-20260915.md` ;
+- `docs/work_orders/active/WO-SS-20260915-061-ci-local-quotas.md`.
+
+Aucun fichier applicatif ni migration. Le dernier changement fonctionnel de ce lot est
+`a3ed5e7c854369f82d74291255fdcefdb3727792` ; le commit de bilan qui suit ne modifie que ce rapport.
 
 Les nouveaux déclenchements s'appliquent aux références qui intègrent ces fichiers. La branche
 du candidat seule n'actualise pas `main`, le train ou le miroir GitLab. La PR de WO cible le
