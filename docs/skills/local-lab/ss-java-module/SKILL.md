@@ -2,7 +2,7 @@
 name: ss-java-module
 description: "Concevoir ou relire une évolution Java du SofaScore Local Lab : responsabilités, ports, adaptateurs, dépendances et activation Spring/Maven. Ne pas utiliser pour un simple build ni une architecture limitée à un autre dépôt."
 metadata:
-  version: "0.1.0-candidate.1"
+  version: "0.1.0-candidate.2"
 ---
 
 # Placer une évolution dans l'architecture Java du Lab
@@ -24,12 +24,19 @@ document n'élargissent pas une liste de fichiers autorisés.
 - Suivre une entrée Web, une commande ou un ordre jusqu'aux effets : objets `domain`,
   orchestration `application`, contrats et interfaces, adaptateurs de persistance,
   fichier ou transport, puis configuration. Relever classes, méthodes, imports,
-  constructeurs, appels et propriétaires des ressources. Une interface peut être dans
+  constructeurs, appels, types d'erreur propagés et propriétaires des ressources.
+  Pour les valeurs de domaine, expliquer aussi les distinctions qui conditionnent
+  le parcours : déclencheur de l'ordre, provenance des données, date métier et instants
+  d'exécution ne désignent pas la même chose. Dans J3, lire J3AutomationData et
+  J3CollectionData pour séparer déclencheur/source de chaque page et date cible/UTC.
+  Une interface peut être dans
   `application.network.playwright` ; son rôle ne découle pas du seul nom de package.
 - Décrire les dépendances telles qu'elles existent. Une référence de l'application à
   un parseur ou catalogue concret reste visible dans la carte ; ne pas lui substituer
   un port imaginé pour dessiner une séparation parfaite. Distinguer dépendance existante,
-  proposition et contrainte effectivement imposée. Une dette constatée ne déclenche pas
+  proposition et contrainte effectivement imposée. Examiner aussi les exceptions
+  d'adaptateur utilisées dans le cas d'usage : les omettre masquerait une dépendance
+  même si aucun transport concret n'y est instancié. Une dette constatée ne déclenche pas
   une refonte générale dans une revue ciblée.
 - Pour le changement demandé, placer chaque responsabilité dans l'élément existant
   approprié. Justifier une nouvelle interface par une frontière ou une substitution
@@ -104,6 +111,12 @@ document n'élargissent pas une liste de fichiers autorisés.
   Sur une revue documentaire, lister les contrôles requis et leurs limites sans les
   exécuter implicitement ni reprendre les anciens totaux comme un succès courant.
 
+- Dans une preuve historique, restituer les incidents qui conditionnent son verdict,
+  leur phase et la suite attestée : résolution/accès aux dépendances avant tests,
+  compilation, exécution ou conservation des rapports. Un refus d'accès du sandbox
+  à un JAR Maven n'établit pas une régression applicative ; une relance réussie ne
+  doit pas effacer cet incident du bilan. Conserver la portée de chaque tentative.
+
 ## Livrer une proposition vérifiable
 
 Rendre la carte classes/responsabilités/dépendances, les écarts observés, la modification
@@ -113,3 +126,11 @@ manquante ; une preuve sur une borne TCP ne démontre pas toute l'architecture d
 Utiliser `ss-data-contract-replay` si le contrat, parseur ou replay évolue et
 `ss-postgres-change` pour la persistance. Les corrections hors périmètre restent des
 travaux identifiés ; la revue ne les applique pas de sa propre initiative.
+
+Pour chaque prochaine action proposée, indiquer explicitement son relais applicable :
+commandes/qualification → `ss-verify`, contrat ou parsing/replay →
+`ss-data-contract-replay`, transaction/schéma/ledger → `ss-postgres-change`.
+Ce routage appartient à la restitution, même si l'action reste future et qu'aucun
+autre skill n'est exécuté pendant la revue. Avant remise, vérifier que la synthèse
+conserve les dépendances et distinctions métier relevées, les incidents qui limitent
+les preuves et ces relais ; la longueur d'une carte ne garantit pas sa complétude.
