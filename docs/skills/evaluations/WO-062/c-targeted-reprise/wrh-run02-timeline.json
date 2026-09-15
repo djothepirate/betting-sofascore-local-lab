@@ -1,0 +1,68 @@
+{
+  "schema": "wo062-wrh-run02-timeline-analysis-v1",
+  "source_case": "docs/skills/evaluations/WO-062/ss-windows-runtime/run-02/cases/WR-H01",
+  "source_trace_sha256": "cb08aa0de49b8411884b7bf40f0e7bee951dab33c8d3333b97dcaf11911046d0",
+  "native_events_sha256": "2895f515191aa47d889dbf436ac17ec74dc94f8018087fb16a41897c0f35c0ae",
+  "phase_points": [
+    {
+      "phase": "session_started",
+      "observed_utc": "2026-09-15T21:53:57.899226+00:00",
+      "since_session_start_seconds": 0.0,
+      "source": "trace.json"
+    },
+    {
+      "phase": "initial_conductor_preflight",
+      "observed_utc": "2026-09-15T22:00:14.3051018Z",
+      "since_session_start_seconds": 376.406,
+      "source": "runtime-artifacts/run.json"
+    },
+    {
+      "phase": "harness_conductor_start",
+      "observed_utc": "2026-09-15T22:03:58.3226359Z",
+      "since_session_start_seconds": 600.423,
+      "source": "runtime-artifacts/execution-outer-return.json"
+    },
+    {
+      "phase": "harness_conductor_return",
+      "observed_utc": "2026-09-15T22:04:01.9317418Z",
+      "since_session_start_seconds": 604.033,
+      "source": "runtime-artifacts/execution-outer-return.json"
+    },
+    {
+      "phase": "independent_postflight",
+      "observed_utc": "2026-09-15T22:05:09.5243423Z",
+      "since_session_start_seconds": 671.625,
+      "source": "runtime-artifacts/independent-postflight.json"
+    },
+    {
+      "phase": "artifact_manifest_written",
+      "observed_utc": "2026-09-15T22:08:24.8362083Z",
+      "since_session_start_seconds": 866.937,
+      "source": "runtime-artifacts/artifact-manifest.json"
+    },
+    {
+      "phase": "model_watchdog",
+      "observed_utc": "2026-09-15T22:08:58.490554+00:00",
+      "since_session_start_seconds": 900.591,
+      "source": "trace.json"
+    }
+  ],
+  "completed_commands": 22,
+  "unmatched_started_item_ids": [],
+  "command_output_characters": 336104,
+  "largest_command_output_characters": 193799,
+  "harness_ms": 2726.6811000000002,
+  "before_conductor_seconds": 600.423409,
+  "after_conductor_return_to_watchdog_seconds": 296.558813,
+  "findings": [
+    "Long preparation, full module read and repeated historical reads precede the actual execution.",
+    "After execution: evidence reread, separate postflight, extensive README/tool-event documentation and manifest generation.",
+    "All started public tools have completed; no pending tool is established at the watchdog.",
+    "The orchestrator parses/filter/freezes after subprocess completion/timeout; its post-session collection cannot explain the model subprocess watchdog."
+  ],
+  "limits": [
+    "Original JSONL lacks per-event receipt times. Artifact UTC values bound phases, not exact model/server reasoning or network latency.",
+    "No conclusion about internal model reasoning content or an exact causal percentage is made.",
+    "New observation and concise flow may influence duration; one successful repeat would not establish general performance."
+  ]
+}

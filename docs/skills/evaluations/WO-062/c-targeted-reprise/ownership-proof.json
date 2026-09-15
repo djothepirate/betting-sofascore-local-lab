@@ -1,0 +1,60 @@
+{
+    "schema":  "wo062-java-ownership-preflight-v1",
+    "observedAtUtc":  "2026-09-15T22:41:02.6560556Z",
+    "result":  "PASS_OWNERSHIP_ONLY",
+    "error":  null,
+    "scope":  "Ownership prerequisite only. No failure/sleep modes, no forced termination, no model call.",
+    "powerShellVersion":  "5.1.26100.9444",
+    "edition":  "Desktop",
+    "discovery":  [
+                      {
+                          "path":  "C:\\Program Files\\Common Files\\Oracle\\Java\\javapath\\java.exe",
+                          "originalFilename":  "shimconsole.exe",
+                          "version":  "25.0.4.0",
+                          "bytes":  703632,
+                          "sha256":  "c955ad99c04ae91812d1175340a293023ff06d594d476ef90bcb23986ad31172"
+                      },
+                      {
+                          "path":  "C:\\Program Files\\Java\\jdk-25.0.4\\bin\\java.exe",
+                          "originalFilename":  "java.exe",
+                          "version":  "25.0.4.0",
+                          "bytes":  54952,
+                          "sha256":  "12cdbbb7c110c5e86b76d9170c820981a3adf7b1eb890ec6acf73f43a44a2ade"
+                      }
+                  ],
+    "fixtureSha256":  "8f1aa2734f9ba19040145ab52b6668832a47c8bcbace98de368e18e53ca14863",
+    "identity":  {
+                     "conductorPid":  35688,
+                     "requestedExecutable":  "C:\\Program Files\\Java\\jdk-25.0.4\\bin\\java.exe",
+                     "observedImage":  "C:\\Program Files\\Java\\jdk-25.0.4\\bin\\java.exe",
+                     "retainedHandle":  2520,
+                     "retainedPid":  4808,
+                     "retainedStartUtc":  "2026-09-15T22:41:02.0858359Z",
+                     "fixturePid":  "4808",
+                     "fixtureParentPid":  "35688",
+                     "fixtureCommand":  "C:\\Program Files\\Java\\jdk-25.0.4\\bin\\java.exe",
+                     "fixtureStartUtc":  "2026-09-15T22:41:02.085Z",
+                     "uuid":  "db7b5bbe-362a-4873-9f98-6b7cf1cd2d38",
+                     "javaVersion":  "25.0.4+7-LTS-189",
+                     "aliveDuringCheck":  true
+                 },
+    "stdout":  [
+                   "OWNER_UUID=db7b5bbe-362a-4873-9f98-6b7cf1cd2d38",
+                   "OWNER_PID=4808",
+                   "OWNER_PARENT_PID=35688",
+                   "OWNER_COMMAND=C:\\Program Files\\Java\\jdk-25.0.4\\bin\\java.exe",
+                   "OWNER_STARTED=2026-09-15T22:41:02.085Z",
+                   "OWNER_JAVA_VERSION=25.0.4+7-LTS-189",
+                   "OWNER_READY",
+                   "OWNER_RELEASED"
+               ],
+    "stderr":  "",
+    "exitCode":  0,
+    "releaseSent":  true,
+    "cleanup":  "PASS_EMPTY_ROOT_REMOVED",
+    "temporaryRoot":  "C:\\Dev\\BettingProject\\codex\\betting-sofascore-local-lab\\.tmp\\wo062-skills-lot2\\.tmp\\wrn-ownership-preflight-01\\ownership probe db7b5bbe-362a-4873-9f98-6b7cf1cd2d38",
+    "rootAbsent":  true,
+    "durationMs":  959.1857,
+    "processesStopped":  0,
+    "oldWRN01ResidueTouched":  false
+}

@@ -1,0 +1,20 @@
+{
+  "schema": "wo062-targeted-reprise-authorization-v1",
+  "decision_date": "2026-09-16",
+  "basis": "Current owner request for a very targeted C reprise of JM-N01, WR-H01 and WR-N01; fresh JM-N01 session, diagnose WR-H01 elapsed time and complete its execution/evidence/postflight/conclusion/final-response chain; improve WR-N01 ownership before any repeated test.",
+  "authorized_immediately": [
+    {"skill":"ss-java-module","version":"0.1.0-candidate.2","case_id":"JM-N01","fresh_model_sessions":1,"inputs":"Frozen original case, unchanged candidate, no oracle or previous responses"},
+    {"skill":"ss-windows-runtime","version":"0.1.0-candidate.1","case_id":"WR-H01","fresh_model_sessions":1,"prerequisite":"Analyze prior timeline and freeze a concise completion/observability addendum without expected verdicts"}
+  ],
+  "WR_N01": {
+    "immediate_repeat_authorized": false,
+    "current_action": "Improve and demonstrate process ownership/parentage first; retain the first failure and unexpected residue.",
+    "repeat_gate": "A concrete reviewed ownership proof and updated bounded operational inputs are required before considering the full failure/sleep evaluation."
+  },
+  "configured_model_service_and_internal_input_scope": "Same service and scoped internal candidate/catalogue/versioned inputs as earlier explicitly authorized evaluations; current owner request renews only the targeted trials.",
+  "candidate_changes": false,
+  "previous_runs_preserved": true,
+  "human_validation": false,
+  "personal_installation": false,
+  "application_changes": false
+}

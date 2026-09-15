@@ -1,0 +1,70 @@
+{
+  "schema": "wo062-c-targeted-preparation-v1",
+  "recorded_at_utc": "2026-09-15T22:43:05.609360+00:00",
+  "baseline_commit": "4a83e121d8c28833b7617313ab277bc4341f078e",
+  "inputs_bound_before_sessions": true,
+  "candidate_bodies_changed": false,
+  "WR_N01_full_test_repeated": false,
+  "files": [
+    {
+      "path": "authorization.json",
+      "bytes": 1572,
+      "sha256": "d6507ab7bf482b84d8a942652015bc7567ad23439bbd060a34ce2bc8b6009aa8"
+    },
+    {
+      "path": "ownership-proof.json",
+      "bytes": 3106,
+      "sha256": "70be6ee6153269c440944fdb2b15b21fef065ce5b0e5ad4f5c61f535b18bacef"
+    },
+    {
+      "path": "OwnershipProbe.java",
+      "bytes": 1390,
+      "sha256": "8f1aa2734f9ba19040145ab52b6668832a47c8bcbace98de368e18e53ca14863"
+    },
+    {
+      "path": "preparation/JM-N01-preflight.json",
+      "bytes": 10016,
+      "sha256": "fad4863cfaa4b87de80324828e008b15b8e0c0001c09920df3c1b6caee4f3311"
+    },
+    {
+      "path": "preparation/targeted-preparation.py.txt",
+      "bytes": 1035,
+      "sha256": "ef00afbed4af59843c80dcf81bfd4438160ee86059c881c6b7be8f4812b2c08d"
+    },
+    {
+      "path": "preparation/timed-evaluator.py.txt",
+      "bytes": 20083,
+      "sha256": "0e65c943e75279f4fafcc27feae614bf08bebde301747add2e54352436baed5b"
+    },
+    {
+      "path": "preparation/timing-tests.json",
+      "bytes": 866,
+      "sha256": "941c967c9098eea7e35abb996504a4cdebbd8f511d4e38553e3243f9ec7e5c9f"
+    },
+    {
+      "path": "preparation/timing-tests.py.txt",
+      "bytes": 2536,
+      "sha256": "32216bb00059cbf20384f7b898f2247df1fb66f48515dd88d56aff56dfabc45a"
+    },
+    {
+      "path": "preparation/WR-H01-preflight.json",
+      "bytes": 3569,
+      "sha256": "f9adb83bb0aff10fba842b8d61abc7e35c90e8346ca4243eb9ee882ec629fab1"
+    },
+    {
+      "path": "Probe-JavaOwnership.ps1",
+      "bytes": 8105,
+      "sha256": "d88c87a13518c03ea32233ab43acfebcd5cbc06d31494e6d0ea0c12fad58cc48"
+    },
+    {
+      "path": "wrh-flow-addendum.md",
+      "bytes": 2180,
+      "sha256": "59bae0779270ea670730b3c60425623ba81bee52d899edcb4dd2c2ddab52f4a6"
+    },
+    {
+      "path": "wrh-run02-timeline.json",
+      "bytes": 2964,
+      "sha256": "f57a5898f8a1aa7c8619ab5ddcbf299893c7c3fe7c8c725c80c3f575054ae18e"
+    }
+  ]
+}
