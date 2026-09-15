@@ -6,9 +6,14 @@ Les évolutions notables du SofaScore Local Lab sont consignées dans ce fichier
 
 ### WO-062 — skills spécialisés du lot 2
 
+- Complète PB-S01 par une réexécution instrumentée : lecture intégrale du candidat inchangé,
+  empreintes concordantes et revue indépendante PASS. La [qualification courante](docs/validation/WO062-PROVIDER-BENCHMARK-PBS01-QUALIFICATION-20260915.md)
+  réunit douze cas PASS, en conservant le BLOCKED historique du premier run. Validation humaine
+  et installation personnelle restent à réaliser.
+
 - Rédige le candidat `ss-provider-benchmark` depuis A1 et conserve ses douze réponses évaluées
-  dans des contextes indépendants de l'oracle : 11 PASS, PB-S01 ouvert pour une preuve
-  de chargement explicite insuffisante. Le routage des quatre cas de sélection est correct.
+  dans des contextes indépendants de l'oracle : run-01 à 11 PASS, PB-S01 alors bloqué pour une
+  preuve de chargement explicite insuffisante. Le routage des quatre cas de sélection est correct.
 - Produit le [protocole et la scorecard prematch/live](docs/skills/evaluations/WO-062/ss-provider-benchmark/run-01/cases/PB-N01/response.md),
   avec trois revues indépendantes et [preuves A2](docs/validation/WO062-PROVIDER-BENCHMARK-CANDIDATE-20260915.md).
   Protège les octets des preuves contre la normalisation Git ; validation humaine et installation restent à faire.

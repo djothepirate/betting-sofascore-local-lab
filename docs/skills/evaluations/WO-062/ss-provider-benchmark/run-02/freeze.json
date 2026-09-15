@@ -1,0 +1,47 @@
+{
+  "schema": "wo062-pb-s01-retry-freeze-v1",
+  "frozen_at_utc": "2026-09-15T18:10:21.985845+00:00",
+  "before_independent_result_review": true,
+  "files": [
+    {
+      "path": "catalogue.txt",
+      "bytes": 7670,
+      "sha256": "e1e5d1b55875ed6785fa1ec7fc334ac5d9dae7558531f8096cf688886427fac5"
+    },
+    {
+      "path": "native-events.json",
+      "bytes": 9918,
+      "sha256": "6a73146201b15f84174f79dfa4ff80bafecdbf44adc8fff99697b5020a43acd3"
+    },
+    {
+      "path": "preflight.json",
+      "bytes": 1263,
+      "sha256": "5ff2604d9e3c1d5c07ae6ff764922e3058e709a1deed956b1fd527ce788bd04d"
+    },
+    {
+      "path": "prompt.txt",
+      "bytes": 157,
+      "sha256": "ae3d76ca52d167c47bf81db65645d1f54d18695f4d3f804a1c1edca3832d5455"
+    },
+    {
+      "path": "protocol.md",
+      "bytes": 3307,
+      "sha256": "8f9353ec392ce78e2cc7e86ff27e09dca225f8f2cbd4cd97cca07fc3372869a2"
+    },
+    {
+      "path": "response.md",
+      "bytes": 1123,
+      "sha256": "f654de0e67e55de8f8472dd83681e5ca7486ec8323ea14a9522ab1106a2bd829"
+    },
+    {
+      "path": "routing-request.txt",
+      "bytes": 733,
+      "sha256": "6df7eef7002338ccf54e6c7e540e53f97fe877dfdeae401724636194902f6c24"
+    },
+    {
+      "path": "trace.json",
+      "bytes": 3342,
+      "sha256": "bda00c4cd4378c40630ffa4d7f3a2e905d3aa25b5ee4fa300a697854d0254311"
+    }
+  ]
+}

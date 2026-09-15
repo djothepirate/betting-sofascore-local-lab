@@ -1,5 +1,8 @@
 # WO-062 — Candidat ss-provider-benchmark et évaluation A2
 
+**Complément ultérieur :** [PB-S01 qualifié dans run-02 et bilan cumulé](WO062-PROVIDER-BENCHMARK-PBS01-QUALIFICATION-20260915.md).
+Le présent rapport conserve les résultats et limites du premier run.
+
 - **Date :** 15 septembre 2026.
 - **État :** `EVALUATED_WITH_OPEN_FINDINGS_PENDING_OWNER_REVIEW` ; **12 cas exécutés, 11 PASS**, cas restant ouvert : **PB-S01**.
 - **Périmètre :** EXPERIMENTAL · LOCAL_ONLY · NOT_PRODUCTION_APPROVED · NO_CRITICAL_DEPENDENCY.

@@ -1,0 +1,20 @@
+{
+  "schema": "wo062-pb-s01-retry-preflight-v1",
+  "created_at_utc": "2026-09-15T18:07:11.408754+00:00",
+  "worktree_head": "6e310623208902db994995caf61bc58d1d4a9040",
+  "candidate_sha256": "4bcecee4dbe75ec74530a7bda63acc8cbc84cc15dcd7c07e2ab9e6f80cc7be94",
+  "candidate_yaml_sha256": "707b19c6ff8b73d6a5962244ef2855e163dc3c55b8f27ea14ef2e9863ac66bdd",
+  "a1_manifest_sha256": "4fd13d59e33665b11b48767dbb75ace879c626ed450cc15596c625320e3ac6eb",
+  "run01_manifest_sha256": "cb44371200f47e72aa00c3bd231a4fb4168f06fd6c91e9653aecdb7f1e788087",
+  "run01_files_verified": 68,
+  "a1_sources_verified": 38,
+  "a1_locked_files_verified": 5,
+  "prompt_sha256": "ae3d76ca52d167c47bf81db65645d1f54d18695f4d3f804a1c1edca3832d5455",
+  "routing_request_sha256": "6df7eef7002338ccf54e6c7e540e53f97fe877dfdeae401724636194902f6c24",
+  "case_prompt_unchanged": true,
+  "candidate_unchanged": true,
+  "manual_body_preload": false,
+  "oracle_supplied": false,
+  "harness_change": "Instrumented selection: mandatory full local tool read of whichever SKILL.md is chosen. No expected skill, hash, answer or oracle in the wrapper.",
+  "qualification_limit": "Proves a tool-mediated load in this instrumented attempt; does not attest automatic CLI injection before the first tool call."
+}

@@ -1,0 +1,141 @@
+{
+  "schema": "wo062-provider-benchmark-current-qualification-v1",
+  "qualified_at_utc": "2026-09-15T18:21:16.181140+00:00",
+  "status": "QUALIFIED_ON_FROZEN_CASES_PENDING_OWNER_VALIDATION",
+  "skill": "ss-provider-benchmark",
+  "candidate_version": "0.1.0-candidate.1",
+  "candidate_commit": "06f7bf8aa76c124246ea661fea5c4afe95b66354",
+  "candidate_sha256": "4bcecee4dbe75ec74530a7bda63acc8cbc84cc15dcd7c07e2ab9e6f80cc7be94",
+  "source_commit": "74d3f38afd64ce587353fbd645cad7a388e9756c",
+  "distinct_cases": 12,
+  "qualified_cases": 12,
+  "executions_in_recorded_runs": 13,
+  "runs": [
+    {
+      "id": "run-01",
+      "executions": 12,
+      "pass": 11,
+      "blocked": 1,
+      "historical_status_preserved": true
+    },
+    {
+      "id": "run-02",
+      "executions": 1,
+      "pass": 1,
+      "blocked": 0,
+      "method": "instrumented explicit selection"
+    }
+  ],
+  "open_material_findings": [],
+  "closed_finding": {
+    "id": "SEL-01",
+    "case_id": "PB-S01",
+    "proof": "run-02/review.json",
+    "scope": "Complete tool-mediated loading of exact candidate; no claim of automatic CLI injection."
+  },
+  "human_validation": false,
+  "personal_installation": false,
+  "limits": [
+    "Qualification covers the twelve frozen cases and the declared instrumentation, not generalization or productivity.",
+    "Original run-01 BLOCKED is preserved; cumulative status uses the reviewed run-02 complement.",
+    "Exact model/effort not exposed by observed CLI events."
+  ],
+  "cases": [
+    {
+      "case_id": "PB-H01",
+      "verdict": "PASS",
+      "source_run": "run-01",
+      "response": "run-01/cases/PB-H01/response.md",
+      "response_sha256": "49fbfdf3a08012d1c78c35f41083182895afa50737e14c6234cfda2ca67d6dce",
+      "result_source": "run-01/results.json"
+    },
+    {
+      "case_id": "PB-N01",
+      "verdict": "PASS",
+      "source_run": "run-01",
+      "response": "run-01/cases/PB-N01/response.md",
+      "response_sha256": "668b6642593f5c3d4c625f9b783c19d1fb2e50ddae317c27a9c2e18b9256eb85",
+      "result_source": "run-01/results.json"
+    },
+    {
+      "case_id": "PB-C01",
+      "verdict": "PASS",
+      "source_run": "run-01",
+      "response": "run-01/cases/PB-C01/response.md",
+      "response_sha256": "34a5dfb58997296c7e085e285061804d95e1164f3ba750e3f20d4d6963b60963",
+      "result_source": "run-01/results.json"
+    },
+    {
+      "case_id": "PB-C02",
+      "verdict": "PASS",
+      "source_run": "run-01",
+      "response": "run-01/cases/PB-C02/response.md",
+      "response_sha256": "da79092dd3157222854b503046502d8ad613f70e927f04e7b398512228919904",
+      "result_source": "run-01/results.json"
+    },
+    {
+      "case_id": "PB-C03",
+      "verdict": "PASS",
+      "source_run": "run-01",
+      "response": "run-01/cases/PB-C03/response.md",
+      "response_sha256": "ba39f18e36032cf3c47e40de9dc42d49f77cbc333bd9773b24df8f982ad699cb",
+      "result_source": "run-01/results.json"
+    },
+    {
+      "case_id": "PB-C04",
+      "verdict": "PASS",
+      "source_run": "run-01",
+      "response": "run-01/cases/PB-C04/response.md",
+      "response_sha256": "c4078916cf42d9df00bad952a0f4a2851ece3d0c471a125e7b4b39c4bb655a6a",
+      "result_source": "run-01/results.json"
+    },
+    {
+      "case_id": "PB-C05",
+      "verdict": "PASS",
+      "source_run": "run-01",
+      "response": "run-01/cases/PB-C05/response.md",
+      "response_sha256": "ca4a8fbb395db561654c5c627fb6184796448cfb3269dc4aaee2012c0ebaa661",
+      "result_source": "run-01/results.json"
+    },
+    {
+      "case_id": "PB-C06",
+      "verdict": "PASS",
+      "source_run": "run-01",
+      "response": "run-01/cases/PB-C06/response.md",
+      "response_sha256": "97ebef8ea3de79b59329ef92020ccfaf7c0c4caf635b2e766ffebd4e4c668f54",
+      "result_source": "run-01/results.json"
+    },
+    {
+      "case_id": "PB-S01",
+      "verdict": "PASS",
+      "source_run": "run-02",
+      "response": "run-02/response.md",
+      "response_sha256": "f654de0e67e55de8f8472dd83681e5ca7486ec8323ea14a9522ab1106a2bd829",
+      "result_source": "run-02/result.json"
+    },
+    {
+      "case_id": "PB-S02",
+      "verdict": "PASS",
+      "source_run": "run-01",
+      "response": "run-01/cases/PB-S02/response.md",
+      "response_sha256": "dca8336b8352a044dc3e7b4291b59a6cb738b6bbce219e205d56275f2322374f",
+      "result_source": "run-01/results.json"
+    },
+    {
+      "case_id": "PB-S03",
+      "verdict": "PASS",
+      "source_run": "run-01",
+      "response": "run-01/cases/PB-S03/response.md",
+      "response_sha256": "d411a230257455b093daf325492b6b9950fd0b55517334fc2df448ffd393e6e8",
+      "result_source": "run-01/results.json"
+    },
+    {
+      "case_id": "PB-S04",
+      "verdict": "PASS",
+      "source_run": "run-01",
+      "response": "run-01/cases/PB-S04/response.md",
+      "response_sha256": "e473333819b144df84e53cfac999f38ba63499192087bf750dd474b9f025aa46",
+      "result_source": "run-01/results.json"
+    }
+  ]
+}

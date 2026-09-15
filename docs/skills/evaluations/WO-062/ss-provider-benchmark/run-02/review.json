@@ -1,0 +1,109 @@
+{
+  "reviewer": "/root/pb_s01_result_review",
+  "reviewed_at_utc": "2026-09-15T18:15:03.6426268Z",
+  "case_id": "PB-S01",
+  "run_id": "run-02",
+  "verdict": "PASS",
+  "closes_finding": true,
+  "assertions": [
+    {
+      "criterion": "Intégrité de chaque fichier gelé avant jugement",
+      "result": "PASS",
+      "evidence": [
+        "frozen/freeze.json:5-45 : les 8 tailles et SHA-256 sont recalculés et concordent avant analyse des résultats ; détails complets dans review.md, section 1.",
+        "A1 manifest.json SHA-256 4fd13d59e33665b11b48767dbb75ace879c626ed450cc15596c625320e3ac6eb ; les 5 fichiers evaluation_files concordent avec leurs tailles et SHA-256 gelés.",
+        "run-01/artifact-manifest.json SHA-256 cb44371200f47e72aa00c3bd231a4fb4168f06fd6c91e9653aecdb7f1e788087 ; ses 68 fichiers concordent sans écart."
+      ]
+    },
+    {
+      "criterion": "Identité du prompt PB-S01 A1 et rattachement de l'enveloppe préétablie",
+      "result": "PASS",
+      "evidence": [
+        "cases.json:124-130 et frozen/prompt.txt:1 : identité exacte du champ prompt suivi du LF terminal ; SHA-256 recalculé ae3d76ca52d167c47bf81db65645d1f54d18695f4d3f804a1c1edca3832d5455.",
+        "frozen/routing-request.txt:3 : prompt intégral identique ; empreinte de l'enveloppe 6df7eef7002338ccf54e6c7e540e53f97fe877dfdeae401724636194902f6c24 identique à preflight.json:13 et trace.json:26.",
+        "preflight.json:3,13,18 et trace.json:5-6 : préflight enregistré à 18:07:11Z avant l'exécution 18:08:24Z-18:08:58Z ; freeze.json:3 enregistre le gel à 18:10:21Z avant revue. Chronologie locale, sans attestation temporelle externe."
+      ]
+    },
+    {
+      "criterion": "Enveloppe générique sans réponse de sélection supplémentaire",
+      "result": "PASS",
+      "evidence": [
+        "frozen/routing-request.txt:1 impose une lecture du skill retenu et autorise aucun ; il ne donne ni nom de candidat attendu, ni chemin, hash, corps ou extrait.",
+        "Le nom ss-provider-benchmark apparaît dans le prompt métier original, déjà explicitement invoqué par A1.",
+        "frozen/protocol.md:9-18,46-49 conserve la différence de méthode : lecture obligatoire, essai instrumenté distinct, aucun PASS rétroactif de run-01."
+      ]
+    },
+    {
+      "criterion": "Identité binaire du candidat versionné et de la copie effectivement lue",
+      "result": "PASS",
+      "evidence": [
+        "docs/skills/local-lab/ss-provider-benchmark/SKILL.md et .tmp/pb-evaluations/run-02/PB-S01/.agents/skills/ss-provider-benchmark/SKILL.md sont identiques octet par octet : 6835 octets, SHA-256 4bcecee4dbe75ec74530a7bda63acc8cbc84cc15dcd7c07e2ab9e6f80cc7be94.",
+        "SKILL.md:1-6 : version 0.1.0-candidate.1 ; concordance avec preflight.json:5 et trace.json:31-32 ainsi qu'avec run-01.",
+        "agents/openai.yaml : SHA-256 recalculé 707b19c6ff8b73d6a5962244ef2855e163dc3c55b8f27ea14ef2e9863ac66bdd, identique au préflight."
+      ]
+    },
+    {
+      "criterion": "Chemin lu exact et commande terminée avec succès",
+      "result": "PASS",
+      "evidence": [
+        "frozen/native-events.json:18-36 : une commande Get-Content -LiteralPath du SKILL.md isolé PB-S01, avec -Raw ; même commande et même item_1 au démarrage et à la fin, exit_code=0, status=completed.",
+        "L'argument -LiteralPath extrait de l'événement natif et résolu après normalisation des séparateurs Windows désigne exactement la copie isolée vérifiée.",
+        "frozen/catalogue.txt:10,17 : une entrée ss-provider-benchmark vers cette racine r6 ; le catalogue est postérieurement reconstruit, comme précisé par trace.json:52."
+      ]
+    },
+    {
+      "criterion": "Corps complet effectivement retourné, comparé indépendamment",
+      "result": "PASS",
+      "evidence": [
+        "frozen/native-events.json:34, item_1 terminé, aggregated_output réel : 6837 octets UTF-8, strictement égaux aux 6835 octets de texte du candidat plus un CRLF terminal de transport.",
+        "Les 92 lignes complètes du candidat, du frontmatter à la dernière ligne, concordent avec le fichier versionné et la copie isolée.",
+        "Après CRLF vers LF et retrait des seuls CR/LF terminaux : 6834 octets identiques pour les trois textes ; SHA-256 recalculé 7e908db329a8d386c39733542ee5c3efaa1b5b74a72db303603b50db3ca876eb.",
+        "Aucun espace interne, aucun espace de bord autre qu'un caractère de fin de ligne et aucun contenu n'ont été retirés. Le verdict ne repose pas sur trace.tool_body_complete_match."
+      ]
+    },
+    {
+      "criterion": "Réponse authentiquement rattachée au journal et routage cohérent",
+      "result": "PASS",
+      "evidence": [
+        "frozen/response.md est strictement égal au texte natif final item_2, native-events.json:40-44, sans LF ajouté.",
+        "response.md:1,7-10 : choix du skill explicitement demandé et justification cohérente avec SKILL.md:23-25,63-81,83-92.",
+        "response.md:12 : arrêt au routage ; absence de résultat métier, chiffre fournisseur, classement, adoption J9 ou autorisation de collecte."
+      ]
+    },
+    {
+      "criterion": "Absence d'autres commandes ou actions hors portée dans le journal publié",
+      "result": "PASS",
+      "evidence": [
+        "frozen/native-events.json:1-57 : 7 événements ; deux messages, une seule commande démarrée puis terminée, encadrés par thread.started, turn.started et turn.completed.",
+        "La seule commande lit le SKILL.md ; aucun autre outil, lecture métier, réseau fournisseur, application, build, DB, Docker ou navigateur n'apparaît dans le journal filtré.",
+        "L'exhaustivité du filtrage est une limite explicite ; les événements bruts n'ont pas été consultés."
+      ]
+    },
+    {
+      "criterion": "Levée de SEL-01 avec conservation de la portée historique et méthodologique",
+      "result": "PASS",
+      "evidence": [
+        "oracle.md:157 demande le chargement du candidat exact ; la commande native et son corps intégral l'établissent matériellement dans run-02.",
+        "run-01/review-selection.md:72-88 reste inchangé : PB-S01/run-01 BLOCKED pour absence de preuve de chargement.",
+        "Le complément instrumenté lève la preuve ouverte dans la qualification courante ; il ne qualifie pas une exécution avec le seul prompt A1, sans l'enveloppe ajoutée, ni l'injection automatique du CLI."
+      ]
+    }
+  ],
+  "findings": [
+    {
+      "id": "SEL-01",
+      "status": "CLOSED_BY_COMPLEMENTARY_RUN",
+      "severity": "none_remaining_in_instrumented_scope",
+      "description": "Le corps exact du candidat a été intégralement retourné par une lecture locale réussie dans PB-S01/run-02. Cette nouvelle preuve lève le manque de chargement dans la qualification courante. PB-S01/run-01 reste BLOCKED, sans modification de ses preuves ou de son verdict."
+    }
+  ],
+  "limits": [
+    "Le PASS porte seulement sur le chargement outil et le routage explicite dans l'essai instrumenté run-02. L'enveloppe impose génériquement la lecture et modifie l'entrée par rapport au seul prompt A1 ; ce n'est pas une reproduction à entrée identique de run-01.",
+    "Ce résultat ne démontre pas que le même chargement aurait eu lieu sans cette obligation, ni l'injection automatique antérieure du CLI.",
+    "Le catalogue est une reconstruction locale postérieure ; sa présence exacte dans la requête effectivement transmise n'est pas certifiée. L'absence d'ajout manuel supplémentaire et le mode de lancement reposent aussi sur les attestations documentées du superviseur.",
+    "La revue utilise le journal natif filtré dont le corps de lecture est conservé. Elle ne vérifie pas indépendamment l'exhaustivité du filtrage ; aucun événement de raisonnement brut ni prompt-render complet n'a été lu, et le hash du journal brut n'est pas attesté par cette revue.",
+    "Les horodatages et les empreintes avant exécution sont des preuves locales cohérentes ; ils ne sont pas une attestation temporelle externe signée. Modèle et effort exacts restent non exposés.",
+    "La revue ne vaut ni validation humaine du skill, ni installation personnelle, ni validation métier de la scorecard, ni mesure fournisseur.",
+    "Aucun évaluateur n'a été contacté ; aucun nouveau modèle, essai, accès réseau, application, build, DB ou Docker n'a été exécuté. Seuls review.md et review.json sont produits par le relecteur."
+  ]
+}

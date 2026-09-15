@@ -27,11 +27,12 @@ Le propriétaire a accepté WO-062 et autorisé la préparation de `ss-provider-
 Son [inventaire de 38 sources](evaluations/WO-062/ss-provider-benchmark/source-inventory.md)
 et ses [12 cas d'évaluation](evaluations/WO-062/ss-provider-benchmark/evaluation-plan.md)
 ont été figés avec un oracle séparé avant rédaction. Le [candidat](local-lab/ss-provider-benchmark/SKILL.md)
-est désormais évalué : douze cas exécutés, 11 PASS ; PB-S01 conserve une preuve de chargement
-explicite insuffisante malgré un routage correct. Le [protocole et la scorecard prematch/live](evaluations/WO-062/ss-provider-benchmark/run-01/cases/PB-N01/response.md)
-sont produits. Voir les [résultats et limites A2](../validation/WO062-PROVIDER-BENCHMARK-CANDIDATE-20260915.md).
+est désormais qualifié sur les douze cas figés : onze PASS de run-01 et le PASS complémentaire
+PB-S01 de run-02, instrumenté avec lecture intégrale du candidat exact. Le [protocole et la scorecard prematch/live](evaluations/WO-062/ss-provider-benchmark/run-01/cases/PB-N01/response.md)
+sont produits. Voir la [qualification et ses limites](../validation/WO062-PROVIDER-BENCHMARK-PBS01-QUALIFICATION-20260915.md).
 La [préparation A1](../validation/WO062-PROVIDER-BENCHMARK-PREPARATION-20260915.md) demeure intacte,
-avec son état historique `NOT_RUN`. Le candidat attend la preuve manquante puis la validation humaine.
+avec son état historique `NOT_RUN`. Run-01 conserve son BLOCKED initial ; la qualification
+courante renvoie à la preuve complémentaire. Le candidat attend désormais la validation humaine.
 
 Chaque skill devra passer un cas historique connu, une tâche nouvelle et des tests de sélection,
 puis une revue. Les sources du Lab font autorité : J8 ne dispose pas de contrôle externe intégré,
