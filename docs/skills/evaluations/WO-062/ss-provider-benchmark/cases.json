@@ -1,0 +1,156 @@
+{
+  "schema": "wo062-provider-benchmark-cases-v1",
+  "status": "PREPARED_NOT_RUN",
+  "case_count": 12,
+  "cases": [
+    {
+      "id": "PB-H01",
+      "kind": "historical",
+      "prompt": "Relis le rapport J8 du 30 août 2026 et sa validation finale. Produis une note vérifiable sur les populations, taux, latences, complétude, coûts et portée du verdict. Signale ce qu'il permet de conclure sur SofaScore et ce qui reste inconnu. Lire seulement les sources autorisées. Aucun réseau, démarrage d'application, accès DB/Docker, collecte ou modification des sources. Écrire la réponse dans le dossier de sortie isolé fourni à l'exécution.",
+      "source_ids": [
+        "N01",
+        "N07",
+        "P01",
+        "H01",
+        "H03"
+      ],
+      "input_case": null,
+      "status": "NOT_RUN"
+    },
+    {
+      "id": "PB-N01",
+      "kind": "new_task",
+      "prompt": "Prépare un protocole reproductible et une première scorecard pour évaluer l'utilité du Local Lab avant match puis en live. Détermine les comparaisons déjà possibles et les preuves manquantes, avec populations, unités d'observation, checkpoints, métriques, coûts et limites. Replace chaque preuve dans sa politique historique et dans le fonctionnement actuel. Lire seulement les sources autorisées. Aucun réseau, démarrage d'application, accès DB/Docker, collecte ou modification des sources. Écrire la réponse dans le dossier de sortie isolé fourni à l'exécution.",
+      "source_ids": [
+        "N01",
+        "N02",
+        "N03",
+        "N04",
+        "N05",
+        "N06",
+        "N07",
+        "N09",
+        "P01",
+        "P03",
+        "I07",
+        "I12",
+        "H01",
+        "H05",
+        "H06",
+        "H07",
+        "H08",
+        "H09",
+        "H10"
+      ],
+      "input_case": null,
+      "status": "NOT_RUN"
+    },
+    {
+      "id": "PB-C01",
+      "kind": "counterexample",
+      "prompt": "Séparer les populations et déterminer mesures et coûts disponibles. Applique les définitions du Lab et justifie les calculs et les limites. Lire seulement les sources autorisées. Aucun réseau, démarrage d'application, accès DB/Docker, collecte ou modification des sources. Écrire la réponse dans le dossier de sortie isolé fourni à l'exécution.",
+      "source_ids": [
+        "N01",
+        "N07",
+        "I03",
+        "I07"
+      ],
+      "input_case": "PB-C01",
+      "status": "NOT_RUN"
+    },
+    {
+      "id": "PB-C02",
+      "kind": "counterexample",
+      "prompt": "Calculer les taux et la distribution des latences à asOf. Applique les définitions du Lab et justifie les calculs et les limites. Lire seulement les sources autorisées. Aucun réseau, démarrage d'application, accès DB/Docker, collecte ou modification des sources. Écrire la réponse dans le dossier de sortie isolé fourni à l'exécution.",
+      "source_ids": [
+        "N07",
+        "I03"
+      ],
+      "input_case": "PB-C02",
+      "status": "NOT_RUN"
+    },
+    {
+      "id": "PB-C03",
+      "kind": "counterexample",
+      "prompt": "Calculer complétude pondérée et distribution des statuts. Applique les définitions du Lab et justifie les calculs et les limites. Lire seulement les sources autorisées. Aucun réseau, démarrage d'application, accès DB/Docker, collecte ou modification des sources. Écrire la réponse dans le dossier de sortie isolé fourni à l'exécution.",
+      "source_ids": [
+        "N07",
+        "I03"
+      ],
+      "input_case": "PB-C03",
+      "status": "NOT_RUN"
+    },
+    {
+      "id": "PB-C04",
+      "kind": "counterexample",
+      "prompt": "Déterminer dossiers exploitables et coûts ; traiter aussi la variante. Applique les définitions du Lab et justifie les calculs et les limites. Lire seulement les sources autorisées. Aucun réseau, démarrage d'application, accès DB/Docker, collecte ou modification des sources. Écrire la réponse dans le dossier de sortie isolé fourni à l'exécution.",
+      "source_ids": [
+        "N07",
+        "I03",
+        "I06"
+      ],
+      "input_case": "PB-C04",
+      "status": "NOT_RUN"
+    },
+    {
+      "id": "PB-C05",
+      "kind": "counterexample",
+      "prompt": "Évaluer inclusions temporelles, variante du cutoff, HTTP et export ; comparer contrat et code si besoin. Applique les définitions du Lab et justifie les calculs et les limites. Lire seulement les sources autorisées. Aucun réseau, démarrage d'application, accès DB/Docker, collecte ou modification des sources. Écrire la réponse dans le dossier de sortie isolé fourni à l'exécution.",
+      "source_ids": [
+        "N07",
+        "I02",
+        "I03",
+        "P02",
+        "I01",
+        "I07"
+      ],
+      "input_case": "PB-C05",
+      "status": "NOT_RUN"
+    },
+    {
+      "id": "PB-C06",
+      "kind": "counterexample",
+      "prompt": "Reprendre les classifications J6 fournies et calculer les délais réellement définis par J8. Applique les définitions du Lab et justifie les calculs et les limites. Lire seulement les sources autorisées. Aucun réseau, démarrage d'application, accès DB/Docker, collecte ou modification des sources. Écrire la réponse dans le dossier de sortie isolé fourni à l'exécution.",
+      "source_ids": [
+        "N07",
+        "N08",
+        "I03",
+        "I05"
+      ],
+      "input_case": "PB-C06",
+      "status": "NOT_RUN"
+    },
+    {
+      "id": "PB-S01",
+      "kind": "selection",
+      "prompt": "Utilise $ss-provider-benchmark pour préparer une scorecard prematch/live du Local Lab à partir des rapports J8 et WO-058 déjà versionnés, sans réseau.",
+      "source_ids": [],
+      "input_case": null,
+      "status": "NOT_RUN"
+    },
+    {
+      "id": "PB-S02",
+      "kind": "selection",
+      "prompt": "Dans le SofaScore Local Lab, peut-on comparer le coût par dossier et la fraîcheur du benchmark du 30 août avec les campagnes live de septembre ? Établis les dénominateurs, populations comparables et limites à partir des preuves locales.",
+      "source_ids": [],
+      "input_case": null,
+      "status": "NOT_RUN"
+    },
+    {
+      "id": "PB-S03",
+      "kind": "selection",
+      "prompt": "Dans le Local Lab, vérifie la cohérence des XML Surefire/Failsafe de ce build et explique pourquoi Maven semble vert. Je ne demande aucune mesure fournisseur.",
+      "source_ids": [],
+      "input_case": null,
+      "status": "NOT_RUN"
+    },
+    {
+      "id": "PB-S04",
+      "kind": "selection",
+      "prompt": "Dans le dépôt Betting Project uniquement, compare les offres API-FOOTBALL et Highlightly et prépare sa scorecard fournisseur. N'utilise pas le SofaScore Local Lab.",
+      "source_ids": [],
+      "input_case": null,
+      "status": "NOT_RUN"
+    }
+  ]
+}

@@ -4,6 +4,20 @@ Les évolutions notables du SofaScore Local Lab sont consignées dans ce fichier
 
 ## [Non publié]
 
+### WO-062 — cadrage des skills spécialisés du lot 2
+
+- Consigne l'acceptation du WO-062 et réalise la préparation A1 de `ss-provider-benchmark` :
+  [38 sources et 12 cas](docs/skills/evaluations/WO-062/ss-provider-benchmark/evaluation-plan.md),
+  corpus synthétique, oracle séparé et manifeste d'empreintes. Les évaluations restent `NOT_RUN` ;
+  voir la [preuve de préparation](docs/validation/WO062-PROVIDER-BENCHMARK-PREPARATION-20260915.md).
+- Prépare le [WO-062](docs/work_orders/active/WO-SS-20260915-062-skills-lot2.md) pour développer
+  `ss-provider-benchmark`, puis `ss-football-quality` et `ss-ci-security`, puis `ss-java-module`
+  et `ss-windows-runtime`, selon les rôles de la conversation « Skills du lot 2 ».
+- Définit les adaptations propres au Lab, les sources actuelles, dix évaluations métier,
+  vingt cas de sélection et l'évolution de l'installateur avec conservation du lot 1.
+- Distingue les [contrôles du cadrage](docs/validation/WO062-SKILLS-LOT2-SCOPING-20260915.md)
+  de la réalisation, de la validation humaine et de l'installation futures des cinq skills.
+
 ### WO-061 — CI locale et maîtrise des quotas
 
 - Prépare la clôture documentaire et la fusion de la [PR #37](https://github.com/djothepirate/betting-sofascore-local-lab/pull/37)

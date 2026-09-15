@@ -140,6 +140,14 @@ les HTTP 404 des trois familles J5 comme des indisponibilités à réinterroger 
 planifié, et bloque la sélection J4 d'une rencontre déjà suivie, sauf `STOPPED_ERROR`.
 La reprise fournisseur après ce correctif reste à valider par l'opérateur.
 
+**Skills du lot 2 — WO accepté le 15 septembre 2026 :** le
+[WO-062](docs/work_orders/active/WO-SS-20260915-062-skills-lot2.md) prépare, dans cet ordre,
+`ss-provider-benchmark`, `ss-football-quality`, `ss-ci-security`, `ss-java-module` et
+`ss-windows-runtime`. Leurs rôles, sources et critères d'évaluation sont définis ; leur
+développement et leur installation restent à réaliser. La préparation de `ss-provider-benchmark`
+dispose désormais de [38 sources et 12 cas d'évaluation](docs/skills/evaluations/WO-062/ss-provider-benchmark/evaluation-plan.md)
+figés, sans essai du skill exécuté. Voir le [guide des skills](docs/skills/README.md).
+
 **Skills du lot 1 validés — 5 septembre 2026 :** les cinq skills `ss-*` sont livrés avec
 leur [guide et installateur personnel](docs/skills/README.md), sous
 [WO-054](docs/work_orders/completed/WO-SS-20260905-054-skills-lot1.md).

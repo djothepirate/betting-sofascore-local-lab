@@ -10,6 +10,35 @@ Les cinq skills du lot 1 ont été validés par le propriétaire le 5 septembre 
 | [ss-data-contract-replay](local-lab/ss-data-contract-replay/SKILL.md) | Préserver provenance, snapshots, complétude, contrats et validation humaine. |
 | [ss-review-closeout](local-lab/ss-review-closeout/SKILL.md) | Relier revue, qualification, décisions, clôture et état Git courant. |
 
+## Lot 2 — développement cadré, skills à réaliser
+
+Le [WO-062](../work_orders/active/WO-SS-20260915-062-skills-lot2.md), préparé le 15 septembre 2026,
+adapte au Local Lab les rôles de la conversation « Skills du lot 2 » dans l'ordre demandé :
+
+| Étape | Skill prévu | Rôle |
+|---|---|---|
+| A | `ss-provider-benchmark` | Protocole reproductible, populations et dénominateurs, coût et limites des mesures. |
+| B | `ss-football-quality` | Cohérence sémantique des données football, anomalies et corrections tardives. |
+| B | `ss-ci-security` | Diagnostic CI et preuve des contrôles réellement applicables au candidat. |
+| C | `ss-java-module` | Placement des responsabilités et dépendances dans les couches Java du Lab. |
+| C | `ss-windows-runtime` | Reproduction et diagnostic dans le runtime Windows concerné. |
+
+Le propriétaire a accepté WO-062 et autorisé la préparation de `ss-provider-benchmark`.
+Son [inventaire de 38 sources](evaluations/WO-062/ss-provider-benchmark/source-inventory.md)
+et ses [12 cas d'évaluation](evaluations/WO-062/ss-provider-benchmark/evaluation-plan.md)
+sont préparés avec des entrées figées et un oracle séparé. Les résultats restent `NOT_RUN`.
+Voir les [contrôles de cette étape](../validation/WO062-PROVIDER-BENCHMARK-PREPARATION-20260915.md).
+
+Chaque skill devra passer un cas historique connu, une tâche nouvelle et des tests de sélection,
+puis une revue. Les sources du Lab font autorité : J8 ne dispose pas de contrôle externe intégré,
+et la CI suit notamment l'allègement adopté dans WO-061. Le WO distingue les
+[preuves du cadrage](../validation/WO062-SKILLS-LOT2-SCOPING-20260915.md) de cette qualification future.
+
+Le paquet et l'installateur ci-dessous livrent toujours **les cinq skills du lot 1**. WO-062
+prévoit un nouveau manifeste et une évolution qualifiée de l'installateur pour les dix skills,
+avec préservation du contenu approuvé et des preuves SKL-002. Les cinq skills du lot 2 ne sont
+ni créés ni installés pendant ce cadrage.
+
 ## Installation personnelle depuis ce dépôt
 
 Dans PowerShell sous Windows, à la racine du checkout :
