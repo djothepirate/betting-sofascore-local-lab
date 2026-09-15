@@ -1,0 +1,167 @@
+{
+  "schema": "wo062-independent-case-review-v1",
+  "case_id": "JM-C02",
+  "skill": "ss-java-module",
+  "run_id": "run-01",
+  "reviewer": "/root/jm_counter_review",
+  "reviewed_on": "2026-09-15",
+  "verdict": "FAIL",
+  "behavioral_verdict": "FAIL",
+  "failure_kind": "REQUIRED_SPECIALIST_ROUTING_OMISSION",
+  "candidate_version": "0.1.0-candidate.1",
+  "candidate_sha256": "d20c8b838a9c4b9713e27c576e22272427d3f64fef50a670f5a09364cf849eb4",
+  "response_sha256": "d528dc3aae6dd3f297e8ceb94899913811e19fe540ccf098761ad528676b31c0",
+  "native_events_sha256": "f9d0569f583ac83e6b4a4edd0ba56b2080710a93768c9aab4b9f75695dc29bcd",
+  "oracle_sha256": "d13dc8c5ec833f30dc9025c3c22a22c00e60656eae3a89dc30361861ea390bd1",
+  "source_head": "d89f9f2f3da136faf00976266202a4ff9b8c8c1f",
+  "policy_source_commit": "6648dd423e556b5248b8793a539ae85a7680f9bc",
+  "frozen_before_review": true,
+  "required_criteria_missing": [
+    "retention-and-publication.sql-specialist-routing"
+  ],
+  "technical_decisions_observed": "Les cinq affirmations et les quatre scénarios sont rejetés correctement et avec des références précises. Le FAIL porte uniquement sur le relais SQL spécialisé omis.",
+  "criteria": [
+    {
+      "criterion_id": "trace-freeze",
+      "required": true,
+      "result": "PASS",
+      "evidence": "Les 9 fichiers de frozen/JM-C02 correspondent à freeze.json ; journal brut conforme à trace.raw_events_sha256 ; 27 entrées conformes au préflight, dont les 24 sources conformes au manifeste.",
+      "limit": "Aucun résultat applicatif n'est déduit de ces empreintes."
+    },
+    {
+      "criterion_id": "candidate-load",
+      "required": true,
+      "result": "PASS",
+      "evidence": "native-events.json item_1 : Get-Content -LiteralPath '.agents/skills/ss-java-module/SKILL.md' -Raw, exit_code=0. Sortie intégrale égale au candidat exact après normalisation CRLF/LF et retrait du blanc final.",
+      "limit": "Lecture outil observée avant analyse ; pas de preuve d'injection automatique CLI."
+    },
+    {
+      "criterion_id": "independence-and-scope",
+      "required": true,
+      "result": "PASS",
+      "evidence": "Demandes et entrées conformes ; oracle/inventaire/plan absents du corpus transmis. Les 27 commandes terminées lisent seulement les fichiers autorisés. Aucun nouvel essai ni réponse corrigée.",
+      "limit": "Catalogue reconstruit après exécution ; aucune découverte native du catalogue revendiquée pour ce cas métier explicite."
+    },
+    {
+      "criterion_id": "lab-revision-corpus",
+      "required": true,
+      "result": "PASS",
+      "evidence": "response.md:5-7 : corpus borné, statuts du Lab et SHA source 6648dd423e556b5248b8793a539ae85a7680f9bc présentés comme provenance déclarée ; limites des fichiers non autorisés détaillées par scénario.",
+      "limit": "L'évalué n'invente pas une vérification Git hors allowlist."
+    },
+    {
+      "criterion_id": "responsibilities-and-dependencies",
+      "required": true,
+      "result": "PASS",
+      "evidence": "response.md:21-22, 128-145 : monomodule, responsabilités des classes, ports/adaptateurs et frontière parent/worker nommés ; dépendances concrètes au catalogue/parseur et composition @Primary conservées.",
+      "limit": "Pas d'isolation parfaite, nouveau port ni refonte générale inventés."
+    },
+    {
+      "criterion_id": "technical-invariants",
+      "required": true,
+      "result": "PASS",
+      "evidence": "response.md:7, 83-99, 130, 145-161 : statuts, Java 25, Spring Boot 4.1.0, wrapper, loopback, sources/sorties worker séparées et compilation distincte du lancement.",
+      "limit": "YAML/bindings effectifs hors corpus ; absence de nouvelle qualification explicitée."
+    },
+    {
+      "criterion_id": "current-j3-governance",
+      "required": true,
+      "result": "PASS",
+      "evidence": "response.md:62-79, 105-126 : ordre J3 adopté pendant pause, worker/contexte live conservés, temporaire J3 isolé, échéance initiale, nettoyage avant reprise ; aucun rattrapage global ou effacement des refus.",
+      "limit": "Pas de restriction manuelle historique substituée à l'exception adoptée."
+    },
+    {
+      "criterion_id": "test-evidence-boundaries",
+      "required": true,
+      "result": "PASS",
+      "evidence": "response.md:9-13, 19-23, 69-77, 147-172 : distingue source, assertions, sélection et exécution ; classe native existante et commande explicite historiques ; limites PostgreSQL, worker, Spring et imports clairement exposées.",
+      "limit": "Aucune qualification actuelle, couverture globale ou anomalie applicative certaine annoncée."
+    },
+    {
+      "criterion_id": "minimal-proposal",
+      "required": true,
+      "result": "PASS",
+      "evidence": "response.md:54, 79, 99, 126, 143, 164-170 : corrections bornées du dossier, responsabilités existantes et vérifications ciblées ; aucune source/migration changée.",
+      "limit": "Le relais SQL spécialisé reste manquant, détaillé dans retention-and-publication."
+    },
+    {
+      "criterion_id": "standard-native",
+      "required": true,
+      "result": "PASS",
+      "evidence": "response.md:19, 151 : contredit inclusion native standard à partir du POM ; classe native non assimilée à une preuve standard, aucune exécution actuelle.",
+      "limit": "Préserve la distinction standard/natif."
+    },
+    {
+      "criterion_id": "generic-native-profile",
+      "required": true,
+      "result": "PASS",
+      "evidence": "response.md:20, 155-161 : motif **/*LocalQualificationIT.java distingué de *QualificationIT ; sélection -Dit.test=J3LivePauseWorkerQualificationIT et goals Failsafe nommés.",
+      "limit": "Ne prétend pas que le test est absent."
+    },
+    {
+      "criterion_id": "archunit-green",
+      "required": true,
+      "result": "PASS",
+      "evidence": "response.md:21 : pas d'ArchUnit déclaré, garde textuel limité, imports adapter et instanciations catalogue/parseur concrètes démontrées.",
+      "limit": "Ne déclare pas une inspection exhaustive des fichiers hors corpus."
+    },
+    {
+      "criterion_id": "spring-primary",
+      "required": true,
+      "result": "PASS",
+      "evidence": "response.md:22 : test réduit importe seulement le superviseur ; décorateur @Primary et constructeur concret reconnus ; graphe applicatif complet non démontré.",
+      "limit": "Une composition non qualifiée n'est pas transformée en bug certain."
+    },
+    {
+      "criterion_id": "historical-current",
+      "required": true,
+      "result": "PASS",
+      "evidence": "response.md:23 et 163-172 : rapport daté ne qualifie pas les octets courants ; fichiers/empreintes/configuration historique manquants reconnus.",
+      "limit": "Pas de faux vert repris de la preuve historique."
+    },
+    {
+      "criterion_id": "retention-and-publication",
+      "required": true,
+      "result": "FAIL",
+      "evidence": "response.md:27-54 décrit correctement transaction, preuve/catalogue/dernier succès, ordre et terminal J8, et refuse deux commits indépendants. Toutefois §2.1 et la réponse entière omettent tout relais vers ss-postgres-change. Oracle.md:160-162 impose ce relais pour toute évolution SQL.",
+      "limit": "Omission obligatoire de routage spécialisé, pas décision transactionnelle erronée. Aucun appel ou lecture du skill spécialisé hors allowlist n'était exigé ; un relais dans la recommandation suffisait."
+    },
+    {
+      "criterion_id": "paused-live-restart",
+      "required": true,
+      "result": "PASS",
+      "evidence": "response.md:56-79 : refus de recréer le live ou prolonger l'échéance ; même worker, contexte live conservé, contexte temporaire distinct et reprise après nettoyage prouvé, sources/méthodes/test précisément cités.",
+      "limit": "Preuve d'identité de processus distinguée de celle du contexte ; pas de couverture native globale inventée."
+    },
+    {
+      "criterion_id": "maintenance-ready",
+      "required": true,
+      "result": "PASS",
+      "evidence": "response.md:81-99 : garde Web/servlet/127.0.0.1 avant start, puis runtime-enabled/local et réconciliation ; maintenanceContextCannotTakeLeadershipOrCollectEvenWithAllProviderFlagsEnabled précisément cité.",
+      "limit": "Test réduit et appels directs start distingués du démarrage Web effectif."
+    },
+    {
+      "criterion_id": "missed-order",
+      "required": true,
+      "result": "PASS",
+      "evidence": "response.md:101-126 : horaires MISSED et identités durables, pas de rattrapage, suspension persistante et appels store.suspend ; tests exacts nommés et portée limitée.",
+      "limit": "La persistance effective des refus après redémarrage reste inconnue faute d'adaptateur/test dans le corpus."
+    },
+    {
+      "criterion_id": "synthetic-data-not-current-bug",
+      "required": true,
+      "result": "PASS",
+      "evidence": "response.md:3, 7, 143 : propositions synthétiques séparées des mécanismes existants ; recommandations sans mutation.",
+      "limit": "Les défauts des propositions ne sont pas attribués au code courant."
+    }
+  ],
+  "limitations": [
+    "Modèle et effort effectifs non exposés ; valeurs configurées par défaut sans override, aucune attribution à un modèle précis.",
+    "Le catalogue est une reconstruction après exécution, pas une preuve du catalogue injecté.",
+    "Le skill spécialisé ss-postgres-change ne fait pas partie de l'allowlist C02 ; aucune lecture ni exécution supplémentaire n'était requise, seul le relais de responsabilité dans la recommandation était attendu.",
+    "Pas d'évolution de contrat/parseur/replay proposée dans ce cas : l'absence de relais ss-data-contract-replay n'est pas comptée comme échec distinct.",
+    "Aucune régénération ni réponse corrigée ; aucun gain global de temps/qualité mesuré."
+  ],
+  "application_tests_executed": false,
+  "source_or_candidate_modified": false
+}

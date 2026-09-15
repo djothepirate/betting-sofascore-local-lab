@@ -1,0 +1,11 @@
+{
+  "recorded_at_utc": "2026-09-15T21:05:15.897074+00:00",
+  "authorized_by": "repository owner, current Codex task",
+  "decision": "J’autorise les 16 essais",
+  "scope": "8 ss-java-module and 8 ss-windows-runtime ephemeral sessions in the model service configured in Codex; exact candidate, local skill catalogue, case-allowlisted versioned internal sources only; no oracle. WR-H01 and WR-N01 may execute only frozen bounded local probes in isolated temporary resources.",
+  "initial_launch_rejected": true,
+  "initial_rejection_reason": "Previous explicit model egress approval covered PB and FQ/CS only. Current owner specifically approved Java/Windows before any session launch.",
+  "initial_attempt_started_process": false,
+  "human_content_validation": false,
+  "personal_installation_authorized": false
+}

@@ -1,0 +1,68 @@
+{
+  "schema": "wo062-java-module-static-review-v1",
+  "review_type": "STATIC_CANDIDATE_REVIEW_NOT_BEHAVIORAL_EVALUATION",
+  "skill_name": "ss-java-module",
+  "skill_version": "0.1.0-candidate.1",
+  "reviewed_commit": "d89f9f2f3da136faf00976266202a4ff9b8c8c1f",
+  "reviewed_on": "2026-09-15",
+  "reviewer": "java_prepare",
+  "independence": "Reviewer prepared the frozen source inventory and oracle, but did not author or modify the candidate. This is a static design review, not an oracle-isolated behavioral session.",
+  "verdict": "PASS",
+  "material_findings": [],
+  "candidate_files": [
+    {
+      "path": "docs/skills/local-lab/ss-java-module/SKILL.md",
+      "bytes": 8306,
+      "sha256": "d20c8b838a9c4b9713e27c576e22272427d3f64fef50a670f5a09364cf849eb4"
+    },
+    {
+      "path": "docs/skills/local-lab/ss-java-module/agents/openai.yaml",
+      "bytes": 309,
+      "sha256": "ccc4fc2a4707838dd6defdd73ef6f6c7ee0d69e6df86e41689a46884691573ae"
+    }
+  ],
+  "preparation_manifest_sha256": "a0907baba5a15606b6a735873a3e8ab9cc4043dfe8d852f3b843e1ec61b68290",
+  "review_basis": [
+    "WO-062 sections 4.C1, 5 and 6",
+    "Frozen Java source corpus and its stated temporal limitations",
+    "C:/Users/geoff/.codex/skills/.system/skill-creator/SKILL.md",
+    "C:/Users/geoff/.codex/skills/.system/skill-creator/references/openai_yaml.md"
+  ],
+  "checks": [
+    {
+      "subject": "Scope and discovery",
+      "result": "PASS",
+      "evidence": "Description targets Lab Java responsibilities, interfaces and activation; simple build and unrelated repository explicitly excluded. Metadata agrees and default_prompt names $ss-java-module."
+    },
+    {
+      "subject": "Actual architecture",
+      "result": "PASS",
+      "evidence": "Monomodule maintained; package and role distinguished; concrete application-to-adapter dependencies visible; no invented port or installed ArchUnit."
+    },
+    {
+      "subject": "J3 and worker authority",
+      "result": "PASS",
+      "evidence": "Adopted J3 authority is preserved without a new permission requirement; no extension to other routes, fallback or implicit standard-browser startup."
+    },
+    {
+      "subject": "Composition and coverage",
+      "result": "PASS",
+      "evidence": "@Primary and reduced Spring test contexts distinguished; Maven sources/includes/Failsafe selection, current and historical evidence, and simulated/native tests separated."
+    },
+    {
+      "subject": "Proportionality and references",
+      "result": "PASS",
+      "evidence": "Outcomes and criteria leave implementation judgment; constraints address actual Lab boundaries; repository paths/class names are discoverable from worktree. No universal five-module redesign or implicit external action."
+    }
+  ],
+  "limitations": [
+    "No behavioral case or native selection session run by this reviewer.",
+    "No application test, Maven, browser, worker or database launched.",
+    "Static PASS does not establish candidate qualification, human acceptance, or permission to install.",
+    "Review uses the already-read corpus and targeted candidate inspection; no exhaustive fresh repository audit."
+  ],
+  "writes": [
+    ".tmp/wo062-evaluations/ss-java-module/run-01/review-static.md",
+    ".tmp/wo062-evaluations/ss-java-module/run-01/review-static.json"
+  ]
+}

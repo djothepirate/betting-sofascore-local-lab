@@ -1,0 +1,3 @@
+À partir de la demande ci-dessous et du catalogue réellement découvert, détermine les skills pertinents. Pour chaque skill retenu, lis intégralement son fichier SKILL.md avec un outil, puis indique le nom, le chemin effectivement lu et la raison de sa sélection. Si aucun skill ne convient, dis-le. Arrête-toi après ce routage : n’exécute pas la tâche métier. Ne lis aucun oracle, résultat antérieur, inventaire commenté ou plan d’évaluation. Demande à router :
+
+Dans le dépôt atelier-factures, application Java indépendante du SofaScore Local Lab et du Betting Project, relis les dépendances entre son contrôleur HTTP et son service de facturation à partir de ses propres fichiers.

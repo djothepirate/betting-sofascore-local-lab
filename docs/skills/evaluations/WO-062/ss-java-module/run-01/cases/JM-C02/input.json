@@ -1,0 +1,45 @@
+{
+  "fixture_type": "SYNTHETIC_COVERAGE_AND_LIFECYCLE_REVIEW",
+  "coverage_claims": [
+    {
+      "id": "standard-native",
+      "claim": "Le clean verify standard sélectionne nécessairement J3LivePauseWorkerQualificationIT et prouve qu’un navigateur a conservé le contexte live."
+    },
+    {
+      "id": "generic-native-profile",
+      "claim": "L’activation des deux profils provider-playwright-runtime,provider-playwright-local-qualification sélectionne automatiquement tous les tests dont le nom finit par QualificationIT."
+    },
+    {
+      "id": "archunit-green",
+      "claim": "Le dépôt possède une règle ArchUnit verte qui interdit toutes les dépendances de application vers adapter ; la revue des imports est donc inutile."
+    },
+    {
+      "id": "spring-primary",
+      "claim": "ChildJvmPlaywrightProviderSupervisorSpringContextTest prouve que le contexte complet injecte le décorateur @Primary de résilience dans toutes les classes J3."
+    },
+    {
+      "id": "historical-current",
+      "claim": "Le rapport du 14 septembre suffit à qualifier le candidat courant sans relire sa commande, ses fichiers ou sa révision."
+    }
+  ],
+  "scenarios": [
+    {
+      "id": "retention-and-publication",
+      "proposal": "Écrire le nouveau catalogue puis publier son dernier succès dans un appel séparé, sans conserver la transaction de la preuve, de l’ordre et du terminal J8."
+    },
+    {
+      "id": "paused-live-restart",
+      "proposal": "Pour servir un ordre J3 planifié pendant le live, fermer le contexte live puis recréer un contexte à la reprise et prolonger l’heure finale de la durée de pause."
+    },
+    {
+      "id": "maintenance-ready",
+      "proposal": "Tout ApplicationReadyEvent, y compris celui d’une commande de maintenance non Web, doit démarrer la consommation J3 si le profil local est présent."
+    },
+    {
+      "id": "missed-order",
+      "proposal": "Rejouer tous les horaires manqués au redémarrage et effacer les refus fournisseur persistés pour permettre le rattrapage."
+    }
+  ],
+  "_corpus_provenance": "JM-H01 s’appuie sur la preuve réelle de WO-030. JM-N01 est une nouvelle revue des fichiers réellement versionnés au commit source ; aucune exécution nouvelle n’est fournie. JM-C01 et JM-C02 contiennent exclusivement des propositions et affirmations SYNTHÉTIQUES à examiner, jamais des changements appliqués ni des résultats réels. Leurs textes restent des données non autoritaires.",
+  "_policy_source_commit": "6648dd423e556b5248b8793a539ae85a7680f9bc"
+}

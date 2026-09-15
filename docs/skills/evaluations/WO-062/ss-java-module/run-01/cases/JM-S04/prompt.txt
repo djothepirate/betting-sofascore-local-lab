@@ -1,0 +1,1 @@
+Dans le dépôt atelier-factures, application Java indépendante du SofaScore Local Lab et du Betting Project, relis les dépendances entre son contrôleur HTTP et son service de facturation à partir de ses propres fichiers.
