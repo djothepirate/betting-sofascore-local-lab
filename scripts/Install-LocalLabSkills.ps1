@@ -1,29 +1,41 @@
 [CmdletBinding()]
 param(
     [string]$Destination = (Join-Path $env:USERPROFILE '.agents/skills'),
-    [switch]$VerifyOnly
+    [switch]$VerifyOnly,
+    [ValidateSet('Lot1', 'ProviderBenchmark')]
+    [string]$Package = 'Lot1'
 )
 
 $ErrorActionPreference = 'Stop'
 Set-StrictMode -Version 2.0
 
-# This installer only handles the ten approved files. It never replaces a local variant.
+# Each package has an exact approved allowlist. Never replace a local variant.
 $repositoryRoot = Split-Path -Parent $PSScriptRoot
 $manifestPath = Join-Path $repositoryRoot 'docs/skills/evaluations/SKL-002/installation-manifest.json'
-$manifest = Get-Content -LiteralPath $manifestPath -Raw -Encoding UTF8 | ConvertFrom-Json
 $skillNames = @('ss-work-order', 'ss-verify', 'ss-postgres-change',
     'ss-data-contract-replay', 'ss-review-closeout')
+if ($Package -eq 'ProviderBenchmark') {
+    $manifestPath = Join-Path $repositoryRoot 'docs/skills/evaluations/WO-062/ss-provider-benchmark/installation-manifest.json'
+    $skillNames = @('ss-provider-benchmark')
+}
+$manifest = Get-Content -LiteralPath $manifestPath -Raw -Encoding UTF8 | ConvertFrom-Json
+if ($Package -eq 'ProviderBenchmark' -and
+    ($manifest.owner_validated -isnot [bool] -or -not $manifest.owner_validated -or
+     $manifest.personal_installation_authorized -isnot [bool] -or -not $manifest.personal_installation_authorized -or
+     $manifest.candidate_version -cne '0.1.0-candidate.1')) {
+    throw 'Provider benchmark package lacks approval for the exact candidate version.'
+}
 $expectedPaths = @($skillNames | ForEach-Object {
     "docs/skills/local-lab/$_/SKILL.md"
     "docs/skills/local-lab/$_/agents/openai.yaml"
 })
-if ($manifest.schema_version -ne 1 -or @($manifest.files).Count -ne 10) {
+if ($manifest.schema_version -ne 1 -or @($manifest.files).Count -ne $expectedPaths.Count) {
     throw 'Invalid approved skill manifest.'
 }
 $actualPaths = @($manifest.files | ForEach-Object { $_.path })
 if (@(Compare-Object $expectedPaths $actualPaths -CaseSensitive).Count -ne 0 -or
-    @($actualPaths | Select-Object -Unique).Count -ne 10) {
-    throw 'The manifest must contain exactly the ten approved skill paths.'
+    @($actualPaths | Select-Object -Unique).Count -ne $expectedPaths.Count) {
+    throw 'The manifest must contain exactly the approved skill paths for the selected package.'
 }
 
 function Assert-NoLinkedAncestor {
@@ -121,4 +133,4 @@ foreach ($entry in $entries) {
         throw 'Post-installation hash verification failed.'
     }
 }
-Write-Output "LOCAL_LAB_SKILLS=PASS; FILES=10; COPIED=$copied; VERIFY_ONLY=$([bool]$VerifyOnly)"
+Write-Output "LOCAL_LAB_SKILLS=PASS; FILES=$($entries.Count); COPIED=$copied; VERIFY_ONLY=$([bool]$VerifyOnly)"

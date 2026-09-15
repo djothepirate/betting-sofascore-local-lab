@@ -1,0 +1,62 @@
+{
+  "schema_version": 1,
+  "work_order": "WO-062",
+  "verified_at_utc": "2026-09-15T19:16:38.140491+00:00",
+  "status": "PERSONALLY_INSTALLED_AND_VERIFIED",
+  "candidate_version": "0.1.0-candidate.1",
+  "owner_validated": true,
+  "source_qualification_commit": "f349f7292a4c3cadd4edef1478abc7a0388318f6",
+  "manifest_sha256": "c9c70831b744e89bed7e492865ddd2645f59ac3e2b3a86b60b0a8c317b5322a5",
+  "human_validation_sha256": "7dc658c31be332ec8db9f685c4d43b639b27e34f023e532d4e8827eee85970b8",
+  "files": [
+    {
+      "path": "docs/skills/local-lab/ss-provider-benchmark/SKILL.md",
+      "sha256": "4bcecee4dbe75ec74530a7bda63acc8cbc84cc15dcd7c07e2ab9e6f80cc7be94",
+      "bytes": 6835,
+      "installed_path": "C:\\Users\\geoff\\.agents\\skills\\ss-provider-benchmark\\SKILL.md",
+      "installed_sha256": "4bcecee4dbe75ec74530a7bda63acc8cbc84cc15dcd7c07e2ab9e6f80cc7be94"
+    },
+    {
+      "path": "docs/skills/local-lab/ss-provider-benchmark/agents/openai.yaml",
+      "sha256": "707b19c6ff8b73d6a5962244ef2855e163dc3c55b8f27ea14ef2e9863ac66bdd",
+      "bytes": 322,
+      "installed_path": "C:\\Users\\geoff\\.agents\\skills\\ss-provider-benchmark\\agents\\openai.yaml",
+      "installed_sha256": "707b19c6ff8b73d6a5962244ef2855e163dc3c55b8f27ea14ef2e9863ac66bdd"
+    }
+  ],
+  "installation": {
+    "command": "powershell.exe -NoProfile -ExecutionPolicy Bypass -File scripts/Install-LocalLabSkills.ps1 -Package ProviderBenchmark -Destination C:/Users/geoff/.agents/skills",
+    "exit_code": 0,
+    "files_checked": 2,
+    "files_copied": 2
+  },
+  "verification": {
+    "command": "same command with -VerifyOnly",
+    "exit_code": 0,
+    "files_checked": 2,
+    "files_copied": 0
+  },
+  "format_validation": "Official quick_validate.py PASS with existing isolated PyYAML dependency",
+  "installer_tests": {
+    "Lot1": 7,
+    "ProviderBenchmark": 11,
+    "failures": 0,
+    "isolated_destinations": true
+  },
+  "lot1_installed_files_unchanged": 10,
+  "lot1_timestamps_unchanged": true,
+  "discovery_entries": 1,
+  "model_invoked": false,
+  "script_sources": [
+    {
+      "path": "scripts/Install-LocalLabSkills.ps1",
+      "worktree_sha256": "2b826e307289914a56d0f90049bf74b46830a9052e53bbc45be373a581b9fe46",
+      "git_blob_oid": "1602e7f3ecf5372a6569e55fbc554494fcf1df1c"
+    },
+    {
+      "path": "scripts/Test-LocalLabSkillsInstallation.ps1",
+      "worktree_sha256": "b4af603f1661cc78d55a38ec2179055a50b42c87ba1554647b710fd4cb8a51c1",
+      "git_blob_oid": "caa98ec17041dca56560ad5fbd4c478ee500238d"
+    }
+  ]
+}

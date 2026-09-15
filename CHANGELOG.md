@@ -6,17 +6,23 @@ Les évolutions notables du SofaScore Local Lab sont consignées dans ce fichier
 
 ### WO-062 — skills spécialisés du lot 2
 
+- Consigne la validation propriétaire de `ss-provider-benchmark 0.1.0-candidate.1` et réalise son
+  [installation personnelle vérifiée](docs/validation/WO062-PROVIDER-BENCHMARK-INSTALLATION-20260915.md).
+  Ajoute le paquet explicite `ProviderBenchmark`, son manifeste de deux fichiers approuvés
+  et les contrôles de coexistence avec le lot 1 ; 18 cas d'installation isolée réussis.
+  Le contenu du skill, les preuves A1/A2 et les dix fichiers personnels du lot 1 restent intacts.
+
 - Complète PB-S01 par une réexécution instrumentée : lecture intégrale du candidat inchangé,
   empreintes concordantes et revue indépendante PASS. La [qualification courante](docs/validation/WO062-PROVIDER-BENCHMARK-PBS01-QUALIFICATION-20260915.md)
   réunit douze cas PASS, en conservant le BLOCKED historique du premier run. Validation humaine
-  et installation personnelle restent à réaliser.
+  et installation personnelle restaient à réaliser à la fin de cet essai.
 
 - Rédige le candidat `ss-provider-benchmark` depuis A1 et conserve ses douze réponses évaluées
   dans des contextes indépendants de l'oracle : run-01 à 11 PASS, PB-S01 alors bloqué pour une
   preuve de chargement explicite insuffisante. Le routage des quatre cas de sélection est correct.
 - Produit le [protocole et la scorecard prematch/live](docs/skills/evaluations/WO-062/ss-provider-benchmark/run-01/cases/PB-N01/response.md),
   avec trois revues indépendantes et [preuves A2](docs/validation/WO062-PROVIDER-BENCHMARK-CANDIDATE-20260915.md).
-  Protège les octets des preuves contre la normalisation Git ; validation humaine et installation restent à faire.
+  Protège les octets des preuves contre la normalisation Git ; validation humaine et installation étaient alors à faire.
 
 - Consigne l'acceptation du WO-062 et réalise la préparation A1 de `ss-provider-benchmark` :
   [38 sources et 12 cas](docs/skills/evaluations/WO-062/ss-provider-benchmark/evaluation-plan.md),

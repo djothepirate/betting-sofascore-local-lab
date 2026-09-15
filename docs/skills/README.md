@@ -10,7 +10,7 @@ Les cinq skills du lot 1 ont été validés par le propriétaire le 5 septembre 
 | [ss-data-contract-replay](local-lab/ss-data-contract-replay/SKILL.md) | Préserver provenance, snapshots, complétude, contrats et validation humaine. |
 | [ss-review-closeout](local-lab/ss-review-closeout/SKILL.md) | Relier revue, qualification, décisions, clôture et état Git courant. |
 
-## Lot 2 — développement cadré, skills à réaliser
+## Lot 2 — premier skill validé et installé
 
 Le [WO-062](../work_orders/active/WO-SS-20260915-062-skills-lot2.md), préparé le 15 septembre 2026,
 adapte au Local Lab les rôles de la conversation « Skills du lot 2 » dans l'ordre demandé :
@@ -32,18 +32,20 @@ PB-S01 de run-02, instrumenté avec lecture intégrale du candidat exact. Le [pr
 sont produits. Voir la [qualification et ses limites](../validation/WO062-PROVIDER-BENCHMARK-PBS01-QUALIFICATION-20260915.md).
 La [préparation A1](../validation/WO062-PROVIDER-BENCHMARK-PREPARATION-20260915.md) demeure intacte,
 avec son état historique `NOT_RUN`. Run-01 conserve son BLOCKED initial ; la qualification
-courante renvoie à la preuve complémentaire. Le candidat attend désormais la validation humaine.
+courante renvoie à la preuve complémentaire. Le propriétaire a ensuite accepté le contenu,
+le périmètre et les limites de `0.1.0-candidate.1` et autorisé son installation personnelle :
+[validation et installation A3](../validation/WO062-PROVIDER-BENCHMARK-INSTALLATION-20260915.md).
+Les deux fichiers installés restent exactement ceux évalués ; la version est conservée.
 
 Chaque skill devra passer un cas historique connu, une tâche nouvelle et des tests de sélection,
 puis une revue. Les sources du Lab font autorité : J8 ne dispose pas de contrôle externe intégré,
 et la CI suit notamment l'allègement adopté dans WO-061. Le WO distingue les
 [preuves du cadrage](../validation/WO062-SKILLS-LOT2-SCOPING-20260915.md) de cette qualification future.
 
-Le paquet et l'installateur ci-dessous livrent toujours **les cinq skills du lot 1**. WO-062
-prévoit un nouveau manifeste et une évolution qualifiée de l'installateur pour les dix skills,
-avec préservation du contenu approuvé et des preuves SKL-002. Seul `ss-provider-benchmark` est
-rédigé comme candidat A2 ; il n'est pas couvert par l'installateur actuel ni installé personnellement.
-Les quatre autres skills du lot 2 restent à développer.
+L'installateur livre **les cinq skills du lot 1 par défaut**. L'option explicite
+`-Package ProviderBenchmark` installe uniquement le premier skill du lot 2, à partir de son
+[manifeste approuvé](evaluations/WO-062/ss-provider-benchmark/installation-manifest.json).
+Les quatre autres skills du lot 2 et la consolidation des dix restent à réaliser.
 
 ## Installation personnelle depuis ce dépôt
 
@@ -54,16 +56,25 @@ powershell.exe -NoProfile -ExecutionPolicy Bypass -File scripts/Install-LocalLab
 powershell.exe -NoProfile -ExecutionPolicy Bypass -File scripts/Install-LocalLabSkills.ps1 -VerifyOnly
 ```
 
-La destination par défaut est `%USERPROFILE%/.agents/skills`, portée utilisateur documentée par [Codex](https://learn.chatgpt.com/docs/build-skills). Les cinq skills sont alors disponibles dans les worktrees actuels et futurs sur ce compte. Les descriptions ciblent le SofaScore Local Lab et les références sont résolues depuis la racine Git du worktree concerné. Actualiser la tâche ou redémarrer Codex si son catalogue est ancien.
+Pour installer ou vérifier uniquement `ss-provider-benchmark` version `0.1.0-candidate.1` :
+
+```powershell
+powershell.exe -NoProfile -ExecutionPolicy Bypass -File scripts/Install-LocalLabSkills.ps1 -Package ProviderBenchmark
+powershell.exe -NoProfile -ExecutionPolicy Bypass -File scripts/Install-LocalLabSkills.ps1 -Package ProviderBenchmark -VerifyOnly
+```
+
+La destination par défaut est `%USERPROFILE%/.agents/skills`, portée utilisateur documentée par [Codex](https://learn.chatgpt.com/docs/build-skills). Les skills du paquet sélectionné sont alors disponibles dans les worktrees actuels et futurs sur ce compte. Les descriptions ciblent le SofaScore Local Lab et les références sont résolues depuis la racine Git du worktree concerné. Actualiser la tâche ou redémarrer Codex si son catalogue est ancien.
 
 Le paquet reste dans `docs/skills/local-lab` : ne pas en créer une seconde copie homonyme dans `.agents/skills` du dépôt lorsque l'installation utilisateur existe. Codex peut découvrir plusieurs skills de même nom sans les fusionner. Les skills `bp-*` demeurent propres au Betting Project.
 
-L'installateur contrôle les dix sources par taille et SHA-256 avant toute copie, puis tous les fichiers de destination existants. Il ne remplace aucun fichier différent et refuse les fichiers supplémentaires dans un dossier `ss-*`, afin de préserver une variante locale. La casse des chemins relatifs approuvés est exacte : un fichier `skill.md` ne remplace pas `SKILL.md`. Une casse différente du préfixe absolu de destination reste acceptée lorsque Windows résout le même dossier. Réconcilier ou sauvegarder cette variante explicitement avant de réinstaller ; aucun mode d'écrasement forcé n'est fourni. Une installation identique ne réécrit pas les fichiers. `-VerifyOnly` vérifie aussi la présence complète sans créer de répertoire. Les chemins liés sont refusés. Une erreur d'entrée/sortie peut laisser une installation partielle ; les fichiers déjà copiés sont contrôlés lors d'une nouvelle exécution.
+L'installateur contrôle les sources du paquet sélectionné (dix pour `Lot1`, deux pour
+`ProviderBenchmark`) par taille et SHA-256 avant toute copie, puis tous les fichiers de destination existants. Il ne remplace aucun fichier différent et refuse les fichiers supplémentaires dans un dossier `ss-*`, afin de préserver une variante locale. La casse des chemins relatifs approuvés est exacte : un fichier `skill.md` ne remplace pas `SKILL.md`. Une casse différente du préfixe absolu de destination reste acceptée lorsque Windows résout le même dossier. Réconcilier ou sauvegarder cette variante explicitement avant de réinstaller ; aucun mode d'écrasement forcé n'est fourni. Une installation identique ne réécrit pas les fichiers. `-VerifyOnly` vérifie aussi la présence complète sans créer de répertoire. Les chemins liés sont refusés. Une erreur d'entrée/sortie peut laisser une installation partielle ; les fichiers déjà copiés sont contrôlés lors d'une nouvelle exécution.
 
 `-Destination '<dossier de skills>'` permet une installation isolée. Pour qualifier l'installateur sans toucher au compte utilisateur :
 
 ```powershell
 powershell.exe -NoProfile -ExecutionPolicy Bypass -File scripts/Test-LocalLabSkillsInstallation.ps1
+powershell.exe -NoProfile -ExecutionPolicy Bypass -File scripts/Test-LocalLabSkillsInstallation.ps1 -Package ProviderBenchmark
 ```
 
 Ce contrôle crée un dossier temporaire neuf avec les seuls fichiers synthétiques et copies du paquet ; il le conserve pour inspection. Il ne lance ni application, ni Maven, ni Docker.
@@ -71,6 +82,7 @@ Ce contrôle crée un dossier temporaire neuf avec les seuls fichiers synthétiq
 ## Utilisation
 
 ```text
+Utilise $ss-provider-benchmark pour préparer une scorecard prematch/live à partir des rapports versionnés du Lab.
 Utilise $ss-work-order pour reprendre le WO concerné et établir son état actuel.
 Utilise $ss-verify pour diagnostiquer cet échec CI et réaliser le correctif.
 Utilise $ss-postgres-change et $ss-data-contract-replay pour préparer cette évolution du ledger et de son contrat.

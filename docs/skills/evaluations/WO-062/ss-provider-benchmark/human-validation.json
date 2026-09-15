@@ -1,0 +1,32 @@
+{
+  "schema_version": 1,
+  "work_order": "WO-062",
+  "recorded_at_utc": "2026-09-15T19:09:49.230663+00:00",
+  "authority": "Explicit owner message in current Codex task",
+  "decision": "CONTENT_SCOPE_AND_DOCUMENTED_LIMITS_ACCEPTED",
+  "owner_statement": "J'accepte le contenu, le périmètre et les limites documentées de `ss-provider-benchmark` version `0.1.0-candidate.1`. J'autorise sa validation humaine et son passage à l'étape d'installation personnelle.",
+  "skill": "ss-provider-benchmark",
+  "candidate_version": "0.1.0-candidate.1",
+  "candidate_commit": "06f7bf8aa76c124246ea661fea5c4afe95b66354",
+  "qualification_commit": "f349f7292a4c3cadd4edef1478abc7a0388318f6",
+  "files": [
+    {
+      "path": "docs/skills/local-lab/ss-provider-benchmark/SKILL.md",
+      "sha256": "4bcecee4dbe75ec74530a7bda63acc8cbc84cc15dcd7c07e2ab9e6f80cc7be94",
+      "bytes": 6835
+    },
+    {
+      "path": "docs/skills/local-lab/ss-provider-benchmark/agents/openai.yaml",
+      "sha256": "707b19c6ff8b73d6a5962244ef2855e163dc3c55b8f27ea14ef2e9863ac66bdd",
+      "bytes": 322
+    }
+  ],
+  "human_validation": true,
+  "personal_installation_authorized": true,
+  "other_lot2_skills_validated": false,
+  "limits_preserved": [
+    "PB-S01 run-02 is instrumented and does not certify automatic CLI injection.",
+    "No general productivity gain, live provider capacity or production approval established."
+  ],
+  "scope": "Approval and personal installation of these exact two files; no version bump or change to evaluated instructions."
+}

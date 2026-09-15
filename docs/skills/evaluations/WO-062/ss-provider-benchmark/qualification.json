@@ -1,7 +1,7 @@
 {
   "schema": "wo062-provider-benchmark-current-qualification-v1",
   "qualified_at_utc": "2026-09-15T18:21:16.181140+00:00",
-  "status": "QUALIFIED_ON_FROZEN_CASES_PENDING_OWNER_VALIDATION",
+  "status": "QUALIFIED_OWNER_VALIDATED_PERSONALLY_INSTALLED",
   "skill": "ss-provider-benchmark",
   "candidate_version": "0.1.0-candidate.1",
   "candidate_commit": "06f7bf8aa76c124246ea661fea5c4afe95b66354",
@@ -33,8 +33,8 @@
     "proof": "run-02/review.json",
     "scope": "Complete tool-mediated loading of exact candidate; no claim of automatic CLI injection."
   },
-  "human_validation": false,
-  "personal_installation": false,
+  "human_validation": true,
+  "personal_installation": true,
   "limits": [
     "Qualification covers the twelve frozen cases and the declared instrumentation, not generalization or productivity.",
     "Original run-01 BLOCKED is preserved; cumulative status uses the reviewed run-02 complement.",
@@ -137,5 +137,8 @@
       "response_sha256": "e473333819b144df84e53cfac999f38ba63499192087bf750dd474b9f025aa46",
       "result_source": "run-01/results.json"
     }
-  ]
+  ],
+  "owner_decision": "human-validation.json",
+  "installation_result": "installation/result.json",
+  "installation_verified_at_utc": "2026-09-15T19:16:38.140491+00:00"
 }

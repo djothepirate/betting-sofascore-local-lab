@@ -1,5 +1,8 @@
 # WO-062 — Qualification complémentaire PB-S01
 
+**Étape suivante réalisée :** [validation propriétaire et installation personnelle A3](WO062-PROVIDER-BENCHMARK-INSTALLATION-20260915.md).
+Le présent rapport conserve le résultat technique et les limites établis avant cette décision.
+
 - **Date :** 15 septembre 2026.
 - **Résultat :** PB-S01 **PASS dans run-02** ; la preuve ouverte SEL-01 est levée par la revue indépendante.
 - **État cumulé :** **12 cas distincts qualifiés**, 13 exécutions conservées : run-01 reste à 11 PASS / 1 BLOCKED ; run-02 ajoute le PASS complémentaire.

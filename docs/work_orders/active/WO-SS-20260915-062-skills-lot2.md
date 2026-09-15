@@ -1,11 +1,12 @@
 # WO-SS-20260915-062 — Développement des skills spécialisés du lot 2
 
-- **Statut :** `OWNER_ACCEPTED — A2_CANDIDATE_QUALIFIED` ; candidat `ss-provider-benchmark` qualifié sur les douze cas figés, après preuve complémentaire PB-S01. Validation humaine et installation personnelle non réalisées.
+- **Statut :** `OWNER_ACCEPTED — A_VALIDATED_PERSONALLY_INSTALLED` ; `ss-provider-benchmark` version `0.1.0-candidate.1` qualifié sur les douze cas, validé par le propriétaire et installé personnellement. Les quatre autres skills et la consolidation restent à réaliser.
 - **Date :** 2026-09-15.
 - **Autorité :** demande propriétaire de préparer un WO avec `ss-work-order`, à partir de la conversation « Skills du lot 2 », dans l'ordre précisé ci-dessous.
 - **Acceptation :** le 15 septembre 2026, le propriétaire confirme « J’accepte le WO-062 » et autorise l'inventaire des sources et la préparation des cas d'évaluation de `ss-provider-benchmark`.
 - **Autorisation A2 :** le propriétaire demande ensuite de rédiger ce candidat depuis A1 et de l'évaluer sans oracle dans le contexte évalué ; il autorise explicitement les quatre sessions éphémères de sélection et la transmission de leur contexte local.
 - **Complément PB-S01 :** le propriétaire demande de terminer la qualification ouverte ; run-02 apporte la lecture intégrale du candidat exact par outil et une revue PASS. Le premier run reste historique et inchangé.
+- **Validation et installation A3 :** le propriétaire accepte explicitement le contenu, le périmètre et les limites de `0.1.0-candidate.1`, puis autorise son installation personnelle ; [décision exacte et empreintes](../../skills/evaluations/WO-062/ss-provider-benchmark/human-validation.json).
 - **Branche :** `feature/V0.1.0-RC01-CODEX-WO-SS-20260915-062`.
 - **Cible de PR :** `feature/V0.1.0-RC01`.
 - **Base canonique vérifiée sur GitHub :** `74d3f38afd64ce587353fbd645cad7a388e9756c` ; train local et distant identiques lors du cadrage, après fusion de la PR #37 / WO-061.
@@ -92,8 +93,17 @@ distinct ; elle n'élargit pas implicitement ce lot de skills.
   [résultats/revues](../../skills/evaluations/WO-062/ss-provider-benchmark/run-01/results.json).
 - [Qualification courante et portée de la preuve](../../validation/WO062-PROVIDER-BENCHMARK-PBS01-QUALIFICATION-20260915.md),
   avec [bilan cumulé](../../skills/evaluations/WO-062/ss-provider-benchmark/qualification.json).
-- Validation humaine, installation personnelle et clôture non réalisées ; pas de modification
-  des quatre autres skills prévus, de l'installateur, du lot 1 ou de son historique SKL-002.
+- À la fin A2, validation humaine et installation restaient à réaliser. Cette étape conservait
+  les quatre autres skills, l'installateur, le lot 1 et SKL-002 sans modification.
+
+### A3 — validation propriétaire et installation personnelle du 15 septembre 2026
+
+- Contenu, périmètre et limites de `0.1.0-candidate.1` acceptés ; version et deux fichiers conservés à l'identique.
+- [Manifeste ciblé](../../skills/evaluations/WO-062/ss-provider-benchmark/installation-manifest.json) distinct de SKL-002 ; option explicite `-Package ProviderBenchmark`, défaut lot 1 conservé.
+- Installation personnelle : deux fichiers copiés, vérification taille/SHA-256 réussie, une entrée USER découverte par le CLI local.
+- Dix fichiers personnels du lot 1 conservés, contenu et dates de modification identiques.
+- 18 cas d'installation isolée réussis (7 lot 1, 11 nouveau paquet) et revue indépendante favorable.
+- [Preuve A3](../../validation/WO062-PROVIDER-BENCHMARK-INSTALLATION-20260915.md). Les quatre autres skills, la consolidation des dix et la clôture du WO restent à réaliser.
 
 ### Suite du développement
 
@@ -280,11 +290,15 @@ références. Les détails longs sont lus à la demande depuis leurs sources ; l
 ne se justifient que par un besoin déterministe absent des outils existants. Le format et les
 métadonnées suivent la [documentation officielle des skills](https://learn.chatgpt.com/docs/build-skills).
 
-Prévoir `docs/skills/evaluations/WO-062/` pour l'inventaire sourcé, les cas figés, les résultats,
-la revue et le **nouveau manifeste** taille/SHA-256. Ce chemin est un livrable futur, pas une
-preuve déjà présente. Conserver les dix fichiers approuvés du lot 1 et SKL-002 sans réécriture.
+Conserver dans `docs/skills/evaluations/WO-062/` l'inventaire sourcé, les cas figés, les résultats,
+la revue et les manifestes taille/SHA-256. Les pièces du premier skill sont présentes ; le
+manifeste consolidé des dix skills reste à produire à l'étape D. Conserver les dix fichiers
+approuvés du lot 1 et SKL-002 sans réécriture.
 
-L'installateur actuel impose cinq noms et dix chemins. Son évolution doit couvrir les dix
+L'installateur livré au lot 1 impose cinq noms et dix chemins. A3 ajoute un paquet ciblé
+`ProviderBenchmark`, avec son manifeste approuvé de deux fichiers et une option explicite ;
+le défaut `Lot1` et SKL-002 sont conservés. Cette livraison progressive suit la validation
+individuelle du premier skill. La consolidation D doit encore couvrir les dix
 skills avec un manifeste courant distinct et un préflight complet avant copie, conserver
 `-VerifyOnly`, l'idempotence, la casse exacte des chemins relatifs, le refus des variantes locales,
 fichiers supplémentaires et liens, ainsi que la relance sûre après interruption d'entrée/sortie.
@@ -296,8 +310,9 @@ récursive permissive ni modification du manifeste historique.
 
 Réutiliser la portée personnelle documentée du lot 1, sans copie homonyme découverte dans le
 dépôt. Les essais d'installation utilisent des destinations isolées. L'installation personnelle
-définitive vient après validation du contenu et autorisation correspondante ; la demande de
-préparation du WO ne modifie pas aujourd'hui `%USERPROFILE%/.agents/skills`.
+définitive vient après validation du contenu et autorisation correspondante. A3 applique
+cette décision au seul `ss-provider-benchmark` dans `%USERPROFILE%/.agents/skills` ; la simple
+préparation historique du WO n'avait modifié aucun skill personnel.
 
 ## 8. Qualification, revue, clôture et livraison Git
 
@@ -320,8 +335,7 @@ Le WO reste dans `active` pendant la réalisation et la revue. La PR cible exclu
 la fusion. La clôture effective suit cette fusion. Publication, fusion, promotion, tag et
 installation personnelle ne sont pas déduits de la seule préparation du WO.
 
-**Prochaine action :** soumettre le candidat `ss-provider-benchmark`, qualifié sur les douze
-cas figés avec la méthode documentée, et ses limites à la validation propriétaire. La tâche
-nouvelle prematch/live a produit son protocole et sa scorecard ; les douze réponses évaluées
-et les revues sont conservées. La validation humaine et l'installation personnelle restent
-distinctes de la rédaction et des essais effectués.
+**Suite prévue :** préparer `ss-football-quality`, puis `ss-ci-security`, dans l'ordre accepté.
+L'incrément `ss-provider-benchmark` a terminé préparation, rédaction, qualification, validation
+propriétaire et installation personnelle. Ses preuves et limites restent conservées ; cet
+incrément ne clôture pas le WO et ne réalise pas sa publication Git.

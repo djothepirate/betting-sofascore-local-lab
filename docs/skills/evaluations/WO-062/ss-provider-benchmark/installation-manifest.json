@@ -1,0 +1,23 @@
+{
+  "schema_version": 1,
+  "work_order": "WO-062",
+  "package": "ProviderBenchmark",
+  "skill_count": 1,
+  "candidate_version": "0.1.0-candidate.1",
+  "owner_validated": true,
+  "personal_installation_authorized": true,
+  "owner_decision": "human-validation.json",
+  "qualification": "qualification.json",
+  "files": [
+    {
+      "path": "docs/skills/local-lab/ss-provider-benchmark/SKILL.md",
+      "sha256": "4bcecee4dbe75ec74530a7bda63acc8cbc84cc15dcd7c07e2ab9e6f80cc7be94",
+      "bytes": 6835
+    },
+    {
+      "path": "docs/skills/local-lab/ss-provider-benchmark/agents/openai.yaml",
+      "sha256": "707b19c6ff8b73d6a5962244ef2855e163dc3c55b8f27ea14ef2e9863ac66bdd",
+      "bytes": 322
+    }
+  ]
+}

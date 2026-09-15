@@ -1,0 +1,19 @@
+{
+  "checked_at_utc": "2026-09-15T19:14:14.045039+00:00",
+  "method": "Local CLI debug prompt-input reconstruction; no model invocation",
+  "cli_version": "codex-cli 0.154.0-alpha.6.2",
+  "cwd": "C:\\Dev\\BettingProject\\codex\\betting-sofascore-local-lab\\.tmp\\wo062-skills-lot2",
+  "command": [
+    "codex",
+    "debug",
+    "prompt-input"
+  ],
+  "exit_code": 0,
+  "matching_entries": 1,
+  "entry": "- ss-provider-benchmark: Cadrer ou relire un benchmark fournisseur du SofaScore Local Lab : populations, couverture, complétude, fraîcheur, latence et coût en appels, notamment prematch/live. Ne pas utiliser pour un simple build ni pour une comparaison limitée au Betting Project. (file: r0/ss-provider-benchmark/SKILL.md)",
+  "resolved_path": "C:\\Users\\geoff\\.agents\\skills\\ss-provider-benchmark\\SKILL.md",
+  "sha256": "4bcecee4dbe75ec74530a7bda63acc8cbc84cc15dcd7c07e2ab9e6f80cc7be94",
+  "scope": "USER",
+  "model_invoked": false,
+  "limit": "Local catalogue discovery only; not an additional model selection or automatic injection evaluation."
+}

@@ -148,7 +148,9 @@ cas figés sont qualifiés : 12 PASS au bilan cumulé, après réexécution inst
 avec preuve de lecture intégrale du candidat exact.
 Le [protocole et la scorecard prematch/live](docs/skills/evaluations/WO-062/ss-provider-benchmark/run-01/cases/PB-N01/response.md)
 sont produits. Voir la [qualification courante](docs/validation/WO062-PROVIDER-BENCHMARK-PBS01-QUALIFICATION-20260915.md)
-et le [guide des skills](docs/skills/README.md). Validation humaine et installation personnelle restent distinctes.
+et le [guide des skills](docs/skills/README.md). La version `0.1.0-candidate.1` est désormais
+[validée par le propriétaire et installée personnellement](docs/validation/WO062-PROVIDER-BENCHMARK-INSTALLATION-20260915.md),
+avec ses limites documentées et ses deux fichiers inchangés.
 
 **Skills du lot 1 validés — 5 septembre 2026 :** les cinq skills `ss-*` sont livrés avec
 leur [guide et installateur personnel](docs/skills/README.md), sous
