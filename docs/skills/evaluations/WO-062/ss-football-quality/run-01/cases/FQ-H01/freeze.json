@@ -1,0 +1,36 @@
+{
+  "frozen_at_utc": "2026-09-15T19:50:45.702003+00:00",
+  "before_independent_review": true,
+  "files": [
+    {
+      "path": "catalogue.txt",
+      "bytes": 8002,
+      "sha256": "d23bf1a697ce1da148af4076c2f2c9026a5b8ab6364f3034f3ba060d3e8a0f96"
+    },
+    {
+      "path": "native-events.json",
+      "bytes": 136245,
+      "sha256": "1433a400a755f1aad12d450acece5546f61a743dd6cc8bfefe48e5f35e7228a8"
+    },
+    {
+      "path": "prompt.txt",
+      "bytes": 553,
+      "sha256": "6c3c3ef78e84b7728949048ed3d00f8df504aca8cc10633bc980c8dd4ef7cb03"
+    },
+    {
+      "path": "request.txt",
+      "bytes": 1776,
+      "sha256": "11852661cb75825568cd58c67e8206e40f7716a730976b18b814f50645504983"
+    },
+    {
+      "path": "response.md",
+      "bytes": 19481,
+      "sha256": "3b73b308dd89b45666d6266044ada558dfef273fe49a97e20be8569fb27ceb70"
+    },
+    {
+      "path": "trace.json",
+      "bytes": 3929,
+      "sha256": "5b72473fa9828d636c7f41732f6b774f2f8b260eec3e0da620c1779ce87cf4f1"
+    }
+  ]
+}

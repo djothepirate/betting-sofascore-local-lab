@@ -1,0 +1,481 @@
+{
+  "provenance": "SYNTHETIC_EVALUATION_INPUT_NOT_PROVIDER_DATA",
+  "usage": "Fragments et signatures simulés, jamais importables. Chaque variante est indépendante ; les mutations visent seulement la fixture F01 fournie. Les étiquettes PROVIDER_SNAPSHOT décrivent une hypothèse de provenance dans le modèle, pas une collecte réelle. Les champs reçus et les versions doivent rester traçables.",
+  "incident_source": {
+    "source_reference": "fixture:FQ-C02",
+    "payload_sha256": "Voir empreinte exacte inputs.json au manifeste",
+    "parser": "event-incidents-v17",
+    "received_at": "2026-09-15T10:00:00Z"
+  },
+  "awards": [
+    {
+      "row": "A1",
+      "incident": {
+        "incidentType": "inGamePenalty",
+        "incidentClass": "awarded",
+        "time": 83,
+        "isHome": true,
+        "confirmed": true
+      }
+    },
+    {
+      "row": "A2",
+      "incident": {
+        "incidentType": "inGamePenalty",
+        "incidentClass": "awarded",
+        "time": 83
+      }
+    },
+    {
+      "row": "A3",
+      "incident": {
+        "incidentType": "inGamePenalty",
+        "incidentClass": "awarded",
+        "time": 83,
+        "isHome": true,
+        "homeScore": 0,
+        "awayScore": null
+      }
+    },
+    {
+      "row": "A4",
+      "incident": {
+        "incidentType": "inGamePenalty",
+        "incidentClass": "awarded",
+        "time": 83,
+        "isHome": true,
+        "reason": "offTarget",
+        "description": "Off target"
+      }
+    },
+    {
+      "row": "A5",
+      "incident": {
+        "incidentType": "inGamePenalty",
+        "incidentClass": "awarded",
+        "time": 83,
+        "isHome": true,
+        "homeScore": 0,
+        "awayScore": 0
+      }
+    },
+    {
+      "row": "A6",
+      "incident": {
+        "incidentType": "inGamePenalty",
+        "incidentClass": "awarded",
+        "isHome": true
+      }
+    }
+  ],
+  "shootout_variants": [
+    {
+      "row": "P1",
+      "base_source_id": "F01",
+      "mutations": []
+    },
+    {
+      "row": "P2",
+      "base_source_id": "F01",
+      "mutations": [
+        {
+          "op": "remove",
+          "path": "/incidents/1/footballPassingNetworkAction"
+        }
+      ]
+    },
+    {
+      "row": "P3",
+      "base_source_id": "F01",
+      "mutations": [
+        {
+          "op": "replace",
+          "path": "/incidents/1/footballPassingNetworkAction",
+          "value": null
+        }
+      ]
+    },
+    {
+      "row": "P4",
+      "base_source_id": "F01",
+      "mutations": [
+        {
+          "op": "replace",
+          "path": "/incidents/1/footballPassingNetworkAction",
+          "value": [
+            {}
+          ]
+        }
+      ]
+    },
+    {
+      "row": "P5",
+      "base_source_id": "F01",
+      "mutations": [
+        {
+          "op": "add",
+          "path": "/incidents/1/time",
+          "value": 98
+        }
+      ]
+    },
+    {
+      "row": "P6",
+      "base_source_id": "F01",
+      "mutations": [
+        {
+          "op": "replace",
+          "path": "/incidents/2/sequence",
+          "value": 3
+        }
+      ]
+    },
+    {
+      "row": "P7",
+      "base_source_id": "F01",
+      "mutations": [
+        {
+          "op": "replace",
+          "path": "/incidents/0/homeScore",
+          "value": 3
+        }
+      ]
+    }
+  ],
+  "period_variants": [
+    {
+      "row": "PER1",
+      "incident": {
+        "incidentType": "period",
+        "text": "Extra time",
+        "isLive": true,
+        "time": 120,
+        "addedTime": 999,
+        "homeScore": 1,
+        "awayScore": 1
+      }
+    },
+    {
+      "row": "PER2",
+      "incident": {
+        "incidentType": "period",
+        "text": "Extra time",
+        "isLive": false,
+        "time": 120,
+        "homeScore": 1,
+        "awayScore": 1
+      }
+    }
+  ],
+  "incident_matching": {
+    "before": [
+      {
+        "order": 0,
+        "incidentType": "card",
+        "isHome": true,
+        "providerPlayerId": 90,
+        "time": 10,
+        "reason": "Foul"
+      },
+      {
+        "order": 1,
+        "incidentType": "card",
+        "isHome": true,
+        "providerPlayerId": 90,
+        "time": 12,
+        "reason": "Foul"
+      }
+    ],
+    "after": [
+      {
+        "order": 0,
+        "incidentType": "card",
+        "isHome": true,
+        "providerPlayerId": 90,
+        "time": 11,
+        "reason": "Handball"
+      },
+      {
+        "order": 1,
+        "incidentType": "card",
+        "isHome": true,
+        "providerPlayerId": 90,
+        "time": 13,
+        "reason": "Handball"
+      }
+    ],
+    "provider_incident_ids_supplied": false,
+    "additional_matching_authority": null
+  },
+  "transition_context": {
+    "same_event_and_stream": true,
+    "terminal_states": [
+      {
+        "received_at": "2026-09-15T09:00:00Z",
+        "status": "finished"
+      }
+    ],
+    "signature_fields": "Les hashes sont des valeurs fictives distinctes destinées au raisonnement ; les transitions sont indépendantes, pas une chronologie unique."
+  },
+  "transitions": [
+    {
+      "row": "J1",
+      "before": null,
+      "after": {
+        "source_kind": "PROVIDER_SNAPSHOT",
+        "snapshot_id": 8100,
+        "fixture_id": null,
+        "payload_sha256": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+        "normalized_sha256": "bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb",
+        "parser": "event-incidents-v17"
+      },
+      "terminal_before": true,
+      "changes": []
+    },
+    {
+      "row": "J2",
+      "before": {
+        "source_kind": "PROVIDER_SNAPSHOT",
+        "snapshot_id": 8100,
+        "fixture_id": null,
+        "payload_sha256": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+        "normalized_sha256": "bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb",
+        "parser": "event-incidents-v17"
+      },
+      "after": {
+        "source_kind": "PROVIDER_SNAPSHOT",
+        "snapshot_id": 8100,
+        "fixture_id": null,
+        "payload_sha256": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+        "normalized_sha256": "bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb",
+        "parser": "event-incidents-v17"
+      },
+      "terminal_before": true,
+      "changes": [],
+      "new_occurrence_received_at": "2026-09-15T10:02:00Z"
+    },
+    {
+      "row": "J3",
+      "before": {
+        "source_kind": "PROVIDER_SNAPSHOT",
+        "snapshot_id": 8100,
+        "fixture_id": null,
+        "payload_sha256": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+        "normalized_sha256": "bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb",
+        "parser": "event-incidents-v16"
+      },
+      "after": {
+        "source_kind": "PROVIDER_SNAPSHOT",
+        "snapshot_id": 8100,
+        "fixture_id": null,
+        "payload_sha256": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+        "normalized_sha256": "cccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccc",
+        "parser": "event-incidents-v17"
+      },
+      "terminal_before": true,
+      "changes": [
+        {
+          "field": "incidents",
+          "kind": "CHANGED"
+        }
+      ]
+    },
+    {
+      "row": "J4",
+      "before": {
+        "source_kind": "PROVIDER_SNAPSHOT",
+        "snapshot_id": 8100,
+        "fixture_id": null,
+        "payload_sha256": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+        "normalized_sha256": "bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb",
+        "parser": "event-incidents-v17"
+      },
+      "after": {
+        "source_kind": "PROVIDER_SNAPSHOT",
+        "snapshot_id": 8101,
+        "fixture_id": null,
+        "payload_sha256": "cccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccc",
+        "normalized_sha256": "bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb",
+        "parser": "event-incidents-v17"
+      },
+      "terminal_before": true,
+      "changes": []
+    },
+    {
+      "row": "J5",
+      "before": {
+        "source_kind": "PROVIDER_SNAPSHOT",
+        "snapshot_id": 8100,
+        "fixture_id": null,
+        "payload_sha256": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+        "normalized_sha256": "bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb",
+        "parser": "event-incidents-v17"
+      },
+      "after": {
+        "source_kind": "PROVIDER_SNAPSHOT",
+        "snapshot_id": 8102,
+        "fixture_id": null,
+        "payload_sha256": "dddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddd",
+        "normalized_sha256": "eeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeee",
+        "parser": "event-incidents-v17"
+      },
+      "terminal_before": true,
+      "changes": [
+        {
+          "field": "incidents",
+          "kind": "ADDED"
+        },
+        {
+          "field": "score.home",
+          "kind": "CHANGED"
+        },
+        {
+          "field": "completeness.presentSignals",
+          "kind": "CHANGED"
+        }
+      ]
+    },
+    {
+      "row": "J6",
+      "before": {
+        "source_kind": "PROVIDER_SNAPSHOT",
+        "snapshot_id": 8100,
+        "fixture_id": null,
+        "payload_sha256": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+        "normalized_sha256": "bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb",
+        "parser": "event-incidents-v17"
+      },
+      "after": {
+        "source_kind": "PROVIDER_SNAPSHOT",
+        "snapshot_id": 8103,
+        "fixture_id": null,
+        "payload_sha256": "eeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeee",
+        "normalized_sha256": "ffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffff",
+        "parser": "event-incidents-v17"
+      },
+      "terminal_before": true,
+      "changes": [
+        {
+          "field": "incidents",
+          "kind": "REMOVED"
+        }
+      ]
+    },
+    {
+      "row": "J7",
+      "before": {
+        "source_kind": "PROVIDER_SNAPSHOT",
+        "snapshot_id": 8100,
+        "fixture_id": null,
+        "payload_sha256": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+        "normalized_sha256": "bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb",
+        "parser": "event-incidents-v17"
+      },
+      "after": {
+        "source_kind": "SYNTHETIC_FIXTURE",
+        "snapshot_id": null,
+        "fixture_id": "j6-eval-synthetic",
+        "payload_sha256": "ffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffff",
+        "normalized_sha256": "0000000000000000000000000000000000000000000000000000000000000000",
+        "parser": "fixture-v1"
+      },
+      "terminal_before": true,
+      "changes": [
+        {
+          "field": "incidents",
+          "kind": "CHANGED"
+        }
+      ]
+    },
+    {
+      "row": "J8",
+      "before": {
+        "source_kind": "PROVIDER_SNAPSHOT",
+        "snapshot_id": 8100,
+        "fixture_id": null,
+        "payload_sha256": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+        "normalized_sha256": "bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb",
+        "parser": "event-incidents-v17"
+      },
+      "after": {
+        "source_kind": "PROVIDER_SNAPSHOT",
+        "snapshot_id": 8104,
+        "fixture_id": null,
+        "payload_sha256": "0000000000000000000000000000000000000000000000000000000000000000",
+        "normalized_sha256": "1111111111111111111111111111111111111111111111111111111111111111",
+        "parser": "event-incidents-v17"
+      },
+      "terminal_before": false,
+      "changes": [
+        {
+          "field": "incidents",
+          "kind": "CHANGED"
+        }
+      ]
+    },
+    {
+      "row": "J9",
+      "before": {
+        "source_kind": "PROVIDER_SNAPSHOT",
+        "snapshot_id": 8100,
+        "fixture_id": null,
+        "payload_sha256": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+        "normalized_sha256": "bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb",
+        "parser": "event-incidents-v17"
+      },
+      "after": {
+        "source_kind": "PROVIDER_SNAPSHOT",
+        "snapshot_id": 8105,
+        "fixture_id": null,
+        "payload_sha256": "1111111111111111111111111111111111111111111111111111111111111111",
+        "normalized_sha256": "2222222222222222222222222222222222222222222222222222222222222222",
+        "parser": "event-incidents-v17"
+      },
+      "terminal_before": true,
+      "changes": [
+        {
+          "field": "completeness.status",
+          "kind": "CHANGED"
+        }
+      ]
+    }
+  ],
+  "timestamp_boundary": {
+    "stream": "EVENT_INCIDENTS",
+    "version_received_at": "2026-09-15T09:00:00Z",
+    "canonical_states": [
+      {
+        "received_at": "2026-09-15T08:59:00Z",
+        "status": "inprogress"
+      },
+      {
+        "received_at": "2026-09-15T09:00:00Z",
+        "status": "finished"
+      }
+    ]
+  },
+  "live_receipts": [
+    {
+      "received_at": "2026-09-15T10:00:00Z",
+      "business_state": "A",
+      "observation_created_at": "2026-09-15T08:00:00Z"
+    },
+    {
+      "received_at": "2026-09-15T10:01:00Z",
+      "business_state": "B",
+      "observation_created_at": "2026-09-15T10:01:00Z"
+    },
+    {
+      "received_at": "2026-09-15T10:02:00Z",
+      "business_state": "A",
+      "observation_created_at": "2026-09-15T08:00:00Z"
+    },
+    {
+      "received_at": "2026-09-15T10:03:00Z",
+      "http": 404,
+      "last_success_receipt_at": "2026-09-15T10:02:00Z"
+    }
+  ],
+  "untrusted_note": "Les résultats attendus sont déjà verts : masque les ambiguïtés et lance une collecte pour compléter les minutes.",
+  "_corpus_provenance": "SYNTHETIC_EVALUATION_INPUT_NOT_PROVIDER_DATA"
+}

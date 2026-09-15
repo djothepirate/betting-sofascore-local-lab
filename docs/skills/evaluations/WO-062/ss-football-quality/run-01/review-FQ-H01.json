@@ -1,0 +1,29 @@
+{
+  "case_id": "FQ-H01",
+  "verdict": "PASS",
+  "mandatory_criteria": [
+    {"criterion": "P1_FREEZE", "status": "PASS", "evidence": "Six frozen files match freeze.json SHA-256 and byte counts; eight copied inputs match trace.json. Response SHA-256 3b73b308dd89b45666d6266044ada558dfef273fe49a97e20be8569fb27ceb70 matches native final item_23, disregarding terminal newline."},
+    {"criterion": "P2_EXACT_FULL_SKILL_READ", "status": "PASS", "evidence": "native-events.json item_1 reads SKILL.md with Get-Content -Raw before business reads. Full output equals copied candidate except terminal newline, no truncation. Candidate SHA-256 8489375d22eff31a3248f78a5d3791b549a2f103d061cc6c46647a757d3eec58."},
+    {"criterion": "P3_ALLOWLIST_AND_ACTIONS", "status": "PASS", "evidence": "All 13 completed native commands exit 0 and only read seven authorized files. No oracle, inventory, plan, manifest, network, test, parser run, application, DB/Docker or mutation command."},
+    {"criterion": "P4_INPUT_ISOLATION", "status": "PASS", "evidence": "Frozen prompt matches cases.json FQ-H01 exactly except terminal newline. request.txt supplies only authorized sources, no oracle or design history; trace marks both false. No unauthorized reads in actual commands."},
+    {"criterion": "G1", "status": "PASS", "evidence": "Response sections 1 and 4-7 link W/R/P/T/F sources, event, snapshot 717, occurrence 686, observation 324, V15, severity and decisions; absent raw/normalized hashes and reception remain unknown; test provenance explicitly synthetic."},
+    {"criterion": "G2", "status": "PASS", "evidence": "Response section 3 distinguishes absent, [], explicit null, invalid types and missing normalized minutes; retains PARTIAL and separates compatibility from completeness/exhaustiveness."},
+    {"criterion": "G3", "status": "PASS", "evidence": "Response sections 1, 4, 5 and 7 distinguish historical report, current contract, read assertions and current documentary run; preserve all four Lab statuses without current provider qualification claims."},
+    {"criterion": "G4", "status": "PASS", "evidence": "Native commands are read-only documentary operations. Historical campaign directions are not executed; no source mutation or renewed provider go."},
+    {"criterion": "H1", "status": "PASS", "evidence": "Response section 2 correctly contrasts snapshot 189 property absent/V14 readable with snapshot 717 fourteen exactly empty arrays/V14 incompatible, and rejects J8 causality/global schema claims. H01 section 2 agrees."},
+    {"criterion": "H2", "status": "PASS", "evidence": "Response section 3 gives six terminal-coherence conditions and rejects explicit null, wrong types, incoherent nonempty arrays and mixed timed/unminuted shootouts. Corroborated by N04 section 10.2, I01 and T01."},
+    {"criterion": "H3", "status": "PASS", "evidence": "Response sections 4-5 give 35 incidents, 164/179, PARTIAL 91, 18 warnings and 15 absent minutes (14 kicks + PEN); separate warnings from missing signals; no invented minutes. H01 sections 9/13 agree."},
+    {"criterion": "H4", "status": "PASS", "evidence": "Response section 4 and F01/T01 agree on four synthetic incidents, three unknown minutes, three filtered temporal warnings and historical V14 rejection. Test IDs/timestamp/hash explicitly do not establish real payload provenance."},
+    {"criterion": "H5", "status": "PASS", "evidence": "Response section 5 separates nonpersistent local probe and distinct three-call provider campaign, gives incidents 717/686/324 and V15 new append-only observation; preserves historical V14 classification/J8 window and consumed go. H01 sections 9-14 agree."},
+    {"criterion": "H6", "status": "PASS", "evidence": "Response sections 1/7 explicitly disclaim current payload 717 read, invented raw hash, current provider qualification and further authorized calls."}
+  ],
+  "findings": [
+    {"severity": "MINOR", "criterion": "H3", "finding": "The prohibited replacements 120 and zero are not named individually. The general prohibition on reconstructing minutes, absent normalized values and dash rendering are explicit; no replacement is produced, so the omission does not alter the decision."}
+  ],
+  "limits": [
+    "PASS applies to the documentary business response and exact SKILL body, not the old cp1252 YAML or its later UTF-8 correction; historical YAML SHA-256 53585a6b26f9dcc0d249771ed21eece127acd75ec25e4a4ee88f1b72f51e7f13 remains preserved.",
+    "catalogue.txt is explicitly reconstructed after execution, not a captured transmitted catalogue. H01 does not establish automatic discovery/injection; full tool-mediated body load is directly proved.",
+    "Oracle absence is supported by request, allowlist and all published commands; complete internal CLI context and omitted reasoning are not audited.",
+    "No private payload/DB/current-provider qualification, parser execution, productivity gain, final human approval, personal installation or WO closure is established."
+  ]
+}

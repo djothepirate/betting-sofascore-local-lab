@@ -59,3 +59,8 @@ docs/skills/evaluations/WO-062/ss-provider-benchmark/installation/** -text white
 # Frozen B1/B2 preparation and independent evaluation evidence.
 docs/skills/evaluations/WO-062/ss-football-quality/** -text whitespace=blank-at-eol,space-before-tab,cr-at-eol,-blank-at-eof
 docs/skills/evaluations/WO-062/ss-ci-security/** -text whitespace=blank-at-eol,space-before-tab,cr-at-eol,-blank-at-eof
+# Native answers and independent Markdown reviews retain intentional line breaks.
+docs/skills/evaluations/WO-062/ss-football-quality/run-01/cases/*/response.md whitespace=-blank-at-eol,space-before-tab,cr-at-eol,-blank-at-eof
+docs/skills/evaluations/WO-062/ss-football-quality/run-01/review-*.md whitespace=-blank-at-eol,space-before-tab,cr-at-eol,-blank-at-eof
+docs/skills/evaluations/WO-062/ss-ci-security/run-01/cases/*/response.md whitespace=-blank-at-eol,space-before-tab,cr-at-eol,-blank-at-eof
+docs/skills/evaluations/WO-062/ss-ci-security/run-01/review-*.md whitespace=-blank-at-eol,space-before-tab,cr-at-eol,-blank-at-eof

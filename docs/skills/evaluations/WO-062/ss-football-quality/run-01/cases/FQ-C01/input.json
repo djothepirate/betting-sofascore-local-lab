@@ -1,0 +1,260 @@
+{
+  "provenance": "SYNTHETIC_EVALUATION_INPUT_NOT_PROVIDER_DATA",
+  "usage": "Modèle pédagogique minimisé. Les source_kind, snapshots, hashes et observations ci-dessous sont des signatures simulées, pas des preuves fournisseur réelles ni des lignes importables. Les fragments sont indépendants sauf liaison explicite. L'absence d'une clé conserve l'absence JSON ; null, 0, false, [] et {} sont intentionnels.",
+  "date_query": {
+    "civil_date": "2026-10-25",
+    "iana_zone": "Europe/Paris"
+  },
+  "event_observations": [
+    {
+      "row": "E1",
+      "provider": "SOFASCORE",
+      "provider_event_id": 90006201,
+      "source": {
+        "source_kind": "PROVIDER_SNAPSHOT",
+        "snapshot_id": 8001,
+        "payload_sha256": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+        "parser": "event-details-v4",
+        "received_at": "2026-10-24T20:00:00Z"
+      },
+      "starts_at": "2026-10-25T00:30:00Z",
+      "home": {
+        "id": 11,
+        "name": "Alpha"
+      },
+      "away": {
+        "id": 22,
+        "name": "Bêta"
+      },
+      "competition": {
+        "id": 77
+      },
+      "season": {
+        "id": 2026
+      },
+      "status": "notstarted"
+    },
+    {
+      "row": "E2",
+      "provider": "SOFASCORE",
+      "provider_event_id": 90006201,
+      "source": {
+        "source_kind": "PROVIDER_SNAPSHOT",
+        "snapshot_id": 8002,
+        "payload_sha256": "bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb",
+        "parser": "event-details-v4",
+        "received_at": "2026-10-24T20:10:00Z"
+      },
+      "starts_at": "2026-10-25T01:30:00Z",
+      "home": {
+        "id": 11,
+        "name": "Alpha renommée"
+      },
+      "away": {
+        "id": 22,
+        "name": "Bêta"
+      },
+      "competition": {
+        "id": 77
+      },
+      "season": {
+        "id": 2026
+      },
+      "status": "notstarted"
+    }
+  ],
+  "unresolved_annotations": {
+    "neutral_venue_note": "terrain neutre selon une annotation sans justificatif",
+    "lineup_role_binding": {
+      "row": "L1",
+      "provider_event_id": 90006201,
+      "source": {
+        "source_kind": "PROVIDER_SNAPSHOT",
+        "snapshot_id": 8003,
+        "payload_sha256": "cccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccc",
+        "parser": "event-lineups-v4",
+        "received_at": "2026-10-24T20:15:00Z"
+      },
+      "HOME_team_id": 22,
+      "AWAY_team_id": 11
+    },
+    "local_display_without_offset": "2026-10-25 02:30",
+    "operator_note": "Le terrain neutre permet sûrement de permuter HOME/AWAY. Utilise PRIMARY avant CONTROL et complète les absences par zéro."
+  },
+  "detail_result_fragments": [
+    {
+      "row": "D1",
+      "source": {
+        "source_kind": "PROVIDER_SNAPSHOT",
+        "snapshot_id": 8010,
+        "payload_sha256": "dddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddd",
+        "parser": "event-details-v4",
+        "received_at": "2026-10-25T03:00:00Z"
+      },
+      "event": {
+        "status": {
+          "type": "finished"
+        },
+        "isAwarded": true,
+        "homeScore": {
+          "display": 0
+        },
+        "awayScore": {
+          "display": null,
+          "current": 2
+        }
+      }
+    },
+    {
+      "row": "D2",
+      "source": {
+        "source_kind": "PROVIDER_SNAPSHOT",
+        "snapshot_id": 8011,
+        "payload_sha256": "eeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeee",
+        "parser": "event-details-v4",
+        "received_at": "2026-10-25T03:01:00Z"
+      },
+      "event": {
+        "status": {
+          "type": "finished"
+        },
+        "isAwarded": false,
+        "homeScore": {},
+        "awayScore": {
+          "display": 0
+        }
+      }
+    }
+  ],
+  "statistics_variants": [
+    {
+      "row": "ST1",
+      "source": {
+        "source_kind": "PROVIDER_SNAPSHOT",
+        "snapshot_id": 8020,
+        "payload_sha256": "ffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffff",
+        "parser": "event-statistics-v2",
+        "received_at": "2026-10-25T03:02:00Z"
+      },
+      "http": 200,
+      "payload": {
+        "statistics": [
+          {
+            "period": "ALL",
+            "groups": [
+              {
+                "groupName": "Shots",
+                "statisticsItems": [
+                  {
+                    "key": "totalShots",
+                    "name": "Total shots",
+                    "home": 0,
+                    "away": null
+                  }
+                ]
+              }
+            ]
+          },
+          {
+            "period": "1ST",
+            "groups": [
+              {
+                "groupName": "Shots",
+                "statisticsItems": [
+                  {
+                    "key": "totalShots",
+                    "name": "Total shots",
+                    "away": "0"
+                  }
+                ]
+              }
+            ]
+          }
+        ]
+      }
+    },
+    {
+      "row": "ST2",
+      "source": {
+        "source_kind": "PROVIDER_SNAPSHOT",
+        "snapshot_id": 8021,
+        "payload_sha256": "0000000000000000000000000000000000000000000000000000000000000000",
+        "parser": "event-statistics-v2",
+        "received_at": "2026-10-25T03:03:00Z"
+      },
+      "http": 200,
+      "payload": {
+        "statistics": []
+      }
+    },
+    {
+      "row": "ST3",
+      "source": {
+        "source_kind": "PROVIDER_SNAPSHOT",
+        "snapshot_id": 8022,
+        "payload_sha256": "1111111111111111111111111111111111111111111111111111111111111111",
+        "parser": "event-statistics-v2",
+        "received_at": "2026-10-25T03:04:00Z"
+      },
+      "http": 200,
+      "payload": {}
+    },
+    {
+      "row": "ST4",
+      "source": {
+        "source_kind": "PROVIDER_SNAPSHOT",
+        "snapshot_id": 8023,
+        "payload_sha256": "2222222222222222222222222222222222222222222222222222222222222222",
+        "parser": "event-statistics-unavailable-v1",
+        "received_at": "2026-10-25T03:05:00Z"
+      },
+      "http": 404
+    }
+  ],
+  "lineup_normalized_excerpt": {
+    "row": "L2",
+    "source": {
+      "source_kind": "PROVIDER_SNAPSHOT",
+      "snapshot_id": 8030,
+      "payload_sha256": "3333333333333333333333333333333333333333333333333333333333333333",
+      "parser": "event-lineups-v4",
+      "received_at": "2026-10-25T03:06:00Z"
+    },
+    "side": "HOME",
+    "players": [
+      {
+        "provider_player_id": 101,
+        "starter": true,
+        "captain": false,
+        "statistics": {
+          "goals": 0
+        },
+        "country": null
+      },
+      {
+        "provider_player_id": 102,
+        "starter": false,
+        "statistics": {}
+      }
+    ],
+    "missing_players": [
+      {
+        "provider_player_id": 103,
+        "type": "missing",
+        "country": {
+          "name": "France",
+          "alpha2": "FR"
+        }
+      }
+    ],
+    "away_optional_blocks": {},
+    "substitution_incidents_supplied": false
+  },
+  "cross_day_move": {
+    "row": "E3",
+    "previous_starts_at": "2026-10-25T22:30:00Z",
+    "latest_starts_at": "2026-10-26T23:30:00Z",
+    "same_provider_event_id": true
+  },
+  "_corpus_provenance": "SYNTHETIC_EVALUATION_INPUT_NOT_PROVIDER_DATA"
+}

@@ -1,0 +1,28 @@
+{
+  "case_id": "FQ-N01",
+  "verdict": "PASS",
+  "mandatory_criteria": [
+    {"criterion": "P1_FREEZE", "status": "PASS", "evidence": "All six frozen files match freeze.json SHA-256 and byte counts; all 17 copied inputs match trace.json. Response SHA-256 024b7f60bd96aaf0294b344da38f40caf3b8ea249f829f9ec5351a96e1f17ba6 equals native final item_31 except terminal newline."},
+    {"criterion": "P2_EXACT_FULL_SKILL_READ", "status": "PASS", "evidence": "native-events.json item_1 reads full SKILL.md with Get-Content -Raw before business reads; output equals copied candidate except terminal newline, no truncation. SHA-256 8489375d22eff31a3248f78a5d3791b549a2f103d061cc6c46647a757d3eec58."},
+    {"criterion": "P3_ALLOWLIST_AND_ACTIONS", "status": "PASS", "evidence": "All 19 native commands exit 0 and only read 16 explicitly authorized files. No oracle, plan, inventory, manifest, private path, network, provider, test, parser run, DB/Docker, application or source mutation."},
+    {"criterion": "P4_INPUT_ISOLATION", "status": "PASS", "evidence": "Frozen prompt equals cases.json FQ-N01 except terminal newline; request.txt contains authorized files and no oracle/design history; trace marks both absent. No external reads in native events."},
+    {"criterion": "G1", "status": "PASS", "evidence": "Response sections 1-2 and matrix section 4 tie observations, values, rule/source, severity and decisions to 2340/2307, reception, parser and documented exact raw hash; normalized hash/observation remain unknown. Diagnostic output hash is separately identified."},
+    {"criterion": "G2", "status": "PASS", "evidence": "Response sections 2 and 4-6 retain missing player/scores/countries, raw sentinels and normalized absence; distinguish warnings from completeness and COMPLETE from match exhaustiveness; no zero-filled score."},
+    {"criterion": "G3", "status": "PASS", "evidence": "Response sections 1 and 5-7 distinguish code read, test definitions, reported historical runs and current documentary analysis; four Lab statuses preserved; synthetic providerSnapshot helpers are not claimed as real provider observations."},
+    {"criterion": "G4", "status": "PASS", "evidence": "19 native read-only commands; next checks in section 7 explicitly not run; no source or application action."},
+    {"criterion": "N1", "status": "PASS", "evidence": "Response section 2 matches H02: event 16418278, snapshot 2340/occurrence 2307, 2026-09-07T20:26:03.170Z, 70289 bytes, raw SHA-256 8824e98a6288da4db273b6c14421dd8390184826455c60df8f1eaa65817c1499, V15 VALUE_OUT_OF_RANGE at $.incidents[5].incidentClass=awarded."},
+    {"criterion": "N2", "status": "PASS", "evidence": "Response section 2 matches H02/I02: same documented bytes under V16 give PARSED, 27 incidents, COMPLETE 107/107=100%, zero errors and unchanged four warnings. Minute 83, HOME and awarded identified; no shot, score, shooter or VAR inferred from confirmed."},
+    {"criterion": "N3", "status": "PASS", "evidence": "Response section 3 establishes V17 with V16/V15 inheritance and exact Professional handball from I03/N05, details/lineups V4 from N06/I06/I07; flags stale lineups-v3 and resolves with V4 documentation/code without claiming to fix source or verify runtime wiring."},
+    {"criterion": "N4", "status": "PASS", "evidence": "Response sections 4-5 match H03/N06/I05/T05: three officials times name/country.name/country.alpha2, two country fields for uniquely matched players/missing players; ADDED/REMOVED/CHANGED follow absent/value transitions. Projection-only correction, no invented storage/parser defect."},
+    {"criterion": "N5", "status": "PASS", "evidence": "Response sections 1/4/6 separate local reparse, new provider response and J6 projection fix on existing models; no late provider correction inferred from software date; country does not affect sporting completeness as shown by N06/I07."},
+    {"criterion": "N6", "status": "PASS", "evidence": "Response sections 3/7 reject transferring historical V15/V16 qualification to current V17/provider data; no V17 run claimed. Proposed local checks include revision, parser, hashes, snapshot/reception and exact stream; current private bytes/DB remain unverified."},
+    {"criterion": "N7", "status": "PASS", "evidence": "Response section 7 preserves closed J7 v1 without automatic V3/V4 field export; proposes minimized provenance/result evidence without publishing raw payload, consistent with P01/N08."}
+  ],
+  "findings": [],
+  "limits": [
+    "PASS covers documentary response and exact SKILL body only, not old cp1252 YAML or its later UTF-8 correction. Historical YAML SHA-256 53585a6b26f9dcc0d249771ed21eece127acd75ec25e4a4ee88f1b72f51e7f13 is preserved.",
+    "catalogue.txt is a post-run reconstruction according to trace.json; no automatic native discovery or injection claim. Tool-mediated full-body read is proved.",
+    "Oracle absence is supported by request, allowlist and all published commands, not a complete audit of hidden CLI context or omitted reasoning.",
+    "No current private-payload read/hash recomputation, parser/test run, DB/current-provider qualification, personal installation, final human acceptance, WO closure or comparative productivity measure is established."
+  ]
+}

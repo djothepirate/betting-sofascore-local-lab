@@ -1,0 +1,61 @@
+{
+  "review_type": "INDEPENDENT_STATIC_REVIEW",
+  "reviewer": "fq_candidate_review",
+  "skill": "ss-football-quality",
+  "verdict": "PASS_STATIC_REVIEW_AFTER_ENCODING_FIX",
+  "behavioral_evaluation_qualified": false,
+  "initial_review_head": "bfbe3fb6e787756544508e1a3e5a92674a678bd7",
+  "correction_commit": "11394e327448827c13ad3006d3afc2d9199c1e15",
+  "verification_head": "658309c0e8d9d18e7d96396d8768ac90d8d16cca",
+  "initial_finding": {
+    "priority": "P2",
+    "file": "docs/skills/local-lab/ss-football-quality/agents/openai.yaml",
+    "lines": [2, 3, 4],
+    "title": "Metadata file was not encoded in UTF-8",
+    "evidence": "Strict UTF-8 decoding rejected the standalone E9 byte at offset 34; F4 and E0 also occurred as standalone accented bytes.",
+    "requirement": "AGENTS.md:23 requires UTF-8 text files",
+    "impact": "Metadata could be rejected or rendered with replacement characters."
+  },
+  "resolution": {
+    "status": "VERIFIED_FIXED",
+    "strict_utf8_decode": true,
+    "expected_texts_and_lf_exact_match": true,
+    "display_name": "Qualité football du Local Lab",
+    "short_description": "Contrôler identité, incidents, complétude et historique",
+    "default_prompt": "Utilise $ss-football-quality pour examiner la cohérence des données football du SofaScore Local Lab et relier chaque constat à ses preuves.",
+    "yaml_unchanged_since_correction": true,
+    "skill_unchanged_since_initial_review": true
+  },
+  "remaining_material_findings": [],
+  "business_review": {
+    "conclusion": "No material discrepancy or excessively rigid instruction identified in the controlled sources.",
+    "checked_topics": ["canonical identity", "civil-day IANA boundaries", "independent J4 display scores", "exact V15-V17 incident extensions", "optional V4 metadata warnings", "J6 classification priority", "score.* and completeness.* exclusions", "separation of historical, synthetic, replay and provider evidence"],
+    "optional_precision_not_a_finding": "J6SemanticDiffService.java:560 permits a bounded positional fallback using sequence, type and side when provider identifiers and shootout sequence are absent. The skill does not spell this out but its prohibition on forcing ambiguous matches is compatible."
+  },
+  "hashes": {
+    "skill": {
+      "path": "docs/skills/local-lab/ss-football-quality/SKILL.md",
+      "worktree_sha256": "8489375d22eff31a3248f78a5d3791b549a2f103d061cc6c46647a757d3eec58",
+      "initial_git_blob": "614081aa31aa7744f1ef6b56131997dfd7c92335",
+      "verified_git_blob": "614081aa31aa7744f1ef6b56131997dfd7c92335"
+    },
+    "yaml": {
+      "path": "docs/skills/local-lab/ss-football-quality/agents/openai.yaml",
+      "worktree_sha256": "8d295af442808d3efebbe68e8165ef96efd086b5b84908fc12f04c1c66bf51f2",
+      "initial_git_blob": "ec98cc7278eb2d676db78c30e6a9e1a0fc35013d",
+      "verified_git_blob": "b514b4b2be910ac56b9ae487b922c2265dca7ad4"
+    }
+  },
+  "limits": {
+    "oracles_read": false,
+    "input_cases_read": false,
+    "evaluation_results_read": false,
+    "tests_executed": false,
+    "application_started": false,
+    "database_accessed": false,
+    "browser_started": false,
+    "provider_calls": 0,
+    "tracked_files_modified": false,
+    "final_verification_scope": "Corrected metadata text and UTF-8 encoding; unchanged SKILL.md confirmed by identical Git blob and empty diff."
+  }
+}

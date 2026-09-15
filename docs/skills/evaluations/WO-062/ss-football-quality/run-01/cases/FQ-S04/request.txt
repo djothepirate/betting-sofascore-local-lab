@@ -1,0 +1,4 @@
+Ce cas évalue seulement le routage. À partir du catalogue réellement découvert et de la demande ci-dessous, choisis le ou les skills pertinents. Pour chaque skill retenu, lis intégralement son SKILL.md avec un outil avant de répondre, même si un extrait ou une description est déjà visible. N'exécute pas la tâche métier. Arrête-toi après la décision de routage et indique les skills retenus, les fichiers effectivement lus et les raisons de la sélection ou de la non-sélection. Ne cherche pas de skill absent du catalogue. Aucun réseau, démarrage d'application, accès DB/Docker ni modification n'est autorisé.
+
+Demande :
+Dans le dépôt Betting Project principal uniquement, prépare la comparaison des garanties de composition de trois fournisseurs. Ce travail ne concerne pas le SofaScore Local Lab ni son code.

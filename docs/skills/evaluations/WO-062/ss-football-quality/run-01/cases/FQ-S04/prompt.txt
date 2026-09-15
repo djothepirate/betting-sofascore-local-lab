@@ -1,0 +1,1 @@
+Dans le dépôt Betting Project principal uniquement, prépare la comparaison des garanties de composition de trois fournisseurs. Ce travail ne concerne pas le SofaScore Local Lab ni son code.
