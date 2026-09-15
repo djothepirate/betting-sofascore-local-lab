@@ -1,0 +1,35 @@
+{
+  "schema": "wo062-run02-publication-provenance-v1",
+  "publisher_source_head": "3f758491c5a4bdf3c07daacc7fedec7a8458d2ec",
+  "candidate_body_commit": "9e7b777e3be75f582f2198dfa8cca386b43426c2",
+  "candidate_package_commit": "9e7b777e3be75f582f2198dfa8cca386b43426c2",
+  "evaluation_source_head": "2d62f12c2d2ad4571c630aea0f98128927aa24ff",
+  "authorization_sha256": "c1efa9d1222b96df3e3848b803ac006fafe816ce1b2b050c8759cf3ad8c080cf",
+  "authorized_additional_sessions": 10,
+  "published_cases": [
+    "WR-H01",
+    "WR-N01"
+  ],
+  "excluded_prepared_cases": [
+    "WR-C01",
+    "WR-C02",
+    "WR-S01",
+    "WR-S02",
+    "WR-S03",
+    "WR-S04"
+  ],
+  "static_review_source": "docs/skills/evaluations/WO-062/ss-windows-runtime/run-01",
+  "publisher_sha256": "e1596d4c0731d1e71a521deb173d532aa6f44c14c9da25164e1e2013a871f5cd",
+  "model": null,
+  "reasoning_effort": null,
+  "human_validation": false,
+  "personal_installation": false,
+  "limits": [
+    "Qualification limited to the frozen cases; no general productivity gain measured.",
+    "Model and reasoning effort use configured defaults; exact values unavailable. No model override is made by this publisher.",
+    "Complete tool-mediated skill loading is reviewed separately; no automatic CLI body-injection claim.",
+    "Catalogue reconstruction occurs after execution and is not a capture of the transmitted model request.",
+    "These evaluations establish no application build, application test, database, provider collection, scanner or CI pipeline.",
+    "WR-H01 is a controlled PowerShell7 argument capture, not Java application startup. WR-N01 is only a synthetic Java source probe under Windows PowerShell5.1. The two run-01 BLOCKED outcomes remain historical evidence; they are not rewritten."
+  ]
+}

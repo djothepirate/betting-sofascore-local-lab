@@ -1,0 +1,16 @@
+WR_H01_STARTED_UTC=2026-09-15T22:00:14.3051018Z
+COMMAND=NOT_STARTED
+WORKING_DIRECTORY=C:\Dev\BettingProject\codex\betting-sofascore-local-lab\.tmp\wo062-skills-lot2\.tmp\wo062-evaluations\ss-windows-runtime\run-02\WR-H01\output
+CHILD_TEMP=C:\Dev\BettingProject\codex\betting-sofascore-local-lab\.tmp\wo062-skills-lot2\.tmp\wo062-evaluations\ss-windows-runtime\run-02\WR-H01\output\runtime
+CHILD_TMP=C:\Dev\BettingProject\codex\betting-sofascore-local-lab\.tmp\wo062-skills-lot2\.tmp\wo062-evaluations\ss-windows-runtime\run-02\WR-H01\output\runtime
+--- HARNESS STDOUT ---
+
+--- HARNESS STDERR ---
+
+HARNESS_EXIT_CODE=
+FORCED_HARNESS_EXIT_CODE=
+PRIMARY=PREFLIGHT_BLOCKED
+CLEANUP=FAIL_OR_NOT_ESTABLISHED
+DRIVER_EXIT_CODE=1
+DURATION_AT_EVIDENCE_MS=428.6709
+HARNESS_DURATION_MS=

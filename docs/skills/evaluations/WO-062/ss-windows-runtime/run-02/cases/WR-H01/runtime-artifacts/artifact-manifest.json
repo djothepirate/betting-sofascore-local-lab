@@ -1,0 +1,135 @@
+{
+  "utc": "2026-09-15T22:08:24.8362083Z",
+  "validation": "UTF8_WITHOUT_BOM_JSON_AND_ARTIFACT_LINKS_PASS",
+  "files": [
+    {
+      "name": "cim-observation-block.json",
+      "bytes": 549,
+      "sha256": "09B3BB01C07C9B4F1B6D2914A36125C19B73BA657673916AA6DA653EE284EA74",
+      "utf8WithoutBom": true
+    },
+    {
+      "name": "execution-outer-return.json",
+      "bytes": 505,
+      "sha256": "EB6A42D35976B2FFF66AED1BB94F1229453DA0305FFF08AA4DBA5D8987731962",
+      "utf8WithoutBom": true
+    },
+    {
+      "name": "execution-prompt-return.json",
+      "bytes": 318,
+      "sha256": "2E4A269740D4FACAD98D3AEDAFD6D9B1D62A916DA08271547BF3189301F0049F",
+      "utf8WithoutBom": true
+    },
+    {
+      "name": "execution-transcript.txt",
+      "bytes": 1116,
+      "sha256": "F33215DFF62EE197EC3D937308A5B7DC63E65013E778B7A6EA48E71098360A78",
+      "utf8WithoutBom": true
+    },
+    {
+      "name": "execution.json",
+      "bytes": 25158,
+      "sha256": "382D40B80D2FF45B73FF044DDA418EB9B8BCE56B35534912EB9103EA787A9666",
+      "utf8WithoutBom": true
+    },
+    {
+      "name": "execution.stderr.txt",
+      "bytes": 0,
+      "sha256": "E3B0C44298FC1C149AFBF4C8996FB92427AE41E4649B934CA495991B7852B855",
+      "utf8WithoutBom": true
+    },
+    {
+      "name": "execution.stdout.txt",
+      "bytes": 547,
+      "sha256": "2EA5456171EE72ABA19170D19F6BD8FB94AF6EC7579D49C057B6478804E97D9D",
+      "utf8WithoutBom": true
+    },
+    {
+      "name": "harness.stderr.txt",
+      "bytes": 0,
+      "sha256": "E3B0C44298FC1C149AFBF4C8996FB92427AE41E4649B934CA495991B7852B855",
+      "utf8WithoutBom": true
+    },
+    {
+      "name": "harness.stdout.txt",
+      "bytes": 0,
+      "sha256": "E3B0C44298FC1C149AFBF4C8996FB92427AE41E4649B934CA495991B7852B855",
+      "utf8WithoutBom": true
+    },
+    {
+      "name": "independent-postflight.json",
+      "bytes": 4285,
+      "sha256": "DAB997775F9C713CED21611F847DF12C35B73F298B6710BE6C0C32756F4D2C58",
+      "utf8WithoutBom": true
+    },
+    {
+      "name": "Invoke-WRH01.ps1",
+      "bytes": 20496,
+      "sha256": "8A01B76DD72A6702F1AD312905A339D51CC4F44788CE6D1DB03458FAA47386AC",
+      "utf8WithoutBom": true
+    },
+    {
+      "name": "Invoke-WRH01Harness.ps1",
+      "bytes": 16118,
+      "sha256": "89FC081C70036DA058E261D2E37B2A10AD98394E69C1DBE5DF97D593536A0655",
+      "utf8WithoutBom": true
+    },
+    {
+      "name": "outer-return.json",
+      "bytes": 645,
+      "sha256": "8D5EB2E9547641DB589A7633CF7CA7A1F87C8A8CB96BE34794352998B9E8EA86",
+      "utf8WithoutBom": true
+    },
+    {
+      "name": "Postflight-WRH01.ps1",
+      "bytes": 2613,
+      "sha256": "15DD8A177500851BB9DBE717DA3F6FBCD6C61099319BFDB5AFFF95CEE3D20BD2",
+      "utf8WithoutBom": true
+    },
+    {
+      "name": "prompt-return.json",
+      "bytes": 188,
+      "sha256": "471F269618BEBD3E8326EE51810C601EE4244C33A867820B852C49BCEF907BBC",
+      "utf8WithoutBom": true
+    },
+    {
+      "name": "README.md",
+      "bytes": 15376,
+      "sha256": "62730E1B1371A1C39EA7F5555258E4F0FF78FBACC682AD79B3AB856CA4B55707",
+      "utf8WithoutBom": true
+    },
+    {
+      "name": "Run-WRH01.ps1",
+      "bytes": 1099,
+      "sha256": "7B43544E2C565A58ABFC7C1BCFEFB5B3AE54ADA9D7D24E82290241B0990D7D9E",
+      "utf8WithoutBom": true
+    },
+    {
+      "name": "Run-WRH01Harness.ps1",
+      "bytes": 838,
+      "sha256": "9DF2FF4BBEEC4ED8C85715D9A4F7C16A24AC1C6E62DA95191B4F3F48B88B64A0",
+      "utf8WithoutBom": true
+    },
+    {
+      "name": "run.json",
+      "bytes": 4948,
+      "sha256": "A411F3A606AFADD6DAC2D86B0D8C25DD268029BBD4339F6E66D10D76C415B461",
+      "utf8WithoutBom": true
+    },
+    {
+      "name": "tool-events.json",
+      "bytes": 7579,
+      "sha256": "04846F4DE6C14C315A5F37600D8EAD4D3980EF805AE32E1D5354EBBDD22ED620",
+      "utf8WithoutBom": true
+    },
+    {
+      "name": "transcript.txt",
+      "bytes": 787,
+      "sha256": "4A0764850EA92A73CF4940E72F09DBAA246CD82A9A1AC12BA9F761F60CAD5FB5",
+      "utf8WithoutBom": true
+    }
+  ],
+  "runtimeEntryCount": 0,
+  "sourceVerification": "independent-postflight.json: all 12 authorized input files identical",
+  "manifestExcludesItself": true
+}

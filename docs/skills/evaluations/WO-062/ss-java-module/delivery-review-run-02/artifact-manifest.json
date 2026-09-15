@@ -1,0 +1,17 @@
+{
+  "schema": "wo062-support-evidence-manifest-v1",
+  "created_at_utc": "2026-09-15T22:12:21.442550+00:00",
+  "scope": "Independent review of Java result/document consistency at commit 3f75849; Windows was explicitly provisional.",
+  "files": [
+    {
+      "path": "c-delivery-review.json",
+      "bytes": 21731,
+      "sha256": "6e7e7836166c636661411e60ade95ad770aa3b1c53d3900ef1b9c970dd9613b7"
+    },
+    {
+      "path": "c-delivery-review.md",
+      "bytes": 7044,
+      "sha256": "a0e0b255b62536b943ee0b600e16a34d8c67315b1b38d791416311d0d3c8e440"
+    }
+  ]
+}

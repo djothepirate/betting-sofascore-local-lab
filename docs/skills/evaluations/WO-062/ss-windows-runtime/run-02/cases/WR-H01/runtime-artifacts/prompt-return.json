@@ -1,0 +1,7 @@
+{
+  "marker": "WR_PROMPT_RETURNED",
+  "utc": "2026-09-15T22:00:23.4412534Z",
+  "command": "Write-Output WR_PROMPT_RETURNED",
+  "precedingToolExitCode": 1,
+  "harnessStarted": false
+}

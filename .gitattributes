@@ -78,3 +78,5 @@ docs/skills/evaluations/WO-062/ss-java-module/run-*/review-*.md whitespace=-blan
 docs/skills/evaluations/WO-062/ss-windows-runtime/run-*/cases/*/response.md whitespace=-blank-at-eol,space-before-tab,cr-at-eol,-blank-at-eof
 docs/skills/evaluations/WO-062/ss-windows-runtime/run-*/review-*.md whitespace=-blank-at-eol,space-before-tab,cr-at-eol,-blank-at-eof
 docs/skills/evaluations/WO-062/java-windows-runtime/** -text
+# Native PS5.1 transcript retains the console's empty configuration-label space.
+docs/skills/evaluations/WO-062/ss-windows-runtime/run-02/cases/WR-N01/runtime-artifacts/conductor-transcript.txt whitespace=-blank-at-eol,space-before-tab,cr-at-eol,-blank-at-eof

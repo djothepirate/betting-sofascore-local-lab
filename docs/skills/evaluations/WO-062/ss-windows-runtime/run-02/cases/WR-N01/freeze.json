@@ -1,0 +1,131 @@
+{
+  "frozen_at_utc": "2026-09-15T22:03:52.288244+00:00",
+  "before_independent_review": true,
+  "files": [
+    {
+      "path": "catalogue.txt",
+      "bytes": 8593,
+      "sha256": "d4fbbc6b09bcaf40e5216affa6620b055a917191323251039e07988828c80de1"
+    },
+    {
+      "path": "host-runtime.json",
+      "bytes": 371,
+      "sha256": "012bb3d9baec43b09f468f032cbb68b70f9871a0889b9b4aa72ebbc5bf96a4e4"
+    },
+    {
+      "path": "input.json",
+      "bytes": 1643,
+      "sha256": "76687203add1b1059600052f0f8809cd915224628738a937733b7f69e18374b7"
+    },
+    {
+      "path": "native-events.json",
+      "bytes": 243592,
+      "sha256": "4b8d9ae8f57c121d884cd23979f62b8b748c61cd36eadf9a2c23e95414a3060d"
+    },
+    {
+      "path": "prompt.txt",
+      "bytes": 651,
+      "sha256": "526d0d877ac644775f25742231f5f870bbe3bfacfb729e66a59a933082c10c5b"
+    },
+    {
+      "path": "request.txt",
+      "bytes": 2423,
+      "sha256": "7a5113dcdb6a32832b24b02e78c99a9cbdf0d261e51cbd6152a7ca58b449de1f"
+    },
+    {
+      "path": "response.md",
+      "bytes": 4154,
+      "sha256": "0148ebd3172cab3e9529214ac50db040d12b4709198091e5440c8048290290a3"
+    },
+    {
+      "path": "runtime-artifacts/conductor-transcript.txt",
+      "bytes": 934,
+      "sha256": "a998752a2c533046cb328bc2afe21f536fec062ad3754d30975b8265dedf40bc"
+    },
+    {
+      "path": "runtime-artifacts/events.jsonl.txt",
+      "bytes": 11652,
+      "sha256": "a53944d408d530d3f912a9b0c676e77d91542d0896e6f2dbd0ee5f64675cdcc2"
+    },
+    {
+      "path": "runtime-artifacts/failure.stderr.txt",
+      "bytes": 0,
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    {
+      "path": "runtime-artifacts/failure.stdout.txt",
+      "bytes": 136,
+      "sha256": "ba758a75760039b49c8ce72cde1e68e8075657f59cbdefc559680afc398252b9"
+    },
+    {
+      "path": "runtime-artifacts/independent-postflight.json",
+      "bytes": 3166,
+      "sha256": "3857973aa6054d9f090644368aca15ac82c720f442d1b6d4dfff165234ef9eb8"
+    },
+    {
+      "path": "runtime-artifacts/Invoke-Qualification.ps1",
+      "bytes": 1742,
+      "sha256": "e0321371a6f340cc53beb666b28297b999b124bb83fffe1aa63ecbaf25fbe2ff"
+    },
+    {
+      "path": "runtime-artifacts/Invoke-WRN01.ps1",
+      "bytes": 19887,
+      "sha256": "c2d87e3d7da7806c84a93e0bcfa16ac16a1f20126fafe696e60f00fb2ceb61dd"
+    },
+    {
+      "path": "runtime-artifacts/Observe-Postflight.ps1",
+      "bytes": 3898,
+      "sha256": "d005a93fa564ac3eb0b617dce33920dbbd40e0e90f21949abfc6d2f1d954a68e"
+    },
+    {
+      "path": "runtime-artifacts/outer-result.json",
+      "bytes": 1183,
+      "sha256": "07359a610b74260520ff5e1bc3be32bca143fa79f61a661e0884b99b1f37a25a"
+    },
+    {
+      "path": "runtime-artifacts/prompt-returned.txt",
+      "bytes": 49,
+      "sha256": "3b39db9059f66402faf96608c6a6f2a0381f46878d18829f8b8dd00e73bd0ba2"
+    },
+    {
+      "path": "runtime-artifacts/provenance.json",
+      "bytes": 2452,
+      "sha256": "8392967e6e39f2395e6a2184b2ca7752ecf7b71aec1e611a598e8a9c4a7f491e"
+    },
+    {
+      "path": "runtime-artifacts/qualification-note.md",
+      "bytes": 10442,
+      "sha256": "40ce3ae17f17846511ae4f6beacf744a77c12ef86a3a12f63fa481bb4f7c5c0b"
+    },
+    {
+      "path": "runtime-artifacts/result.json",
+      "bytes": 16518,
+      "sha256": "ab3d036a118fe98442bbb791992d45344783d6f3b9e119cb07a0f930c985c246"
+    },
+    {
+      "path": "runtime-artifacts/tool-observations.json",
+      "bytes": 1202,
+      "sha256": "a15f97573cb25860b1ae2dd1c492fa5aa62fd4c3c1d96bf3c572cdd7d67b1728"
+    },
+    {
+      "path": "runtime-artifacts/version.stderr.txt",
+      "bytes": 0,
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    {
+      "path": "runtime-artifacts/version.stdout.txt",
+      "bytes": 164,
+      "sha256": "6336c74c55757e97f9a46128f1d297c379c7a69efd019487651747a722bd1378"
+    },
+    {
+      "path": "stderr.log",
+      "bytes": 878,
+      "sha256": "e612ca66a812e1ed009b436cade03371220eb7ea786664e6cd4237686dd44fb1"
+    },
+    {
+      "path": "trace.json",
+      "bytes": 7305,
+      "sha256": "49acb387602de0a24a71f97b1e890e24fb3d792c54d8670c56a7729bece84c9c"
+    }
+  ]
+}

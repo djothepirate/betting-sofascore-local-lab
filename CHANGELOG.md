@@ -10,7 +10,10 @@ Les évolutions notables du SofaScore Local Lab sont consignées dans ce fichier
   Conserve [seize premières recettes et leurs limites](docs/validation/WO062-JAVA-WINDOWS-CANDIDATES-20260915.md) :
   Java `.1` 5 PASS / 3 FAIL pour omissions, Windows `.1` 6 PASS / 2 BLOCKED avant exécution.
   Corrige Java en `.2` et prépare les nouveaux contextes Windows sans assouplir le sandbox.
-  Dix sessions supplémentaires sont autorisées, requalification en cours ; aucune validation
+  Conserve les dix tentatives supplémentaires du 15–16 septembre : Java `.2` 7 PASS / 1 FAIL ;
+  Windows garde 6 PASS / 2 BLOCKED. La reproduction PowerShell 7 réussit, mais sa session
+  expire avant réponse finale ; la sonde Java est interrompue sur une identité de processus
+  incohérente, avant sleep, avec un résidu signalé. Qualification C incomplète ; aucune validation
   humaine ou installation personnelle C, aucun changement des skills antérieurs ou du code.
 
 - Consigne la validation humaine de `ss-football-quality` et `ss-ci-security` version

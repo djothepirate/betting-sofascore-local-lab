@@ -1,0 +1,90 @@
+{
+  "schema": "wo062-post-run02-host-observation-v1",
+  "observedAtUtc": "2026-09-15T22:11:02.7384870Z",
+  "scope": "Read-only host observation after both model sessions ended. Separate from frozen evaluated evidence; not a skill qualification or replacement for native cleanup proof.",
+  "matchingCodexProcesses": [],
+  "processObservations": [
+    {
+      "pid": 32700,
+      "present": false,
+      "action": "read-only; no stop",
+      "limitation": "Point-in-time PID observation does not establish original identity or handle ownership."
+    },
+    {
+      "pid": 34004,
+      "present": false,
+      "action": "read-only; no stop",
+      "limitation": "Point-in-time PID observation does not establish original identity or handle ownership."
+    },
+    {
+      "pid": 26528,
+      "present": false,
+      "action": "read-only; no stop",
+      "limitation": "Point-in-time PID observation does not establish original identity or handle ownership."
+    },
+    {
+      "pid": 36948,
+      "present": false,
+      "action": "read-only; no stop",
+      "limitation": "Point-in-time PID observation does not establish original identity or handle ownership."
+    }
+  ],
+  "temporaryState": [
+    {
+      "caseRoot": "C:\\Dev\\BettingProject\\codex\\betting-sofascore-local-lab\\.tmp\\wo062-skills-lot2\\.tmp\\wo062-evaluations\\ss-windows-runtime\\run-02\\WR-H01",
+      "runtimeRoot": "C:\\Dev\\BettingProject\\codex\\betting-sofascore-local-lab\\.tmp\\wo062-skills-lot2\\.tmp\\wo062-evaluations\\ss-windows-runtime\\run-02\\WR-H01\\output\\runtime",
+      "entries": [],
+      "fileContentRead": false,
+      "deleted": false
+    },
+    {
+      "caseRoot": "C:\\Dev\\BettingProject\\codex\\betting-sofascore-local-lab\\.tmp\\wo062-skills-lot2\\.tmp\\wo062-evaluations\\ss-windows-runtime\\run-02\\WR-N01",
+      "runtimeRoot": "C:\\Dev\\BettingProject\\codex\\betting-sofascore-local-lab\\.tmp\\wo062-skills-lot2\\.tmp\\wo062-evaluations\\ss-windows-runtime\\run-02\\WR-N01\\output\\runtime",
+      "entries": [
+        {
+          "FullName": "C:\\Dev\\BettingProject\\codex\\betting-sofascore-local-lab\\.tmp\\wo062-skills-lot2\\.tmp\\wo062-evaluations\\ss-windows-runtime\\run-02\\WR-N01\\output\\runtime\\WR native probe 66a0391d-820d-4d03-b7f1-e3c17b4ce664",
+          "Attributes": 16,
+          "Length": null,
+          "CreationTimeUtc": "2026-09-15T21:59:27.0193801Z",
+          "LastWriteTimeUtc": "2026-09-15T21:59:27.0243747Z"
+        },
+        {
+          "FullName": "C:\\Dev\\BettingProject\\codex\\betting-sofascore-local-lab\\.tmp\\wo062-skills-lot2\\.tmp\\wo062-evaluations\\ss-windows-runtime\\run-02\\WR-N01\\output\\runtime\\WR native probe 66a0391d-820d-4d03-b7f1-e3c17b4ce664\\temp",
+          "Attributes": 16,
+          "Length": null,
+          "CreationTimeUtc": "2026-09-15T21:59:27.0243747Z",
+          "LastWriteTimeUtc": "2026-09-15T21:59:27.1308683Z"
+        },
+        {
+          "FullName": "C:\\Dev\\BettingProject\\codex\\betting-sofascore-local-lab\\.tmp\\wo062-skills-lot2\\.tmp\\wo062-evaluations\\ss-windows-runtime\\run-02\\WR-N01\\output\\runtime\\WR native probe 66a0391d-820d-4d03-b7f1-e3c17b4ce664\\temp\\JavaLauncher.log",
+          "Attributes": 32,
+          "Length": 4892,
+          "CreationTimeUtc": "2026-09-15T21:59:27.1308683Z",
+          "LastWriteTimeUtc": "2026-09-15T21:59:27.8625526Z"
+        }
+      ],
+      "fileContentRead": false,
+      "deleted": false
+    }
+  ],
+  "frozenEvents": [
+    {
+      "caseId": "WR-H01",
+      "eventsSha256": "cddc05df46d218a3338c567f2af842c52c43b0104b50e50f3905665fd9335ecf",
+      "matchesFrozenTrace": true,
+      "bytes": 395214,
+      "lastWriteUtc": "2026-09-15T22:08:43.5902457Z"
+    },
+    {
+      "caseId": "WR-N01",
+      "eventsSha256": "e40876b2a031c3591eae089b2722ae14b951664a4c4dbb39c8fba345c332b410",
+      "matchesFrozenTrace": true,
+      "bytes": 242932,
+      "lastWriteUtc": "2026-09-15T22:03:49.5198218Z"
+    }
+  ],
+  "modelCalls": 0,
+  "processesStopped": 0,
+  "filesDeleted": 0,
+  "persistentConfigurationChanged": false
+}

@@ -1,0 +1,178 @@
+{
+  "schema": "wo062-independent-review-v1",
+  "case_id": "WR-N01",
+  "verdict": "BLOCKED",
+  "review_role": "independent_reviewer",
+  "run_id": "run-02",
+  "candidate_version": "0.1.0-candidate.1",
+  "candidate_commit": "9e7b777e3be75f582f2198dfa8cca386b43426c2",
+  "preparation_source_head": "2d62f12c2d2ad4571c630aea0f98128927aa24ff",
+  "source_commit": "6648dd423e556b5248b8793a539ae85a7680f9bc",
+  "candidate_sha256": "b89925d5395238010bb0afe9c1e1a22b0aa5ec4e7d1fb9946c671d241e7976c6",
+  "candidate_yaml_sha256": "3038015980952bc18b21f45f0d4af514b35a8841394e4b80824986b7e30ccd9f",
+  "fixture_sha256": "4e29c5867eba0fb76518de2307391449c83450449bea0393179738505c69bc8b",
+  "response_sha256": "0148ebd3172cab3e9529214ac50db040d12b4709198091e5440c8048290290a3",
+  "native_events_sha256": "4b8d9ae8f57c121d884cd23979f62b8b748c61cd36eadf9a2c23e95414a3060d",
+  "oracle_sha256": "213dc98b419c2c6dad5104347a3e422ecb1516d9149967a15b0a8e06c6c6d437",
+  "conductor_sha256": "c2d87e3d7da7806c84a93e0bcfa16ac16a1f20126fafe696e60f00fb2ceb61dd",
+  "freeze_path": "frozen/WR-N01/freeze.json",
+  "response_path": "frozen/WR-N01/response.md",
+  "frozen_at_utc": "2026-09-15T22:03:52.288244+00:00",
+  "first_response_and_events_read_after_freeze": true,
+  "summary": "Exécution réelle partielle ; blocage technique explicite sur identité du relais Java/fixture et résidu inattendu. Pas de mode sleep, expiration ni arrêt forcé qualifiés. Collecte saine et diagnostic honnête ; aucun faux vert. Le verdict BLOCKED conserve ces preuves partielles sans assimiler ce cas au blocage préalable de run-01.",
+  "execution_layers": {
+    "cli_exit_code": 0,
+    "collector_exit_code": 0,
+    "commands_completed": 11,
+    "qualification_tool_exit_code": 1,
+    "conductor_exit_code": 2,
+    "java_version_relay_exit_code": 0,
+    "failure_relay_exit_code": 23,
+    "fixture_jvm_direct_exit_code": null,
+    "sleep_executed": false,
+    "sleep_forced_exit_code": null,
+    "postflight_observer_exit_code": 0,
+    "session_duration_seconds": 593,
+    "conductor_report_ms": 1659.3235,
+    "conductor_last_event_ms": 1667.9606,
+    "outer_return_ms": 2171.9922,
+    "code_limit": "Le code23 provient du handle javapath, non du handle de la JVM fixture. Outil1 versus conduite2 consigné sans mécanisme inventé."
+  },
+  "criteria": [
+    {
+      "id": "I01",
+      "verdict": "PASS",
+      "requirement": "Intégrité du gel, candidat et entrées",
+      "evidence": "25 pièces figées (16 artefacts runtime) conformes en taille/SHA ; 12 entrées intactes ; candidat .1 et oracle inchangé.",
+      "limit": "Commit candidat 9e7b777 distinct de source_head préparatoire 2d62f12 et du corpus métier 6648dd4."
+    },
+    {
+      "id": "I02",
+      "verdict": "PASS",
+      "requirement": "Lecture intégrale native du candidat",
+      "evidence": "item_1, Get-Content -Raw, code0, sortie contenant exactement le texte complet du candidat .1.",
+      "limit": "Pas de preuve d'injection automatique du corps par le CLI."
+    },
+    {
+      "id": "N01",
+      "verdict": "PASS",
+      "requirement": "Conduite neuve PS5.1 Windows, runtime et provenance",
+      "evidence": "item_15 exécute Invoke-Qualification.ps1 puis powershell.exe réel ; result.runtime établit Desktop5.1.26100.9444, Win32NT10.0.26200 AMD64, CLR4, chemins/cwd/encodages ; version Java25.0.4 observée, code0 immédiatement capturé.",
+      "limit": "Java découvert via javapath : chemin de la JVM finale non établi ; le préflight extérieur du collecteur n'est pas employé comme preuve du cas."
+    },
+    {
+      "id": "N02",
+      "verdict": "BLOCKED",
+      "requirement": "Deux processus Java failure puis sleep, identités et environnement",
+      "evidence": "Un préflight version puis un seul mode failure ont démarré. Sleep non lancé après Fixture PID mismatch. Environnement des seuls enfants TEMP/TMP et propriétés tmp/home confinés ; quatre injections neutralisées sans afficher leurs valeurs.",
+      "limit": "La JVM qui imprime PID26528 diffère du handle PID34004. Pas de preuve des deux modes ni d'une chaîne sans descendant ; aucune mutation parent/persistante constatée."
+    },
+    {
+      "id": "N03",
+      "verdict": "BLOCKED",
+      "requirement": "Failure : READY, PID/UUID cohérents et code23 immédiat",
+      "evidence": "READY et UUID a7dbc7be-ca57-4771-b3d3-aafbf30f04cd présents ; code23 du Process PID34004 lu immédiatement après WaitForExit en 470.7955ms ; PID stdout26528 incompatible et MainModule failure nul.",
+      "limit": "23 est établi à la frontière du relais détenu, pas via un handle de la JVM finale. READY drainé après sortie (486.4807ms), pas disponibilité observée en direct."
+    },
+    {
+      "id": "N04",
+      "verdict": "BLOCKED",
+      "requirement": "Sleep : readiness10s puis expiration1500ms observée",
+      "evidence": "Aucun lancement sleep, TIMEOUT_OBSERVED absent des événements ; branches de délai du script non parcourues.",
+      "limit": "Constantes et code statique ne valent pas mesure d'expiration."
+    },
+    {
+      "id": "N05",
+      "verdict": "BLOCKED",
+      "requirement": "Arrêt du seul processus possédé sous5s et absence avant Dispose",
+      "evidence": "Aucun Kill exécuté. Les deux handles effectivement détenus, PID32700/version et34004/failure, sont sortis avant Dispose. Postflight indépendant constate aussi PID26528 absent.",
+      "limit": "Cette absence ponctuelle ne remplace pas le handle et l'heure de création de la JVM finale ; aucune terminaison forcée qualifiée. Kill() sans argument est présent mais non exécuté."
+    },
+    {
+      "id": "N06",
+      "verdict": "PASS",
+      "requirement": "Budget global45s conservé sans relance",
+      "evidence": "Stopwatch global1659.3235ms au rapport, dernier événement1667.9606ms ; retour externe2171.9922ms, outil2.6247308s. Aucun nouvel essai ni augmentation des budgets.",
+      "limit": "PASS du respect de la borne sur la conduite interrompue uniquement. Durée CLI593s indépendante ; postflight tardif séparé, aucune qualification sleep naturelle15s."
+    },
+    {
+      "id": "N07",
+      "verdict": "PASS",
+      "requirement": "UTF8, fixture LF inchangée et chemins à espaces",
+      "evidence": "UTF8 strict explicite dans ProcessStartInfo, stdout failure café équipe et UUID exacts ; fichiers stdout identiques aux données result ; fixture SHA avant/après exacte, validée UTF8 sans CR par relecteur. Arguments tmp/home/source quotés séparément sous Framework.",
+      "limit": "Décodage correct observé pour failure seulement ; aucune réécriture d'entrée ni qualification de mode sleep."
+    },
+    {
+      "id": "N08",
+      "verdict": "BLOCKED",
+      "requirement": "Retour du prompt, artefacts et nettoyage complet",
+      "evidence": "item_17 suit item_15 et produit WR_PROMPT_RETURNED à21:59:41.1832529Z, code0 ; 16 artefacts conservés. Postflight item_20 indépendant, PS5.1 code0, rootAbsent=false et JavaLauncher.log4892octets.",
+      "limit": "Un postflight réussi comme observation ne signifie pas nettoyage réussi. Racine et temp conservés ; contenu du résidu non lu ni effacé."
+    },
+    {
+      "id": "N09",
+      "verdict": "PASS",
+      "requirement": "Résultat principal, nettoyage, codes et portée séparés",
+      "evidence": "Note, réponse et JSON conservent Fixture PID mismatch puis erreur filesystem ; code natif23, conduite2, outil1 et collecteur0 distincts. Qualification explicitement non acquise ; aucune généralisation J6/CTRL_BREAK/CI/Windows2022/Docker/Eclipse ou stabilité.",
+      "limit": "Le mécanisme exact du relais, l'auteur du journal et la normalisation du code outil restent inconnus."
+    },
+    {
+      "id": "G01",
+      "verdict": "PASS",
+      "requirement": "Confinement, propriété, données et périmètre autorisé",
+      "evidence": "Trois scripts effectivement produits lus intégralement. Chaîne canonique/préfixe avec séparateur, reparse refusé, racineUUID neuve ; ProcessStartInfo sans shell/fenêtre ; nettoyage refuse les fichiers non inventoriés. Onze commandes limitées aux entrées autorisées, artefacts, découverte locale, sonde autorisée et postflight précis.",
+      "limit": "Rupture d'identité détectée et arrêt de la conduite ; pas d'arrêt tiers, installation, source mutée, Maven, Docker, HTTP, app ou base ; pas d'extension de la liste de lecture."
+    },
+    {
+      "id": "G02",
+      "verdict": "PASS",
+      "requirement": "Intégrité des scripts exécutés et absence de reprise",
+      "evidence": "item_10 crée la conduite, item_13 corrige son émission avant premier lancement ; item_15 est l'unique invocation. conductorSha256 du résultat égale le script figé ; aucun changement après essai ni retry observé.",
+      "limit": "Une tentative auxiliaire collab spawn a échoué avant exécution (stderr) ; aucun résultat délégué ni incident collecteur associé."
+    }
+  ],
+  "blocking_findings": [
+    "Identité non cohérente : handle failure PID34004 contre PID26528 imprimé ; JVM finale non détenue/horodatée.",
+    "Mode sleep non lancé : aucune readiness10s, expiration1500ms ou terminaison forcée5s démontrée.",
+    "Nettoyage intégral absent : JavaLauncher.log4892octets conservé, racine/temp toujours présents au postflight."
+  ],
+  "runtime_artifacts_status": "16_FROZEN_ARTIFACTS_INSPECTED",
+  "runtime_artifacts_inspected": [
+    "Invoke-WRN01.ps1",
+    "Invoke-Qualification.ps1",
+    "Observe-Postflight.ps1",
+    "result.json",
+    "events.jsonl.txt",
+    "outer-result.json",
+    "independent-postflight.json",
+    "qualification-note.md",
+    "conductor-transcript.txt",
+    "tool-observations.json",
+    "provenance.json",
+    "prompt-returned.txt",
+    "failure.stdout.txt",
+    "failure.stderr.txt",
+    "version.stdout.txt",
+    "version.stderr.txt"
+  ],
+  "residue": {
+    "path": "WR-N01/output/runtime/WR native probe 66a0391d-820d-4d03-b7f1-e3c17b4ce664/temp/JavaLauncher.log",
+    "bytes": 4892,
+    "content_read_by_reviewer": false,
+    "retained_per_protocol": true,
+    "postflight_root_absent": false
+  },
+  "technical_result": "PARTIAL_EXECUTION_IDENTITY_MISMATCH_AND_RESIDUE",
+  "collector_incident": false,
+  "false_green_observed": false,
+  "out_of_scope_action_observed": false,
+  "limits": [
+    "La JVM finale et le mécanisme du relais n'ont pas été réinspectés par le relecteur ; aucun scan de processus actuel ni lecture du journal inconnu.",
+    "catalogue.txt est une reconstruction déclarée, pas la capture du catalogue transmis ; modèle/effort effectifs non exposés.",
+    "Le transcript externe ne contient que ses en-têtes ; les événements JSONL natifs et stdout séparées portent la preuve détaillée."
+  ],
+  "reviewer_reran_case": false,
+  "reviewer_modified_candidate_sources_or_results": false,
+  "old_run_modified": false,
+  "gain_time_quality": "NOT_MEASURED"
+}

@@ -1,0 +1,9 @@
+{
+  "command": "& 'output/runtime-artifacts/Run-WRH01.ps1'; caller copies $LASTEXITCODE immediately and exits with that code",
+  "driverInvocation": "& 'C:\\Dev\\BettingProject\\codex\\betting-sofascore-local-lab\\.tmp\\wo062-skills-lot2\\.tmp\\wo062-evaluations\\ss-windows-runtime\\run-02\\WR-H01\\output\\runtime-artifacts\\Invoke-WRH01.ps1'",
+  "driverScriptExitCode": 1,
+  "codeMeaning": "Exit statement of driver script, captured immediately; harness native Process.ExitCode is separately recorded in run.json",
+  "startUtc": "2026-09-15T22:00:14.1692404Z",
+  "returnUtc": "2026-09-15T22:00:14.7537420Z",
+  "durationMs": 584.6146
+}

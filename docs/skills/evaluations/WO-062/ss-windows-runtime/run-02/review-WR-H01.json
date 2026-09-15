@@ -1,0 +1,191 @@
+{
+  "schema": "wo062-independent-review-v1",
+  "case_id": "WR-H01",
+  "verdict": "BLOCKED",
+  "review_role": "independent_reviewer",
+  "run_id": "run-02",
+  "candidate_version": "0.1.0-candidate.1",
+  "candidate_commit": "9e7b777e3be75f582f2198dfa8cca386b43426c2",
+  "preparation_source_head": "2d62f12c2d2ad4571c630aea0f98128927aa24ff",
+  "source_commit": "6648dd423e556b5248b8793a539ae85a7680f9bc",
+  "candidate_sha256": "b89925d5395238010bb0afe9c1e1a22b0aa5ec4e7d1fb9946c671d241e7976c6",
+  "candidate_yaml_sha256": "3038015980952bc18b21f45f0d4af514b35a8841394e4b80824986b7e30ccd9f",
+  "response_sha256": null,
+  "response_status": "ABSENT",
+  "native_events_sha256": "2895f515191aa47d889dbf436ac17ec74dc94f8018087fb16a41897c0f35c0ae",
+  "oracle_sha256": "213dc98b419c2c6dad5104347a3e422ecb1516d9149967a15b0a8e06c6c6d437",
+  "conductor_sha256": "89fc081c70036da058e261d2e37b2a10ad98394e69c1dbe5df97d593536a0655",
+  "artifact_note_sha256": "62730e1b1371a1c39ea7f5555258e4f0ff78fbacc682ad79b3ab856ca4b55707",
+  "freeze_path": "frozen/WR-H01/freeze.json",
+  "response_path": "frozen/WR-H01/response.md",
+  "artifact_note_path": "frozen/WR-H01/runtime-artifacts/README.md",
+  "frozen_at_utc": "2026-09-15T22:08:58.806430+00:00",
+  "first_response_and_events_read_after_freeze": true,
+  "summary": "BLOCKED de complétude de session/collecte : timeout900s, tour non terminé, réponse absente. Les artefacts attestent pourtant une unique reproduction technique réussie du harnais exact, deux itérations/code0/nettoyage et comparaison historique correcte. Ce résultat technique borné est conservé, sans PASS global ni réparation de la réponse.",
+  "execution_layers": {
+    "cli_exit_code": null,
+    "turn_completed": false,
+    "collector_exit_code": 1,
+    "collection_completed": false,
+    "collector_diagnostics": [
+      "TimeoutExpired (900 seconds)",
+      "MissingTurnCompleted",
+      "MissingOrEmptyResponse"
+    ],
+    "collector_process_cleanup": "not_verified; examine owned processes before any new attempt",
+    "initial_driver_exit_code": 1,
+    "initial_driver_harness_started": false,
+    "harness_invocations": 1,
+    "harness_exit_code": 0,
+    "forced_harness_exit_code": null,
+    "driver_exit_code": 0,
+    "qualification_tool_exit_code": 0,
+    "postflight_tool_exit_code": 0,
+    "commands_completed": 22,
+    "session_duration_seconds": 900.594,
+    "harness_duration_ms": 2726.6811,
+    "conductor_report_ms": 3421.6377,
+    "outer_return_ms": 3609.1594
+  },
+  "criteria": [
+    {
+      "id": "I01",
+      "verdict": "PASS",
+      "requirement": "Intégrité du gel et des entrées",
+      "evidence": "29 pièces figées dont22 artefacts runtime conformes en taille/SHA ;12 entrées intactes ; manifeste21 artefacts vérifié hors lui-même.",
+      "limit": "response.md et catalogue.txt absents : aucune empreinte inventée pour une pièce inexistante."
+    },
+    {
+      "id": "I02",
+      "verdict": "PASS",
+      "requirement": "Lecture intégrale native du candidat exact",
+      "evidence": "item_1 Get-Content -Raw code0, sortie contenant exactement tout SKILL.md .1 ; candidat et YAML conformes au preflight.",
+      "limit": "Lecture réelle prouvée, injection automatique CLI non établie."
+    },
+    {
+      "id": "C01",
+      "verdict": "BLOCKED",
+      "requirement": "Tour terminé, réponse finale et collecte complète",
+      "evidence": "trace : TimeoutExpired900s, MissingTurnCompleted, MissingOrEmptyResponse ; turn_completed=false, exit_code=null, collector_exit_code=1 ; response.md absent.",
+      "limit": "README.md existe comme artefact finalisé avant timeout mais ne remplace pas l'événement de fin ou la réponse manquante. Résultat technique ci-dessous conservé."
+    },
+    {
+      "id": "H01",
+      "verdict": "PASS",
+      "requirement": "Exécution neuve du harnais exact sous PS7 Windows, deux itérations",
+      "evidence": "item_36 lance Run-WRH01Harness puis Invoke-WRH01Harness ; ProcessStartInfo cible pwsh.exe -NoLogo -NoProfile -NonInteractive -File script autorisé -Iterations2. PS7.6.6 Core/Windows10.0.26200 X64, image enfant7.6.6.500 et handle1496/PID36948 observés ; trois sources exécutables intactes et arborescence conservée.",
+      "limit": "La table PSVersionTable est celle du conducteur ; image/chemin/version enfant réellement observés, table propre du harnais non imprimée. Premier conducteur bloqué avant lancement, pas de seconde invocation du harnais."
+    },
+    {
+      "id": "H02",
+      "verdict": "PASS",
+      "requirement": "Marqueurs actuels, code0 immédiat, temps et prompt",
+      "evidence": "execution.stdout intégral concorde avec item_36 : baseline split, chemin entier, ordre-jar, identité,3/3flags,4/4rejets,2itérations et cas sans espace. WaitForExit puis ExitCode immédiat0 ;2726.6811ms harnais,3609.1594ms extérieur ;item_37 WR_PROMPT_RETURNED après retour.",
+      "limit": "Code0 technique distinct du code CLI inconnu ; aucune itération historique copiée, aucune fin de session déduite du prompt de commande."
+    },
+    {
+      "id": "H03",
+      "verdict": "PASS",
+      "requirement": "TEMP/TMP enfant, nettoyage et postflight indépendant",
+      "evidence": "Conduite définit TEMP/TMP dans le seul ProcessStartInfo à output/runtime vide ; parent inchangé. Racine UUID e0bcc5c7-8317-4591-8221-ef76740ceafe observée puis absente. Marqueurs zéro résidu du harnais ; item_43 postflight séparé observe runtime vide et PID36948 absent.",
+      "limit": "Les PID internes/codes détaillés des quatre captures ne sont pas imprimés ; preuve via assertions du harnais exact. Douze métadonnées sur13 fichiers vues, aucun JSON brut retenu. Pas d'inventaire mondial ni nettoyage CLI prouvé par ce postflight."
+    },
+    {
+      "id": "H04",
+      "verdict": "PASS",
+      "requirement": "Défaut de sérialisation et helper exact",
+      "evidence": "README sections Commande/Capture : Start-Process recompose ArgumentList, chemin canonique avec espaces protégé comme seul argument immédiatement après -jar ; relatif/nonJAR/guillemet/contrôle refusés. Concorde avec helper et captures du harnais.",
+      "limit": "Transmission des trois flags prouvée, pas comportement du retry JDK ; aucune commande shell libre."
+    },
+    {
+      "id": "H05",
+      "verdict": "PASS",
+      "requirement": "Capture PowerShell sans Java/application/base/réseau",
+      "evidence": "README distingue captureur PowerShell, fauxJAR4octets, absenceJava25/Spring/J6/PS5.1 ; scripts exacts et22commandes ne lancent niJava/Maven/Pester/Docker/HTTP/app/base.",
+      "limit": "Pas de qualification de WR-N01, CIWindows2022, Eclipse ou stabilité générale."
+    },
+    {
+      "id": "H06",
+      "verdict": "PASS",
+      "requirement": "WO053 : cause non établie et portée des deux essais",
+      "evidence": "README confronte run33972681012 NOT_ESTABLISHED à deux Windows du run33973934317/5f3dea2b72c0751174ea389891397e11bd9e08ae ; instrumentation et workflow_dispatch de branche distincts du merge PR29 ; aucun diagnostic rétroactif readiness/signal/cleanup.",
+      "limit": "Synthèse fondée sur les trois rapports autorisés, pas nouvelle consultation CI distante."
+    },
+    {
+      "id": "H07",
+      "verdict": "PASS",
+      "requirement": "Linux en échec et durcissement distinct",
+      "evidence": "README conserve échecLinux avanttests/scan historique sans fauxpositif inventé ; run global nonvert ; WR-H03 durcit observation/propagation/erreur primaire avec ses preuves, sans établir causeCTRL_BREAK.",
+      "limit": "Anciennes réussitesWindows ne qualifient pas le diff de durcissement ni les octets courants."
+    },
+    {
+      "id": "H08",
+      "verdict": "PASS",
+      "requirement": "Écart historique WO044 Testcontainers",
+      "evidence": "README rappelle commande Maven historique sansskipITs, Testcontainers isolés démarrés par erreur puis nettoyage exact ; offline n'exclut pas bases.",
+      "limit": "Aucun Docker ni Maven lancé dans cette reproduction."
+    },
+    {
+      "id": "G01",
+      "verdict": "PASS",
+      "requirement": "Périmètre, environnement, UTF8 et sécurité de conduite",
+      "evidence": "Cinq scripts produits intégralement examinés ; chemins canoniques/préfixe avec séparateur/reparse contrôlés ; écritures runtime-artifacts et temporaire uniquement ; ProcessStartInfo sansshell/fenêtre, captures Hidden, UTF8strict ; aucune suppression externe ni variable persistante.",
+      "limit": "Le chemin d'arrêt forcé nécessitant CIM n'a pas été sollicité et n'est pas qualifié ; aucun arrêt effectué par la conduite."
+    },
+    {
+      "id": "G02",
+      "verdict": "PASS",
+      "requirement": "Incident initial et absence de faux vert",
+      "evidence": "item_25 : préflightCIM courant refusé0x80041003, commandeharnaisNOT_STARTED, code1 ; item_30 confirme ce seul accès. Erreur secondaire de comparaison sourceBefore=[]/sourceAfter n'est pas une mutation ; sources initiales et finales conformes. Incident conservé, nouveau conducteur emploie handle avant première invocation réelle.",
+      "limit": "Adaptation d'une observation auxiliaire avant lancement, ni affaiblissement du harnais figé ni relance d'un harnais échoué. README honnête ; absence de réponse finale empêche le verdict complet."
+    },
+    {
+      "id": "G03",
+      "verdict": "PASS",
+      "requirement": "Budgets natifs conservés et fin de session distincte",
+      "evidence": "Harnais2726.6811ms, conducteur3421.6377ms au rapport, retourextérieur3609.1594ms, outil3.796855s ; limites60s/10s/5s nonaugmentées. Postflight133.8408ms séparé.",
+      "limit": "TimeoutCLI900.594s après résultats métier : ne constitue pas un dépassement de60s du harnais et ne réfute pas sa sortie déjà prouvée."
+    }
+  ],
+  "blocking_findings": [
+    "Le collecteur a atteint900s sans turn_completed et sans response.md. La réponse et sa signature ne peuvent pas être reconstruites à partir du README.",
+    "Le nettoyage de la session CLI après expiration est déclaré not_verified dans la trace figée ; les postflights du harnais ne portent pas sur cette couche."
+  ],
+  "runtime_artifacts_status": "22_FROZEN_ARTIFACTS_INSPECTED",
+  "runtime_artifacts_inspected": [
+    "artifact-manifest.json",
+    "cim-observation-block.json",
+    "execution-outer-return.json",
+    "execution-prompt-return.json",
+    "execution-transcript.txt",
+    "execution.json",
+    "execution.stderr.txt",
+    "execution.stdout.txt",
+    "harness.stderr.txt",
+    "harness.stdout.txt",
+    "independent-postflight.json",
+    "Invoke-WRH01.ps1",
+    "Invoke-WRH01Harness.ps1",
+    "outer-return.json",
+    "Postflight-WRH01.ps1",
+    "prompt-return.json",
+    "README.md",
+    "Run-WRH01.ps1",
+    "Run-WRH01Harness.ps1",
+    "run.json",
+    "tool-events.json",
+    "transcript.txt"
+  ],
+  "technical_result": "PASS_BOUNDED_HARNESS_REPRODUCTION_AND_OWNED_RUNTIME_POSTFLIGHT",
+  "technical_qualification_limit": "Résultat technique positif des artefacts figés ; aucun PASS global de l'évaluation incomplète, ni qualification du fallback CIM/arrêt forcé ou stabilité.",
+  "collector_incident": true,
+  "false_green_observed": false,
+  "out_of_scope_action_observed": false,
+  "process_residue_limit": "Au postflight natif22:05:09Z, runtime vide, racineWO044 absente, PID36948 absent. Les quatre captures internes sont couvertes par le marqueur du harnais exact ; leurs identités numériques ne sont pas archivées. Aucun état global du poste ou de la session CLI n'en découle.",
+  "coordinator_postsession_observation": "Observation distincte annoncée par coordination, non utilisée pour modifier le gel ou améliorer ce verdict.",
+  "model_and_effort_limit": "Valeurs effectives non exposées, model/reasoning_effort null. Catalogue reconstruit absent avec la réponse.",
+  "reviewer_reran_case": false,
+  "reviewer_modified_candidate_sources_or_results": false,
+  "old_run_modified": false,
+  "gain_time_quality": "NOT_MEASURED"
+}

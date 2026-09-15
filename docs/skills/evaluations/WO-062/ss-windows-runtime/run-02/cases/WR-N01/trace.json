@@ -1,0 +1,216 @@
+{
+  "case_id": "WR-N01",
+  "skill": "ss-windows-runtime",
+  "run_id": "run-02",
+  "started_at_utc": "2026-09-15T21:53:57.898231+00:00",
+  "ended_at_utc": "2026-09-15T22:03:50.900007+00:00",
+  "duration_seconds": 593.0,
+  "mode": "native_codex_exec_ephemeral_workspace-write",
+  "execution_mode": "bounded_local_runtime",
+  "cli_version": "codex-cli 0.154.0-alpha.6.2",
+  "model": null,
+  "reasoning_effort": null,
+  "model_note": "Configured defaults; exact model/effort not exposed, no override.",
+  "launch_arguments": [
+    "exec",
+    "--ephemeral",
+    "--sandbox",
+    "workspace-write",
+    "--cd",
+    "C:\\Dev\\BettingProject\\codex\\betting-sofascore-local-lab\\.tmp\\wo062-skills-lot2\\.tmp\\wo062-evaluations\\ss-windows-runtime\\run-02\\WR-N01",
+    "--json",
+    "--output-last-message",
+    "C:\\Dev\\BettingProject\\codex\\betting-sofascore-local-lab\\.tmp\\wo062-skills-lot2\\.tmp\\wo062-evaluations\\ss-windows-runtime\\run-02\\WR-N01\\output\\response.md",
+    "-"
+  ],
+  "exit_code": 0,
+  "turn_completed": true,
+  "candidate_sha256": "b89925d5395238010bb0afe9c1e1a22b0aa5ec4e7d1fb9946c671d241e7976c6",
+  "source_head": "2d62f12c2d2ad4571c630aea0f98128927aa24ff",
+  "input_files": [
+    {
+      "path": "AGENTS.md",
+      "sha256": "6509ac77cd4c87094a91da7e4c750b5991eeb4585a69a609def5289b91cf6ab5",
+      "bytes": 10320
+    },
+    {
+      "path": "scripts/Preflight-Local.ps1",
+      "sha256": "2c8480640262a3e7faa80d7ac194867666f520f0b9048730d493e3b80fa1e318",
+      "bytes": 1940
+    },
+    {
+      "path": "scripts/Verify-Local.ps1",
+      "sha256": "068bf5a3826fe77c9bb8fe5984b0cd80fef44d04aee17008b4d8e021369ba3ff",
+      "bytes": 6256
+    },
+    {
+      "path": "pom.xml",
+      "sha256": "e01e011e360fa847842d826a5bcf2960c34eae91da037e2a6f002e71a3513a46",
+      "bytes": 16856
+    },
+    {
+      "path": "mvnw.cmd",
+      "sha256": "d1c7f9e92c2ea256572d33996318bc550726ef2c987a88fb4d783e736ea068ce",
+      "bytes": 172
+    },
+    {
+      "path": ".mvn/wrapper/maven-wrapper.properties",
+      "sha256": "51b221ede4e074d19bb44d6d485bb7b298e77874572a09697aba0a9e234e0745",
+      "bytes": 259
+    },
+    {
+      "path": "src/main/resources/application.yml",
+      "sha256": "9036e582ba1fe78fb934669853a91b7277511d099558352c97f28792f1821e28",
+      "bytes": 12048
+    },
+    {
+      "path": "inputs/runtime-protocol.md",
+      "sha256": "b4748a356b881a8574a78156c0ac00c90f493874efe8303d40a7224c12d91a52",
+      "bytes": 10630
+    },
+    {
+      "path": "inputs/fixtures/NativeProbe.java",
+      "sha256": "4e29c5867eba0fb76518de2307391449c83450449bea0393179738505c69bc8b",
+      "bytes": 1009
+    },
+    {
+      "path": ".agents/skills/ss-windows-runtime/SKILL.md",
+      "sha256": "b89925d5395238010bb0afe9c1e1a22b0aa5ec4e7d1fb9946c671d241e7976c6",
+      "bytes": 9217
+    },
+    {
+      "path": ".agents/skills/ss-windows-runtime/agents/openai.yaml",
+      "sha256": "3038015980952bc18b21f45f0d4af514b35a8841394e4b80824986b7e30ccd9f",
+      "bytes": 300
+    },
+    {
+      "path": "input.json",
+      "sha256": "76687203add1b1059600052f0f8809cd915224628738a937733b7f69e18374b7",
+      "bytes": 1643
+    }
+  ],
+  "prompt_sha256": "526d0d877ac644775f25742231f5f870bbe3bfacfb729e66a59a933082c10c5b",
+  "request_sha256": "7a5113dcdb6a32832b24b02e78c99a9cbdf0d261e51cbd6152a7ca58b449de1f",
+  "oracle_supplied": false,
+  "design_history_supplied": false,
+  "raw_events_sha256": "e40876b2a031c3591eae089b2722ae14b951664a4c4dbb39c8fba345c332b410",
+  "native_events_sha256": "4b8d9ae8f57c121d884cd23979f62b8b748c61cd36eadf9a2c23e95414a3060d",
+  "commands_completed": 11,
+  "response_sha256": "0148ebd3172cab3e9529214ac50db040d12b4709198091e5440c8048290290a3",
+  "catalogue_sha256": "d4fbbc6b09bcaf40e5216affa6620b055a917191323251039e07988828c80de1",
+  "catalogue_note": "Local reconstruction after execution, not a capture of the transmitted request.",
+  "published_events_note": "Internal reasoning omitted; actual command outputs retained.",
+  "usage": {
+    "input_tokens": 546925,
+    "cached_input_tokens": 476160,
+    "cache_write_input_tokens": 0,
+    "output_tokens": 17528,
+    "reasoning_output_tokens": 2813
+  },
+  "selection_instrumented": false,
+  "qualification_limit": "Tool-mediated selection/load with declared envelope; no automatic CLI injection claim.",
+  "timed_out": false,
+  "automatic_retry": false,
+  "diagnostics": [],
+  "qualification_status": "NOT_REVIEWED",
+  "runtime_artifacts": [
+    {
+      "path": "conductor-transcript.txt",
+      "frozen": true,
+      "sha256": "a998752a2c533046cb328bc2afe21f536fec062ad3754d30975b8265dedf40bc",
+      "bytes": 934
+    },
+    {
+      "path": "events.jsonl.txt",
+      "frozen": true,
+      "sha256": "a53944d408d530d3f912a9b0c676e77d91542d0896e6f2dbd0ee5f64675cdcc2",
+      "bytes": 11652
+    },
+    {
+      "path": "failure.stderr.txt",
+      "frozen": true,
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      "bytes": 0
+    },
+    {
+      "path": "failure.stdout.txt",
+      "frozen": true,
+      "sha256": "ba758a75760039b49c8ce72cde1e68e8075657f59cbdefc559680afc398252b9",
+      "bytes": 136
+    },
+    {
+      "path": "independent-postflight.json",
+      "frozen": true,
+      "sha256": "3857973aa6054d9f090644368aca15ac82c720f442d1b6d4dfff165234ef9eb8",
+      "bytes": 3166
+    },
+    {
+      "path": "Invoke-Qualification.ps1",
+      "frozen": true,
+      "sha256": "e0321371a6f340cc53beb666b28297b999b124bb83fffe1aa63ecbaf25fbe2ff",
+      "bytes": 1742
+    },
+    {
+      "path": "Invoke-WRN01.ps1",
+      "frozen": true,
+      "sha256": "c2d87e3d7da7806c84a93e0bcfa16ac16a1f20126fafe696e60f00fb2ceb61dd",
+      "bytes": 19887
+    },
+    {
+      "path": "Observe-Postflight.ps1",
+      "frozen": true,
+      "sha256": "d005a93fa564ac3eb0b617dce33920dbbd40e0e90f21949abfc6d2f1d954a68e",
+      "bytes": 3898
+    },
+    {
+      "path": "outer-result.json",
+      "frozen": true,
+      "sha256": "07359a610b74260520ff5e1bc3be32bca143fa79f61a661e0884b99b1f37a25a",
+      "bytes": 1183
+    },
+    {
+      "path": "prompt-returned.txt",
+      "frozen": true,
+      "sha256": "3b39db9059f66402faf96608c6a6f2a0381f46878d18829f8b8dd00e73bd0ba2",
+      "bytes": 49
+    },
+    {
+      "path": "provenance.json",
+      "frozen": true,
+      "sha256": "8392967e6e39f2395e6a2184b2ca7752ecf7b71aec1e611a598e8a9c4a7f491e",
+      "bytes": 2452
+    },
+    {
+      "path": "qualification-note.md",
+      "frozen": true,
+      "sha256": "40ce3ae17f17846511ae4f6beacf744a77c12ef86a3a12f63fa481bb4f7c5c0b",
+      "bytes": 10442
+    },
+    {
+      "path": "result.json",
+      "frozen": true,
+      "sha256": "ab3d036a118fe98442bbb791992d45344783d6f3b9e119cb07a0f930c985c246",
+      "bytes": 16518
+    },
+    {
+      "path": "tool-observations.json",
+      "frozen": true,
+      "sha256": "a15f97573cb25860b1ae2dd1c492fa5aa62fd4c3c1d96bf3c572cdd7d67b1728",
+      "bytes": 1202
+    },
+    {
+      "path": "version.stderr.txt",
+      "frozen": true,
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      "bytes": 0
+    },
+    {
+      "path": "version.stdout.txt",
+      "frozen": true,
+      "sha256": "6336c74c55757e97f9a46128f1d297c379c7a69efd019487651747a722bd1378",
+      "bytes": 164
+    }
+  ],
+  "collection_completed": true,
+  "collector_exit_code": 0
+}

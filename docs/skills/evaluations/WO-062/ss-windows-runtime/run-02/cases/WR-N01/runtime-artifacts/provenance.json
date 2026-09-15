@@ -1,0 +1,66 @@
+{
+  "executableProvenance": "Get-Command application paths, Process.MainModule where available, file versions and effective runtime output; no binary hash claimed",
+  "hashes": [
+    {
+      "sha256": "6509ac77cd4c87094a91da7e4c750b5991eeb4585a69a609def5289b91cf6ab5",
+      "path": "AGENTS.md"
+    },
+    {
+      "sha256": "2c8480640262a3e7faa80d7ac194867666f520f0b9048730d493e3b80fa1e318",
+      "path": "scripts/Preflight-Local.ps1"
+    },
+    {
+      "sha256": "068bf5a3826fe77c9bb8fe5984b0cd80fef44d04aee17008b4d8e021369ba3ff",
+      "path": "scripts/Verify-Local.ps1"
+    },
+    {
+      "sha256": "e01e011e360fa847842d826a5bcf2960c34eae91da037e2a6f002e71a3513a46",
+      "path": "pom.xml"
+    },
+    {
+      "sha256": "d1c7f9e92c2ea256572d33996318bc550726ef2c987a88fb4d783e736ea068ce",
+      "path": "mvnw.cmd"
+    },
+    {
+      "sha256": "51b221ede4e074d19bb44d6d485bb7b298e77874572a09697aba0a9e234e0745",
+      "path": ".mvn/wrapper/maven-wrapper.properties"
+    },
+    {
+      "sha256": "9036e582ba1fe78fb934669853a91b7277511d099558352c97f28792f1821e28",
+      "path": "src/main/resources/application.yml"
+    },
+    {
+      "sha256": "b4748a356b881a8574a78156c0ac00c90f493874efe8303d40a7224c12d91a52",
+      "path": "inputs/runtime-protocol.md"
+    },
+    {
+      "sha256": "4e29c5867eba0fb76518de2307391449c83450449bea0393179738505c69bc8b",
+      "path": "inputs/fixtures/NativeProbe.java"
+    },
+    {
+      "sha256": "b89925d5395238010bb0afe9c1e1a22b0aa5ec4e7d1fb9946c671d241e7976c6",
+      "path": ".agents/skills/ss-windows-runtime/SKILL.md"
+    },
+    {
+      "sha256": "3038015980952bc18b21f45f0d4af514b35a8841394e4b80824986b7e30ccd9f",
+      "path": ".agents/skills/ss-windows-runtime/agents/openai.yaml"
+    },
+    {
+      "sha256": "76687203add1b1059600052f0f8809cd915224628738a937733b7f69e18374b7",
+      "path": "input.json"
+    },
+    {
+      "sha256": "c2d87e3d7da7806c84a93e0bcfa16ac16a1f20126fafe696e60f00fb2ceb61dd",
+      "path": "output/runtime-artifacts/Invoke-WRN01.ps1"
+    },
+    {
+      "sha256": "e0321371a6f340cc53beb666b28297b999b124bb83fffe1aa63ecbaf25fbe2ff",
+      "path": "output/runtime-artifacts/Invoke-Qualification.ps1"
+    },
+    {
+      "sha256": "d005a93fa564ac3eb0b617dce33920dbbd40e0e90f21949abfc6d2f1d954a68e",
+      "path": "output/runtime-artifacts/Observe-Postflight.ps1"
+    }
+  ],
+  "observedUtc": "2026-09-15T22:03:04.2330880Z"
+}

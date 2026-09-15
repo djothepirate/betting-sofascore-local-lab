@@ -56,9 +56,12 @@ Le suffixe `candidate.1` conserve l’identité des fichiers évalués et accept
 Les candidats [ss-java-module](local-lab/ss-java-module/SKILL.md) `.2` et
 [ss-windows-runtime](local-lab/ss-windows-runtime/SKILL.md) `.1` sont rédigés.
 La première recette conserve 5 PASS / 3 FAIL Java et 6 PASS / 2 BLOCKED Windows.
-La correction Java et les reprises Windows sont préparées ; dix sessions supplémentaires
-sont autorisées. Voir le [rapport C et les limites](../validation/WO062-JAVA-WINDOWS-CANDIDATES-20260915.md).
-La requalification, la validation humaine C et la consolidation des dix restent distinctes.
+Les dix tentatives supplémentaires sont conservées : Java `.2` obtient 7 PASS / 1 FAIL
+(JM-N01 incomplet) ; Windows garde 6 PASS / 2 BLOCKED. WR-H01 a produit une reproduction
+PowerShell 7 réussie mais sa session a expiré sans réponse finale ; WR-N01 est interrompu
+sur l'identité du lanceur Java avant le scénario d'expiration, avec un résidu signalé.
+Voir le [rapport C et les limites](../validation/WO062-JAVA-WINDOWS-CANDIDATES-20260915.md).
+La qualification reste ouverte ; validation humaine C, installation et consolidation des dix restent à réaliser.
 
 ## Installation personnelle depuis ce dépôt
 

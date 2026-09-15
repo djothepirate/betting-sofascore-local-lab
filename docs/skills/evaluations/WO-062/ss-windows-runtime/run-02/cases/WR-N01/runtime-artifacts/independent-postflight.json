@@ -1,0 +1,54 @@
+{
+    "observedUtc":  "2026-09-15T22:00:45.8073886Z",
+    "PSVersion":  "5.1.26100.9444",
+    "PSEdition":  "Desktop",
+    "temporaryRoot":  "C:\\Dev\\BettingProject\\codex\\betting-sofascore-local-lab\\.tmp\\wo062-skills-lot2\\.tmp\\wo062-evaluations\\ss-windows-runtime\\run-02\\WR-N01\\output\\runtime\\WR native probe 66a0391d-820d-4d03-b7f1-e3c17b4ce664",
+    "rootAbsent":  false,
+    "processes":  [
+                      {
+                          "pid":  32700,
+                          "origin":  "retained Process handle",
+                          "observedUtc":  "2026-09-15T22:00:45.7823506Z",
+                          "processFoundNow":  false,
+                          "action":  "read-only; no stop",
+                          "observation":  "PID absent at observation time"
+                      },
+                      {
+                          "pid":  34004,
+                          "origin":  "retained Process handle",
+                          "observedUtc":  "2026-09-15T22:00:45.7968780Z",
+                          "processFoundNow":  false,
+                          "action":  "read-only; no stop",
+                          "observation":  "PID absent at observation time"
+                      },
+                      {
+                          "pid":  26528,
+                          "origin":  "fixture output only, no original handle",
+                          "observedUtc":  "2026-09-15T22:00:45.7968780Z",
+                          "processFoundNow":  false,
+                          "action":  "read-only; no stop",
+                          "observation":  "PID absent at observation time"
+                      }
+                  ],
+    "inventory":  [
+                      {
+                          "path":  "C:\\Dev\\BettingProject\\codex\\betting-sofascore-local-lab\\.tmp\\wo062-skills-lot2\\.tmp\\wo062-evaluations\\ss-windows-runtime\\run-02\\WR-N01\\output\\runtime\\WR native probe 66a0391d-820d-4d03-b7f1-e3c17b4ce664\\temp",
+                          "attributes":  "Directory",
+                          "contentRead":  false
+                      },
+                      {
+                          "path":  "C:\\Dev\\BettingProject\\codex\\betting-sofascore-local-lab\\.tmp\\wo062-skills-lot2\\.tmp\\wo062-evaluations\\ss-windows-runtime\\run-02\\WR-N01\\output\\runtime\\WR native probe 66a0391d-820d-4d03-b7f1-e3c17b4ce664\\temp\\JavaLauncher.log",
+                          "attributes":  "Archive",
+                          "contentRead":  false,
+                          "length":  4892,
+                          "createdUtc":  "2026-09-15T21:59:27.1308683Z",
+                          "lastWriteUtc":  "2026-09-15T21:59:27.8625526Z"
+                      }
+                  ],
+    "filesReadInTemporaryRoot":  0,
+    "filesDeleted":  0,
+    "processesStopped":  0,
+    "cleanupStatus":  "UNEXPECTED_RESIDUE_RETAINED_PER_PROTOCOL",
+    "elapsedMs":  348.1834,
+    "limitation":  "The PID emitted by the fixture had no retained original handle or creation time; point-in-time absence does not replace that missing ownership proof."
+}

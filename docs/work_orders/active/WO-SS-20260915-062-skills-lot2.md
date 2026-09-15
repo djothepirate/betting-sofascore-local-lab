@@ -1,6 +1,6 @@
 # WO-SS-20260915-062 — Développement des skills spécialisés du lot 2
 
-- **Statut :** `OWNER_ACCEPTED — A_INSTALLED — B_INSTALLED — C_REQUALIFICATION_IN_PROGRESS` ; PB, FQ et CS validés et installés personnellement. Java et Windows rédigés ; reprises autorisées en cours, validation humaine C, consolidation D et livraison Git encore distinctes.
+- **Statut :** `OWNER_ACCEPTED — A_INSTALLED — B_INSTALLED — C_QUALIFICATION_INCOMPLETE` ; PB, FQ et CS validés et installés personnellement. Java et Windows rédigés ; dix reprises autorisées conservées, qualification C encore ouverte, validation humaine C, consolidation D et livraison Git encore distinctes.
 - **Date :** 2026-09-15.
 - **Autorité :** demande propriétaire de préparer un WO avec `ss-work-order`, à partir de la conversation « Skills du lot 2 », dans l'ordre précisé ci-dessous.
 - **Acceptation :** le 15 septembre 2026, le propriétaire confirme « J’accepte le WO-062 » et autorise l'inventaire des sources et la préparation des cas d'évaluation de `ss-provider-benchmark`.
@@ -136,8 +136,14 @@ distinct ; elle n'élargit pas implicitement ce lot de skills.
   sur refus du setup sandbox. Nouveaux contextes créés sous le compte du lanceur ; accès
   local vérifié sans modèle et avec sandbox conservé, sans qualifier les sondes.
 - Le propriétaire autorise ensuite **dix sessions supplémentaires** : huit Java `.2`, puis
-  les deux sondes Windows `.1`, avec mêmes sources, critères et bornes. Requalification
-  en cours ; premières réponses et verdicts conservés.
+  les deux sondes Windows `.1`, avec mêmes sources, critères et bornes. Dix tentatives
+  conservées le 15–16 septembre : neuf sessions terminées et une expirée.
+- Java `.2` : **7 PASS / 1 FAIL**, JM-N01 restant incomplet sur UTC, perte du contexte
+  live et périmètre exact du garde textuel. Windows `.1` : **6 PASS / 2 BLOCKED** courants.
+  WR-H01 produit un harnais réussi en 2,73 s et un nettoyage établi, mais sa session
+  expire à 900 s sans réponse finale. WR-N01 observe le code 23 du relais Java, puis
+  bloque avant sleep sur une identité incohérente ; un journal temporaire est conservé.
+  Les 26 tentatives historiques restent traçables ; aucun résultat manquant ne devient PASS.
 - [Rapport C, preuves et limites](../../validation/WO062-JAVA-WINDOWS-CANDIDATES-20260915.md).
   Les seize fichiers personnels précédents, les preuves A/B, l'installateur et le code
   applicatif restent intacts. Validation humaine et installation personnelle C non réalisées.

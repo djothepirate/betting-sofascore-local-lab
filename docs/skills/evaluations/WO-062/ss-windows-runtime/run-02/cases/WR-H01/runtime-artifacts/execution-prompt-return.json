@@ -1,0 +1,9 @@
+{
+  "marker": "WR_PROMPT_RETURNED",
+  "utc": "2026-09-15T22:04:10.8278624Z",
+  "command": "Write-Output WR_PROMPT_RETURNED",
+  "durationMs": 32.7362,
+  "precedingToolChunkId": "9ca1c1",
+  "precedingToolExitCode": 0,
+  "followingToolEvent": "This separate exec_command ran after the harness command returned."
+}

@@ -1,0 +1,132 @@
+{
+  "case": "WR-H01",
+  "statuses": [
+    "EXPERIMENTAL",
+    "LOCAL_ONLY",
+    "NOT_PRODUCTION_APPROVED",
+    "NO_CRITICAL_DEPENDENCY"
+  ],
+  "runIdentity": "8310725e-4954-409e-a9ac-1fe1b61cac88",
+  "startedUtc": "2026-09-15T22:00:14.3051018Z",
+  "endedUtc": "2026-09-15T22:00:14.7336933Z",
+  "primary": "PREFLIGHT_BLOCKED",
+  "harnessExitCode": null,
+  "forcedHarnessExitCode": null,
+  "driverExitCode": 1,
+  "failure": "Accès refusé ",
+  "cleanup": "FAIL_OR_NOT_ESTABLISHED",
+  "cleanupFailure": "Allowed source hashes changed.",
+  "durationAtEvidenceMs": 428.6709,
+  "harnessLaunchToExitObservedMs": null,
+  "stopwatchFrequency": 10000000,
+  "budgets": {
+    "captureWaitMs": 10000,
+    "cleanupMs": 5000,
+    "globalMs": 60000,
+    "externalCutoffMs": 55000
+  },
+  "runtime": null,
+  "command": null,
+  "sourceBefore": [],
+  "sourceAfter": [
+    {
+      "relativePath": "AGENTS.md",
+      "sha256": "6509AC77CD4C87094A91DA7E4C750B5991EEB4585A69A609DEF5289B91CF6AB5"
+    },
+    {
+      "relativePath": "input.json",
+      "sha256": "D49BEA0E90CA263B75840A198DD7ABBDF67E2DC45541D5474D9E26B833812A57"
+    },
+    {
+      "relativePath": "inputs/runtime-protocol.md",
+      "sha256": "B4748A356B881A8574A78156C0AC00C90F493874EFE8303D40A7224C12D91A52"
+    },
+    {
+      "relativePath": ".agents/skills/ss-windows-runtime/SKILL.md",
+      "sha256": "B89925D5395238010BB0AFE9C1E1A22B0AA5EC4E7D1FB9946C671D241E7976C6"
+    },
+    {
+      "relativePath": ".agents/skills/ss-windows-runtime/agents/openai.yaml",
+      "sha256": "3038015980952BC18B21F45F0D4AF514B35A8841394E4B80824986B7E30CCD9F"
+    },
+    {
+      "relativePath": "scripts/wo044/Invoke-WO044JavaJarArgumentBoundaryQualification.ps1",
+      "sha256": "59996B14941700523007E1F6B0784B102D65E088569F95E882340250D43565E4"
+    },
+    {
+      "relativePath": "scripts/wo044/Capture-WO044NativeArguments.ps1",
+      "sha256": "841428737A500FD9CCB1407D3C0822B56872F40B308568EE59AB48BAE88B7818"
+    },
+    {
+      "relativePath": "scripts/wo036/WO036-CampaignTools.psm1",
+      "sha256": "43C7BC8EB242161729F6C18F8B0FEB67C46715CE911B27572E4BD13E5956BD74"
+    },
+    {
+      "relativePath": "scripts/Tests/WO044JavaJarArgumentBoundary.Tests.ps1",
+      "sha256": "E1F661B0380C72B86374331B79419E6A2C8B551EBB0D195775F04AA731F1C29F"
+    },
+    {
+      "relativePath": "docs/validation/J9-WO044-JAVA-JAR-PATH-ARGUMENT-BOUNDARY-QUALIFICATION-20260904.md",
+      "sha256": "02008824316E688B6E42C523AAEC45ACF7B8EDB776F49A9B11A822AFD6A125A7"
+    },
+    {
+      "relativePath": "docs/validation/J9-WO053-CTRL-BREAK-DIAGNOSTIC-20260905.md",
+      "sha256": "8718125554E239925DCB8A785A4143DD8E9232F9D2CB554E91D0A6D864FF55FA"
+    },
+    {
+      "relativePath": "docs/validation/J9-WO053-REVIEW-HARDENING-20260905.md",
+      "sha256": "BACD897E4E4621E687935F9AA09F91469F69942869DBC3A95E8792FCDC8CF34E"
+    }
+  ],
+  "provenance": {
+    "currentCheckoutSha": "NOT_READ_SCOPE_RESTRICTED",
+    "declaredPolicySourceCommit": "6648dd423e556b5248b8793a539ae85a7680f9bc",
+    "pinOrigin": "SHA-256 observed from the supplied frozen files before execution; no separate signed manifest supplied"
+  },
+  "filesObserved": [],
+  "rootsObserved": [],
+  "captureObservationCount": 0,
+  "events": [
+    {
+      "event": "PRIMARY_FAILURE",
+      "utc": "2026-09-15T22:00:14.5406035Z",
+      "elapsedMs": 236.1524,
+      "data": "Accès refusé "
+    },
+    {
+      "event": "INDEPENDENT_POSTFLIGHT",
+      "utc": "2026-09-15T22:00:14.5490898Z",
+      "elapsedMs": 244.0421,
+      "data": {
+        "runtimeRoot": "C:\\Dev\\BettingProject\\codex\\betting-sofascore-local-lab\\.tmp\\wo062-skills-lot2\\.tmp\\wo062-evaluations\\ss-windows-runtime\\run-02\\WR-H01\\output\\runtime",
+        "remainingEntries": [],
+        "remainingCount": 0,
+        "observedRoots": [],
+        "harnessHasExited": false,
+        "captureProcesses": []
+      }
+    },
+    {
+      "event": "CLEANUP_FAILURE",
+      "utc": "2026-09-15T22:00:14.7322790Z",
+      "elapsedMs": 427.2424,
+      "data": "Allowed source hashes changed."
+    },
+    {
+      "event": "CLEANUP_FINISHED",
+      "utc": "2026-09-15T22:00:14.7332144Z",
+      "elapsedMs": 428.1583,
+      "data": {
+        "result": "FAIL_OR_NOT_ESTABLISHED",
+        "durationMs": 187.9402,
+        "failure": "Allowed source hashes changed."
+      }
+    }
+  ],
+  "observationLimits": [
+    "Frozen harness owns and deletes its raw argument JSON and redirection logs. They are not preserved by this driver.",
+    "Capture process codes recorded on first observed exit with held handles; observation times are not exact OS exit times.",
+    "Polling metadata may affect scheduling. No source instrumentation or extra native probe.",
+    "Independent postflight covers output/runtime and held process handles; it is not an inventory of unrelated processes."
+  ]
+}
