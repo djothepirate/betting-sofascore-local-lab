@@ -1,7 +1,7 @@
 # ADR-SS-007 — Automatisation J3, catalogue durable par date et pause live
 
 - **Version :** 0.3 — complément propriétaire du 15 septembre 2026 pour le clic direct tournoi.
-- **Statut :** `ACCEPTED_FOR_IMPLEMENTATION` — instruction propriétaire « Commencer l’implémentation du WO-060 » le 13 septembre 2026 ; qualification distincte et en cours.
+- **Statut :** `ACCEPTED_FOR_IMPLEMENTATION` — instruction propriétaire « Commencer l’implémentation du WO-060 » le 13 septembre 2026 ; réalisation qualifiée localement, recette opérateur déclarée concluante le 15 septembre. La publication de la branche et la création de sa PR sont autorisées ; la fusion reste distincte (voir le WO, section 11).
 - **Date :** 2026-09-13.
 - **Décideur :** propriétaire du Betting Project.
 - **Work Order :** [WO-SS-20260913-060](docs/work_orders/active/WO-SS-20260913-060-j3-automation-and-durable-catalog.md).

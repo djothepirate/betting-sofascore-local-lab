@@ -6,6 +6,10 @@ Les évolutions notables du SofaScore Local Lab sont consignées dans ce fichier
 
 ### WO-060 — automatisation J3, résultats durables et pause live
 
+- Consigne la validation opérateur du 15 septembre 2026 et l’autorisation de pousser le WO
+  et de créer sa PR vers `feature/V0.1.0-RC01`. La recette fournie confirme notamment une
+  collecte LaLiga en un clic, un seul appel et trois rencontres validées. Le WO reste actif
+  jusqu’à fusion ; les preuves automatisées et cette recette restent distinguées.
 - Réduit la découverte des rencontres d'un tournoi sélectionné à un clic de collecte ou
   d'import JSON : retrait de la préparation Web, de la phrase et de l'acquittement.
   La collecte/date/phase est résolue au clic, le jeton est à usage unique et les deux voies

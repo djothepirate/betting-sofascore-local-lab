@@ -1,15 +1,15 @@
 # WO-SS-20260913-060 — Automatisation J3 et dernier catalogue durable par date
 
-- **Statut :** `IN_PROGRESS` — réalisation qualifiée localement le 14 septembre 2026 ; prête pour revue, clôture effective après fusion de la PR.
+- **Statut :** `IN_PROGRESS` — réalisation qualifiée localement et validée par l’opérateur le 15 septembre 2026 ; push et création de PR autorisés, clôture effective après fusion de la PR.
 - **Date de cadrage :** 2026-09-13.
 - **Jalon :** J3, avec coordination des campagnes live J4/J5 et impacts de persistance/audit J6/J8.
 - **Branche :** `feature/V0.1.0-RC01-CODEX-WO-SS-20260913-060`.
 - **Train / cible de PR :** `feature/V0.1.0-RC01` exclusivement.
-- **Base exacte :** `d4c3d8ceeb6c46442f0792d436a3df7e2630f599`, vérifiée sur GitHub le 13 septembre.
+- **Base exacte :** `d4c3d8ceeb6c46442f0792d436a3df7e2630f599`, vérifiée sur GitHub le 13 septembre et confirmée inchangée le 15 septembre avant publication.
 - **Worktree :** `.tmp/wo060-j3-automation-design` sous la racine de travail Codex du Lab.
 - **Version Maven de base :** `0.1.0-rc.1-SNAPSHOT` ; Java 25 LTS, Spring Boot 4.1.0, Flyway V54.
-- **Décision de réalisation :** [ADR-SS-007 v0.2](../../../ADR-SS-007-j3-automation-durable-catalog-and-live-pause.md), `ACCEPTED_FOR_IMPLEMENTATION`.
-- **Autorité actuelle :** instruction propriétaire « Commencer l’implémentation du WO-060 », après cadrage au commit `9e0d1cb` ; réalisation et qualification hors fournisseur autorisées.
+- **Décision de réalisation :** [ADR-SS-007 v0.3](../../../ADR-SS-007-j3-automation-durable-catalog-and-live-pause.md), `ACCEPTED_FOR_IMPLEMENTATION` ; réalisation initialement adoptée en v0.2, complément du clic tournoi en v0.3.
+- **Autorité actuelle :** instruction propriétaire du 15 septembre 2026 : tous les tests sont concluants, les travaux du WO-060 peuvent être poussés et une PR vers `feature/V0.1.0-RC01` créée. Cette autorisation complète celle de réalisation après cadrage au commit `9e0d1cb` ; elle ne vaut pas autorisation de fusion.
 - **Statuts conservés :** `EXPERIMENTAL`, `LOCAL_ONLY`, `NOT_PRODUCTION_APPROVED`, `NO_CRITICAL_DEPENDENCY`.
 
 ## 1. Fiche de reprise
@@ -151,8 +151,8 @@ qu'au moteur commun capable d'arbitrer le live ; aucun jalon intermédiaire n'es
 | R5 — qualification et revue | Chaîne intégrée, mesures de durée de pause, documentation opérateur et réexécution proportionnée des contrôles | Rapport exact, limitations, diff sans secret, revue humaine avant fusion vers le train |
 
 Le WO reste actif durant ces étapes. Une clôture ne devient effective qu’après fusion de sa
-PR vers le train, conformément à AGENTS. Un push, une PR ou une fusion n’est pas effectué
-par la réalisation locale sans publication distante.
+PR vers le train, conformément à AGENTS. Le push et la création de PR sont autorisés par
+la décision du 15 septembre consignée en section 11 ; la fusion reste une étape distincte.
 
 ## 5. Points d’intégration constatés
 
@@ -294,3 +294,36 @@ L'ADR-SS-001 v1.6 et l'ADR-SS-007 v0.3 consignent cette décision. Pas de migrat
 réel ni de redémarrage du Lab opérateur pour cette réalisation.
 
 Voir [la validation de la collecte directe](../../validation/WO060-TOURNAMENT-DIRECT-20260915.md).
+
+## 11. Validation opérateur et autorisation de publication — 15 septembre 2026
+
+Le propriétaire déclare « tous les tests sont concluants » et autorise explicitement le push
+des travaux WO-060 ainsi que la création d’une PR vers `feature/V0.1.0-RC01`.
+Le dernier changement fonctionnel est `692b2a29c3ff87e38ccd063dd8b440fbf826d0fb` ;
+la copie HUMAN et le candidat CODEX pointent sur ce commit lors de la reprise de publication.
+La mise à jour de livraison qui suit est documentaire uniquement.
+
+La capture et le texte du tableau de bord fournis par l’opérateur montrent une collecte
+LaLiga en un clic pour le 15 septembre : phase `36`, tournoi unique `8`, état `COMPLETED`,
+un appel fournisseur HTTP 200, contrôle `COUNT_VERIFIED`, trois rencontres attendues et
+retenues, trois observations ajoutées et aucune dédupliquée. Le snapshot local `17373` est
+reçu le `2026-09-15T06:45:07.306Z`. Il s’agit d’une recette opérateur rapportée, distincte
+des tests automatisés ; aucun nouvel appel fournisseur n’est exécuté pour publier le WO.
+
+La [dernière qualification complète](../../validation/WO060-TOURNAMENT-DIRECT-20260915.md)
+porte le code fonctionnel de `692b2a2` : `mvnw.cmd clean verify` terminé le
+14 septembre à 22:56:59 UTC, avec 2 440 tests Surefire (5 exclusions) et 283 Failsafe
+(aucune exclusion), zéro échec et zéro erreur. Les 41 tests ciblés sont également verts.
+La [qualification initiale de persistance](../../validation/WO060-J3-IMPLEMENTATION-20260914.md)
+consigne en plus `mvnw.cmd -Pintegration-tests verify`, les migrations V55–V57, le roundtrip
+J6 sur PostgreSQL jetable et le worker Chromium en boucle locale. Ces rapports historiques
+et leurs manifestes restent conservés, avec leurs périmètres et dates propres.
+
+Après actualisation des références GitHub, le train cible reste à `d4c3d8ceeb6c46442f0792d436a3df7e2630f599`.
+Les douze commits de réalisation sont descendants directs de cette base ; aucun commit du
+train n’est absent du candidat. Aucune PR de cette branche n’existe avant la publication.
+La PR couvre tout le WO, dont l’automatisation, la persistance, la pause live et les compléments
+d’interface. Les checks GitHub doivent être évalués sur la tête distante de la PR ; les tests
+locaux et l’acceptation opérateur ne préjugent pas de leur résultat. Le WO reste dans `active`
+jusqu’à la fusion dans son train ; aucune fusion, promotion, publication de version ou
+activation fournisseur supplémentaire n’est engagée par cette autorisation.
