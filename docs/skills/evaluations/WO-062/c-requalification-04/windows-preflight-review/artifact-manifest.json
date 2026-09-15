@@ -1,0 +1,15 @@
+{
+  "schema": "wo062-c4-protocol-review-v1",
+  "files": [
+    {
+      "path": "review.json",
+      "bytes": 6161,
+      "sha256": "c5dc7f6cd468cd2285d96115671f4df7e5c563f57e053c4d27c7cc0cf5c30088"
+    },
+    {
+      "path": "review.md",
+      "bytes": 11008,
+      "sha256": "9564c0d55717976547182e334f6be5ac5fe7016c182bf581d994c5696dfa9dd2"
+    }
+  ]
+}
