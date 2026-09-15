@@ -1,0 +1,32 @@
+{
+  "schema": "wo062-publication-checks-manifest-v1",
+  "created_at_utc": "2026-09-15T21:59:14.804286+00:00",
+  "scope": "Publisher implementation and 31 synthetic tests only; no model session or runtime probe qualification.",
+  "files": [
+    {
+      "path": "c-run02-publisher-review.json",
+      "bytes": 8583,
+      "sha256": "e910772158cdd1c484e85b3e6f9f10e8755d264e9ce422f503935541dfbebb18"
+    },
+    {
+      "path": "c-run02-publisher-review.md",
+      "bytes": 6836,
+      "sha256": "53c750e4eca45765a80f46ca19e7bf29b6a11a58a6643fed3597ef96ccbf0c25"
+    },
+    {
+      "path": "c-run02-publisher-synthetic-results.json",
+      "bytes": 619,
+      "sha256": "4bbde93fb0bdee74fbdb744b859725971544c64b6055060d32547e09155732cf"
+    },
+    {
+      "path": "publish_c_run02.py",
+      "bytes": 30913,
+      "sha256": "e1596d4c0731d1e71a521deb173d532aa6f44c14c9da25164e1e2013a871f5cd"
+    },
+    {
+      "path": "test_c_run02_publisher.py",
+      "bytes": 21241,
+      "sha256": "ebdc7572ab98d48bc4939c2af4c51e109c9da778230036d541be447b92ff9664"
+    }
+  ]
+}

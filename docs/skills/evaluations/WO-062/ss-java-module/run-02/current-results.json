@@ -1,0 +1,104 @@
+{
+  "schema": "wo062-current-skill-results-v1",
+  "skill": "ss-java-module",
+  "candidate_version": "0.1.0-candidate.2",
+  "candidate_sha256": "255655544771ae6cf2a71b967aba8efeb7e53e64acc41ca31dc784e16a719118",
+  "case_count": 8,
+  "executions": 8,
+  "total_executions_all_versions": 16,
+  "cases": [
+    {
+      "case_id": "JM-H01",
+      "verdict": "PASS",
+      "source_run": "run-02",
+      "review": "review-JM-H01.json",
+      "response": "cases/JM-H01/response.md",
+      "response_sha256": "8b8818e00e902b318b1ef805e51cbc46cf6fc89459e458b6721f258f2c1793c3"
+    },
+    {
+      "case_id": "JM-N01",
+      "verdict": "FAIL",
+      "source_run": "run-02",
+      "review": "review-JM-N01.json",
+      "response": "cases/JM-N01/response.md",
+      "response_sha256": "795fd863934d2eae50d0c30706167d842d3c5aaeaf3d30ec696a1580255f311c"
+    },
+    {
+      "case_id": "JM-C01",
+      "verdict": "PASS",
+      "source_run": "run-02",
+      "review": "review-JM-C01.json",
+      "response": "cases/JM-C01/response.md",
+      "response_sha256": "c6a3ee9a0d7e4319aadce1e26b2eb7b8240520beb11d83581d2e4d1817b68a22"
+    },
+    {
+      "case_id": "JM-C02",
+      "verdict": "PASS",
+      "source_run": "run-02",
+      "review": "review-JM-C02.json",
+      "response": "cases/JM-C02/response.md",
+      "response_sha256": "6705a6c247a28f344e14ebdc2764f15934a6b34174aa1df3c47f0a63092ab16c"
+    },
+    {
+      "case_id": "JM-S01",
+      "verdict": "PASS",
+      "source_run": "run-02",
+      "review": "review-JM-S01.json",
+      "response": "cases/JM-S01/response.md",
+      "response_sha256": "dc869ab663cada403bcdec3feb59c28354d35352f321fb560a1cc9e2df990644"
+    },
+    {
+      "case_id": "JM-S02",
+      "verdict": "PASS",
+      "source_run": "run-02",
+      "review": "review-JM-S02.json",
+      "response": "cases/JM-S02/response.md",
+      "response_sha256": "810df70a3e5335fa5430f8422986bf1bcc5f771900edfe08d2c838a72043e403"
+    },
+    {
+      "case_id": "JM-S03",
+      "verdict": "PASS",
+      "source_run": "run-02",
+      "review": "review-JM-S03.json",
+      "response": "cases/JM-S03/response.md",
+      "response_sha256": "ec31db95074ef133017e5789da24f3f8c0e40b3a2669d359bd4c6471737ffb35"
+    },
+    {
+      "case_id": "JM-S04",
+      "verdict": "PASS",
+      "source_run": "run-02",
+      "review": "review-JM-S04.json",
+      "response": "cases/JM-S04/response.md",
+      "response_sha256": "1786066f181d1dbdf005fa56662bc5b8ebbd5e844a15152321a3f1357d962b62"
+    }
+  ],
+  "pass": 7,
+  "fail": 1,
+  "blocked": 0,
+  "historical_runs": [
+    {
+      "run_id": "run-01",
+      "candidate_version": "0.1.0-candidate.1",
+      "candidate_sha256": "d20c8b838a9c4b9713e27c576e22272427d3f64fef50a670f5a09364cf849eb4",
+      "executions": 8,
+      "pass": 5,
+      "fail": 3,
+      "blocked": 0,
+      "results": "run-01/results.json",
+      "artifact_manifest_sha256": "6b6b057a742ebd8f3b064adf4be7b57ac02ff9309ad76cf7b3599b7e72e56649",
+      "candidate_files": [
+        {
+          "path": "agents/openai.yaml",
+          "bytes": 309,
+          "sha256": "ccc4fc2a4707838dd6defdd73ef6f6c7ee0d69e6df86e41689a46884691573ae"
+        },
+        {
+          "path": "SKILL.md",
+          "bytes": 8306,
+          "sha256": "d20c8b838a9c4b9713e27c576e22272427d3f64fef50a670f5a09364cf849eb4"
+        }
+      ],
+      "candidate_body_commit": "d89f9f2f3da136faf00976266202a4ff9b8c8c1f"
+    }
+  ]
+}

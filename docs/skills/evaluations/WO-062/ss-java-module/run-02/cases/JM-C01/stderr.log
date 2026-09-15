@@ -1,0 +1,6 @@
+2026-09-15T21:40:58.567640Z  WARN codex_skills::interface: ignoring interface.icon_small: icon path with '..' must resolve under plugin assets/
+2026-09-15T21:40:58.567781Z  WARN codex_skills::interface: ignoring interface.icon_large: icon path with '..' must resolve under plugin assets/
+2026-09-15T21:40:58.576081Z  WARN codex_core::shell_snapshot: Failed to create shell snapshot for powershell: Shell snapshot not supported yet for PowerShell
+2026-09-15T21:40:59.086045Z  WARN codex_skills::interface: ignoring interface.icon_small: icon path with '..' must resolve under plugin assets/
+2026-09-15T21:40:59.086108Z  WARN codex_skills::interface: ignoring interface.icon_large: icon path with '..' must resolve under plugin assets/
+2026-09-15T21:41:25.750329Z ERROR codex_core::tools::router: error=collab spawn failed: no thread with id: 01a0a704-1822-7561-a89d-bd96ef827fd4

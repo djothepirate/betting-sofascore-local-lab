@@ -155,7 +155,9 @@ Les candidats `ss-football-quality` et `ss-ci-security`, version `0.1.0-candidat
 sont à leur tour [qualifiés sur huit cas chacun](docs/validation/WO062-FOOTBALL-QUALITY-CI-SECURITY-CANDIDATES-20260915.md),
 avec sources figées et revue indépendante. Leur contenu, périmètre et limites ont ensuite été
 [validés par le propriétaire et leurs quatre fichiers installés personnellement](docs/validation/WO062-FOOTBALL-QUALITY-CI-SECURITY-INSTALLATION-20260915.md).
-Les deux skills Java/Windows et la consolidation restent à réaliser.
+Les candidats Java `.2` et Windows `.1` sont rédigés ; leurs premières recettes et
+reprises autorisées figurent dans le [rapport C](docs/validation/WO062-JAVA-WINDOWS-CANDIDATES-20260915.md).
+Leur requalification, validation humaine, installation et la consolidation restent distinctes.
 
 **Skills du lot 1 validés — 5 septembre 2026 :** les cinq skills `ss-*` sont livrés avec
 leur [guide et installateur personnel](docs/skills/README.md), sous

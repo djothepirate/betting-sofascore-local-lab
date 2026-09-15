@@ -1,0 +1,14 @@
+{
+  "schema": "wo062-run02-publisher-synthetic-tests-v1",
+  "kind": "SYNTHETIC_ONLY_NO_REAL_PUBLICATION",
+  "tests_run": 31,
+  "failures": 0,
+  "errors": 0,
+  "success": true,
+  "model_calls": 0,
+  "external_process_calls": 0,
+  "real_run_publications": 0,
+  "fixture_root": "C:\\Dev\\BettingProject\\codex\\betting-sofascore-local-lab\\.tmp\\wo062-skills-lot2\\.tmp\\c-run02-publisher-synthetic\\4ce42867-4848-4e27-b4af-5a200caf5039",
+  "publisher_sha256": "e1596d4c0731d1e71a521deb173d532aa6f44c14c9da25164e1e2013a871f5cd",
+  "test_script_sha256": "ebdc7572ab98d48bc4939c2af4c51e109c9da778230036d541be447b92ff9664"
+}

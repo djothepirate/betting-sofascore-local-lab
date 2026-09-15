@@ -2,43 +2,41 @@
   "schema": "wo062-current-skill-qualification-v1",
   "skill": "ss-java-module",
   "candidate_version": "0.1.0-candidate.2",
-  "status": "REVISED_NOT_REQUALIFIED",
+  "status": "INCOMPLETE_QUALIFICATION",
   "source_commit": "6648dd423e556b5248b8793a539ae85a7680f9bc",
+  "source_head": "2d62f12c2d2ad4571c630aea0f98128927aa24ff",
   "preparation_manifest_sha256": "a0907baba5a15606b6a735873a3e8ab9cc4043dfe8d852f3b843e1ec61b68290",
   "candidate_files": [
-    {
-      "path": "agents/openai.yaml",
-      "bytes": 309,
-      "sha256": "ccc4fc2a4707838dd6defdd73ef6f6c7ee0d69e6df86e41689a46884691573ae"
-    },
     {
       "path": "SKILL.md",
       "bytes": 9859,
       "sha256": "255655544771ae6cf2a71b967aba8efeb7e53e64acc41ca31dc784e16a719118"
+    },
+    {
+      "path": "agents/openai.yaml",
+      "bytes": 309,
+      "sha256": "ccc4fc2a4707838dd6defdd73ef6f6c7ee0d69e6df86e41689a46884691573ae"
     }
   ],
+  "publisher_source_head": "1bf14ddadd38ee4cbba34ee09bf2c729fb0ab890",
+  "candidate_body_commit": "2d62f12c2d2ad4571c630aea0f98128927aa24ff",
+  "candidate_package_commit": "2d62f12c2d2ad4571c630aea0f98128927aa24ff",
   "distinct_cases": 8,
-  "executions": 0,
-  "pass": 0,
-  "fail": 0,
+  "executions": 8,
+  "total_executions": 16,
+  "pass": 7,
+  "fail": 1,
   "blocked": 0,
   "human_validation": false,
   "personal_installation": false,
-  "results": null,
-  "artifact_manifest_sha256": null,
-  "limits": [
-    "Qualification limited to the frozen cases; no general productivity gain measured.",
-    "Model and reasoning effort use configured defaults; exact values unavailable in the observed native events.",
-    "Selection and complete tool-mediated loading are instrumented; no automatic body injection claim.",
-    "Catalogue reconstruction occurs after execution; it is not a capture of the transmitted request. Each candidate is evaluated separately with the existing personal catalogue.",
-    "No application build, application test, database, provider collection, scanner or CI pipeline is established by these evaluations."
-  ],
-  "candidate_body_commit": "2d62f12c2d2ad4571c630aea0f98128927aa24ff",
-  "candidate_package_commit": "2d62f12c2d2ad4571c630aea0f98128927aa24ff",
-  "not_run": 8,
+  "results": "run-02/current-results.json",
+  "run_results": "run-02/results.json",
+  "artifact_manifest_sha256": "2f7122962f8051445dce31a3019dcb381aa88c6fc9823790596199b117a45e37",
   "historical_runs": [
     {
+      "run_id": "run-01",
       "candidate_version": "0.1.0-candidate.1",
+      "candidate_sha256": "d20c8b838a9c4b9713e27c576e22272427d3f64fef50a670f5a09364cf849eb4",
       "executions": 8,
       "pass": 5,
       "fail": 3,
@@ -57,18 +55,62 @@
           "sha256": "d20c8b838a9c4b9713e27c576e22272427d3f64fef50a670f5a09364cf849eb4"
         }
       ],
-      "candidate_body_commit": "d89f9f2f3da136faf00976266202a4ff9b8c8c1f",
-      "run_id": "run-01"
+      "candidate_body_commit": "d89f9f2f3da136faf00976266202a4ff9b8c8c1f"
     }
   ],
-  "requalification": {
-    "run_id": "run-02",
-    "prepared": true,
-    "executed": false,
-    "additional_model_sessions_authorized": true,
-    "case_count": 8,
-    "preflight": "revision-02/preflight.json",
-    "authorization": "../java-windows-runtime/requalification-authorization.json"
+  "execution_totals": {
+    "pass": 12,
+    "fail": 4,
+    "blocked": 0
   },
-  "static_review": "revision-02/review-static.json"
+  "current_cases": [
+    {
+      "case_id": "JM-H01",
+      "verdict": "PASS",
+      "source_run": "run-02"
+    },
+    {
+      "case_id": "JM-N01",
+      "verdict": "FAIL",
+      "source_run": "run-02"
+    },
+    {
+      "case_id": "JM-C01",
+      "verdict": "PASS",
+      "source_run": "run-02"
+    },
+    {
+      "case_id": "JM-C02",
+      "verdict": "PASS",
+      "source_run": "run-02"
+    },
+    {
+      "case_id": "JM-S01",
+      "verdict": "PASS",
+      "source_run": "run-02"
+    },
+    {
+      "case_id": "JM-S02",
+      "verdict": "PASS",
+      "source_run": "run-02"
+    },
+    {
+      "case_id": "JM-S03",
+      "verdict": "PASS",
+      "source_run": "run-02"
+    },
+    {
+      "case_id": "JM-S04",
+      "verdict": "PASS",
+      "source_run": "run-02"
+    }
+  ],
+  "static_review": "run-02/review-static.json",
+  "limits": [
+    "Qualification limited to the frozen cases; no general productivity gain measured.",
+    "Model and reasoning effort use configured defaults; exact values unavailable. No model override is made by this publisher.",
+    "Complete tool-mediated skill loading is reviewed separately; no automatic CLI body-injection claim.",
+    "Catalogue reconstruction occurs after execution and is not a capture of the transmitted model request.",
+    "These evaluations establish no application build, application test, database, provider collection, scanner or CI pipeline."
+  ]
 }

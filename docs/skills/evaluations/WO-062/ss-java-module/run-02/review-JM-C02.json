@@ -1,0 +1,148 @@
+{
+  "schema": "wo062-independent-case-review-v1",
+  "case_id": "JM-C02",
+  "run_id": "run-02",
+  "skill": "ss-java-module",
+  "reviewer": "/root/jm_counter_review",
+  "reviewed_on": "2026-09-15",
+  "verdict": "PASS",
+  "behavioral_verdict": "PASS",
+  "candidate_version": "0.1.0-candidate.2",
+  "candidate_sha256": "255655544771ae6cf2a71b967aba8efeb7e53e64acc41ca31dc784e16a719118",
+  "response_sha256": "6705a6c247a28f344e14ebdc2764f15934a6b34174aa1df3c47f0a63092ab16c",
+  "native_events_sha256": "91d4e48e2ad59d09ccb70ace83993a0a9474cf0b605cb90f6486ffdc39f13e6b",
+  "source_head": "2d62f12c2d2ad4571c630aea0f98128927aa24ff",
+  "policy_source_commit": "6648dd423e556b5248b8793a539ae85a7680f9bc",
+  "oracle_sha256": "d13dc8c5ec833f30dc9025c3c22a22c00e60656eae3a89dc30361861ea390bd1",
+  "frozen_before_review": true,
+  "required_criteria_missing": [],
+  "criteria": [
+    {
+      "criterion_id": "integrity",
+      "required": true,
+      "result": "PASS",
+      "evidence": "9 fichiers figés et 27 entrées recalculés conformes ; journal brut conforme à trace.raw_events_sha256 ; oracle/cas/manifeste préparatoires immuables.",
+      "limit": "Freeze du 15 septembre à 21:53:22.444050Z observé avant accès à la réponse."
+    },
+    {
+      "criterion_id": "candidate-tool-read",
+      "required": true,
+      "result": "PASS",
+      "evidence": "item_1 : Get-Content -LiteralPath '.agents/skills/ss-java-module/SKILL.md' -Raw, code 0. Sortie égale au candidat .2 complet après normalisation CRLF/LF et fin de fichier.",
+      "limit": "La lecture réelle est établie ; aucune injection automatique du corps CLI revendiquée."
+    },
+    {
+      "criterion_id": "independence-and-actions",
+      "required": true,
+      "result": "PASS",
+      "evidence": "26 commandes terminées : lectures Get-Content et recherches rg du candidat et des fichiers autorisés. Requête et entrées sans oracle, anciens résultats ni historique de conception.",
+      "limit": "Le catalogue figé est reconstruit après run, pas une capture du contexte transmis. Aucun outil applicatif ou mutation observé."
+    },
+    {
+      "criterion_id": "lab-and-source",
+      "required": true,
+      "result": "PASS",
+      "evidence": "Réponse lignes 7–17 : statuts Lab, SHA source déclaré 6648dd423e556b5248b8793a539ae85a7680f9bc, Git effectif non vérifié, portée du corpus explicite.",
+      "limit": "Le source_head de préparation 2d62f12 ne devient pas un SHA qualifié de l'application."
+    },
+    {
+      "criterion_id": "architecture-and-dependencies",
+      "required": true,
+      "result": "PASS",
+      "evidence": "Lignes 17, 66–69 et 207–225 : monomodule, ports et adaptateurs réels, ProviderAccess, dépendances concrètes catalogue/parseur/ScheduledEventsTransportException ; responsabilités transactionnelles et IPC situées.",
+      "limit": "Pas de port inventé ni d'isolation absolue. Le constructeur concret du décorateur est reconnu ligne 85."
+    },
+    {
+      "criterion_id": "invariants-and-governance",
+      "required": true,
+      "result": "PASS",
+      "evidence": "Lignes 17, 27–30, 139–169 et 233–251 : Java 25, Boot 4.1.0, wrapper Windows, loopback, sources/profils/sorties worker séparés et navigateur absent du standard ; exception J3 durable appliquée.",
+      "limit": "L'exception ne permet ni contexte live recréé, ni prolongation de campagne ou généralisation à d'autres parcours."
+    },
+    {
+      "criterion_id": "standard-native",
+      "required": true,
+      "result": "PASS",
+      "evidence": "Lignes 21–34 et 251 : source native ajoutée par profil de qualification, runtime séparé, Surefire/Failsafe neutralisent J3 ; succès standard ne prouve pas Chromium. Références POM 169–187/222–367 et AGENTS 54–62.",
+      "limit": "Aucun build actuel annoncé exécuté."
+    },
+    {
+      "criterion_id": "generic-native-profile",
+      "required": true,
+      "result": "PASS",
+      "evidence": "Lignes 36–56 et 239–249 : motif exact **/*LocalQualificationIT.java ; classe J3LivePauseWorkerQualificationIT existante mais non sélectionnée par ce motif ; -Dit.test et deux goals Failsafe nommés du rapport explicités.",
+      "limit": "Présence, sélection et résultat actuel distingués ; identité du worker exécuté non vérifiée."
+    },
+    {
+      "criterion_id": "archunit-green",
+      "required": true,
+      "result": "PASS",
+      "evidence": "Lignes 58–71 : aucune dépendance/règle/preuve ArchUnit dans le corpus ; imports concrets Executor cités précisément ; Verify-Local décrit comme garde textuel ciblé.",
+      "limit": "Pas de taux de couverture ou graphe global inventé ; absence hors corpus non extrapolée."
+    },
+    {
+      "criterion_id": "spring-primary",
+      "required": true,
+      "result": "PASS",
+      "evidence": "Lignes 73–87 : ApplicationContextRunner limité et seul superviseur importé ; assertions sur le superviseur, décorateur @Primary et constructeur concret établis séparément.",
+      "limit": "Injection du contexte complet et binding réel restent non vérifiés."
+    },
+    {
+      "criterion_id": "historical-current",
+      "required": true,
+      "result": "PASS",
+      "evidence": "Lignes 89–107 : rapport WO-060 daté, commandes/versions/incidents historiques, chiffres non courants ; correspondance SHA et profils à réétablir.",
+      "limit": "Discordance avec le POM actuel ouvre une vérification, pas une accusation de faux rapport ni un vert courant."
+    },
+    {
+      "criterion_id": "retention-and-publication",
+      "required": true,
+      "result": "PASS",
+      "evidence": "Lignes 111–135 : refuse découplage catalogue/pointeur ; suit publication @Transactional de collection, terminal J8 et ordre, verrou JDBC et protection du dernier succès ; tests de rollback/commit incertain cités. Relais ss-postgres-change explicite ligne 135 et 256.",
+      "limit": "Migrations, purge et audit hors corpus ; absence de faux succès J8 distinguée d'une réconciliation complète. Aucune migration modifiée."
+    },
+    {
+      "criterion_id": "paused-live-restart",
+      "required": true,
+      "result": "PASS",
+      "evidence": "Lignes 137–157 : refuse recréation live et échéance prolongée ; même worker, liveContext conservé, J3 temporaire isolé, propriétaire/lease/délai et nettoyage contrôlés avant reprise ; protocole et tests nommés.",
+      "limit": "Qualification native historique n'établit pas toutes les couches SQL/résilience ou les rejets IPC directs."
+    },
+    {
+      "criterion_id": "maintenance-ready",
+      "required": true,
+      "result": "PASS",
+      "evidence": "Lignes 159–180 : onApplicationReady exige WebApplicationContext, ServletContext et 127.0.0.1 ; start vérifie séparément local/runtime-enabled ; test maintenance cité avec aucune admission/propriété/interaction.",
+      "limit": "Le profil local seul ne suffit pas. Portée événementielle et accès public start distingués sans bug certain inventé."
+    },
+    {
+      "criterion_id": "missed-order",
+      "required": true,
+      "result": "PASS",
+      "evidence": "Lignes 182–205 : conserve MISSED et identités, aucun replay/rattrapage ni réarmement des refus ; tick/claim et suspension résiliente décrits ; tests de dates, horaires, succès, concurrence cités.",
+      "limit": "Persistance de la suspension globale lors d'un redémarrage complet reste à qualifier ; relais PostgreSQL/verify explicites."
+    },
+    {
+      "criterion_id": "evidence-boundaries",
+      "required": true,
+      "result": "PASS",
+      "evidence": "Chaque affirmation/scénario sépare établi, contredit et non vérifié, avec référence précise au fichier/section/ligne et contrôle présent ; propositions synthétiques jamais assimilées à un changement appliqué.",
+      "limit": "Les annotations, noms de tests et rapports historiques ne valent pas exécution actuelle."
+    },
+    {
+      "criterion_id": "minimal-proposal-and-handoffs",
+      "required": true,
+      "result": "PASS",
+      "evidence": "Lignes 207–259 : placement dans les éléments existants, aucune refonte générale ; contrôles futurs bornés relayés ss-verify, SQL/ledger à ss-postgres-change, évolution parsing/provenance à ss-data-contract-replay.",
+      "limit": "Les skills spécialisés sont proposés comme relais futurs ; l'enveloppe n'autorise pas leur lecture pendant cet essai."
+    }
+  ],
+  "limitations": [
+    "Modèle et effort effectifs non exposés ; aucun override ni modèle précis revendiqué.",
+    "Catalogue reconstruit après session, pas capture du contexte transmis ou preuve d'injection automatique.",
+    "PASS limité au comportement observé de cette réponse ; aucune qualification applicative ni gain global mesuré."
+  ],
+  "application_tests_executed": false,
+  "source_or_candidate_modified": false,
+  "prior_run_unchanged": true
+}

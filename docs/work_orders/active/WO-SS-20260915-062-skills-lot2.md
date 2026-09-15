@@ -1,6 +1,6 @@
 # WO-SS-20260915-062 — Développement des skills spécialisés du lot 2
 
-- **Statut :** `OWNER_ACCEPTED — A_INSTALLED — B_INSTALLED` ; PB, FQ et CS `0.1.0-candidate.1` validés par le propriétaire et installés personnellement. Les deux skills C, la consolidation D et la livraison Git restent à réaliser.
+- **Statut :** `OWNER_ACCEPTED — A_INSTALLED — B_INSTALLED — C_REQUALIFICATION_IN_PROGRESS` ; PB, FQ et CS validés et installés personnellement. Java et Windows rédigés ; reprises autorisées en cours, validation humaine C, consolidation D et livraison Git encore distinctes.
 - **Date :** 2026-09-15.
 - **Autorité :** demande propriétaire de préparer un WO avec `ss-work-order`, à partir de la conversation « Skills du lot 2 », dans l'ordre précisé ci-dessous.
 - **Acceptation :** le 15 septembre 2026, le propriétaire confirme « J’accepte le WO-062 » et autorise l'inventaire des sources et la préparation des cas d'évaluation de `ss-provider-benchmark`.
@@ -123,7 +123,26 @@ distinct ; elle n'élargit pas implicitement ce lot de skills.
 - Huit skills personnels découverts par le CLI local, une entrée par nom ; cette découverte ne constitue pas une nouvelle recette comportementale commune.
 - [Rapport d’installation et limites](../../validation/WO062-FOOTBALL-QUALITY-CI-SECURITY-INSTALLATION-20260915.md) : incident initial avant copie, correction du seul environnement enfant, commandes et preuves exactes.
 
-### Suite du développement
+### Réalisation C — Java puis Windows
+
+- Demande propriétaire « faire ss-java-module, puis ss-windows-runtime », puis autorisation
+  explicite de seize sessions éphémères sans oracle, dont deux sondes Windows bornées.
+- Préparations figées avant rédaction : 48 sources Java et 23 Windows, huit cas par skill,
+  avec protocole et fixture des deux sondes Windows. Les sources et critères restent intacts.
+- Première recette Java `.1` : 5 PASS / 3 FAIL pour omissions obligatoires de restitution.
+  Correction `.2` versionnée à `2d62f12`, revue statique favorable ; aucun résultat `.1`
+  n'est transféré à cette nouvelle version.
+- Première recette Windows `.1` : 6 PASS / 2 BLOCKED avant lecture du candidat ou exécution,
+  sur refus du setup sandbox. Nouveaux contextes créés sous le compte du lanceur ; accès
+  local vérifié sans modèle et avec sandbox conservé, sans qualifier les sondes.
+- Le propriétaire autorise ensuite **dix sessions supplémentaires** : huit Java `.2`, puis
+  les deux sondes Windows `.1`, avec mêmes sources, critères et bornes. Requalification
+  en cours ; premières réponses et verdicts conservés.
+- [Rapport C, preuves et limites](../../validation/WO062-JAVA-WINDOWS-CANDIDATES-20260915.md).
+  Les seize fichiers personnels précédents, les preuves A/B, l'installateur et le code
+  applicatif restent intacts. Validation humaine et installation personnelle C non réalisées.
+
+### Ordre restant et consolidation
 
 | Étape | Skill | Résultat attendu avant passage à la suite |
 |---|---|---|
@@ -357,7 +376,8 @@ Le WO reste dans `active` pendant la réalisation et la revue. La PR cible exclu
 la fusion. La clôture effective suit cette fusion. Publication, fusion, promotion, tag et
 installation personnelle ne sont pas déduits de la seule préparation du WO.
 
-**Suite prévue :** `ss-java-module`, puis `ss-windows-runtime` (C), puis consolidation D, dans l’ordre accepté.
+**Suite en cours :** requalification de `ss-java-module` `.2`, puis reprise des deux sondes
+de `ss-windows-runtime` `.1` ; validation humaine et installation C ensuite, puis consolidation D.
 Les trois skills A/B ont terminé préparation, rédaction, qualification, validation propriétaire
 et installation personnelle. Leurs preuves et limites restent conservées. Le WO reste actif ;
 la livraison Git et sa clôture suivent le workflow de revue et de fusion décrit ci-dessus.

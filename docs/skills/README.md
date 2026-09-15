@@ -53,7 +53,12 @@ et CI sont produites. Le propriétaire a accepté leur contenu, leur périmètre
 les quatre fichiers exacts sont désormais [validés humainement et installés personnellement](../validation/WO062-FOOTBALL-QUALITY-CI-SECURITY-INSTALLATION-20260915.md).
 Le paquet explicite `FootballQualityCiSecurity` suit son [manifeste approuvé](evaluations/WO-062/football-quality-ci-security/installation-manifest.json).
 Le suffixe `candidate.1` conserve l’identité des fichiers évalués et acceptés.
-Les deux skills C et la consolidation des dix restent à réaliser.
+Les candidats [ss-java-module](local-lab/ss-java-module/SKILL.md) `.2` et
+[ss-windows-runtime](local-lab/ss-windows-runtime/SKILL.md) `.1` sont rédigés.
+La première recette conserve 5 PASS / 3 FAIL Java et 6 PASS / 2 BLOCKED Windows.
+La correction Java et les reprises Windows sont préparées ; dix sessions supplémentaires
+sont autorisées. Voir le [rapport C et les limites](../validation/WO062-JAVA-WINDOWS-CANDIDATES-20260915.md).
+La requalification, la validation humaine C et la consolidation des dix restent distinctes.
 
 ## Installation personnelle depuis ce dépôt
 

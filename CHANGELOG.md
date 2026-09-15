@@ -6,6 +6,13 @@ Les évolutions notables du SofaScore Local Lab sont consignées dans ce fichier
 
 ### WO-062 — skills spécialisés du lot 2
 
+- Rédige `ss-java-module`, puis `ss-windows-runtime`, depuis 48 et 23 sources figées.
+  Conserve [seize premières recettes et leurs limites](docs/validation/WO062-JAVA-WINDOWS-CANDIDATES-20260915.md) :
+  Java `.1` 5 PASS / 3 FAIL pour omissions, Windows `.1` 6 PASS / 2 BLOCKED avant exécution.
+  Corrige Java en `.2` et prépare les nouveaux contextes Windows sans assouplir le sandbox.
+  Dix sessions supplémentaires sont autorisées, requalification en cours ; aucune validation
+  humaine ou installation personnelle C, aucun changement des skills antérieurs ou du code.
+
 - Consigne la validation humaine de `ss-football-quality` et `ss-ci-security` version
   `0.1.0-candidate.1` et réalise leur [installation personnelle vérifiée](docs/validation/WO062-FOOTBALL-QUALITY-CI-SECURITY-INSTALLATION-20260915.md).
   Ajoute le paquet explicite `FootballQualityCiSecurity` avec quatre fichiers approuvés ;
