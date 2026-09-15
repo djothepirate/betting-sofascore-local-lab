@@ -143,10 +143,11 @@ La reprise fournisseur après ce correctif reste à valider par l'opérateur.
 **Skills du lot 2 — WO accepté le 15 septembre 2026 :** le
 [WO-062](docs/work_orders/active/WO-SS-20260915-062-skills-lot2.md) prépare, dans cet ordre,
 `ss-provider-benchmark`, `ss-football-quality`, `ss-ci-security`, `ss-java-module` et
-`ss-windows-runtime`. Leurs rôles, sources et critères d'évaluation sont définis ; leur
-développement et leur installation restent à réaliser. La préparation de `ss-provider-benchmark`
-dispose désormais de [38 sources et 12 cas d'évaluation](docs/skills/evaluations/WO-062/ss-provider-benchmark/evaluation-plan.md)
-figés, sans essai du skill exécuté. Voir le [guide des skills](docs/skills/README.md).
+`ss-windows-runtime`. Le premier candidat `ss-provider-benchmark` est rédigé et ses douze
+cas figés ont été exécutés : 11 PASS, PB-S01 ouvert pour la preuve du chargement explicite.
+Le [protocole et la scorecard prematch/live](docs/skills/evaluations/WO-062/ss-provider-benchmark/run-01/cases/PB-N01/response.md)
+sont produits. Voir la [validation A2](docs/validation/WO062-PROVIDER-BENCHMARK-CANDIDATE-20260915.md)
+et le [guide des skills](docs/skills/README.md). Validation humaine et installation personnelle restent distinctes.
 
 **Skills du lot 1 validés — 5 septembre 2026 :** les cinq skills `ss-*` sont livrés avec
 leur [guide et installateur personnel](docs/skills/README.md), sous

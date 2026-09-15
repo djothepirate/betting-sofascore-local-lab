@@ -4,11 +4,18 @@ Les évolutions notables du SofaScore Local Lab sont consignées dans ce fichier
 
 ## [Non publié]
 
-### WO-062 — cadrage des skills spécialisés du lot 2
+### WO-062 — skills spécialisés du lot 2
+
+- Rédige le candidat `ss-provider-benchmark` depuis A1 et conserve ses douze réponses évaluées
+  dans des contextes indépendants de l'oracle : 11 PASS, PB-S01 ouvert pour une preuve
+  de chargement explicite insuffisante. Le routage des quatre cas de sélection est correct.
+- Produit le [protocole et la scorecard prematch/live](docs/skills/evaluations/WO-062/ss-provider-benchmark/run-01/cases/PB-N01/response.md),
+  avec trois revues indépendantes et [preuves A2](docs/validation/WO062-PROVIDER-BENCHMARK-CANDIDATE-20260915.md).
+  Protège les octets des preuves contre la normalisation Git ; validation humaine et installation restent à faire.
 
 - Consigne l'acceptation du WO-062 et réalise la préparation A1 de `ss-provider-benchmark` :
   [38 sources et 12 cas](docs/skills/evaluations/WO-062/ss-provider-benchmark/evaluation-plan.md),
-  corpus synthétique, oracle séparé et manifeste d'empreintes. Les évaluations restent `NOT_RUN` ;
+  corpus synthétique, oracle séparé et manifeste d'empreintes. Les évaluations étaient `NOT_RUN` à cette étape ;
   voir la [preuve de préparation](docs/validation/WO062-PROVIDER-BENCHMARK-PREPARATION-20260915.md).
 - Prépare le [WO-062](docs/work_orders/active/WO-SS-20260915-062-skills-lot2.md) pour développer
   `ss-provider-benchmark`, puis `ss-football-quality` et `ss-ci-security`, puis `ss-java-module`

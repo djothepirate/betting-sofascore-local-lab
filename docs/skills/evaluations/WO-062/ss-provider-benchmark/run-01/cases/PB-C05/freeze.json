@@ -1,0 +1,17 @@
+{
+  "case_id": "PB-C05",
+  "frozen_at_utc": "2026-09-15T17:00:55.533233+00:00",
+  "files": [
+    {
+      "path": "response.md",
+      "bytes": 11959,
+      "sha256": "ca4a8fbb395db561654c5c627fb6184796448cfb3269dc4aaee2012c0ebaa661"
+    },
+    {
+      "path": "trace.json",
+      "bytes": 3705,
+      "sha256": "c794541dab49a01c84b64894871fe3b3bd3d4dd553846602a4175357447875d9"
+    }
+  ],
+  "frozen_before_oracle_review": true
+}

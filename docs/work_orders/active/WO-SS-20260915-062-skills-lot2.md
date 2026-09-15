@@ -1,9 +1,10 @@
 # WO-SS-20260915-062 — Développement des skills spécialisés du lot 2
 
-- **Statut :** `OWNER_ACCEPTED — A1_PREPARED` ; WO accepté, inventaire et cas de `ss-provider-benchmark` préparés ; rédaction et évaluation du skill à venir.
+- **Statut :** `OWNER_ACCEPTED — A2_EVALUATED_WITH_OPEN_FINDINGS` ; candidat `ss-provider-benchmark` rédigé, 12 cas exécutés, 11 PASS ; PB-S01 reste ouvert pour sa preuve de chargement. Validation humaine et installation personnelle non réalisées.
 - **Date :** 2026-09-15.
 - **Autorité :** demande propriétaire de préparer un WO avec `ss-work-order`, à partir de la conversation « Skills du lot 2 », dans l'ordre précisé ci-dessous.
 - **Acceptation :** le 15 septembre 2026, le propriétaire confirme « J’accepte le WO-062 » et autorise l'inventaire des sources et la préparation des cas d'évaluation de `ss-provider-benchmark`.
+- **Autorisation A2 :** le propriétaire demande ensuite de rédiger ce candidat depuis A1 et de l'évaluer sans oracle dans le contexte évalué ; il autorise explicitement les quatre sessions éphémères de sélection et la transmission de leur contexte local.
 - **Branche :** `feature/V0.1.0-RC01-CODEX-WO-SS-20260915-062`.
 - **Cible de PR :** `feature/V0.1.0-RC01`.
 - **Base canonique vérifiée sur GitHub :** `74d3f38afd64ce587353fbd645cad7a388e9756c` ; train local et distant identiques lors du cadrage, après fusion de la PR #37 / WO-061.
@@ -37,7 +38,8 @@ lot 1 n'est ajouté comme prérequis du lot 2.
 Le périmètre de réalisation comprend les cinq skills, leurs métadonnées, références ciblées,
 évaluations, manifeste de livraison et adaptation de l'installateur existant. Après le cadrage
 accepté, la phase A1 prépare l'inventaire des sources, les prompts, les entrées et les oracles
-de `ss-provider-benchmark`. Elle ne rédige ni n'installe le skill et ne lance pas ses essais.
+de `ss-provider-benchmark`. Cette préparation a été figée avant rédaction. L'autorisation
+A2 suivante couvre maintenant le candidat et ses essais, dont les résultats figurent ci-dessous.
 
 Les statuts `EXPERIMENTAL`, `LOCAL_ONLY`, `NOT_PRODUCTION_APPROVED` et
 `NO_CRITICAL_DEPENDENCY` restent applicables. Le lot ne crée aucune dépendance du Betting
@@ -73,7 +75,20 @@ distinct ; elle n'élargit pas implicitement ce lot de skills.
   sources et entrées identifiées par empreinte ; distinct du futur manifeste d'installation.
 - [Contrôles de préparation](../../validation/WO062-PROVIDER-BENCHMARK-PREPARATION-20260915.md) :
   cohérence des sources/cas/oracles, revue indépendante et limites. Tous les essais du skill
-  restent `NOT_RUN` ; aucun gain de productivité ou résultat fournisseur n'est revendiqué.
+  restaient `NOT_RUN` à la clôture A1 ; cette preuve historique reste intacte.
+
+### A2 — candidat et évaluations du 15 septembre 2026
+
+- [Candidat 0.1.0-candidate.1](../../skills/local-lab/ss-provider-benchmark/SKILL.md) figé avant les essais.
+- Huit réponses métier indépendantes de l'oracle, puis quatre sessions natives de sélection :
+  **12 cas exécutés, 11 PASS**. PB-S01 conserve une preuve de chargement insuffisante,
+  malgré un routage correct ; aucun critère manquant n'est déclaré réussi.
+- [Protocole et scorecard prematch/live](../../skills/evaluations/WO-062/ss-provider-benchmark/run-01/cases/PB-N01/response.md)
+  désormais produits ; observations, règles actuelles et qualifications locales distinguées.
+- [Validation A2](../../validation/WO062-PROVIDER-BENCHMARK-CANDIDATE-20260915.md) et
+  [résultats/revues](../../skills/evaluations/WO-062/ss-provider-benchmark/run-01/results.json).
+- Validation humaine, installation personnelle et clôture non réalisées ; pas de modification
+  des quatre autres skills prévus, de l'installateur, du lot 1 ou de son historique SKL-002.
 
 ### Suite du développement
 
@@ -300,8 +315,8 @@ Le WO reste dans `active` pendant la réalisation et la revue. La PR cible exclu
 la fusion. La clôture effective suit cette fusion. Publication, fusion, promotion, tag et
 installation personnelle ne sont pas déduits de la seule préparation du WO.
 
-**Prochaine action :** rédiger le candidat `ss-provider-benchmark` à partir de l'inventaire A1,
-puis l'évaluer avec les cas figés et un contexte indépendant de l'oracle. La tâche nouvelle
-prematch/live est définie et ses entrées versionnées sont identifiées ; ses résultats restent
-à produire. La présente étape s'achève avec la préparation autorisée, sans anticiper la
-rédaction, la validation humaine du skill ou son installation personnelle.
+**Prochaine action :** compléter la preuve de chargement explicite PB-S01, puis soumettre
+le candidat `ss-provider-benchmark` et ses limites à la validation propriétaire. La tâche
+nouvelle prematch/live a produit son protocole et sa scorecard ; les douze réponses évaluées
+et les revues sont conservées. La validation humaine et l'installation personnelle restent
+distinctes de la rédaction et des essais effectués.

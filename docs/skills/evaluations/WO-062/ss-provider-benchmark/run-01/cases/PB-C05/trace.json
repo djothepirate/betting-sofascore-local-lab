@@ -1,0 +1,61 @@
+{
+  "caseId": "PB-C05",
+  "startedUtc": "2026-09-15T16:56:22.622321Z",
+  "startedUtcQualification": "Premier horodatage UTC observé, capturé immédiatement après la lecture de bootstrap de allowed-files.txt ; le début exact de cette première lecture n'a pas été horodaté.",
+  "endedUtc": "2026-09-15T17:00:19.8232778Z",
+  "scope": "Évaluation indépendante, documentaire et synthétique ; dossier PB-C05 uniquement.",
+  "provenance": "SYNTHETIC_EVALUATION_INPUT_NOT_PROVIDER_DATA",
+  "filesRead": [
+    "allowed-files.txt",
+    "prompt.txt",
+    "candidate/SKILL.md",
+    "input.json",
+    "corpus/docs/architecture/J8-BENCHMARK-METRICS.md",
+    "corpus/src/main/java/com/bettingproject/sofascorelocal/application/benchmark/J8BenchmarkWindow.java",
+    "corpus/src/main/java/com/bettingproject/sofascorelocal/application/benchmark/J8BenchmarkService.java",
+    "corpus/scripts/Export-J8Benchmark.ps1",
+    "corpus/src/main/java/com/bettingproject/sofascorelocal/cli/J8BenchmarkExportCommand.java",
+    "corpus/src/main/java/com/bettingproject/sofascorelocal/adapter/persistence/JdbcJ8BenchmarkReadStore.java"
+  ],
+  "filesNotRead": [
+    "candidate/agents/openai.yaml"
+  ],
+  "toolsAndActions": [
+    {
+      "tool": "functions.exec → exec_command",
+      "action": "Lecture de allowed-files.txt, puis du prompt exact, du skill candidat et de input.json avec Get-Content ; capture de l'heure UTC avec Get-Date."
+    },
+    {
+      "tool": "functions.exec → exec_command",
+      "action": "Lecture des six sources métier autorisées, repérage par rg et Select-String, extraits numérotés de fenêtres, SQL, agrégation, empreinte et commande d'export."
+    },
+    {
+      "tool": "functions.exec → exec_command",
+      "action": "Vérification locale de W3 depuis input.json : 50 espaces initiaux, longueur brute 70, longueur après Trim 20."
+    },
+    {
+      "tool": "raisonnement documentaire",
+      "action": "Calculs d'inclusion, visibilité au cutoff et ratios pédagogiques ; comparaison du contrat et du code ; aucune exécution des classes ou scripts métier."
+    },
+    {
+      "tool": "functions.exec → exec_command",
+      "action": "Écriture UTF-8 sans BOM de output/response.md puis output/trace.json, seules mutations."
+    }
+  ],
+  "outputs": [
+    "output/response.md",
+    "output/trace.json"
+  ],
+  "sourceMutations": [],
+  "limitations": [
+    "Seules les sources autorisées ont été consultées ; leurs références sortantes n'ont pas été suivies. Aucun oracle ni grille de notation recherché.",
+    "Aucun réseau, application, serveur, navigateur, base de données, Docker ou collecte ; aucun build, test métier ou export exécuté.",
+    "Les grandes sorties initiales ont été tronquées par l'outil ; les sections pertinentes pour la réponse ont été relues par extraits ciblés.",
+    "Les tableaux sont synthétiques, sans population SQL complète, sans clés de preuve suffisantes, sans mode de campagne et sans issues/HTTP/latency_ms.",
+    "createdAt près de resultAt est interprété comme la création du résultat ; les dates de création des campagnes, unités et tentatives ne sont pas fournies.",
+    "Le statut HTTP effectivement émis n'est pas observé : le contrôleur n'appartient pas au corpus autorisé.",
+    "Le renderer Markdown n'appartient pas au corpus autorisé ; déterminisme des octets Markdown rapporté comme contrat documentaire.",
+    "Aucun commit/base ni modèle/effort d'exécution observé ; modèle et effort non exposés.",
+    "Les états MEASURED indiqués sur des calculs pédagogiques ne qualifient aucune capacité réelle fournisseur."
+  ]
+}

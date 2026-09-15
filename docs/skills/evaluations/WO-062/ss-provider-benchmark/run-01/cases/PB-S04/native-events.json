@@ -1,0 +1,35 @@
+[
+  {
+    "type": "thread.started",
+    "thread_id": "01a0a606-4f10-7b91-84ad-79957844365b"
+  },
+  {
+    "type": "turn.started"
+  },
+  {
+    "type": "item.completed",
+    "item": {
+      "id": "item_0",
+      "type": "agent_message",
+      "text": "Je vais vérifier le périmètre des skills du catalogue et m’arrêter à la décision de routage."
+    }
+  },
+  {
+    "type": "item.completed",
+    "item": {
+      "id": "item_2",
+      "type": "agent_message",
+      "text": "**Décision de routage : aucun skill.**\n\nLa demande porte exclusivement sur le dépôt **Betting Project** pour comparer API-FOOTBALL et Highlightly et préparer une scorecard fournisseur.\n\nLe catalogue réserve **`ss-provider-benchmark`** aux benchmarks du **SofaScore Local Lab** et précise explicitement : « Ne pas utiliser […] pour une comparaison limitée au Betting Project. » Il est donc exclu pour cette demande. Aucun autre skill du catalogue ne correspond à ce périmètre.\n\nJe m’arrête à cette décision de routage, sans exécuter la comparaison ni lancer de réseau, d’application, de build, de DB ou de Docker."
+    }
+  },
+  {
+    "type": "turn.completed",
+    "usage": {
+      "input_tokens": 17287,
+      "cached_input_tokens": 0,
+      "cache_write_input_tokens": 0,
+      "output_tokens": 358,
+      "reasoning_output_tokens": 189
+    }
+  }
+]

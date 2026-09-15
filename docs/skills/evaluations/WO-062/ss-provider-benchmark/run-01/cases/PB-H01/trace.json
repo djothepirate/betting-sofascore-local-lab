@@ -1,0 +1,74 @@
+{
+  "case_id": "PB-H01",
+  "started_at_utc": "2026-09-15T16:46:19Z",
+  "start_time_basis": "Premier horodatage UTC observé, immédiatement après la lecture initiale de allowed-files.txt.",
+  "ended_at_utc": "2026-09-15T16:51:19.4887177Z",
+  "authorized_directory": "C:/Dev/BettingProject/codex/betting-sofascore-local-lab/.tmp/wo062-skills-lot2/.tmp/pb-evaluations/run-01/PB-H01",
+  "files_actually_read": [
+    "allowed-files.txt",
+    "prompt.txt",
+    "candidate/SKILL.md",
+    "corpus/AGENTS.md",
+    "corpus/docs/architecture/J8-BENCHMARK-METRICS.md",
+    "corpus/docs/runbooks/J8-BENCHMARK.md",
+    "corpus/docs/benchmark/J8-BENCHMARK-REPORT-20260830.md",
+    "corpus/docs/validation/J8-FINAL-VALIDATION-20260830.md"
+  ],
+  "allowed_but_not_read": [
+    "candidate/agents/openai.yaml"
+  ],
+  "tools_and_actions": [
+    {
+      "tool": "functions.exec / tools.exec_command",
+      "action": "Lecture de la liste autorisée, du prompt exact et du skill candidat avec Get-Content."
+    },
+    {
+      "tool": "functions.exec / tools.clock__curr_time",
+      "action": "Observation UTC du début."
+    },
+    {
+      "tool": "functions.exec / tools.exec_command",
+      "action": "Lecture exclusive des cinq fichiers de corpus autorisés avec numérotation des lignes ; relectures par plages pour contourner les troncatures de sortie."
+    },
+    {
+      "tool": "functions.exec",
+      "action": "Calculs arithmétiques depuis les valeurs publiées : 15+1+1+3=20 ; 20/20=100 % ; 5 déduplications ; découverte 16 ; coûts marginaux 4/1 et effectifs 20/1 ; rangs J3 8 et 15."
+    },
+    {
+      "tool": "functions.exec / tools.exec_command",
+      "action": "Lecture binaire du seul rapport autorisé, SHA-256 du fichier entier et des 15 202 premiers octets, comptage des marqueurs."
+    },
+    {
+      "tool": "functions.exec / tools.exec_command",
+      "action": "Écriture UTF-8 de output/response.md, sans modification des sources."
+    },
+    {
+      "tool": "functions.exec / tools.exec_command",
+      "action": "Écriture UTF-8 de output/trace.json ; instant UTC final obtenu de l'horloge locale au moment de cette écriture."
+    }
+  ],
+  "verification_results": {
+    "report_bytes": 20008,
+    "report_sha256": "6d9a46b4391beffe9c1c54591089f0b035a5ed81f9522c03998a0feff18e7e52",
+    "automatic_prefix_bytes": 15202,
+    "automatic_prefix_sha256": "ffed40714a7c13f79273d7ddfacd15b02fdd877a2e946f6b843ba63e6b8cfb25",
+    "automatic_begin_markers": 1,
+    "automatic_end_markers": 1,
+    "document_hashes_match_validation": true,
+    "population_hash_reproduced": false,
+    "population_hash_declared": "c61b3ef3a9ac12f94d787da8c396dae58e4208a6f04aa240538e38eac5ab4726"
+  },
+  "limits": [
+    "Corpus imposé uniquement ; aucune référence sortante ouverte ; aucune grille ni oracle recherché ; aucune sollicitation du superviseur sur la réponse attendue.",
+    "Aucun accès réseau, application, serveur, navigateur, PostgreSQL, Docker ou collecte ; aucun test, export de benchmark ou opération Git exécuté.",
+    "Aucune mutation en dehors des deux fichiers output/response.md et output/trace.json ; sources en lecture seule.",
+    "Résultats de campagnes, tests et décisions historiques attribués aux documents, sans revalidation de leur exécution.",
+    "Code de sélection, identifiants ordonnés de preuve et sérialisation canonique non accessibles : hash de population non recalculable.",
+    "Latences individuelles J3 et nombres de signaux présents/attendus absents : impossibilité de reproduire indépendamment ces distributions et couvertures.",
+    "Modèle et effort non exposés."
+  ],
+  "outputs": [
+    "output/response.md",
+    "output/trace.json"
+  ]
+}

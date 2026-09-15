@@ -1,0 +1,78 @@
+{
+  "case_id": "PB-C03",
+  "started_at_utc": "2026-09-15T16:52:19Z",
+  "start_timestamp_note": "Premier horodatage UTC observé, immédiatement après la lecture initiale du manifeste autorisé.",
+  "finished_at_utc": "2026-09-15T16:54:46.275Z",
+  "scope_root": "C:/Dev/BettingProject/codex/betting-sofascore-local-lab/.tmp/wo062-skills-lot2/.tmp/pb-evaluations/run-01/PB-C03",
+  "files_read": [
+    "allowed-files.txt",
+    "prompt.txt",
+    "candidate/SKILL.md",
+    "input.json",
+    "corpus/docs/architecture/J8-BENCHMARK-METRICS.md",
+    "corpus/src/main/java/com/bettingproject/sofascorelocal/application/benchmark/J8BenchmarkService.java"
+  ],
+  "files_written": [
+    "output/response.md",
+    "output/trace.json"
+  ],
+  "tools_actions": [
+    {
+      "tool": "exec_command",
+      "action": "Lecture locale de allowed-files.txt pour établir le périmètre."
+    },
+    {
+      "tool": "clock.curr_time",
+      "action": "Observation du premier horodatage UTC."
+    },
+    {
+      "tool": "exec_command",
+      "action": "Lecture de prompt.txt, candidate/SKILL.md, input.json et des deux sources autorisées ; sortie groupée tronquée par la limite de taille."
+    },
+    {
+      "tool": "exec_command",
+      "action": "Deux recherches rg locales ciblées sur les deux sources autorisées ; contrôle non tronqué des règles de complétude, dimensions et états."
+    },
+    {
+      "tool": "exec_command",
+      "action": "Relecture de input.json et calcul local PowerShell des effectifs, sommes et pourcentages ; aucune exécution applicative."
+    },
+    {
+      "tool": "exec_command",
+      "action": "Écriture UTF-8 des deux livrables dans output ; horodatage final par l horloge UTC locale."
+    }
+  ],
+  "calculations": {
+    "population": 4,
+    "eligible_ids": [
+      "O1",
+      "O2"
+    ],
+    "present_signals": 10,
+    "expected_signals": 12,
+    "weighted_percent": 83.33,
+    "status_counts": {
+      "COMPLETE": 0,
+      "PARTIAL": 2,
+      "EMPTY_VALID": 1,
+      "UNAVAILABLE": 1
+    },
+    "group_state": "PARTIAL",
+    "dimensions": [
+      "UNKNOWN",
+      "UNKNOWN",
+      "UNKNOWN"
+    ]
+  },
+  "limits": [
+    "Données synthétiques ; aucune mesure de capacité fournisseur réelle.",
+    "Fenêtre UTC et asOf des observations absents.",
+    "Trois dimensions inconnues et compteurs de O4 absents.",
+    "Admissibilité aux cohortes réelles du service et strate de preuve non attestées ; calcul limité au tableau fourni.",
+    "Première lecture groupée tronquée à l affichage ; passages déterminants relus par recherches ciblées.",
+    "Aucune source hors manifeste, aucune référence sortante, aucun oracle ni grille de notation consultés.",
+    "Aucun réseau, application, DB, Docker, collecte ou test applicatif ; sources non modifiées.",
+    "candidate/agents/openai.yaml était autorisé mais inutile au calcul et non lu.",
+    "Modèle et effort non exposés : aucune observation fiable fournie."
+  ]
+}

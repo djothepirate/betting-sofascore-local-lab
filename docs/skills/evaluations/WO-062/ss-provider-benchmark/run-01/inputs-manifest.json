@@ -1,0 +1,428 @@
+{
+  "schema": "wo062-provider-benchmark-execution-inputs-v1",
+  "prepared_at_utc": "2026-09-15T16:46:00.833023+00:00",
+  "source_commit": "74d3f38afd64ce587353fbd645cad7a388e9756c",
+  "candidate_commit": "06f7bf8aa76c124246ea661fea5c4afe95b66354",
+  "a1_manifest_sha256": "4fd13d59e33665b11b48767dbb75ace879c626ed450cc15596c625320e3ac6eb",
+  "candidate_sha256": "4bcecee4dbe75ec74530a7bda63acc8cbc84cc15dcd7c07e2ab9e6f80cc7be94",
+  "oracle_excluded": true,
+  "records": [
+    {
+      "case_id": "PB-H01",
+      "kind": "historical",
+      "exact_prompt": "Relis le rapport J8 du 30 août 2026 et sa validation finale. Produis une note vérifiable sur les populations, taux, latences, complétude, coûts et portée du verdict. Signale ce qu'il permet de conclure sur SofaScore et ce qui reste inconnu. Lire seulement les sources autorisées. Aucun réseau, démarrage d'application, accès DB/Docker, collecte ou modification des sources. Écrire la réponse dans le dossier de sortie isolé fourni à l'exécution.",
+      "prompt_sha256": "4011adefbc845da5d9c8eeb2b7147714654276f9a6904a9255c846994e1f745b",
+      "supplied_files": [
+        {
+          "id": "N01",
+          "path": "corpus/AGENTS.md",
+          "sha256": "6509ac77cd4c87094a91da7e4c750b5991eeb4585a69a609def5289b91cf6ab5"
+        },
+        {
+          "id": "N07",
+          "path": "corpus/docs/architecture/J8-BENCHMARK-METRICS.md",
+          "sha256": "2d9d8fc787465ab1d6252148691a524ea481354a03fc7ca8a01c3a1fb538a036"
+        },
+        {
+          "id": "P01",
+          "path": "corpus/docs/runbooks/J8-BENCHMARK.md",
+          "sha256": "3eda5c80961793a70f202010e37b896406cb617448908e345e0f8c177728421d"
+        },
+        {
+          "id": "H01",
+          "path": "corpus/docs/benchmark/J8-BENCHMARK-REPORT-20260830.md",
+          "sha256": "6d9a46b4391beffe9c1c54591089f0b035a5ed81f9522c03998a0feff18e7e52"
+        },
+        {
+          "id": "H03",
+          "path": "corpus/docs/validation/J8-FINAL-VALIDATION-20260830.md",
+          "sha256": "d1670002c5fcc1d5e50a4291f5a438760805ae1a3e5b435f665205601357bc9c"
+        },
+        {
+          "path": "candidate/SKILL.md",
+          "sha256": "4bcecee4dbe75ec74530a7bda63acc8cbc84cc15dcd7c07e2ab9e6f80cc7be94"
+        },
+        {
+          "path": "candidate/agents/openai.yaml",
+          "sha256": "707b19c6ff8b73d6a5962244ef2855e163dc3c55b8f27ea14ef2e9863ac66bdd"
+        }
+      ],
+      "status": "READY"
+    },
+    {
+      "case_id": "PB-N01",
+      "kind": "new_task",
+      "exact_prompt": "Prépare un protocole reproductible et une première scorecard pour évaluer l'utilité du Local Lab avant match puis en live. Détermine les comparaisons déjà possibles et les preuves manquantes, avec populations, unités d'observation, checkpoints, métriques, coûts et limites. Replace chaque preuve dans sa politique historique et dans le fonctionnement actuel. Lire seulement les sources autorisées. Aucun réseau, démarrage d'application, accès DB/Docker, collecte ou modification des sources. Écrire la réponse dans le dossier de sortie isolé fourni à l'exécution.",
+      "prompt_sha256": "09b201fb42ad26d58ed8e00fdb403d3b3eeea1c832b8ee3c42acce8d76c166d8",
+      "supplied_files": [
+        {
+          "id": "N01",
+          "path": "corpus/AGENTS.md",
+          "sha256": "6509ac77cd4c87094a91da7e4c750b5991eeb4585a69a609def5289b91cf6ab5"
+        },
+        {
+          "id": "N02",
+          "path": "corpus/ADR-SS-001-experimentation-endpoints-sofascore-depuis-windows.md",
+          "sha256": "55ac93119d80772941f5c9d0b20c4331b856924329f6814f9ddbec6a783265db"
+        },
+        {
+          "id": "N03",
+          "path": "corpus/ADR-SS-002-bounded-multi-dossier-provider-robustness.md",
+          "sha256": "43a1e3b44e772907311c5ea44f3de884a4029c36017aa816b592937ae15ae238"
+        },
+        {
+          "id": "N04",
+          "path": "corpus/ADR-SS-005-bounded-local-live-j4-j5-campaigns.md",
+          "sha256": "82c9942bb80192cac9dae5c06a55539461d0c91c7e98de92ae7f2c5d5dcca36e"
+        },
+        {
+          "id": "N05",
+          "path": "corpus/ADR-SS-006-j3-manual-pagination-cap-35.md",
+          "sha256": "ab77fc33c993a060c7dea0ad26bea7a295fa36daf3a75df9cd363c31a48368b5"
+        },
+        {
+          "id": "N06",
+          "path": "corpus/ADR-SS-007-j3-automation-durable-catalog-and-live-pause.md",
+          "sha256": "b819ba63c2fb5cbacf1afca115f6ab0597956b1ff8c9377f3e7beb14fba3eb07"
+        },
+        {
+          "id": "N07",
+          "path": "corpus/docs/architecture/J8-BENCHMARK-METRICS.md",
+          "sha256": "2d9d8fc787465ab1d6252148691a524ea481354a03fc7ca8a01c3a1fb538a036"
+        },
+        {
+          "id": "N09",
+          "path": "corpus/docs/architecture/LIVE-J4-J5-CAMPAIGNS.md",
+          "sha256": "472754969ae9696ed6c748073757fe027a6103b86415f24fb3091ee0b7b8e771"
+        },
+        {
+          "id": "P01",
+          "path": "corpus/docs/runbooks/J8-BENCHMARK.md",
+          "sha256": "3eda5c80961793a70f202010e37b896406cb617448908e345e0f8c177728421d"
+        },
+        {
+          "id": "P03",
+          "path": "corpus/docs/runbooks/J3-AUTOMATION-AND-DURABLE-CATALOG.md",
+          "sha256": "2ce9e97781fd0b70fa1931e005526ae0e44ed42a8e66301cca590b5f0d90af8d"
+        },
+        {
+          "id": "I07",
+          "path": "corpus/src/main/java/com/bettingproject/sofascorelocal/adapter/persistence/JdbcJ8BenchmarkReadStore.java",
+          "sha256": "08c65cc6551ff8cbc8f3a03e31ffdf2caa243fd5649ac33e8f8a082032a4f9a4"
+        },
+        {
+          "id": "I12",
+          "path": "corpus/src/main/java/com/bettingproject/sofascorelocal/adapter/persistence/live/JdbcLiveCampaignPressureReadStore.java",
+          "sha256": "7e8bba1f7fb8f21db9df9903173c699e43a9762b72b15acc3c9a8732ff6735cc"
+        },
+        {
+          "id": "H01",
+          "path": "corpus/docs/benchmark/J8-BENCHMARK-REPORT-20260830.md",
+          "sha256": "6d9a46b4391beffe9c1c54591089f0b035a5ed81f9522c03998a0feff18e7e52"
+        },
+        {
+          "id": "H05",
+          "path": "corpus/docs/validation/WO058-PREMATCH-TEMPORAL-20260907.md",
+          "sha256": "f01f53c585436c68d27346225bb66de6e69cb0613a31f30b08e48efd9c1c97b5"
+        },
+        {
+          "id": "H06",
+          "path": "corpus/docs/validation/WO058-REAL-LIVE-V8-403-OBSERVATIONS-20260910.md",
+          "sha256": "399ea38dfc5c09a861958cc951e0faa8d6ec5da4207c24b6afe6139e68271f1a"
+        },
+        {
+          "id": "H07",
+          "path": "corpus/docs/validation/WO060-LIVE-V11-PROFILE-20260914.json",
+          "sha256": "80490d1bb1b781006277234a3337ca9fab3e72bda32bc8ec1da699055e2f326d"
+        },
+        {
+          "id": "H08",
+          "path": "corpus/docs/validation/WO058-TEMPORAL-SUMMARY-20260907.json",
+          "sha256": "d50ea2da6f1a90877622af440bfb37307978782a4ea52c64d63ac83e85296700"
+        },
+        {
+          "id": "H09",
+          "path": "corpus/docs/validation/WO060-J3-LIVE-WORKER-20260914.json",
+          "sha256": "c48ea964bc3f7af883e95e0e9808f5eda5279bbfb4c504e58540b58b1c3346fe"
+        },
+        {
+          "id": "H10",
+          "path": "corpus/docs/validation/WO060-J3-IMPLEMENTATION-20260914.md",
+          "sha256": "7607d35276e1074ac734ca0e624c62c7df9b3482258526ccc6ece32bec3f5ac2"
+        },
+        {
+          "path": "candidate/SKILL.md",
+          "sha256": "4bcecee4dbe75ec74530a7bda63acc8cbc84cc15dcd7c07e2ab9e6f80cc7be94"
+        },
+        {
+          "path": "candidate/agents/openai.yaml",
+          "sha256": "707b19c6ff8b73d6a5962244ef2855e163dc3c55b8f27ea14ef2e9863ac66bdd"
+        }
+      ],
+      "status": "READY"
+    },
+    {
+      "case_id": "PB-C01",
+      "kind": "counterexample",
+      "exact_prompt": "Séparer les populations et déterminer mesures et coûts disponibles. Applique les définitions du Lab et justifie les calculs et les limites. Lire seulement les sources autorisées. Aucun réseau, démarrage d'application, accès DB/Docker, collecte ou modification des sources. Écrire la réponse dans le dossier de sortie isolé fourni à l'exécution.",
+      "prompt_sha256": "7571bb3b979608bc7c04b93241158d7030b150063b2f927f2d904155a0294eb0",
+      "supplied_files": [
+        {
+          "id": "N01",
+          "path": "corpus/AGENTS.md",
+          "sha256": "6509ac77cd4c87094a91da7e4c750b5991eeb4585a69a609def5289b91cf6ab5"
+        },
+        {
+          "id": "N07",
+          "path": "corpus/docs/architecture/J8-BENCHMARK-METRICS.md",
+          "sha256": "2d9d8fc787465ab1d6252148691a524ea481354a03fc7ca8a01c3a1fb538a036"
+        },
+        {
+          "id": "I03",
+          "path": "corpus/src/main/java/com/bettingproject/sofascorelocal/application/benchmark/J8BenchmarkService.java",
+          "sha256": "60d4e1eb279425fcc232bd6e5b003d7f92835ae3657f5cb3839fd1beb93dd258"
+        },
+        {
+          "id": "I07",
+          "path": "corpus/src/main/java/com/bettingproject/sofascorelocal/adapter/persistence/JdbcJ8BenchmarkReadStore.java",
+          "sha256": "08c65cc6551ff8cbc8f3a03e31ffdf2caa243fd5649ac33e8f8a082032a4f9a4"
+        },
+        {
+          "path": "input.json",
+          "sha256": "19277a1509ba57b43d3c9f645f354befbf28626677c3afb00a64021e825c7552"
+        },
+        {
+          "path": "candidate/SKILL.md",
+          "sha256": "4bcecee4dbe75ec74530a7bda63acc8cbc84cc15dcd7c07e2ab9e6f80cc7be94"
+        },
+        {
+          "path": "candidate/agents/openai.yaml",
+          "sha256": "707b19c6ff8b73d6a5962244ef2855e163dc3c55b8f27ea14ef2e9863ac66bdd"
+        }
+      ],
+      "status": "READY"
+    },
+    {
+      "case_id": "PB-C02",
+      "kind": "counterexample",
+      "exact_prompt": "Calculer les taux et la distribution des latences à asOf. Applique les définitions du Lab et justifie les calculs et les limites. Lire seulement les sources autorisées. Aucun réseau, démarrage d'application, accès DB/Docker, collecte ou modification des sources. Écrire la réponse dans le dossier de sortie isolé fourni à l'exécution.",
+      "prompt_sha256": "bc56465204291a1319645c7d03238087291b3a491afe2683f772164d3d06b4ac",
+      "supplied_files": [
+        {
+          "id": "N07",
+          "path": "corpus/docs/architecture/J8-BENCHMARK-METRICS.md",
+          "sha256": "2d9d8fc787465ab1d6252148691a524ea481354a03fc7ca8a01c3a1fb538a036"
+        },
+        {
+          "id": "I03",
+          "path": "corpus/src/main/java/com/bettingproject/sofascorelocal/application/benchmark/J8BenchmarkService.java",
+          "sha256": "60d4e1eb279425fcc232bd6e5b003d7f92835ae3657f5cb3839fd1beb93dd258"
+        },
+        {
+          "path": "input.json",
+          "sha256": "68109d3b026367347a95d798fc8a50ce002e4cb5da596dc1014ef3e552a6f489"
+        },
+        {
+          "path": "candidate/SKILL.md",
+          "sha256": "4bcecee4dbe75ec74530a7bda63acc8cbc84cc15dcd7c07e2ab9e6f80cc7be94"
+        },
+        {
+          "path": "candidate/agents/openai.yaml",
+          "sha256": "707b19c6ff8b73d6a5962244ef2855e163dc3c55b8f27ea14ef2e9863ac66bdd"
+        }
+      ],
+      "status": "READY"
+    },
+    {
+      "case_id": "PB-C03",
+      "kind": "counterexample",
+      "exact_prompt": "Calculer complétude pondérée et distribution des statuts. Applique les définitions du Lab et justifie les calculs et les limites. Lire seulement les sources autorisées. Aucun réseau, démarrage d'application, accès DB/Docker, collecte ou modification des sources. Écrire la réponse dans le dossier de sortie isolé fourni à l'exécution.",
+      "prompt_sha256": "419c2756b08de352ee1e820eff2302308041f5a53d05d72f484690242b1636be",
+      "supplied_files": [
+        {
+          "id": "N07",
+          "path": "corpus/docs/architecture/J8-BENCHMARK-METRICS.md",
+          "sha256": "2d9d8fc787465ab1d6252148691a524ea481354a03fc7ca8a01c3a1fb538a036"
+        },
+        {
+          "id": "I03",
+          "path": "corpus/src/main/java/com/bettingproject/sofascorelocal/application/benchmark/J8BenchmarkService.java",
+          "sha256": "60d4e1eb279425fcc232bd6e5b003d7f92835ae3657f5cb3839fd1beb93dd258"
+        },
+        {
+          "path": "input.json",
+          "sha256": "4fbdbe7f7a7b26ed77035f5a27e70187a16257b04ac10352721542dec337c650"
+        },
+        {
+          "path": "candidate/SKILL.md",
+          "sha256": "4bcecee4dbe75ec74530a7bda63acc8cbc84cc15dcd7c07e2ab9e6f80cc7be94"
+        },
+        {
+          "path": "candidate/agents/openai.yaml",
+          "sha256": "707b19c6ff8b73d6a5962244ef2855e163dc3c55b8f27ea14ef2e9863ac66bdd"
+        }
+      ],
+      "status": "READY"
+    },
+    {
+      "case_id": "PB-C04",
+      "kind": "counterexample",
+      "exact_prompt": "Déterminer dossiers exploitables et coûts ; traiter aussi la variante. Applique les définitions du Lab et justifie les calculs et les limites. Lire seulement les sources autorisées. Aucun réseau, démarrage d'application, accès DB/Docker, collecte ou modification des sources. Écrire la réponse dans le dossier de sortie isolé fourni à l'exécution.",
+      "prompt_sha256": "aa6cd2239942408b6011d458b90986669f88dfb220255063c76d94fa066172d9",
+      "supplied_files": [
+        {
+          "id": "N07",
+          "path": "corpus/docs/architecture/J8-BENCHMARK-METRICS.md",
+          "sha256": "2d9d8fc787465ab1d6252148691a524ea481354a03fc7ca8a01c3a1fb538a036"
+        },
+        {
+          "id": "I03",
+          "path": "corpus/src/main/java/com/bettingproject/sofascorelocal/application/benchmark/J8BenchmarkService.java",
+          "sha256": "60d4e1eb279425fcc232bd6e5b003d7f92835ae3657f5cb3839fd1beb93dd258"
+        },
+        {
+          "id": "I06",
+          "path": "corpus/src/main/java/com/bettingproject/sofascorelocal/application/benchmark/J8DirectObservationCohorts.java",
+          "sha256": "996e61d858caf177ab1db9572f31b9d2627e4b603e18a43563902a9683272187"
+        },
+        {
+          "path": "input.json",
+          "sha256": "e85651299ff9d7ce7468feacb7fb1b160889865fb3fb4956c1632730910f1b92"
+        },
+        {
+          "path": "candidate/SKILL.md",
+          "sha256": "4bcecee4dbe75ec74530a7bda63acc8cbc84cc15dcd7c07e2ab9e6f80cc7be94"
+        },
+        {
+          "path": "candidate/agents/openai.yaml",
+          "sha256": "707b19c6ff8b73d6a5962244ef2855e163dc3c55b8f27ea14ef2e9863ac66bdd"
+        }
+      ],
+      "status": "READY"
+    },
+    {
+      "case_id": "PB-C05",
+      "kind": "counterexample",
+      "exact_prompt": "Évaluer inclusions temporelles, variante du cutoff, HTTP et export ; comparer contrat et code si besoin. Applique les définitions du Lab et justifie les calculs et les limites. Lire seulement les sources autorisées. Aucun réseau, démarrage d'application, accès DB/Docker, collecte ou modification des sources. Écrire la réponse dans le dossier de sortie isolé fourni à l'exécution.",
+      "prompt_sha256": "bb38ddd30f935df645e56c7561926d4f22d8269a1a1e493f166b5a7eac2878d0",
+      "supplied_files": [
+        {
+          "id": "N07",
+          "path": "corpus/docs/architecture/J8-BENCHMARK-METRICS.md",
+          "sha256": "2d9d8fc787465ab1d6252148691a524ea481354a03fc7ca8a01c3a1fb538a036"
+        },
+        {
+          "id": "I02",
+          "path": "corpus/src/main/java/com/bettingproject/sofascorelocal/application/benchmark/J8BenchmarkWindow.java",
+          "sha256": "b69f3f63798dba67d8a4fd493a3f45ee469c88c21cf702d4615662ef1a28ec7c"
+        },
+        {
+          "id": "I03",
+          "path": "corpus/src/main/java/com/bettingproject/sofascorelocal/application/benchmark/J8BenchmarkService.java",
+          "sha256": "60d4e1eb279425fcc232bd6e5b003d7f92835ae3657f5cb3839fd1beb93dd258"
+        },
+        {
+          "id": "P02",
+          "path": "corpus/scripts/Export-J8Benchmark.ps1",
+          "sha256": "840e40af2d46376d3760ca0352386b102d7999780176053b3eef293c37d3d78f"
+        },
+        {
+          "id": "I01",
+          "path": "corpus/src/main/java/com/bettingproject/sofascorelocal/cli/J8BenchmarkExportCommand.java",
+          "sha256": "28b6b9f5d45ad30e0e5b6d6b4d47e79bf0e6881ce5994b25b14c2998ed4c03be"
+        },
+        {
+          "id": "I07",
+          "path": "corpus/src/main/java/com/bettingproject/sofascorelocal/adapter/persistence/JdbcJ8BenchmarkReadStore.java",
+          "sha256": "08c65cc6551ff8cbc8f3a03e31ffdf2caa243fd5649ac33e8f8a082032a4f9a4"
+        },
+        {
+          "path": "input.json",
+          "sha256": "21b59524ad46cee502cd13de6e2065563f7fd325fe94e72ff15809b06f02ce18"
+        },
+        {
+          "path": "candidate/SKILL.md",
+          "sha256": "4bcecee4dbe75ec74530a7bda63acc8cbc84cc15dcd7c07e2ab9e6f80cc7be94"
+        },
+        {
+          "path": "candidate/agents/openai.yaml",
+          "sha256": "707b19c6ff8b73d6a5962244ef2855e163dc3c55b8f27ea14ef2e9863ac66bdd"
+        }
+      ],
+      "status": "READY"
+    },
+    {
+      "case_id": "PB-C06",
+      "kind": "counterexample",
+      "exact_prompt": "Reprendre les classifications J6 fournies et calculer les délais réellement définis par J8. Applique les définitions du Lab et justifie les calculs et les limites. Lire seulement les sources autorisées. Aucun réseau, démarrage d'application, accès DB/Docker, collecte ou modification des sources. Écrire la réponse dans le dossier de sortie isolé fourni à l'exécution.",
+      "prompt_sha256": "46dabc4b5f6e2974615e7c012a48dd5fee43e6ea73739568276a59a9a52ef145",
+      "supplied_files": [
+        {
+          "id": "N07",
+          "path": "corpus/docs/architecture/J8-BENCHMARK-METRICS.md",
+          "sha256": "2d9d8fc787465ab1d6252148691a524ea481354a03fc7ca8a01c3a1fb538a036"
+        },
+        {
+          "id": "N08",
+          "path": "corpus/docs/architecture/J6-HISTORY-AND-GUARDED-RETENTION.md",
+          "sha256": "08b915e4634652524a7388bd18952122979ee27046c0990a2eba058ba16c0693"
+        },
+        {
+          "id": "I03",
+          "path": "corpus/src/main/java/com/bettingproject/sofascorelocal/application/benchmark/J8BenchmarkService.java",
+          "sha256": "60d4e1eb279425fcc232bd6e5b003d7f92835ae3657f5cb3839fd1beb93dd258"
+        },
+        {
+          "id": "I05",
+          "path": "corpus/src/main/java/com/bettingproject/sofascorelocal/application/benchmark/J8BenchmarkMarkdownRenderer.java",
+          "sha256": "75e3830848db9ded33d118544c4338ac5a9b77b9cb54582ba9fc0bb03e062e30"
+        },
+        {
+          "path": "input.json",
+          "sha256": "154eeb8e6e342240cd747a3e2a4e4971452b33db61706f136db251cba0929e74"
+        },
+        {
+          "path": "candidate/SKILL.md",
+          "sha256": "4bcecee4dbe75ec74530a7bda63acc8cbc84cc15dcd7c07e2ab9e6f80cc7be94"
+        },
+        {
+          "path": "candidate/agents/openai.yaml",
+          "sha256": "707b19c6ff8b73d6a5962244ef2855e163dc3c55b8f27ea14ef2e9863ac66bdd"
+        }
+      ],
+      "status": "READY"
+    },
+    {
+      "case_id": "PB-S01",
+      "kind": "selection",
+      "exact_prompt": "Utilise $ss-provider-benchmark pour préparer une scorecard prematch/live du Local Lab à partir des rapports J8 et WO-058 déjà versionnés, sans réseau.",
+      "prompt_sha256": "ae3d76ca52d167c47bf81db65645d1f54d18695f4d3f804a1c1edca3832d5455",
+      "supplied_files": [],
+      "status": "READY"
+    },
+    {
+      "case_id": "PB-S02",
+      "kind": "selection",
+      "exact_prompt": "Dans le SofaScore Local Lab, peut-on comparer le coût par dossier et la fraîcheur du benchmark du 30 août avec les campagnes live de septembre ? Établis les dénominateurs, populations comparables et limites à partir des preuves locales.",
+      "prompt_sha256": "1ddc548a1457cc103210a579695b853ab21ddae4e0e5c25778d92e705fb74e1c",
+      "supplied_files": [],
+      "status": "READY"
+    },
+    {
+      "case_id": "PB-S03",
+      "kind": "selection",
+      "exact_prompt": "Dans le Local Lab, vérifie la cohérence des XML Surefire/Failsafe de ce build et explique pourquoi Maven semble vert. Je ne demande aucune mesure fournisseur.",
+      "prompt_sha256": "7cfef93432bb71745353b977784992d4d863e9b281f1d6e752abaa24b19829f2",
+      "supplied_files": [],
+      "status": "READY"
+    },
+    {
+      "case_id": "PB-S04",
+      "kind": "selection",
+      "exact_prompt": "Dans le dépôt Betting Project uniquement, compare les offres API-FOOTBALL et Highlightly et prépare sa scorecard fournisseur. N'utilise pas le SofaScore Local Lab.",
+      "prompt_sha256": "8bf1f960aa5cf6339b504b38fc39aed9a40207d8bd98bac2263ef1252b0d24a2",
+      "supplied_files": [],
+      "status": "READY"
+    }
+  ]
+}

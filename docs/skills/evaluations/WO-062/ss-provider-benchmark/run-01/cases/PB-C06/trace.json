@@ -1,0 +1,58 @@
+{
+  "caseId": "PB-C06",
+  "startedAtUtc": "2026-09-15T16:57:00Z",
+  "startTimestampPrecision": "Première horloge UTC observée après lecture initiale du manifeste, du prompt et du skill ; début exact de ces lectures non horodaté.",
+  "finishedAtUtc": "2026-09-15T17:01:21.6683056+00:00",
+  "sourceRoot": "C:\\Dev\\BettingProject\\codex\\betting-sofascore-local-lab\\.tmp\\wo062-skills-lot2\\.tmp\\pb-evaluations\\run-01\\PB-C06",
+  "filesRead": [
+    "allowed-files.txt",
+    "prompt.txt",
+    "candidate/SKILL.md",
+    "input.json",
+    "corpus/docs/architecture/J8-BENCHMARK-METRICS.md",
+    "corpus/docs/architecture/J6-HISTORY-AND-GUARDED-RETENTION.md",
+    "corpus/src/main/java/com/bettingproject/sofascorelocal/application/benchmark/J8BenchmarkService.java",
+    "corpus/src/main/java/com/bettingproject/sofascorelocal/application/benchmark/J8BenchmarkMarkdownRenderer.java"
+  ],
+  "toolsAndActions": [
+    {
+      "tool": "functions.exec + exec_command",
+      "action": "Lectures locales explicites via Get-Content et recherches rg dans les seuls fichiers autorisés ; extraits ciblés après troncature de sorties longues."
+    },
+    {
+      "tool": "clock__curr_time",
+      "action": "Lecture de l'heure UTC de traçabilité."
+    },
+    {
+      "tool": "exec_command / PowerShell",
+      "action": "Calcul des différences DateTimeOffset depuis input.json : V2=60000 ms, V3=120000 ms ; écarts de famille 240000 ms et 180000 ms."
+    },
+    {
+      "tool": "exec_command / PowerShell",
+      "action": "Première tentative d'écriture rejetée au parsing PowerShell à cause d'une apostrophe typographique dans une chaîne ; aucune instruction exécutée, aucune mutation."
+    },
+    {
+      "tool": "apply_patch",
+      "action": "Écriture de output/response.md seulement."
+    },
+    {
+      "tool": "exec_command / PowerShell",
+      "action": "Écriture UTF-8 de output/trace.json et validation en mémoire du JSON sérialisé."
+    }
+  ],
+  "filesWritten": [
+    "output/response.md",
+    "output/trace.json"
+  ],
+  "limitations": [
+    "Entrée synthétique d'évaluation, aucune observation fournisseur réelle.",
+    "Classifications J6 et hypothèses reprises comme données du cas, sans réimplémentation.",
+    "Fenêtre, asOf et identifiants immuables complets absents ; aucun hash J8 reproduit.",
+    "Aucune lecture hors corpus, aucune référence sortante suivie, aucun oracle ni grille recherchés.",
+    "Aucun réseau, application, DB, Docker, collecte ou test du Lab.",
+    "Sources inchangées ; seules les deux sorties et leur dossier ont été écrits.",
+    "Certaines lectures globales tronquées dans l'affichage ; passages déterminants relus de manière ciblée.",
+    "Modèle et effort non exposés car non observés.",
+    "Instant initial exact non observé ; première heure UTC observée explicitement qualifiée."
+  ]
+}

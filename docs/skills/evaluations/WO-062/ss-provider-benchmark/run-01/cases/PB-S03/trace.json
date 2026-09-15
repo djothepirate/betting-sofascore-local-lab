@@ -1,0 +1,58 @@
+{
+  "case_id": "PB-S03",
+  "started_at_utc": "2026-09-15T17:03:45.6685913Z",
+  "ended_at_utc": "2026-09-15T17:04:06.7486707Z",
+  "duration_seconds": 21.080079,
+  "mode": "native_codex_exec_ephemeral_read_only",
+  "cli_version": "0.154.0-alpha.6.2",
+  "model": null,
+  "reasoning_effort": null,
+  "model_metadata_note": "Not exposed in the observed exec events; configured defaults used without override.",
+  "exact_user_case_prompt_sha256": "7cfef93432bb71745353b977784992d4d863e9b281f1d6e752abaa24b19829f2",
+  "routing_request_sha256": "359cf7552075fa1047db6902eccb0fecffba1f3616c8e37f1fbb72d74dbd5315",
+  "candidate_sha256": "4bcecee4dbe75ec74530a7bda63acc8cbc84cc15dcd7c07e2ab9e6f80cc7be94",
+  "exit_code": 0,
+  "oracle_supplied": false,
+  "raw_events_sha256": "af736bc69fa78449a80c696445984daf072e0225a7570f02babfa5398b06e26a",
+  "published_events_note": "Reasoning items omitted; command output bodies replaced by content hashes. Original raw events kept only in ignored runtime directory.",
+  "native_events_sha256": "caa12861ea92a0fb4ae8d98279d41cbb772ebab816f17bf5b2946672e2f93cc5",
+  "context_reconstruction": {
+    "timing": "Local rendering after execution using same CLI, directory, prompt and unchanged candidate; this is a reconstruction, not a capture of the transmitted request.",
+    "candidate_body_present": false,
+    "ss_catalogue_entries": [
+      "ss-data-contract-replay",
+      "ss-postgres-change",
+      "ss-provider-benchmark",
+      "ss-review-closeout",
+      "ss-verify",
+      "ss-work-order",
+      "ss-data-contract-replay",
+      "ss-postgres-change",
+      "ss-review-closeout",
+      "ss-verify",
+      "ss-work-order"
+    ],
+    "catalogue_sha256": "b5192f10ee99184e7340cdf5fc3db96bd617a0a66811f9657ab6045789bae18b"
+  },
+  "commands_completed": [
+    {
+      "command": "\"C:\\\\Program Files\\\\PowerShell\\\\7\\\\pwsh.exe\" -Command \"Get-Content -LiteralPath 'C:/Dev/BettingProject/codex/betting-sofascore-local-lab/.tmp/wo062-skills-lot2/.tmp/pb-evaluations/run-01/PB-S03/.agents/skills/ss-verify/SKILL.md'\"",
+      "exit_code": 0,
+      "status": "completed",
+      "output_matches_candidate_after_line_ending_normalization": false
+    }
+  ],
+  "usage": {
+    "input_tokens": 35470,
+    "cached_input_tokens": 17152,
+    "cache_write_input_tokens": 0,
+    "output_tokens": 438,
+    "reasoning_output_tokens": 114
+  },
+  "authorization": "Explicit owner consent received for four ephemeral model routing sessions after initial auto-review rejection.",
+  "limits": [
+    "Selection only; no benchmark, build or commercial comparison performed.",
+    "Native event trace supports executed commands; context preload assessed through local reconstruction.",
+    "No claim about internal model reasoning or personal installation."
+  ]
+}

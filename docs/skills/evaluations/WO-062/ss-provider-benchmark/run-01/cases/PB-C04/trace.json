@@ -1,0 +1,38 @@
+{
+  "case": "PB-C04",
+  "started_at_utc": "2026-09-15T16:55:28Z",
+  "start_timestamp_note": "Premier horodatage UTC observé, immédiatement après lecture initiale de allowed-files.txt.",
+  "finished_at_utc": "2026-09-15T17:00:09Z",
+  "authorized_root": "C:/Dev/BettingProject/codex/betting-sofascore-local-lab/.tmp/wo062-skills-lot2/.tmp/pb-evaluations/run-01/PB-C04",
+  "files_read": [
+    "allowed-files.txt",
+    "prompt.txt",
+    "candidate/SKILL.md",
+    "input.json",
+    "corpus/docs/architecture/J8-BENCHMARK-METRICS.md",
+    "corpus/src/main/java/com/bettingproject/sofascorelocal/application/benchmark/J8BenchmarkService.java",
+    "corpus/src/main/java/com/bettingproject/sofascorelocal/application/benchmark/J8DirectObservationCohorts.java"
+  ],
+  "tools_and_actions": [
+    "functions.exec / exec_command : lecture locale Get-Content de la liste autorisée, du prompt exact, du skill et de l’entrée JSON.",
+    "functions.exec / clock__curr_time : capture de deux horaires UTC.",
+    "functions.exec / exec_command : lectures locales en parallèle des trois sources du corpus ; sortie longue tronquée.",
+    "functions.exec / exec_command : recherches rg ciblées et lectures Select-Object des sections dossiers, coûts et états pour compléter la sortie tronquée.",
+    "Analyse documentaire et calculs arithmétiques du cas initial et de la variante ; aucune exécution du code Java.",
+    "Première commande de rédaction rejetée par le parseur PowerShell à cause du délimiteur apostrophe dans une chaîne de trace ; aucune instruction exécutée ni fichier écrit par cette tentative.",
+    "functions.exec / exec_command : commande de rédaction corrigée, création du dossier output si nécessaire, écriture UTF-8 sans BOM de response.md puis trace.json."
+  ],
+  "files_written": [
+    "output/response.md",
+    "output/trace.json"
+  ],
+  "limits": [
+    "Sources en lecture seule ; aucun autre fichier consulté ; candidate/agents/openai.yaml non lu.",
+    "Aucun réseau, application, DB, Docker, collecte, oracle ni grille de notation ; aucun renvoi sortant suivi.",
+    "Entrée synthétique séparée de toute observation fournisseur ; ledger complet réel non vérifié.",
+    "Résultats terminaux, identifiants techniques complets, parseurs et hash de population non fournis ; état global non attestable.",
+    "Lecteur de persistance absent du corpus autorisé ; actualité des composants prise dans les assertions du scénario.",
+    "Modèle et effort non exposés car non observés.",
+    "Horodatage de fin capturé immédiatement avant sérialisation et écriture de la trace."
+  ]
+}

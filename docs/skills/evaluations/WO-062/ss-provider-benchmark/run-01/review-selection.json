@@ -1,0 +1,239 @@
+{
+  "reviewer": "/root/pb_review_selection — revue indépendante de sélection PB-S01 à PB-S04",
+  "reviewed_at_utc": "2026-09-15T17:12:41Z",
+  "limits": [
+    "Revue documentaire des essais réels figés run-01, selon oracle.md (règles communes et sélection) et cases.json. Les statuts NOT_RUN/PREPARED_NOT_RUN de ces deux documents préparatoires n'ont pas été réécrits ; l'exécution observée vient des sorties figées et journaux autorisés.",
+    "Lectures de contenu limitées à oracle.md, cases.json, frozen/PB-S01..PB-S04/{response.md,trace.json,freeze.json}, PB-S01..PB-S04/{routing-only.txt,output/native-events.json,output/catalogue.txt,.agents/skills/ss-provider-benchmark/SKILL.md}, et PB-S03/.agents/skills/ss-verify/SKILL.md. Inventaire de noms/tailles local effectué. Aucune lecture de raisonnement interne ou d'événements bruts.",
+    "Les journaux native-events omettent les raisonnements internes et remplacent les corps de sortie des commandes par leurs empreintes. Les empreintes normalisées ont été rapprochées des fichiers autorisés ; les journaux bruts et la transformation qui les a produits ne sont pas audités ici.",
+    "Attestation de lancement reçue du superviseur pendant la revue : chaque appel transmet exclusivement routing-only.txt sur stdin à codex exec --ephemeral --sandbox read-only --cd <dossier du cas> --json --output-last-message <output/response.md> - ; aucun fichier joint, corps de skill ajouté manuellement, override modèle ou reprise de session. Cette attestation est une preuve déclarative de l'opérateur, distincte des pièces figées et d'une capture de requête modèle.",
+    "Le champ context_reconstruction est explicitement une reconstruction locale après exécution. candidate_body_present=false ne prouve ni l'absence de corps dans la requête effectivement transmise ni l'échec d'un éventuel chargement automatique. Aucune conclusion sur le raisonnement interne, le comportement caché du CLI ou une installation personnelle.",
+    "PASS porte seulement sur les assertions de sélection établies. BLOCKED signale une preuve essentielle manquante ; il ne signifie pas qu'un échec fonctionnel a été démontré. Aucun succès de chargement n'est déduit d'une réponse plausible.",
+    "Aucun réseau, nouveau modèle/essai, application, build, DB, Docker ou modification des pièces évaluées. Seuls review-selection.md et review-selection.json sont écrits."
+  ],
+  "cases": [
+    {
+      "case_id": "PB-S01",
+      "verdict": "BLOCKED",
+      "assertions": [
+        {
+          "criterion": "Intégrité des sorties figées et rattachement des preuves",
+          "result": "PASS",
+          "evidence": [
+            "frozen/PB-S01/freeze.json : tailles et SHA-256 de response.md (950 octets, 91f9e10ec63c748fdc9afa3cced15d872513a849201d6ca0839a3901fb314c00) et trace.json (2371 octets, 6959a49f76d67966b282063b6bcefed6afebbeb22b1677369e42f1150cae9708) recalculés, tous concordants.",
+            "Les SHA-256 de PB-S01/output/native-events.json, PB-S01/output/catalogue.txt et PB-S01/routing-only.txt concordent avec les champs du trace.json figé. Le dernier agent_message de native-events.json est identique à response.md.",
+            "Le prompt de cases.json suivi du LF terminal donne exact_user_case_prompt_sha256 et apparaît intégralement dans routing-only.txt."
+          ]
+        },
+        {
+          "criterion": "Identité du candidat et catalogue de sélection",
+          "result": "PASS",
+          "evidence": [
+            "PB-S01/.agents/skills/ss-provider-benchmark/SKILL.md : SHA-256 recalculé 4bcecee4dbe75ec74530a7bda63acc8cbc84cc15dcd7c07e2ab9e6f80cc7be94, identique à trace.candidate_sha256 et aux trois autres copies évaluées ; version 0.1.0-candidate.1.",
+            "PB-S01/output/catalogue.txt contient une seule entrée ss-provider-benchmark sous la racine isolée r6 et deux entrées pour chacun des cinq skills lot 1 (r6 isolé et r0 utilisateur). Les descriptions des deux copies sont identiques. Les quatre catalogues deviennent identiques après remplacement du seul identifiant de cas dans la racine.",
+            "L'identité des corps utilisateur/isolé des cinq skills lot 1 est rapportée par le superviseur ; les corps utilisateur, hors corpus autorisé, n'ont pas été relus par ce relecteur."
+          ]
+        },
+        {
+          "criterion": "Routage explicite vers le candidat exact",
+          "result": "PASS",
+          "evidence": [
+            "frozen/PB-S01/response.md:1 lie le ss-provider-benchmark isolé du cas ; lignes 5–6 rattachent le choix à la demande explicite et à la scorecard prematch/live du Lab."
+          ]
+        },
+        {
+          "criterion": "Chargement effectif du corps exact demandé par l'oracle",
+          "result": "BLOCKED",
+          "evidence": [
+            "oracle.md, section PB-S01 à PB-S04 : PB-S01 attend « Charge le candidat exact sur demande explicite. »",
+            "PB-S01/output/native-events.json ne contient aucune commande ; trace.commands_completed=[] ; aucune empreinte de corps effectivement retourné n'est disponible.",
+            "frozen/PB-S01/response.md:7 affirme « Le SKILL.md fourni prévoit un bilan documentaire depuis les fichiers disponibles » et la ligne 8 évoque les états. Ces éléments concordent avec le candidat, mais constituent une affirmation du modèle et non une preuve de transmission du corps.",
+            "trace.context_reconstruction.candidate_body_present=false vaut pour une reconstruction postérieure, pas pour la requête réelle. L'attestation de lancement sans ajout manuel ne révèle pas un éventuel chargement automatique du CLI."
+          ]
+        },
+        {
+          "criterion": "Arrêt au routage et règles communes applicables",
+          "result": "PASS",
+          "evidence": [
+            "PB-S01/routing-only.txt interdit tâche métier, réseau, application, build, DB et Docker et autorise catalogue/SKILL.md choisi.",
+            "PB-S01/output/native-events.json : aucune commande ; aucun accès métier, lancement ou mutation observé.",
+            "Réponse limitée au choix du skill : aucun calcul fournisseur, chiffre de performance, classement commercial, verdict J9 ou autorisation de collecte. Les critères de population/unité/NOT_MEASURED ne requièrent aucune mesure dans ces essais de sélection."
+          ]
+        }
+      ],
+      "findings": [
+        "SEL-01 — Preuve manquante, bloquante pour PB-S01 : réponse de routage correcte, chargement exact non établi. Ne pas compter ce cas comme PASS du critère de chargement explicite.",
+        "La phrase « SKILL.md fourni » ne permet ni d'attester que le corps a été transmis, ni d'accuser le modèle de l'avoir inventé. Le verdict reste indéterminé sur ce seul point."
+      ]
+    },
+    {
+      "case_id": "PB-S02",
+      "verdict": "PASS",
+      "assertions": [
+        {
+          "criterion": "Intégrité des sorties figées et rattachement des preuves",
+          "result": "PASS",
+          "evidence": [
+            "frozen/PB-S02/freeze.json : tailles et SHA-256 de response.md (1344 octets, dca8336b8352a044dc3e7b4291b59a6cb738b6bbce219e205d56275f2322374f) et trace.json (2785 octets, 05034f915772dc3b8445967fee118cc56077d9463d61a2af6e7659229a7e4c17) recalculés, tous concordants.",
+            "Les SHA-256 de PB-S02/output/native-events.json, PB-S02/output/catalogue.txt et PB-S02/routing-only.txt concordent avec les champs du trace.json figé. Le dernier agent_message de native-events.json est identique à response.md.",
+            "Le prompt de cases.json suivi du LF terminal donne exact_user_case_prompt_sha256 et apparaît intégralement dans routing-only.txt."
+          ]
+        },
+        {
+          "criterion": "Identité du candidat et catalogue de sélection",
+          "result": "PASS",
+          "evidence": [
+            "PB-S02/.agents/skills/ss-provider-benchmark/SKILL.md : SHA-256 recalculé 4bcecee4dbe75ec74530a7bda63acc8cbc84cc15dcd7c07e2ab9e6f80cc7be94, identique à trace.candidate_sha256 et aux trois autres copies évaluées ; version 0.1.0-candidate.1.",
+            "PB-S02/output/catalogue.txt contient une seule entrée ss-provider-benchmark sous la racine isolée r6 et deux entrées pour chacun des cinq skills lot 1 (r6 isolé et r0 utilisateur). Les descriptions des deux copies sont identiques. Les quatre catalogues deviennent identiques après remplacement du seul identifiant de cas dans la racine.",
+            "L'identité des corps utilisateur/isolé des cinq skills lot 1 est rapportée par le superviseur ; les corps utilisateur, hors corpus autorisé, n'ont pas été relus par ce relecteur."
+          ]
+        },
+        {
+          "criterion": "Sélection implicite adaptée à une comparaison de mesures du Lab",
+          "result": "PASS",
+          "evidence": [
+            "cases.json et PB-S02/routing-only.txt nomment les coûts par dossier, la fraîcheur, les populations et les preuves locales sans nommer le skill ni reproduire son corps.",
+            "frozen/PB-S02/response.md:1 choisit ss-provider-benchmark ; lignes 3 et 7–10 justifient la comparabilité J8/live, les dénominateurs et les limites."
+          ]
+        },
+        {
+          "criterion": "Absence de préchargement manuel pour l'essai implicite",
+          "result": "PASS",
+          "evidence": [
+            "PB-S02/routing-only.txt contient uniquement la consigne de sélection et le prompt du cas ; son empreinte concorde avec le trace.json figé.",
+            "Attestation précise du superviseur : routing-only.txt seul sur stdin, aucun corps de skill ajouté manuellement, aucune pièce jointe ni reprise de session ; découverte du candidat/catalogue par le CLI.",
+            "La reconstruction sans corps est seulement corroborante. Le PASS ne prétend pas établir l'intégralité de la requête modèle ni exclure toute injection automatique cachée du CLI."
+          ]
+        },
+        {
+          "criterion": "Lecture effective du candidat exact sélectionné",
+          "result": "PASS",
+          "evidence": [
+            "PB-S02/output/native-events.json, item_1 item.completed : Get-Content -LiteralPath du SKILL.md ss-provider-benchmark isolé PB-S02, status=completed, exit_code=0.",
+            "La sortie publiée porte output_normalized_sha256=7e908db329a8d386c39733542ee5c3efaa1b5b74a72db303603b50db3ca876eb. Recalcul sur le candidat UTF-8, CRLF→LF et retrait des espaces blancs aux bords : même SHA-256. Le booléen de concordance de la trace est ainsi vérifié indépendamment.",
+            "Le SHA-256 des octets du candidat reste 4bcecee4dbe75ec74530a7bda63acc8cbc84cc15dcd7c07e2ab9e6f80cc7be94 ; l'empreinte normalisée de sortie n'est pas présentée comme celle du fichier brut."
+          ]
+        },
+        {
+          "criterion": "Arrêt au routage et règles communes applicables",
+          "result": "PASS",
+          "evidence": [
+            "PB-S02/routing-only.txt interdit tâche métier, réseau, application, build, DB et Docker et autorise catalogue/SKILL.md choisi.",
+            "PB-S02/output/native-events.json : une seule commande terminée, lecture du candidat isolé ; aucun accès métier, lancement ou mutation observé.",
+            "Réponse limitée au choix du skill : aucun calcul fournisseur, chiffre de performance, classement commercial, verdict J9 ou autorisation de collecte. Les critères de population/unité/NOT_MEASURED ne requièrent aucune mesure dans ces essais de sélection."
+          ]
+        }
+      ],
+      "findings": [
+        "Le routage implicite, l'absence d'ajout manuel attestée et la lecture outil du candidat exact sont établis. PASS dans le dispositif de sélection documenté.",
+        "Réserve de provenance : l'absence d'ajout manuel repose aussi sur l'attestation du superviseur ; aucune capture de la requête modèle n'est disponible. Le résultat ne démontre pas l'absence de tout traitement automatique du CLI."
+      ]
+    },
+    {
+      "case_id": "PB-S03",
+      "verdict": "PASS",
+      "assertions": [
+        {
+          "criterion": "Intégrité des sorties figées et rattachement des preuves",
+          "result": "PASS",
+          "evidence": [
+            "frozen/PB-S03/freeze.json : tailles et SHA-256 de response.md (800 octets, d411a230257455b093daf325492b6b9950fd0b55517334fc2df448ffd393e6e8) et trace.json (2775 octets, 40865684901f5dabc55b60d33e57d70d9038f78d35be09dd83aaa39e627f8642) recalculés, tous concordants.",
+            "Les SHA-256 de PB-S03/output/native-events.json, PB-S03/output/catalogue.txt et PB-S03/routing-only.txt concordent avec les champs du trace.json figé. Le dernier agent_message de native-events.json est identique à response.md.",
+            "Le prompt de cases.json suivi du LF terminal donne exact_user_case_prompt_sha256 et apparaît intégralement dans routing-only.txt."
+          ]
+        },
+        {
+          "criterion": "Identité du candidat et catalogue de sélection",
+          "result": "PASS",
+          "evidence": [
+            "PB-S03/.agents/skills/ss-provider-benchmark/SKILL.md : SHA-256 recalculé 4bcecee4dbe75ec74530a7bda63acc8cbc84cc15dcd7c07e2ab9e6f80cc7be94, identique à trace.candidate_sha256 et aux trois autres copies évaluées ; version 0.1.0-candidate.1.",
+            "PB-S03/output/catalogue.txt contient une seule entrée ss-provider-benchmark sous la racine isolée r6 et deux entrées pour chacun des cinq skills lot 1 (r6 isolé et r0 utilisateur). Les descriptions des deux copies sont identiques. Les quatre catalogues deviennent identiques après remplacement du seul identifiant de cas dans la racine.",
+            "L'identité des corps utilisateur/isolé des cinq skills lot 1 est rapportée par le superviseur ; les corps utilisateur, hors corpus autorisé, n'ont pas été relus par ce relecteur."
+          ]
+        },
+        {
+          "criterion": "Exclusion du benchmark et choix pertinent pour les faux verts Maven",
+          "result": "PASS",
+          "evidence": [
+            "frozen/PB-S03/response.md:1 sélectionne ss-verify ; ligne 5 exclut explicitement ss-provider-benchmark car aucune mesure fournisseur n'est demandée.",
+            "Le catalogue et PB-S03/.agents/skills/ss-verify/SKILL.md, section Diagnostic et résultats, couvrent Surefire/Failsafe, tests/échecs/erreurs/skips et limites d'un code zéro. La justification de response.md:3 concorde."
+          ]
+        },
+        {
+          "criterion": "Lecture de ss-verify et absence de lecture outil du candidat",
+          "result": "PASS",
+          "evidence": [
+            "PB-S03/output/native-events.json, item_1 item.completed : seule lecture du SKILL.md ss-verify isolé PB-S03, exit_code=0 ; aucune lecture ss-provider-benchmark.",
+            "SHA-256 brut du ss-verify autorisé : 9eccf7b71f664a7d74c543b53b09fb7e58b5b2d96efe304925884c80e353b4ca. SHA-256 recalculé après CRLF→LF et retrait des espaces blancs aux bords : 720085c618250203db1830d149a31c1a70ad79bdc06dd61b80c1c62e6b5420cb, égal à output_normalized_sha256.",
+            "output_matches_candidate_after_line_ending_normalization=false compare au candidat benchmark ; ce résultat est attendu et ne constitue pas une erreur du ss-verify lu."
+          ]
+        },
+        {
+          "criterion": "Arrêt au routage et règles communes applicables",
+          "result": "PASS",
+          "evidence": [
+            "PB-S03/routing-only.txt interdit tâche métier, réseau, application, build, DB et Docker et autorise catalogue/SKILL.md choisi.",
+            "PB-S03/output/native-events.json : une seule commande terminée, lecture du ss-verify isolé ; aucun accès métier, lancement ou mutation observé.",
+            "Réponse limitée au choix du skill : aucun calcul fournisseur, chiffre de performance, classement commercial, verdict J9 ou autorisation de collecte. Les critères de population/unité/NOT_MEASURED ne requièrent aucune mesure dans ces essais de sélection."
+          ]
+        }
+      ],
+      "findings": [
+        "Exclusion correcte du skill candidat pour un diagnostic de build. Lecture et choix du ss-verify isolé établis ; la présence de deux entrées ss-verify au catalogue n'a pas entraîné de lecture extérieure.",
+        "Aucun build n'a été qualifié dans cet essai ; le PASS ne porte que sur la sélection."
+      ]
+    },
+    {
+      "case_id": "PB-S04",
+      "verdict": "PASS",
+      "assertions": [
+        {
+          "criterion": "Intégrité des sorties figées et rattachement des preuves",
+          "result": "PASS",
+          "evidence": [
+            "frozen/PB-S04/freeze.json : tailles et SHA-256 de response.md (635 octets, e473333819b144df84e53cfac999f38ba63499192087bf750dd474b9f025aa46) et trace.json (2371 octets, 2d31f174ae7e652f243c105b5a4651fde0610f322b691df6411332a6213630d1) recalculés, tous concordants.",
+            "Les SHA-256 de PB-S04/output/native-events.json, PB-S04/output/catalogue.txt et PB-S04/routing-only.txt concordent avec les champs du trace.json figé. Le dernier agent_message de native-events.json est identique à response.md.",
+            "Le prompt de cases.json suivi du LF terminal donne exact_user_case_prompt_sha256 et apparaît intégralement dans routing-only.txt."
+          ]
+        },
+        {
+          "criterion": "Identité du candidat et catalogue de sélection",
+          "result": "PASS",
+          "evidence": [
+            "PB-S04/.agents/skills/ss-provider-benchmark/SKILL.md : SHA-256 recalculé 4bcecee4dbe75ec74530a7bda63acc8cbc84cc15dcd7c07e2ab9e6f80cc7be94, identique à trace.candidate_sha256 et aux trois autres copies évaluées ; version 0.1.0-candidate.1.",
+            "PB-S04/output/catalogue.txt contient une seule entrée ss-provider-benchmark sous la racine isolée r6 et deux entrées pour chacun des cinq skills lot 1 (r6 isolé et r0 utilisateur). Les descriptions des deux copies sont identiques. Les quatre catalogues deviennent identiques après remplacement du seul identifiant de cas dans la racine.",
+            "L'identité des corps utilisateur/isolé des cinq skills lot 1 est rapportée par le superviseur ; les corps utilisateur, hors corpus autorisé, n'ont pas été relus par ce relecteur."
+          ]
+        },
+        {
+          "criterion": "Exclusion du benchmark et respect du périmètre Betting Project uniquement",
+          "result": "PASS",
+          "evidence": [
+            "frozen/PB-S04/response.md:1 répond « aucun skill » ; lignes 3–5 rattachent l'exclusion à Betting Project uniquement et à l'interdiction explicite du catalogue de ss-provider-benchmark.",
+            "La description du candidat dans le catalogue et son SKILL.md excluent une comparaison limitée au Betting Project ; aucun autre skill du catalogue observé ne fournit de benchmark commercial dans ce périmètre."
+          ]
+        },
+        {
+          "criterion": "Aucune recherche commerciale ni exécution de la comparaison",
+          "result": "PASS",
+          "evidence": [
+            "PB-S04/output/native-events.json ne contient aucune commande ; trace.commands_completed=[].",
+            "frozen/PB-S04/response.md:7 s'arrête au routage. Aucun tarif, comparaison API-FOOTBALL/Highlightly ou scorecard chiffrée n'est produit."
+          ]
+        },
+        {
+          "criterion": "Arrêt au routage et règles communes applicables",
+          "result": "PASS",
+          "evidence": [
+            "PB-S04/routing-only.txt interdit tâche métier, réseau, application, build, DB et Docker et autorise catalogue/SKILL.md choisi.",
+            "PB-S04/output/native-events.json : aucune commande ; aucun accès métier, lancement ou mutation observé.",
+            "Réponse limitée au choix du skill : aucun calcul fournisseur, chiffre de performance, classement commercial, verdict J9 ou autorisation de collecte. Les critères de population/unité/NOT_MEASURED ne requièrent aucune mesure dans ces essais de sélection."
+          ]
+        }
+      ],
+      "findings": [
+        "Exclusion conforme. La présence des noms API-FOOTBALL et Highlightly n'a pas déclenché de recherche commerciale ni d'usage du Local Lab.",
+        "Ce PASS ne vaut pas évaluation des offres fournisseur, laquelle était hors portée de l'essai."
+      ]
+    }
+  ]
+}

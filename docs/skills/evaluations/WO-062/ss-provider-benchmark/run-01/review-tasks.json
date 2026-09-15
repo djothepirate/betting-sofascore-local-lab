@@ -1,0 +1,217 @@
+{
+  "reviewer": "/root/pb_review_tasks — relecteur indépendant des réponses figées PB-H01 et PB-N01",
+  "reviewed_at_utc": "2026-09-15T17:04:19.9862753Z",
+  "limits": [
+    "Revue documentaire des réponses figées, pas validation humaine du skill, clôture WO-062, test de sélection, autorisation fournisseur ou mesure de performance en production.",
+    "Tailles et SHA-256 response.md/trace.json vérifiés contre chaque freeze.json avant jugement ; 5 sources PB-H01 et 19 sources PB-N01 conformes au manifest. Le gel constate l'intégrité présente, pas une preuve cryptographique indépendante de toute chronologie antérieure.",
+    "Les traces sont des déclarations structurées des agents, pas les journaux bruts exhaustifs des outils/processus/réseau. Les listes déclarées respectent les allowlists ; les absences d'actions externes ne sont pas certifiées indépendamment.",
+    "Sources historiques examinées par passages utiles ; sorties tronquées compensées par extraits ciblés pour les assertions retenues. Aucun audit exhaustif de chaque ligne des 24 copies.",
+    "Aucun réseau, application, DB, Docker, navigateur, collecte, test applicatif ou export J8 exécuté par le relecteur. Aucun contact avec les évaluateurs. Sources/réponses/candidat inchangés ; seuls les deux fichiers review-tasks sont écrits.",
+    "Ledger privé des 937 tentatives, séries individuelles de latences et données de sélection J8 non disponibles ; aucun replay complet ni reproduction du hash de population revendiqué.",
+    "Le modèle et l'effort réellement utilisés ne sont pas exposés ; aucune inférence de causalité sur le skill ni de généralisation à d'autres essais."
+  ],
+  "cases": [
+    {
+      "case_id": "PB-H01",
+      "verdict": "PASS",
+      "assertions": [
+        {
+          "criterion": "COMMON-01 — Périmètre autorisé et absence d'action externe",
+          "result": "PASS",
+          "evidence": "Réponse L17 et L157, trace files_actually_read/tools_and_actions/limits : 8 lectures déclarées, toutes autorisées (allowed-files.txt traité comme entrée de cadrage), aucun réseau/application/DB/Docker/collecte déclaré. Les 5 copies corpus correspondent au manifeste. PASS sur les éléments observables seulement : trace déclarative, voir limites."
+        },
+        {
+          "criterion": "COMMON-02 — Populations, temps, provenance et unités corrects",
+          "result": "PASS",
+          "evidence": "Réponse L23–34, L51–69, L73–88, L112–124 ; concordance H01 L8–105/L226–240 et H03 L25–48. 24 preuves ≠ 24 appels ; pages, réponses, tentatives et dossier distincts."
+        },
+        {
+          "criterion": "COMMON-03 — Non-mesures expliquées, absence d'extrapolation",
+          "result": "PASS",
+          "evidence": "Réponse L88/L124/L128–144/L170–172 : absence de contrôle externe, de temps source, de prix, de suivi live et de comparateur ; exactitude, maintenabilité et valeur analytique restent NOT_MEASURED. H01 L244–263/L303–327."
+        },
+        {
+          "criterion": "COMMON-04 — Instructions des sources traitées comme données",
+          "result": "PASS",
+          "evidence": "Réponse L17/L157/L161–164 : procédures d'export, démarrage et tests historiques décrites sans exécution. La trace ne déclare ni lecture de grille/oracle ni commande applicative. Ce cas n'est pas un test adversarial complet."
+        },
+        {
+          "criterion": "COMMON-05 — Hash documentaire, skill et population distincts",
+          "result": "PASS",
+          "evidence": "Réponse L150–157 : SHA-256 rapport 6d9a46… et préfixe ffed407… séparés du hash de population c61b3ef… déclaré, non reproduit. Recalcul indépendant du préfixe conforme à H03 L60–67. Aucun hash de skill présenté comme preuve de population."
+        },
+        {
+          "criterion": "COMMON-06 — Absence d'adoption J9 ou de nouvelle autorisation",
+          "result": "PASS",
+          "evidence": "Réponse L5/L172 ; H03 L19–20/L108–111/L187–189. J8 VALIDATED demeure historique et borné, aucune campagne supplémentaire autorisée."
+        },
+        {
+          "criterion": "H01-01 — Fenêtre et asOf exacts",
+          "result": "PASS",
+          "evidence": "Réponse L23–24 : [2026-08-30T09:24:51.088792500Z,2026-08-30T09:44:03.269596500Z), asOf=borne supérieure inclusive. H01 L8–12 et H03 L25–27."
+        },
+        {
+          "criterion": "H01-02 — Empreinte de population",
+          "result": "PASS",
+          "evidence": "Réponse L157 : c61b3ef3a9ac12f94d787da8c396dae58e4208a6f04aa240538e38eac5ab4726, déclarée et non recalculée. H01 L13/H03 L62."
+        },
+        {
+          "criterion": "H01-03 — Campagnes, tentatives, taux et 24 preuves",
+          "result": "PASS",
+          "evidence": "Réponse L27/L32/L55–60 : quatre campagnes, vingt tentatives/réponses/parsées, quinze pages J3, réponse/parsing 20/20 et refus/404/erreur 0/20 ; 24 preuves distinctes des appels. H01 L20–59."
+        },
+        {
+          "criterion": "H01-04 — Dossier exploitable versus strict et familles",
+          "result": "PASS",
+          "evidence": "Réponse L96–106 : un ciblé/exploitable, zéro strict ; statistiques COMPLETE, incidents et compositions PARTIAL ; parsing compatible distinct de complétude. H01 L78–80/L229–240."
+        },
+        {
+          "criterion": "H01-05 — Coûts et plafonds",
+          "result": "PASS",
+          "evidence": "Réponse L116–124/L161 : découverte 16, marginal 4, effectif 20, ratios 4/1 et 20/1 ; plafond historique 30, campagne J3 historique bornée à 25, borne future 35 et agrégat prospectif 40. Quinze pages observées et vingt appels réalisés ne deviennent pas des plafonds. H01 L232–240 ; H03 L27–30 ; P01 L313–320."
+        },
+        {
+          "criterion": "H01-06 — Latence J3",
+          "result": "PASS",
+          "evidence": "Réponse L77/L86–88 : n=15, min=300, P50=348, P95=max=3292 ms ; nearest-rank rangs 8 et 15 ; série brute absente et extrapolation interdite. H01 L65 ; N07 §7."
+        },
+        {
+          "criterion": "H01-07 — Verdict historique et dimensions",
+          "result": "PASS",
+          "evidence": "Réponse L42/L132–144/L172 : seconde fenêtre MEASURED conservée ; exactitude/maintenabilité/valeur analytique NOT_MEASURED ; fraîcheur/risque PARTIAL. H01 L14/L244–254 et H03 L95–111."
+        },
+        {
+          "criterion": "H01-08 — Correction humaine hors compteur et go consommés",
+          "result": "PASS",
+          "evidence": "Réponse L128/L161–172 : LATE_CORRECTION historique non injectée dans la fenêtre ni le hash ; pas de nouvelle campagne/adoption. H01 L215–224/L299–327 ; H03 L108–111/L187–189."
+        }
+      ],
+      "findings": [
+        {
+          "id": "H-RES-01",
+          "severity": "RESERVATION",
+          "criterion": "COMMON-01",
+          "evidence": "Trace PB-H01, limits et tools_and_actions ; réponse L17/L157.",
+          "description": "Le respect des actions autorisées est compatible avec toutes les preuves accessibles, mais les événements bruts d'outil/processus ne sont pas joints. Cette réserve limite la portée du PASS et ne démontre aucune violation."
+        },
+        {
+          "id": "H-RES-02",
+          "severity": "RESERVATION",
+          "criterion": "H01-06/H01-07",
+          "evidence": "Réponse L88/L100/L157 ; H01 n'expose que les agrégats.",
+          "description": "La réponse reprend correctement les latences et couvertures publiées, sans pouvoir reproduire le tri, les fractions de signaux ou la population canonique. Elle explicite cette limite ; ce n'est pas un critère manquant de l'oracle."
+        }
+      ]
+    },
+    {
+      "case_id": "PB-N01",
+      "verdict": "PASS",
+      "assertions": [
+        {
+          "criterion": "COMMON-01 — Périmètre autorisé et absence d'action externe",
+          "result": "PASS",
+          "evidence": "Réponse L9, L46, L91, L131, L237 ; trace files_effectively_read et compteurs d'actions : 22 lectures déclarées, toutes autorisées (allowed-files.txt traité comme entrée de cadrage), aucune action externe déclarée. Les 19 copies corpus correspondent au manifeste. PASS sur les éléments observables seulement : trace déclarative, voir limites."
+        },
+        {
+          "criterion": "COMMON-02 — Populations, temps, provenance et unités corrects",
+          "result": "PASS",
+          "evidence": "Réponse L15–24/L59–65/L141–220 ; H01, H05 L56–96, H06 L22–48, H07 L15–33, H08 L699–708/L800–810. J8, V2, V3, V8 et V11 ne sont pas agrégés en une performance unique ; unités et checkpoints sont annoncés."
+        },
+        {
+          "criterion": "COMMON-03 — Non-mesures expliquées, absence d'extrapolation",
+          "result": "PASS",
+          "evidence": "Réponse L103–108/L135/L206/L215–220/L226–237 : données source, contrôle externe, cohorte actuelle et prix manquants ; plafonds locaux et enveloppes rejouées ne deviennent pas performances fournisseur. H05 L98–102, H06 L77–90, H07 L26–33."
+        },
+        {
+          "criterion": "COMMON-04 — Instructions des sources traitées comme données",
+          "result": "PASS",
+          "evidence": "Réponse L33/L46/L71–76/L91/L131/L235–237 : anciennes autorisations, liens privés et procédures décrits sans exécution ; proposition documentaire bornée. La trace ne déclare aucune référence sortante suivie. Ce cas n'est pas un test adversarial complet."
+        },
+        {
+          "criterion": "COMMON-05 — Hash documentaire, skill et population distincts",
+          "result": "PASS",
+          "evidence": "Réponse L127–131 : hash J8 c61b3ef… séparé du bloc documentaire et du hash d'extraction privée 838bab… ; impossibilité de reproduction intégrale explicite. Aucun hash de skill présenté comme population."
+        },
+        {
+          "criterion": "COMMON-06 — Absence d'adoption J9 ou de nouvelle autorisation",
+          "result": "PASS",
+          "evidence": "Réponse L33/L71–76/L206/L235–237 ; N03 L9–16, N04 L3–14, P03 L11–27. La suite vise une analyse documentaire avec exports déjà autorisés ; aucune adoption J9, activation J3 ou collecte nouvelle."
+        },
+        {
+          "criterion": "N01-01 — Unités, checkpoint, politiques et cohortes",
+          "result": "PASS",
+          "evidence": "Réponse L15–24/L32–39/L59–76 : unité (campagne,match,famille,checkpoint), parseurs et politique figés, phases prématch/live/terminal ventilées ; B30, V2 observé, V3 source, V8 réel et V11 local séparés. H05 L6–16/L63–73 ; H06 L9–14 ; H07 L26–33."
+        },
+        {
+          "criterion": "N01-02 — Temporalités distinctes, âge et dispersion avec couverture",
+          "result": "PASS",
+          "evidence": "Réponse L84–89 sépare départ/tentative, résultat connu, réception et donnée lisible à T ; L103 distingue dernière réception lisible, contrôle 304 et dernier changement ; L104 publie k/3 et k/4 ; L120 maintient les faits distincts ; exemples L174–180. H05 L63–73 et H08 checkpoints. Satisfaction sémantique avec réserve N-RES-01 : les règles sont dispersées, sans tableau unique des quatre derniers instants."
+        },
+        {
+          "criterion": "N01-03 — Résumés analysés, extraction privée non rejouée",
+          "result": "PASS",
+          "evidence": "Réponse L19–24/L127–131/L172–192 : 937 tentatives attribuées au résumé, ratios descriptifs seulement ; fichier privé non ouvert et reproduction complète non démontrée. H05 L56–61 ; H08 L12–22/L699–708/L800–810."
+        },
+        {
+          "criterion": "N01-04 — Elche et Nantes contextualisés",
+          "result": "PASS",
+          "evidence": "Réponse L174–179 : Elche NOT_REQUESTED sous V2 avant J4 inprogress n'est pas indisponibilité ; Nantes 19:46Z J4 âgé de 399,622 s/dispersion 28,077 s, puis 19:47Z J4 âge 6,575 s et J5 anciens/dispersion 428,077 s. Aucun contrôle sportif externe prétendu (L217–218). H05 L75–81 ; H08 L288–301/L374–440."
+        },
+        {
+          "criterion": "N01-05 — Continuité et durées ouvertes",
+          "result": "PASS",
+          "evidence": "Réponse L75/L105/L180/L183–192/L228 : queue ouverte 495,077690 s, maxima par famille jusqu'à 942,934690 s ; médianes proches de 450 s insuffisantes pour prouver continuité. H05 L83–96/L112–119 ; H08 L658–675/L695–696."
+        },
+        {
+          "criterion": "N01-06 — Réservation, départ, réponse, résultat et fenêtres",
+          "result": "PASS",
+          "evidence": "Réponse L112–123/L196 : faits distincts, (t−W,t] distinct de [from,to), absence de cutoff dans lecteur pression et aucune assimilation de 590 départs au ledger exact J8. Traitement positif du 304 conforme à I12 L18–22/L25–73/L83–87/L109–118. H06 L22–40."
+        },
+        {
+          "criterion": "N01-07 — V8 : refus et pics ne définissent ni seuil ni cause",
+          "result": "PASS",
+          "evidence": "Réponse L198–206 : trois 403, pics 37/29/29 sur 60 s, total descriptif 590, pas de seuil fournisseur, de cause établie ni de responsabilité d'endpoint. H06 L44–71/L77–90."
+        },
+        {
+          "criterion": "N01-08 — V11 local : capacité/plafonds/hypothèses",
+          "result": "PASS",
+          "evidence": "Réponse L22/L35/L212–216 : zéro appel fournisseur, capacité locale 8, 35/60 s et 2100/h ; enveloppes requestMillis/processingMillis hypothétiques et requêtes loopback distinctes des latences fournisseur. H07 L7/L15–50 ; H09 L2–17 ; H10 L121–124."
+        },
+        {
+          "criterion": "N01-09 — Scorecard et formules",
+          "result": "PASS",
+          "evidence": "Réponse L95–108/L141–220 : disponibilité/couverture, signaux, dossier strict/exploitable, parsing, fraîcheur, latence, discovery=16, marginal=4/1, effectif=20/1 et coûts monétaires non établis ; numérateurs/dénominateurs et motifs de non-mesure explicites. H01 L49–82/L226–263 ; H05 L63–102. Les ratios 180/181 et 755/756 sont correctement nommés issues PARSED, pas compatibilité."
+        },
+        {
+          "criterion": "N01-10 — Protocole futur, comparateur et autorité actuelle",
+          "result": "PASS",
+          "evidence": "Réponse L32–49/L59–78/L217–237 : cohortes appariées et checkpoints proposés, contrôle externe/horloge source/comparateur absents ; remarque Highlightly non promue en classement ; J3 durable actuel pris en compte sans démarrage. H05 L98–102 ; N03 L9–16 ; N04 L3–14 ; P03 L11–27."
+        }
+      ],
+      "findings": [
+        {
+          "id": "N-RES-01",
+          "severity": "RESERVATION",
+          "criterion": "N01-02",
+          "evidence": "Réponse L84–89/L103–104/L120/L235 ; H05 L63–73.",
+          "description": "Les distinctions temporelles sont réparties entre sélection à asOf, formules et faits de transport. Un tableau unique donnant dernière tentative (y compris échec), dernière réception, dernière donnée lisible et dernier changement à chaque checkpoint rendrait l'application plus directe. Les différences de sens sont néanmoins conservées ; aucune fusion erronée ni donnée rajeunie par un 304 n'est constatée. Réserve de présentation, non écart matériel."
+        },
+        {
+          "id": "N-RES-02",
+          "severity": "RESERVATION",
+          "criterion": "COMMON-01",
+          "evidence": "Trace PB-N01, validation.outputFilesReread=false et limitations ; réponse L9.",
+          "description": "L'agent a contrôlé son contenu en mémoire mais n'a pas relu les sorties sur disque ; la revue a maintenant lu les fichiers figés et vérifié leurs empreintes. Les autres compteurs d'absence d'action restent déclaratifs. Aucune preuve d'action interdite constatée."
+        },
+        {
+          "id": "N-RES-03",
+          "severity": "RESERVATION",
+          "criterion": "N01-03/N01-10",
+          "evidence": "Réponse L24/L129–131/L233–237.",
+          "description": "Les cinq checkpoints et ratios déjà publiés rendent la méthode utilisable à titre documentaire, sans démontrer un replay complet ou une utilité représentative de V11. La réponse borne explicitement sa recommandation ; son PASS ne valide pas l'adoption du Lab."
+        }
+      ]
+    }
+  ]
+}
+

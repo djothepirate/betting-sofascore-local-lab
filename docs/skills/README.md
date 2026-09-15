@@ -26,8 +26,12 @@ adapte au Local Lab les rôles de la conversation « Skills du lot 2 » dans l'o
 Le propriétaire a accepté WO-062 et autorisé la préparation de `ss-provider-benchmark`.
 Son [inventaire de 38 sources](evaluations/WO-062/ss-provider-benchmark/source-inventory.md)
 et ses [12 cas d'évaluation](evaluations/WO-062/ss-provider-benchmark/evaluation-plan.md)
-sont préparés avec des entrées figées et un oracle séparé. Les résultats restent `NOT_RUN`.
-Voir les [contrôles de cette étape](../validation/WO062-PROVIDER-BENCHMARK-PREPARATION-20260915.md).
+ont été figés avec un oracle séparé avant rédaction. Le [candidat](local-lab/ss-provider-benchmark/SKILL.md)
+est désormais évalué : douze cas exécutés, 11 PASS ; PB-S01 conserve une preuve de chargement
+explicite insuffisante malgré un routage correct. Le [protocole et la scorecard prematch/live](evaluations/WO-062/ss-provider-benchmark/run-01/cases/PB-N01/response.md)
+sont produits. Voir les [résultats et limites A2](../validation/WO062-PROVIDER-BENCHMARK-CANDIDATE-20260915.md).
+La [préparation A1](../validation/WO062-PROVIDER-BENCHMARK-PREPARATION-20260915.md) demeure intacte,
+avec son état historique `NOT_RUN`. Le candidat attend la preuve manquante puis la validation humaine.
 
 Chaque skill devra passer un cas historique connu, une tâche nouvelle et des tests de sélection,
 puis une revue. Les sources du Lab font autorité : J8 ne dispose pas de contrôle externe intégré,
@@ -36,8 +40,9 @@ et la CI suit notamment l'allègement adopté dans WO-061. Le WO distingue les
 
 Le paquet et l'installateur ci-dessous livrent toujours **les cinq skills du lot 1**. WO-062
 prévoit un nouveau manifeste et une évolution qualifiée de l'installateur pour les dix skills,
-avec préservation du contenu approuvé et des preuves SKL-002. Les cinq skills du lot 2 ne sont
-ni créés ni installés pendant ce cadrage.
+avec préservation du contenu approuvé et des preuves SKL-002. Seul `ss-provider-benchmark` est
+rédigé comme candidat A2 ; il n'est pas couvert par l'installateur actuel ni installé personnellement.
+Les quatre autres skills du lot 2 restent à développer.
 
 ## Installation personnelle depuis ce dépôt
 

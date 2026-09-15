@@ -1,0 +1,17 @@
+{
+  "checked_at_utc": "2026-09-15T17:21:09.596784+00:00",
+  "result": "PASS",
+  "files_checked": 77,
+  "json_files": 45,
+  "local_links": 601,
+  "sensitive_patterns": 11,
+  "sensitive_signals": 0,
+  "cases_completed": 12,
+  "verdict_pass": 11,
+  "verdict_blocked": 1,
+  "blocked_case": "PB-S01",
+  "case_verdict_note": "Delivery checks do not override the independent blocked verdict.",
+  "frozen_bytes_preserved_by_git": true,
+  "runtime_source_diff": false,
+  "personal_installation": false
+}

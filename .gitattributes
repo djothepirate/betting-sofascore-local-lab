@@ -43,3 +43,8 @@ docs/validation/WO060-J3-IMPLEMENTATION-RESULTS-20260914.json -text whitespace=b
 # Vendored SVG assets and their manifest keep the exact upstream/audited bytes.
 # Their audited CRLF is a line terminator, not trailing whitespace.
 src/main/resources/static/images/flags/** -text whitespace=blank-at-eol,space-before-tab,cr-at-eol
+
+# Frozen WO-062 candidate evaluation: preserve hashes across Windows/Linux checkouts.
+docs/skills/evaluations/WO-062/ss-provider-benchmark/run-01/** -text whitespace=blank-at-eol,space-before-tab,cr-at-eol,-blank-at-eof
+# The frozen reviewers used valid Markdown two-space line breaks; retain those bytes too.
+docs/skills/evaluations/WO-062/ss-provider-benchmark/run-01/review-*.md whitespace=-blank-at-eol,space-before-tab,cr-at-eol,-blank-at-eof

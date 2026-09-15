@@ -1,0 +1,68 @@
+{
+  "provenance": "SYNTHETIC_EVALUATION_INPUT_NOT_PROVIDER_DATA",
+  "input": {
+    "question": "Évaluer inclusions temporelles, variante du cutoff, HTTP et export ; comparer contrat et code si besoin.",
+    "window": {
+      "from": "2026-09-01T10:00:00Z",
+      "to": "2026-09-01T11:00:00Z",
+      "asOf": "2026-09-01T12:00:00Z"
+    },
+    "attempts": [
+      {
+        "id": "T0",
+        "startedAt": "2026-09-01T09:59:59Z"
+      },
+      {
+        "id": "T1",
+        "startedAt": "2026-09-01T10:00:00Z",
+        "resultAt": "2026-09-01T10:00:01Z",
+        "createdAt": "2026-09-01T10:00:01Z"
+      },
+      {
+        "id": "T2",
+        "startedAt": "2026-09-01T10:59:59Z",
+        "resultAt": "2026-09-01T11:30:00Z",
+        "createdAt": "2026-09-01T11:30:00Z"
+      },
+      {
+        "id": "T3",
+        "startedAt": "2026-09-01T11:00:00Z"
+      }
+    ],
+    "resultVariant": {
+      "attempt": "T2",
+      "resultAt": "2026-09-01T12:00:01Z",
+      "createdAt": "2026-09-01T12:00:01Z"
+    },
+    "httpRequests": [
+      {
+        "id": "W1",
+        "from": "2026-09-01T10:00:00Z",
+        "to": "2026-09-01T13:00:00Z",
+        "asOf": "2026-09-01T12:00:00Z"
+      },
+      {
+        "id": "W2",
+        "from": "2026-09-01T12:00:00Z",
+        "to": "2026-09-01T13:00:00Z",
+        "asOf": "2026-09-01T12:00:00Z"
+      },
+      {
+        "id": "W3",
+        "from": "                                                  2026-09-01T10:00:00Z",
+        "to": "2026-09-01T11:00:00Z",
+        "asOf": "2026-09-01T12:00:00Z"
+      }
+    ],
+    "exportRequest": {
+      "from": "2026-09-01T10:00:00Z",
+      "to": "2026-09-01T13:00:00Z",
+      "asOf": "2026-09-01T12:00:00Z"
+    },
+    "hashQuestions": [
+      "Deux lectures identiques de toutes les preuves, du code, de la fenêtre et de asOf.",
+      "Une lecture où seul asOf change, les comptes restant identiques.",
+      "Peut-on calculer un hash J8 réel à partir de ces seuls tableaux pédagogiques ?"
+    ]
+  }
+}
