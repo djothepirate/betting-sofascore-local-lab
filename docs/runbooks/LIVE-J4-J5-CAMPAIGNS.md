@@ -5,7 +5,29 @@ Références : [ADR-SS-005 accepté](../../ADR-SS-005-bounded-local-live-j4-j5-c
 [architecture](../architecture/LIVE-J4-J5-CAMPAIGNS.md),
 [qualification V8 locale historique](../validation/WO058-LIVE-V8-CAPACITY-20260910.md).
 
-## Nouvelles préparations : `live-v10`, profil local distinct et activation manuelle
+## Nouvelles préparations après WO-060 : `live-v11`
+
+Les nouvelles campagnes utilisent V11 pour suspendre toutes les familles J4/J5 pendant J3,
+puis reprendre à partir du contexte live initial. Le lancement live reste manuel. Les bornes
+de huit rencontres, 35 départs/60 s, 2 100/heure et les budgets restent inchangés.
+
+V11 exige son propre profil et le worker de protocole 10. Afficher les dix valeurs à reporter
+dans le lanceur avec `scripts/Show-LiveGroupedV11LauncherConfiguration.ps1 -OutputFormat Eclipse`.
+Ce lecteur ne modifie aucun réglage et ne lance rien. Les valeurs V10 d'un ancien lanceur ne
+sont pas reprises automatiquement. Voir le [guide J3](J3-AUTOMATION-AND-DURABLE-CATALOG.md),
+le [profil V11](../validation/WO060-LIVE-V11-PROFILE-20260914.json) et le
+[rapport WO-060](../validation/WO060-J3-IMPLEMENTATION-20260914.md).
+
+J3 attend la publication de l'échange live en vol. Un contexte J3 neuf temporaire utilise le
+même worker et le même garde ; un seul contexte émet. Sa fermeture vérifiée et le terminal
+durable J3 précèdent le nouveau J4 de revalidation. Aucun groupe manqué, budget, événement
+arrêté ou délai final n'est réarmé. Refus, perte de contexte, arrêt opérateur ou nettoyage
+incertain empêchent la reprise. La qualification locale ne mesure pas la capacité du fournisseur.
+
+## Référence historique WO-058 : `live-v10`
+
+Les instructions V10 suivantes décrivent les préparations antérieures à WO-060.
+Leurs manifestes et preuves restent conservés ; elles ne configurent pas une nouvelle campagne V11.
 
 Les nouvelles préparations visent `live-v10`. Cette politique limite la sélection à **huit
 rencontres** et conserve les quatre familles live (J4 détails, J5 incidents, J5 statistiques,

@@ -104,6 +104,18 @@ public final class ManualProviderRequestCoordinator {
         return acquireCampaign(campaignId, false);
     }
 
+    /** WO-060 admission never waits on an unbounded thread lock. No reentrant live handoff. */
+    public CampaignLease tryAcquireJ3Campaign(UUID campaignId) {
+        Objects.requireNonNull(campaignId);
+        if(liveCampaign || requestLock.isHeldByCurrentThread() || !requestLock.tryLock())
+            throw new CoordinationException("provider campaign is active");
+        try {
+            var ownership=durableGuard==null?null:durableGuard.tryAcquire(campaignId,instanceOwner,java.time.Instant.now())
+                    .orElseThrow(()->new CoordinationException("durable provider guard is occupied")).ownership();
+            return new CampaignLease(this,campaignId,Thread.currentThread(),ownership);
+        } catch(RuntimeException failure) {requestLock.unlock();throw failure;}
+    }
+
     /** Explicitly claimed, single-event manual J5 collection; no caller-supplied delay policy. */
     public CampaignLease acquireManualJ5Campaign(UUID campaignId, long eventId) {
         if (eventId < 1 || eventId > 999_999_999L) throw new IllegalArgumentException("eventId");

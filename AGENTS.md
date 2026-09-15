@@ -50,6 +50,16 @@ Sous Windows, utiliser les variantes `mvnw.cmd` et les scripts `scripts/*.ps1`.
 11. Playwright ne démarre jamais automatiquement : ni au démarrage normal, ni pendant les tests standards, ni via scheduler ou polling. Chaque lancement exige une action opérateur explicite. Pour le seul parcours live couvert par [ADR-SS-005 v0.8](ADR-SS-005-bounded-local-live-j4-j5-campaigns.md), une campagne lancée explicitement par l'opérateur peut exécuter les cycles automatiques de son manifeste dans sa fenêtre et ses budgets. Aucun tick ne crée ou recrée un navigateur ; perte du contexte, veille, panne ou redémarrage terminent la session sans reprise automatique.
 12. Chaque campagne Playwright utilise un contexte non persistant neuf ; aucun profil, cookie, `storageState`, HAR, trace, vidéo, capture ou téléchargement n'est conservé, journalisé ou ajouté à Git.
 
+**Exception J3 adoptée le 13 septembre 2026 — WO-060 / [ADR-SS-007 v0.2](ADR-SS-007-j3-automation-durable-catalog-and-live-pause.md) :**
+les invariants 3 et 11 autorisent aussi le lancement J3 depuis un clic direct ou un ordre
+quotidien/planifié durable du Lab local configuré. La préférence automatique est initialement
+activée puis persistante ; les tests standards ne lancent aucun navigateur. Pendant une pause
+live, une sous-opération J3 isolée peut disposer d’un contexte neuf temporaire dans le même
+worker ; un seul contexte émet et aucun état de session n’est transféré. Le contexte live
+est conservé et jamais recréé par un tick. Les plafonds, le garde durable, les refus fournisseur
+et le nettoyage prouvé restent applicables. Cette exception supprime les confirmations
+d’intention et les gestes d’arrêt/circuit du seul parcours J3 ; aucun autre parcours n’est armé.
+
 ## Règles du jalon J1
 
 - `ConnectorGate` doit rester bloquant.

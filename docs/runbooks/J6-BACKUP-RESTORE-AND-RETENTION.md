@@ -1,5 +1,21 @@
 # Runbook J6 — Historique, sauvegarde, restauration et rétention
 
+**Schéma courant WO-060 — V57 :** V55 ajoute les résultats J3 durables et leurs sources,
+V56 les préférences et ordres, V57 les pauses live-v11. Les scripts comparent les dix tables :
+`j3_collection_run`, `j3_collection_page`, `j3_catalog_entry`, `j3_catalog_source`,
+`j3_last_success`, `j3_legacy_recovery`, `j3_automation_settings`, `j3_order`,
+`j3_live_pause`, `j3_live_pause_transition`. Leurs compteurs et `j3LedgerSha256`
+couvrent toutes les lignes et colonnes ; le singleton de réglage est requis et `activeJ3Count=0`.
+Une preuve V54 ne peut pas autoriser la rétention sous V57.
+
+Arrêter le Lab avant la sauvegarde quiescente. La cible de restauration reste isolée sans
+serveur Web ; les commandes J6 de maintenance ne démarrent aucun horaire J3. Les préférences,
+horaires futurs et preuves sont conservés, sans réarmer de campagne. La rétention partage le
+verrou de publication J3 et protège toutes les pages des derniers succès par date, même vides.
+Les ordres J3 admis et les gardes fournisseur occupés rendent la purge indisponible.
+Le roundtrip WO-060 est exécuté uniquement dans PostgreSQL Testcontainers ; aucune opération
+primaire n'est autorisée par ce rapport. Voir la [preuve de réalisation](../validation/WO060-J3-IMPLEMENTATION-20260914.md).
+
 ## 1. Objet et autorisations
 
 Ce runbook couvre deux opérations distinctes :
@@ -54,7 +70,7 @@ Le complément est qualifié sur PostgreSQL isolé, sans sauvegarde ou purge de 
 Le premier lot de résilience V42–V44 est qualifié fonctionnellement hors fournisseur,
 y compris l'upgrade prérempli et `pg_dump`/`pg_restore` en PostgreSQL isolé :
 [rapport](../validation/WO-058-provider-resilience-qualification-20260909.md). Les scripts courants
-exigent désormais **V54** et incluent dans le SHA live les lignes complètes des sept tables :
+exigent désormais **V57** et incluent dans le SHA live les lignes complètes des sept tables :
 `provider_resilience_state`, `provider_departure_reservation`, `provider_departure_completion`,
 `provider_departure_accounting`, `provider_resilience_event`,
 `live_attempt_transport_diagnostic`, `live_campaign_diagnostic`.
@@ -63,7 +79,7 @@ doit être présent. `provider_departure_accounting` conserve l'horodatage
 `AUTHENTICATED_WORKER_REQUEST` lorsqu'il est prouvé, sinon le repli
 `COMPLETION_FALLBACK`, et son compteur ne peut pas être inférieur à celui des complétions.
 La suspension et les budgets ne sont ni effacés ni réarmés pour sauvegarder. Les anciens
-manifestes de sauvegarde ne sont pas modifiés pour franchir la garde V54.
+manifestes de sauvegarde ne sont pas modifiés pour franchir la garde V57.
 La purge reste limitée aux octets bruts éligibles : ces tables ne deviennent pas supprimables.
 Aucune sauvegarde, restauration ou purge de la base opérateur n'est autorisée par cette mise à jour.
 
@@ -80,7 +96,7 @@ NORMALIZED_OBSERVATION_DELETION=IMPOSSIBLE_BY_DESIGN
 - PowerShell 7.4 ou plus récent pour préserver les pipelines binaires natifs ;
 - exécutable `age` disponible dans `PATH` ou fourni avec `-AgePath` ;
 - PostgreSQL local démarré et sain ;
-- Flyway V54 appliqué ; la rétention reste définie par V22, V23 étend seulement
+- Flyway V57 appliqué ; la rétention reste définie par V22, V23 étend seulement
   `export_manifest` pour J7, V24 élargit la portée du cache de découverte tournoi, V25 ajoute
   uniquement la provenance de l'import JSON local, V26 autorise `event-incidents-v14`, V27 ajoute
   le ledger J8 sans étendre le périmètre de purge et V28 autorise uniquement
@@ -227,7 +243,7 @@ PostgreSQL possédée. Elles ne constituent ni une boucle indéfinie ni un budge
 Le script :
 
 1. refuse une application encore à l'écoute sur le port 8087 ;
-2. vérifie Compose, le verrou réseau, la version courante Flyway V54, le garde fournisseur `FREE`
+2. vérifie Compose, le verrou réseau, la version courante Flyway V57, le garde fournisseur `FREE`
    et l'absence de campagne live `RUNNING` ou `CLEANUP_REQUIRED` ;
 3. vérifie le SHA-256 réel de chaque payload retenu ;
 4. vérifie l'exécutable Docker exact ; sous Windows, il doit être un fichier absolu sans reparse
@@ -273,7 +289,7 @@ Deux fichiers restent dans le répertoire externe : le fichier `.age` et
 `<fichier>.age.manifest.json`. Conserver les deux ensemble. Si la qualification échoue, ils ne
 constituent pas une preuve valide et le mode `Execute` doit rester interdit.
 
-### 5.1 Preuve live V50 incluse dans le manifeste, sous garde courante V54
+### 5.1 Preuve live V50 incluse dans le manifeste, sous garde courante V57
 
 Les blocs `source` et `restored` doivent être identiques pour les champs suivants, même lorsqu'il
 n'existe encore aucune campagne live :
@@ -309,7 +325,7 @@ retenu ; une complétion sans cette preuve reçoit `COMPLETION_FALLBACK`. Le nom
 comptables doit être au moins égal au nombre de complétions.
 
 Un manifeste historique V32 reste une preuve de sa qualification historique. Il ne satisfait pas
-la porte de rétention courante V54, car il ne démontre pas la restauration de ces tables, politiques,
+la porte de rétention courante V57, car il ne démontre pas la restauration de ces tables, politiques,
 détails joueurs et du ledger de départs.
 Restaurer les preuves live ne déclenche aucun worker ni reprise de campagne : les opt-ins restent
 désactivés et tout nouveau lancement exige une action opérateur. Un garde `OWNED` ou
@@ -399,7 +415,7 @@ pwsh -NoProfile -File .\scripts\Invoke-J6Retention.ps1 `
   -ConfirmationPhrase 'PURGER <N> PAYLOADS J6 <J6_RETENTION_PLAN_SHA256>'
 ```
 
-Le script revérifie le nom du fichier chiffré, son hash, Flyway V54, l'égalité complète des preuves
+Le script revérifie le nom du fichier chiffré, son hash, Flyway V57, l'égalité complète des preuves
 source/restauration, les six compteurs et l'empreinte metadata-only du ledger J7 — incluant grant,
 révocation et consommation owner-go — puis les sept compteurs live, les sept compteurs de
 résilience/départ/diagnostic — dont `providerDepartureAccountingCount >=

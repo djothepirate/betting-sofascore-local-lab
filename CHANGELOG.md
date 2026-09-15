@@ -4,6 +4,91 @@ Les évolutions notables du SofaScore Local Lab sont consignées dans ce fichier
 
 ## [Non publié]
 
+### WO-060 — automatisation J3, résultats durables et pause live
+
+- Prépare la clôture documentaire autorisée le 15 septembre 2026 et la fusion de la
+  [PR #36](https://github.com/djothepirate/betting-sofascore-local-lab/pull/36) vers
+  `feature/V0.1.0-RC01` : WO classé dans `completed`, liens actualisés, P2 résolu et
+  quatre checks verts sur le correctif `f3c784e`. La clôture devient effective à la fusion.
+  Le [dossier de clôture](docs/validation/WO060-CLOSEOUT-20260915.md) conserve la qualification
+  locale, les références CI et l’échec Windows initial suivi de sa relance réussie.
+- Corrige le P2 de la PR #36 : un ordre J3 déjà pris en charge dont la fenêtre de réservation
+  réseau expire est enregistré `CANCELLED / ADMISSION_DEADLINE_EXPIRED`, au lieu de
+  `INTERRUPTED / EXECUTION_INTERRUPTED`. Aucun fournisseur n’est ouvert dans ce cas et le
+  dernier succès est conservé. Les erreurs techniques gardent leur traitement d’interruption.
+- Consigne la validation opérateur du 15 septembre 2026 et l’autorisation de pousser le WO
+  et de créer sa PR vers `feature/V0.1.0-RC01`. La recette fournie confirme notamment une
+  collecte LaLiga en un clic, un seul appel et trois rencontres validées. Le WO reste actif
+  jusqu’à fusion ; les preuves automatisées et cette recette restent distinguées.
+- Réduit la découverte des rencontres d'un tournoi sélectionné à un clic de collecte ou
+  d'import JSON : retrait de la préparation Web, de la phrase et de l'acquittement.
+  La collecte/date/phase est résolue au clic, le jeton est à usage unique et les deux voies
+  partagent une admission atomique. Le contrôleur applique la même frontière Host/Origin
+  que J3. Les anciens formulaires répondent 410 ; le résultat
+  revient à la date consultée. Aucun changement de transport, de limite ou de persistance.
+
+- Applique le filtre amateur au clic, sans bouton de confirmation, et ajoute une case
+  indépendante pour les phases qualificatives (`qualificationOrPreliminary: true`).
+  Les deux filtres sont décochés par défaut et se cumulent ; le rechargement reste un GET local.
+- Trie le menu J3 → J5 par catégories prioritaires (`priority > 0`, ordre croissant),
+  puis catégories non prioritaires, avec tri alphabétique français dans chaque niveau.
+  Ajoute le filtre amateur décoché par défaut, appliqué par GET local sur les deux noms
+  sources de catégorie. Traduit les pays reconnus localement, sans dépendre de la présence
+  d'une traduction fournisseur ; les noms inconnus restent inchangés.
+- Borne les nouvelles collectes J3 entre le 01/01/2000 et le jour courant à Paris + 12 mois,
+  et les déclenchements ponctuels jusqu'à la fin de ce dernier jour, selon le choix propriétaire
+  du 14 septembre. Les formulaires et le runtime refusent les années aberrantes sans modifier
+  l'historique ; une révision refusée conserve l'ancien horaire. Les annulations volontaires
+  et les horaires remplacés affichent leur motif exact. Qualification native hors réseau de
+  22 cas sur le fragment réel du tableau de bord et tests PostgreSQL isolés.
+- Adopte ADR-SS-007 v0.2 et réalise R0–R5 : migrations V55–V57, moteur d'ordres commun
+  et publication transactionnelle du catalogue, de la preuve J8 et de l'ordre.
+- Remplace les étapes d'intention J3 par la date et le clic A, ou l'import B validé intégralement ;
+  les anciennes mutations HTTP répondent 410. Les formulaires gardent la protection locale.
+- Active par défaut l'opportunité quotidienne du serveur Web J3 configuré ; conserve le réglage,
+  les heures fixes et les horaires ponctuels. Un succès pour la date empêche un doublon au
+  démarrage ; les horaires explicites restent exécutés, sans rattrapage après indisponibilité.
+- Conserve le dernier succès de chaque date, les tournois, la pagination par collecte exacte,
+  la provenance et la reprise J8 démontrable. Un échec ne remplace pas un succès.
+- Ajoute live-v11 et le protocole worker 10 : pause de J4/J5, contexte J3 temporaire isolé dans
+  le même worker, nettoyage vérifié puis J4 de revalidation dans le contexte live initial.
+  Les politiques historiques et leurs empreintes restent conservées.
+- Étend J6 aux dix tables J3 et à leur empreinte de restauration V57 ; protège les sources des
+  derniers succès sous le verrou de publication. Qualification native sur boucle locale et
+  sauvegarde/restauration sur PostgreSQL jetable, sans fournisseur ni base opérateur.
+- Ajoute le [guide J3](docs/runbooks/J3-AUTOMATION-AND-DURABLE-CATALOG.md), un lecteur de
+  configuration V11 sans mutation, un profil de replay distinct et les preuves de réalisation.
+- Corrige le message de capacité indisponible sur `/events`, qui renvoyait encore au lanceur
+  V10. Il indique les dix paramètres V11 ; son test contrôle la politique réellement utilisée.
+  Le [retour opérateur du 14 septembre](docs/validation/WO060-LIVE-V11-LAUNCHER-FIX-20260914.md)
+  distingue la correction de l'interface et l'ajout local des paramètres manquants dans Eclipse.
+- Corrige les refus HTTP 403 des formulaires J3 issus du tableau de bord : paramètres,
+  planification, collecte manuelle et import. La page conserve désormais son origine locale
+  pour les POST Chromium ; les contrôles de provenance et le jeton restent exigés.
+  Le bouton d'import devient **B. Importer et valider J3 — ZÉRO APPEL**.
+  Voir le [diagnostic et les vérifications](docs/validation/WO060-J3-FORMS-403-FIX-20260914.md).
+- Affiche les erreurs de date et d'heure de programmation dans **Collecte automatique**,
+  au lieu de la page Whitelabel. Un déclenchement passé, un champ absent, une date impossible
+  ou une heure parisienne invalide conserve la saisie ; une modification refusée laisse
+  l'ancien horaire intact. La date du calendrier à collecter peut toujours être passée.
+  Voir le [correctif de validation des horaires](docs/validation/WO060-J3-DATE-VALIDATION-FIX-20260914.md).
+
+#### Historique du cadrage au commit 9e0d1cb
+
+- Prépare un Work Order et ADR-SS-007 v0.1 `PROPOSED`, conformément au choix propriétaire de
+  limiter cette phase au cadrage et aux décisions d’architecture.
+- Consigne les deux arbitrages fonctionnels : automatisation activée à la première mise en
+  service et exécution unique des horaires explicites même après un succès de leur date.
+  Le contrôle quotidien au démarrage évite les collectes déjà réussies pour la date du jour.
+- Décrit le manuel A/B sans étapes d’intention J3, la conservation du dernier succès par date,
+  la vue paginée et la sélection de tournoi liée à la collecte exacte, avec reprise historique
+  attestée, transactions, rétention et sauvegarde isolée à qualifier.
+- Propose une pause de toutes les familles live, un contexte J3 neuf isolé dans le runtime
+  propriétaire et une reprise conservant le contexte live, les budgets et l’échéance finale.
+- Prévoit trente scénarios de recette et distingue la qualification future des
+  [contrôles du cadrage](docs/validation/WO060-J3-AUTOMATION-SCOPING-20260913.md).
+  Aucun comportement applicatif ni réglage opérateur n’est modifié dans cette phase.
+
 ### WO-058 — politique locale `live-v10` à huit rencontres et 35 départs par minute
 
 - Introduit `live-v10` pour les **nouvelles** préparations de campagne locale : la sélection est

@@ -27,6 +27,13 @@ public final class J3NetworkCircuit {
         return new J3NetworkCircuit(startedAt);
     }
 
+    /** WO-060: per-collection incident state, independent of the obsolete J3 operator barriers. */
+    public static J3NetworkCircuit forAcceptedCollection(Instant startedAt) {
+        var circuit=new J3NetworkCircuit(startedAt);
+        circuit.snapshot=new J3CircuitSnapshot(J3CircuitState.CLOSED,J3CircuitReason.NONE,startedAt,null);
+        return circuit;
+    }
+
     public synchronized J3CircuitSnapshot snapshot() {
         return snapshot;
     }

@@ -24,11 +24,45 @@ public record J3MinimizedPageEvidence(
         String payloadSha256,
         RawSnapshotSchemaStatus schemaStatus,
         Boolean hasNextPage,
-        String terminalCode) {
+        String terminalCode,
+        Long occurrenceId,
+        boolean historicalCacheTimestampAbsent) {
 
     private static final Pattern SHA256_PATTERN = Pattern.compile("^[0-9a-f]{64}$");
 
+    /** Historical V6 constructor; it does not invent an occurrence absent from its proof. */
+    public J3MinimizedPageEvidence(int page, J3PageResolutionSource resolutionSource,
+            boolean providerRequestExecuted, Instant resolvedAt, Instant cacheStoredAt, Instant requestedAt,
+            Instant receivedAt, Integer httpStatus, Long latencyMillis, Long snapshotId,
+            RawSnapshotPersistenceOutcome persistenceOutcome, Integer payloadSizeBytes, String payloadSha256,
+            RawSnapshotSchemaStatus schemaStatus, Boolean hasNextPage, String terminalCode) {
+        this(page,resolutionSource,providerRequestExecuted,resolvedAt,cacheStoredAt,requestedAt,receivedAt,
+                httpStatus,latencyMillis,snapshotId,persistenceOutcome,payloadSizeBytes,payloadSha256,
+                schemaStatus,hasNextPage,terminalCode,null,false);
+    }
+
+    public J3MinimizedPageEvidence(int page, J3PageResolutionSource resolutionSource,
+            boolean providerRequestExecuted, Instant resolvedAt, Instant cacheStoredAt, Instant requestedAt,
+            Instant receivedAt, Integer httpStatus, Long latencyMillis, Long snapshotId,
+            RawSnapshotPersistenceOutcome persistenceOutcome, Integer payloadSizeBytes, String payloadSha256,
+            RawSnapshotSchemaStatus schemaStatus, Boolean hasNextPage, String terminalCode, Long occurrenceId) {
+        this(page,resolutionSource,providerRequestExecuted,resolvedAt,cacheStoredAt,requestedAt,receivedAt,
+                httpStatus,latencyMillis,snapshotId,persistenceOutcome,payloadSizeBytes,payloadSha256,
+                schemaStatus,hasNextPage,terminalCode,occurrenceId,false);
+    }
+
+    public J3MinimizedPageEvidence withOccurrence(Long id) {
+        return new J3MinimizedPageEvidence(page,resolutionSource,providerRequestExecuted,resolvedAt,
+                cacheStoredAt,requestedAt,receivedAt,httpStatus,latencyMillis,snapshotId,persistenceOutcome,
+                payloadSizeBytes,payloadSha256,schemaStatus,hasNextPage,terminalCode,id,historicalCacheTimestampAbsent);
+    }
+
     public J3MinimizedPageEvidence {
+        if (historicalCacheTimestampAbsent && (resolutionSource != J3PageResolutionSource.CACHE
+                || cacheStoredAt != null || snapshotId == null || occurrenceId != null))
+            throw new IllegalArgumentException("Only historical cache evidence may omit its unrecorded timestamp");
+        if (occurrenceId != null && (occurrenceId < 1 || snapshotId == null || resolutionSource == J3PageResolutionSource.CACHE))
+            throw new IllegalArgumentException("Invalid acquisition occurrence");
         if (page < ScheduledEventsProviderPageRequest.FIRST_PAGE
                 || page > ScheduledEventsProviderPageRequest.MAXIMUM_COLLECTION_PAGE) {
             throw new IllegalArgumentException("page must be in the bounded collection range");
@@ -79,7 +113,7 @@ public record J3MinimizedPageEvidence(
         }
         if (resolutionSource == J3PageResolutionSource.CACHE
                 && (persistenceOutcome != RawSnapshotPersistenceOutcome.CACHE_HIT
-                        || cacheStoredAt == null)) {
+                        || (cacheStoredAt == null && !historicalCacheTimestampAbsent))) {
             throw new IllegalArgumentException("a cache resolution requires CACHE_HIT evidence");
         }
         if (resolutionSource == J3PageResolutionSource.PROVIDER

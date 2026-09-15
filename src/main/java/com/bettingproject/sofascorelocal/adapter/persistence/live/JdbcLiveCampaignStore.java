@@ -182,6 +182,11 @@ public class JdbcLiveCampaignStore implements LiveCampaignStore {
         Map<String,Object> e=event(ownership.campaignId(),uuid(a,"canonical_event_id"),true);
         if (!"RUNNING".equals(c.get("state")) || terminal((String)e.get("state"))
                 || !authorizedAt.isBefore(instant(c,"ends_at"))) throw new IllegalStateException("live dispatch no longer authorized");
+        if ("live-v11".equals(c.get("policy_version")) && Boolean.TRUE.equals(jdbc.queryForObject("""
+                select exists(select 1 from j3_live_pause where campaign_id=? and generation=?
+                    and phase not in ('RESUMED','STOPPED'))
+                """, Boolean.class, ownership.campaignId(), ownership.generation())))
+            throw new IllegalStateException("LIVE_J3_PAUSE_REQUESTED");
         int n=jdbc.update("insert into live_call_dispatch(attempt_id,authorized_at) values (?,?) on conflict(attempt_id) do nothing",attemptId,time(authorizedAt));
         if(n==0) throw new IllegalStateException("live dispatch authorization already consumed");
         append(ownership.campaignId(),uuid(a,"canonical_event_id"),"DISPATCH_AUTHORIZED",null,authorizedAt,attemptId);
@@ -648,14 +653,14 @@ public class JdbcLiveCampaignStore implements LiveCampaignStore {
         // The V10 manifest keeps its independent policy and qualification in the
         // campaign row.  Its nested profile remains the immutable V9 scheduler
         // contract, exactly as it was when the manifest was prepared.
-        String schedulerPolicy = "live-v10".equals(campaignPolicy) ? "live-v9" : campaignPolicy;
+        String schedulerPolicy = ("live-v10".equals(campaignPolicy) || "live-v11".equals(campaignPolicy)) ? "live-v9" : campaignPolicy;
         return new GroupedAdmissionProfile(envelopes, (String) row.get("qualification_sha256"), schedulerPolicy);
     }
     private static boolean groupedPolicy(Map<String,Object> campaign) {
         return "live-v4".equals(campaign.get("policy_version")) || "live-v5".equals(campaign.get("policy_version"))
                 || "live-v6".equals(campaign.get("policy_version")) || "live-v7".equals(campaign.get("policy_version"))
                 || "live-v8".equals(campaign.get("policy_version")) || "live-v9".equals(campaign.get("policy_version"))
-                || "live-v10".equals(campaign.get("policy_version"));
+                || "live-v10".equals(campaign.get("policy_version")) || "live-v11".equals(campaign.get("policy_version"));
     }
     /**
      * The immutable result ledger is the exact-once release proof.  A request whose response
@@ -664,7 +669,7 @@ public class JdbcLiveCampaignStore implements LiveCampaignStore {
      */
     private void requireVerifiedNotModified(Map<String,Object> campaign, UUID attemptId,
                                             Publication publication, NormalizedReferences refs) {
-        if (!"live-v9".equals(campaign.get("policy_version")) && !"live-v10".equals(campaign.get("policy_version")))
+        if (!"live-v9".equals(campaign.get("policy_version")) && !"live-v10".equals(campaign.get("policy_version")) && !"live-v11".equals(campaign.get("policy_version")))
             throw new IllegalArgumentException("conditional live result requires live-v9 or live-v10");
         if (!refs.equals(NormalizedReferences.none()))
             throw new IllegalArgumentException("HTTP 304 cannot publish normalized references");

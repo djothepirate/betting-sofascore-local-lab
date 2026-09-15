@@ -1,5 +1,21 @@
 # SofaScore Local Lab
 
+**WO-060 — clôture et fusion autorisées le 15 septembre 2026 :** la collecte manuelle utilise désormais la date
+et le bouton A, ou les fichiers JSON et le bouton B. Les préférences quotidiennes et horaires sont
+persistantes, activées initialement, et le dernier succès de chaque date alimente le menu et une
+vue paginée. Les nouvelles campagnes `live-v11` permettent la pause J3 et la reprise avec le même
+contexte live. La configuration fournisseur locale reste un prérequis au réseau.
+Voir le [mode d’emploi J3](docs/runbooks/J3-AUTOMATION-AND-DURABLE-CATALOG.md),
+[ADR-SS-007 v0.3 adopté](ADR-SS-007-j3-automation-durable-catalog-and-live-pause.md) et le
+[WO classé dans les travaux terminés](docs/work_orders/completed/WO-SS-20260913-060-j3-automation-and-durable-catalog.md).
+Le menu J3 → J5 traduit les catégories reconnues et applique ses filtres au clic ; la collecte
+des rencontres se lance aussi en un clic. Les qualifications automatisées hors fournisseur et
+la recette opérateur sont consignées dans le WO. Le P2 est résolu et les quatre checks du
+correctif `f3c784e` sont verts. Le propriétaire autorise la clôture documentaire et la fusion
+de la [PR #36](https://github.com/djothepirate/betting-sofascore-local-lab/pull/36) vers
+`feature/V0.1.0-RC01` ; la clôture devient effective à cette fusion. Voir le
+[dossier de clôture](docs/validation/WO060-CLOSEOUT-20260915.md).
+
 **Lot du 9 septembre — qualification hors fournisseur terminée :** les cartes
 affichent buts, passes décisives et drapeaux SVG locaux ; les motifs d’indisponibilité connus
 sont traduits dans la vue française. J4 expose entraîneurs, arbitre et tour nommé, via les

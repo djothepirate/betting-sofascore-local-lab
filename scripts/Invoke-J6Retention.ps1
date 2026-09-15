@@ -123,6 +123,18 @@ try {
         }
         $qualificationFields = @(
             'flywayVersion',
+            'j3CollectionCount',
+            'j3PageCount',
+            'j3CatalogEntryCount',
+            'j3CatalogSourceCount',
+            'j3LastSuccessCount',
+            'j3RecoveryCount',
+            'j3SettingsCount',
+            'j3OrderCount',
+            'j3PauseCount',
+            'j3PauseTransitionCount',
+            'activeJ3Count',
+            'j3LedgerSha256',
             'snapshotCount',
             'occurrenceCount',
             'canonicalObservationCount',
@@ -177,7 +189,19 @@ try {
                 throw "The qualified manifest source/restore evidence differs: $field"
             }
         }
-        if ($manifest.source.flywayVersion.ToString() -cne '54' -or
+        if ($manifest.source.flywayVersion.ToString() -cne '57' -or
+                [long]$manifest.source.j3CollectionCount -lt 0 -or
+                [long]$manifest.source.j3PageCount -lt 0 -or
+                [long]$manifest.source.j3CatalogEntryCount -lt 0 -or
+                [long]$manifest.source.j3CatalogSourceCount -lt 0 -or
+                [long]$manifest.source.j3LastSuccessCount -lt 0 -or
+                [long]$manifest.source.j3RecoveryCount -lt 0 -or
+                [long]$manifest.source.j3SettingsCount -ne 1 -or
+                [long]$manifest.source.j3OrderCount -lt 0 -or
+                [long]$manifest.source.j3PauseCount -lt 0 -or
+                [long]$manifest.source.j3PauseTransitionCount -lt 0 -or
+                [long]$manifest.source.activeJ3Count -ne 0 -or
+                $manifest.source.j3LedgerSha256.ToString() -cnotmatch '^[0-9a-f]{64}$' -or
                 [long]$manifest.source.rawPayloadIntegrityFailures -ne 0 -or
                 [long]$manifest.source.j7DeliveryCount -lt 0 -or
                 [long]$manifest.source.j7DeliveryAttemptCount -lt 0 -or
@@ -197,7 +221,7 @@ try {
                 [long]$manifest.source.liveCampaignDiagnosticCount -lt 0 -or
                 $manifest.source.providerGuardState.ToString() -cne 'FREE' -or
                 [long]$manifest.source.activeLiveCount -ne 0) {
-            throw 'The qualified manifest does not prove a valid Flyway V54 raw-payload, J8, J7 and quiescent live ledger restore.'
+            throw 'The qualified manifest does not prove a valid Flyway V57 raw-payload, J3, J8, J7 and quiescent live ledger restore.'
         }
         $cipherPath = [IO.Path]::GetFullPath((Join-Path `
             (Split-Path -Parent $manifestPath) $cipherFileName))

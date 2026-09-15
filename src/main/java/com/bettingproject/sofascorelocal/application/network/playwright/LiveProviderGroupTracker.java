@@ -9,7 +9,7 @@ import static com.bettingproject.sofascorelocal.application.network.playwright.L
 
 /** Called only under the campaign's I/O lock; no group may be reopened or repeated. */
 final class LiveProviderGroupTracker {
-    enum Authority { LIVE_V4, LIVE_V5, LIVE_V6, LIVE_V7, LIVE_V8, LIVE_V9, LIVE_V10, MANUAL_J5 }
+    enum Authority { LIVE_V4, LIVE_V5, LIVE_V6, LIVE_V7, LIVE_V8, LIVE_V9, LIVE_V10, LIVE_V11, MANUAL_J5 }
     private static final int MAXIMUM_V4_GROUPS = 3000;
     private static final int MAXIMUM_V5_GROUPS = 20000;
     private static final List<SofascoreEndpointType> ORDER = List.of(
@@ -31,23 +31,29 @@ final class LiveProviderGroupTracker {
         this.authority = authority;
     }
 
+    void abandonForJ3() {
+        if(authority!=Authority.LIVE_V11)fail();
+        current=null;previousIndex=-1;previousResponseUsable=false;
+        // startedGroups is retained: the interrupted group cannot be continued or replayed.
+    }
+
     /** The tracker instance is also the supervisor-owned session identity. */
     boolean usesOneSecondInterGroupDelay() { return authority == Authority.LIVE_V5 || authority == Authority.LIVE_V6 || authority == Authority.LIVE_V7; }
     java.time.Duration interGroupMinimumDelay() {
-        return authority == Authority.LIVE_V8 || authority == Authority.LIVE_V9 || authority == Authority.LIVE_V10
+        return authority == Authority.LIVE_V8 || authority == Authority.LIVE_V9 || (authority == Authority.LIVE_V10 || authority == Authority.LIVE_V11)
                 ? java.time.Duration.ofMillis(500)
                 : usesOneSecondInterGroupDelay() ? java.time.Duration.ofSeconds(1) : null;
     }
     /** V8, V9 and V10 charge a qualified terminal fence after every family exchange. */
     boolean requiresPostExchangeFenceForContinuation() {
-        return authority == Authority.LIVE_V8 || authority == Authority.LIVE_V9 || authority == Authority.LIVE_V10;
+        return authority == Authority.LIVE_V8 || authority == Authority.LIVE_V9 || (authority == Authority.LIVE_V10 || authority == Authority.LIVE_V11);
     }
     boolean isLiveV6() { return authority == Authority.LIVE_V6; }
     boolean isLiveV9() { return authority == Authority.LIVE_V9; }
-    boolean usesConditionalRevalidation() { return authority == Authority.LIVE_V9 || authority == Authority.LIVE_V10; }
+    boolean usesConditionalRevalidation() { return authority == Authority.LIVE_V9 || (authority == Authority.LIVE_V10 || authority == Authority.LIVE_V11); }
     boolean supportsProvenTimeoutRecovery() {
         return authority == Authority.LIVE_V6 || authority == Authority.LIVE_V7
-                || authority == Authority.LIVE_V8 || authority == Authority.LIVE_V9 || authority == Authority.LIVE_V10;
+                || authority == Authority.LIVE_V8 || authority == Authority.LIVE_V9 || (authority == Authority.LIVE_V10 || authority == Authority.LIVE_V11);
     }
 
     boolean isContinuation(PlaywrightProviderRequest request, LiveProviderDispatchGroup group) {
@@ -67,7 +73,7 @@ final class LiveProviderGroupTracker {
         // Ordinary groups open with J4. Only a pending final collection can open
         // directly on its first remaining J5 family after a previous group ended.
         boolean standalonePrematchLineups = (authority == Authority.LIVE_V7 || authority == Authority.LIVE_V8
-                || authority == Authority.LIVE_V9 || authority == Authority.LIVE_V10)
+                || authority == Authority.LIVE_V9 || (authority == Authority.LIVE_V10 || authority == Authority.LIVE_V11))
                 && group.phase() == Phase.PREMATCH && index == 3;
         if (!standalonePrematchLineups && group.phase() != Phase.FINALIZING && (group.phase() != Phase.CHECK || index != 0)) fail();
         return false;
@@ -83,7 +89,7 @@ final class LiveProviderGroupTracker {
      * tracker still retains no more than the manifest's 20,000 possible groups. */
     private int maximumGroups() {
         return switch (authority) {
-            case LIVE_V5, LIVE_V6, LIVE_V7, LIVE_V8, LIVE_V9, LIVE_V10 -> MAXIMUM_V5_GROUPS;
+            case LIVE_V5, LIVE_V6, LIVE_V7, LIVE_V8, LIVE_V9, LIVE_V10, LIVE_V11 -> MAXIMUM_V5_GROUPS;
             case LIVE_V4, MANUAL_J5 -> MAXIMUM_V4_GROUPS;
         };
     }
@@ -130,7 +136,7 @@ final class LiveProviderGroupTracker {
         return switch (phase) {
             case CHECK -> index == 0;
             case PREMATCH -> authority == Authority.LIVE_V7 || authority == Authority.LIVE_V8
-                    || authority == Authority.LIVE_V9 || authority == Authority.LIVE_V10 ? index >= 1 : index == 3;
+                    || authority == Authority.LIVE_V9 || (authority == Authority.LIVE_V10 || authority == Authority.LIVE_V11) ? index >= 1 : index == 3;
             case IN_PLAY, FINALIZING -> index >= 1;
             case MANUAL_J5 -> false;
         };

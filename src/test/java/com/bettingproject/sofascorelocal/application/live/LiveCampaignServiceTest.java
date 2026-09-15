@@ -84,6 +84,143 @@ class LiveCampaignServiceTest {
     private static final long A = 17000001L;
     private static final long B = 17000002L;
 
+    @ParameterizedTest
+    @ValueSource(strings={"RESUME","OPERATOR_STOP","CONTEXT_CLOSE_FAILURE","PUBLICATION_FAILURE","REFUSAL"})
+    void v11J3WaitsForInFlightJ4AndOnlyResumesAfterVerifiedCleanup(String scenario) throws Exception {
+        try (Harness h=new Harness(false,"live-v11",1,true,Duration.ofMinutes(15))) {
+            var pauses=mock(com.bettingproject.sofascorelocal.port.J3LivePauseStore.class);
+            h.service.configureJ3Pauses(pauses);
+            var phases=new CopyOnWriteArrayList<String>();
+            doAnswer(i->{phases.add("REQUESTED");return null;}).when(pauses).request(any(),any(),any(),any());
+            doAnswer(i->{phases.add(i.getArgument(3));return null;})
+                    .when(pauses).transition(any(),any(),any(),any(),any(),any(),any());
+            var scope=mock(PlaywrightProviderCampaign.class);
+            when(h.campaign.openJ3SubOperation(any())).thenReturn(scope);
+            AtomicReference<Thread> liveOwner=new AtomicReference<>();
+            AtomicReference<Thread> j3Owner=new AtomicReference<>();
+            h.reply=request->{
+                liveOwner.compareAndSet(null,Thread.currentThread());
+                return response("{\"event\":{\"id\":17000001,\"startTimestamp\":1788796800,"
+                        +"\"homeTeam\":{\"id\":1,\"name\":\"H\"},\"awayTeam\":{\"id\":2,\"name\":\"A\"},"
+                        +"\"status\":{\"type\":\"inprogress\"}}}",200);
+            };
+            h.holdAfterDispatch.set(true);
+            h.launch();
+            assertThat(h.getInFlight.await(3,TimeUnit.SECONDS)).isTrue();
+            Instant now=Instant.now();UUID runId=UUID.randomUUID();
+            var date=java.time.LocalDate.of(2026,9,13);
+            var order=new com.bettingproject.sofascorelocal.domain.scheduledevents.J3AutomationData.Order(
+                    runId,"SCHEDULED|test",UUID.randomUUID(),1,date,
+                    com.bettingproject.sofascorelocal.domain.scheduledevents.J3CollectionData.Trigger.SCHEDULED,
+                    now,now,com.bettingproject.sofascorelocal.domain.scheduledevents.J3AutomationData.OrderState.RUNNING,
+                    now,now.plusSeconds(1200),null,null,null,null);
+            when(scope.execute(any(),any())).thenAnswer(i->{
+                assertThat(phases.getLast()).isEqualTo("J3_ACTIVE");
+                assertThat(h.dispatched).hasSize(1);
+                var admission=(PlaywrightDispatchAdmission)i.getArgument(1);
+                admission.check();try(var permit=admission.acquireDispatchPermit()) { }
+                return response("{\"events\":[],\"hasNextPage\":false}",200);
+            });
+            if(scenario.equals("CONTEXT_CLOSE_FAILURE"))
+                org.mockito.Mockito.doThrow(new IllegalStateException("cleanup failed")).when(scope).close();
+            AtomicBoolean closed=new AtomicBoolean();
+            if(!scenario.equals("CONTEXT_CLOSE_FAILURE")) doAnswer(i->{closed.set(true);return null;}).when(scope).close();
+            var future=h.service.submitJ3(order,(access,cancellation)->{
+                j3Owner.set(Thread.currentThread());
+                access.execute(new com.bettingproject.sofascorelocal.domain.provider.ScheduledEventsProviderPageRequest(
+                        java.net.URI.create("https://www.sofascore.com"),date,1),()->{});
+                if(scenario.equals("OPERATOR_STOP")) h.service.stop(h.manifest.campaignId(),null);
+                access.close();
+                assertThat(closed).isTrue();
+                if(scenario.equals("PUBLICATION_FAILURE")) throw new IllegalStateException("publication failed");
+                var proof=new com.bettingproject.sofascorelocal.domain.scheduledevents.J3CollectionData.Proof(
+                        runId,date,order.trigger(),now,Instant.now(),
+                        com.bettingproject.sofascorelocal.domain.scheduledevents.J3CollectionData.State.FAILED,
+                        "SCHEMA_INVALID",List.of());
+                return new com.bettingproject.sofascorelocal.application.network.J3CollectionExecutor.Result(
+                        proof,!scenario.equals("REFUSAL"));
+            }).orElseThrow();
+            assertThat(phases).containsExactly("REQUESTED");
+            assertThat(future).isNotDone();
+            verify(h.campaign,never()).openJ3SubOperation(any());
+            h.releaseGet.countDown();
+            if(scenario.equals("CONTEXT_CLOSE_FAILURE") || scenario.equals("PUBLICATION_FAILURE"))
+                assertThatThrownBy(()->future.get(4,TimeUnit.SECONDS)).isInstanceOf(java.util.concurrent.ExecutionException.class);
+            else future.get(4,TimeUnit.SECONDS);
+            assertThat(j3Owner.get()).isSameAs(liveOwner.get()).isNotSameAs(Thread.currentThread());
+            verify(h.factory,times(1)).openLiveGroupedV11(h.manifest.campaignId(),LiveProviderSession.ENDPOINTS);
+            verify(h.coordinator,times(1)).acquireLiveCampaign(h.manifest.campaignId());
+            if(scenario.equals("RESUME")) {
+                assertThat(phases).containsExactly("REQUESTED","QUIESCENT","J3_ACTIVE","CLEANED","RESUMING","RESUMED");
+                long until=System.nanoTime()+TimeUnit.SECONDS.toNanos(65);
+                while(h.dispatched.size()<2 && System.nanoTime()<until) Thread.sleep(20);
+                assertThat(h.dispatched).hasSizeGreaterThanOrEqualTo(2);
+                assertThat(h.dispatched.get(1).endpoint()).isEqualTo(EVENT_DETAILS);
+                assertThat(h.attemptRequests.get(1).groupId()).isNotEqualTo(h.attemptRequests.getFirst().groupId());
+                assertThat(h.attemptRequests.get(1).kind()).isEqualTo("J4_J3_RESUME_RECHECK");
+                verify(h.campaign,never()).close();
+            } else {
+                h.awaitFinished();
+                assertThat(phases).contains("STOPPED").doesNotContain("RESUMED");
+                assertThat(h.dispatched).hasSize(1);
+            }
+        }
+    }
+
+    @ParameterizedTest
+    @org.junit.jupiter.params.provider.EnumSource(value=SofascoreEndpointType.class,
+            names={"EVENT_INCIDENTS","EVENT_STATISTICS","EVENT_LINEUPS"})
+    void everyInFlightJ5FinishesPublicationBeforeJ3AndNoOtherFamilyStarts(SofascoreEndpointType family) throws Exception {
+        try (Harness h=new Harness(false,"live-v11",1,true,Duration.ofMinutes(15))) {
+            var pauses=mock(com.bettingproject.sofascorelocal.port.J3LivePauseStore.class);
+            h.service.configureJ3Pauses(pauses);
+            var phases=new CopyOnWriteArrayList<String>();
+            doAnswer(i->{phases.add("REQUESTED");return null;}).when(pauses).request(any(),any(),any(),any());
+            doAnswer(i->{phases.add(i.getArgument(3));return null;})
+                    .when(pauses).transition(any(),any(),any(),any(),any(),any(),any());
+            h.reply=request->request.endpoint()==EVENT_DETAILS
+                    ? response("{\"event\":{\"id\":17000001,\"startTimestamp\":1788796800,"
+                        +"\"homeTeam\":{\"id\":1,\"name\":\"H\"},\"awayTeam\":{\"id\":2,\"name\":\"A\"},"
+                        +"\"status\":{\"type\":\"inprogress\"}}}",200)
+                    : normalFinishedReply(request);
+            h.transportProgress=dispatch->{
+                if(h.dispatched.getLast().endpoint()==family) h.holdAfterDispatch.set(true);
+            };
+            h.launch();
+            assertThat(h.getInFlight.await(8,TimeUnit.SECONDS)).isTrue();
+            int departures=h.dispatched.size();
+            assertThat(h.dispatched.getLast().endpoint()).isEqualTo(family);
+            Instant now=Instant.now();UUID run=UUID.randomUUID();
+            var date=java.time.LocalDate.of(2026,9,13);
+            var order=new com.bettingproject.sofascorelocal.domain.scheduledevents.J3AutomationData.Order(
+                    run,"SCHEDULED|j5-pause",UUID.randomUUID(),1,date,
+                    com.bettingproject.sofascorelocal.domain.scheduledevents.J3CollectionData.Trigger.SCHEDULED,
+                    now,now,com.bettingproject.sofascorelocal.domain.scheduledevents.J3AutomationData.OrderState.RUNNING,
+                    now,now.plusSeconds(1200),null,null,null,null);
+            var future=h.service.submitJ3(order,(access,cancel)->{
+                assertThat(h.publications).hasSize(departures);
+                assertThat(h.dispatched).hasSize(departures);
+                assertThat(phases).containsExactly("REQUESTED","QUIESCENT");
+                access.close(); // Fully cached J3 needs no child context, but still waits for live quiescence.
+                return new com.bettingproject.sofascorelocal.application.network.J3CollectionExecutor.Result(
+                        new com.bettingproject.sofascorelocal.domain.scheduledevents.J3CollectionData.Proof(
+                                run,date,order.trigger(),now,Instant.now(),
+                                com.bettingproject.sofascorelocal.domain.scheduledevents.J3CollectionData.State.FAILED,
+                                "SCHEMA_INVALID",List.of()),true);
+            }).orElseThrow();
+            assertThat(phases).containsExactly("REQUESTED");
+            assertThat(future).isNotDone();
+            assertThat(h.publications).hasSize(departures-1);
+            h.releaseGet.countDown();
+            future.get(4,TimeUnit.SECONDS);
+            assertThat(phases).containsExactly("REQUESTED","QUIESCENT","CLEANED","RESUMING","RESUMED");
+            assertThat(h.dispatched).hasSize(departures);
+            verify(h.factory,times(1)).openLiveGroupedV11(h.manifest.campaignId(),LiveProviderSession.ENDPOINTS);
+            verify(h.coordinator,times(1)).acquireLiveCampaign(h.manifest.campaignId());
+            verify(h.campaign,never()).openJ3SubOperation(any());
+        }
+    }
+
     @Test
     void emptyAndDuplicateSelectionsAreRejectedBeforeAdmissionOrProviderWork() throws Exception {
         try (Harness h = new Harness()) {
@@ -133,7 +270,7 @@ class LiveCampaignServiceTest {
             when(h.events.findLatestByCanonicalId(id(A))).thenReturn(Optional.of(selected));
             when(h.admission.maximumBytesV5(1)).thenReturn(15_728_640_000L);
             when(h.store.prepare(any())).thenAnswer(invocation -> invocation.getArgument(0));
-            assertThat(h.properties.getGroupedV10().getQualificationSha256()).isEqualTo("0".repeat(64));
+            assertThat(h.properties.getGroupedV11().getQualificationSha256()).isEqualTo("1".repeat(64));
             assertThat(ReflectionTestUtils.getField(h.service, "properties")).isSameAs(h.properties);
 
             Manifest prepared = h.service.prepare(List.of(id(A)));
@@ -141,11 +278,11 @@ class LiveCampaignServiceTest {
             assertThat(prepared.targets()).containsExactly(new Target(id(A), A, 17, 23));
             assertThat(prepared.maximumBytes()).isEqualTo(15_728_640_000L);
             assertThat(prepared.manifestSha256()).matches("[0-9a-f]{64}");
-            assertThat(prepared.policyVersion()).isEqualTo("live-v10");
+            assertThat(prepared.policyVersion()).isEqualTo("live-v11");
             assertThat(prepared.maximumCallsPerEvent()).isEqualTo(2500);
             assertThat(prepared.maximumCalls()).isEqualTo(20000);
             assertThat(prepared.cycleInterval()).isEqualTo(Duration.ofSeconds(60));
-            assertThat(prepared.admissionProfile().groupedProfile().qualificationSha256()).isEqualTo("0".repeat(64));
+            assertThat(prepared.admissionProfile().groupedProfile().qualificationSha256()).isEqualTo("1".repeat(64));
             assertThat(prepared.admissionProfile().groupedProfile().policyVersion()).isEqualTo("live-v9");
             assertThat(prepared.admissionProfile().qualificationSha256()).isEqualTo("a".repeat(64));
             assertThat(Duration.between(prepared.preparedAt(), prepared.expiresAt())).isEqualTo(Duration.ofMinutes(5));
@@ -936,7 +1073,7 @@ class LiveCampaignServiceTest {
     void aV9QualificationCannotAuthorizeEightNewV10GroupedMatches() throws Exception {
         try(Harness h=new Harness()) {
             h.properties.setQualifiedMatchCapacity(8);
-            h.properties.getGroupedV10().setQualificationSha256("");
+            h.properties.getGroupedV11().setQualificationSha256("");
             List<UUID> selected=LongStream.range(A,A+8).mapToObj(providerId->{h.observe(providerId,"inprogress");return id(providerId);}).toList();
             assertThatThrownBy(()->h.service.prepare(selected)).hasMessage("LIVE_GROUPED_QUALIFICATION_REQUIRED");
             verify(h.store,never()).prepare(any());
@@ -1174,7 +1311,7 @@ class LiveCampaignServiceTest {
             long deadline = System.nanoTime() + TimeUnit.SECONDS.toNanos(3);
             while (System.nanoTime() < deadline) {
                 Instant requestedAt = j4RequestedAt.get();
-                LiveSchedule schedule = h.activeSchedule();
+                LiveSessionSchedule schedule = h.activeSchedule();
                 if (requestedAt != null && schedule != null && schedule.states().getFirst().nextDueAt()
                         .equals(requestedAt.plusMillis(1_100))) break;
                 Thread.sleep(10);
@@ -1236,7 +1373,7 @@ class LiveCampaignServiceTest {
 
             assertThat(h.eventStates.get(id(A))).isEqualTo("WAITING_PRESSURE_RECHECK");
             assertThat(notBefore).hasValueSatisfying(nextAllowed -> {
-                LiveSchedule schedule = h.activeSchedule();
+                LiveSessionSchedule schedule = h.activeSchedule();
                 assertThat(schedule.states().getFirst()).satisfies(state -> {
                     assertThat(state.state()).isEqualTo("WAITING_PRESSURE_RECHECK");
                     assertThat(state.nextDueAt()).isEqualTo(nextAllowed);
@@ -1295,7 +1432,7 @@ class LiveCampaignServiceTest {
             long deadline = System.nanoTime() + TimeUnit.SECONDS.toNanos(3);
             while (System.nanoTime() < deadline) {
                 Instant notBefore = fenceRelease.get();
-                LiveSchedule schedule = h.activeSchedule();
+                LiveSessionSchedule schedule = h.activeSchedule();
                 if (notBefore != null && schedule != null && schedule.states().getFirst().state().equals("COLLECTING")
                         && schedule.states().getFirst().missedCycles() == 0
                         && notBefore.equals(schedule.states().getFirst().nextDueAt())) break;
@@ -1303,7 +1440,7 @@ class LiveCampaignServiceTest {
             }
 
             assertThat(fenceRelease).hasValueSatisfying(notBefore -> {
-                LiveSchedule schedule = h.activeSchedule();
+                LiveSessionSchedule schedule = h.activeSchedule();
                 assertThat(schedule.states().getFirst()).satisfies(state -> {
                     assertThat(state.state()).isEqualTo("COLLECTING");
                     assertThat(state.missedCycles()).isZero();
@@ -1780,11 +1917,16 @@ class LiveCampaignServiceTest {
             boolean v8 = "live-v8".equals(policy);
             boolean v9 = "live-v9".equals(policy);
             boolean v10 = "live-v10".equals(policy);
+            properties.getGroupedV11().setQualificationSha256("1".repeat(64));
+            properties.getGroupedV11().getEndpoints().values().forEach(budget->{
+                budget.setRequestEnvelope(Duration.ofMillis(500));budget.setProcessingEnvelope(Duration.ofMillis(100));
+            });
+            boolean v11 = "live-v11".equals(policy);
             manifest = new Manifest(UUID.randomUUID(), "a".repeat(64), policy, now, now.plusSeconds(300),
-                    duration, v5 || v6 || v7 || v8 || v9 || v10 ? 2500 : 1000, v5 || v6 || v7 || v8 || v9 || v10 ? 20000 : 3000, 20_000_000, 2,
+                    duration, v5 || v6 || v7 || v8 || v9 || v10 || v11 ? 2500 : 1000, v5 || v6 || v7 || v8 || v9 || v10 || v11 ? 20000 : 3000, 20_000_000, 2,
                     targetCount==1?List.of(new Target(id(A),A,1,1)):List.of(new Target(id(A), A, 1, 1), new Target(id(B), B, 2, 2)),
                     new AdmissionProfile(properties.getRequestEnvelope(), properties.getProcessingEnvelope(),
-                            properties.getQualificationSha256(), v10 ? properties.groupedAdmissionProfileV10() : v9 ? properties.groupedAdmissionProfileV9() : v8 ? properties.groupedAdmissionProfileV8() : v7 ? properties.groupedAdmissionProfileV7() : v6 ? properties.groupedAdmissionProfileV6()
+                            properties.getQualificationSha256(), v11 ? properties.groupedAdmissionProfileV11() : v10 ? properties.groupedAdmissionProfileV10() : v9 ? properties.groupedAdmissionProfileV9() : v8 ? properties.groupedAdmissionProfileV8() : v7 ? properties.groupedAdmissionProfileV7() : v6 ? properties.groupedAdmissionProfileV6()
                                     : v5 ? properties.groupedAdmissionProfileV5()
                                     : "live-v4".equals(policy)?properties.groupedAdmissionProfile():null), Duration.ofSeconds(v5 || v6 ? 100 : 60));
             ownership = new Ownership(manifest.campaignId(), UUID.randomUUID(), 1);
@@ -1805,6 +1947,7 @@ class LiveCampaignServiceTest {
             when(factory.openLiveGroupedV8(manifest.campaignId(), LiveProviderSession.ENDPOINTS)).thenReturn(campaign);
             when(factory.openLiveGroupedV9(manifest.campaignId(), LiveProviderSession.ENDPOINTS)).thenReturn(campaign);
             when(factory.openLiveGroupedV10(manifest.campaignId(), LiveProviderSession.ENDPOINTS)).thenReturn(campaign);
+            when(factory.openLiveGroupedV11(manifest.campaignId(), LiveProviderSession.ENDPOINTS)).thenReturn(campaign);
             when(supervisor.activeCampaignId()).thenReturn(Optional.empty());
             when(store.find(manifest.campaignId())).thenAnswer(invocation -> Optional.of(view()));
             when(store.dispatchBudget(eq(ownership),any())).thenAnswer(invocation -> {
@@ -1882,6 +2025,13 @@ class LiveCampaignServiceTest {
                     eq(manifest.targets().size()*4), any())).thenAnswer(invocation ->
                     new ProviderResilienceData.DepartureDecision(true,ProviderResilienceData.DepartureReason.ALLOWED,
                             invocation.getArgument(2),open));
+            when(resilience.departureDecision(eq(ProviderResilienceData.DepartureProfile.LIVE_V10), any())).thenAnswer(invocation->
+                    new ProviderResilienceData.DepartureDecision(true,ProviderResilienceData.DepartureReason.ALLOWED,
+                            invocation.getArgument(1),open));
+            when(resilience.departureCapacityDecision(eq(ProviderResilienceData.DepartureProfile.LIVE_V10),
+                    eq(manifest.targets().size()*4), any())).thenAnswer(invocation ->
+                    new ProviderResilienceData.DepartureDecision(true,ProviderResilienceData.DepartureReason.ALLOWED,
+                            invocation.getArgument(2),open));
             doAnswer(invocation->{
                 UUID attempt=invocation.getArgument(1);PlaywrightTransportDiagnostic diagnostic=invocation.getArgument(3);
                 savedTransport.put(attempt,diagnostic);return null;
@@ -1931,10 +2081,10 @@ class LiveCampaignServiceTest {
 
         void launch() { service.launch(manifest.campaignId(), manifest.manifestSha256()); launched = true; }
         void awaitFinished() throws InterruptedException { assertThat(finished.await(4, TimeUnit.SECONDS)).isTrue(); }
-        LiveSchedule activeSchedule() {
+        LiveSessionSchedule activeSchedule() {
             AtomicReference<?> active = (AtomicReference<?>) ReflectionTestUtils.getField(service, "active");
             Object session = active.get();
-            return session == null ? null : (LiveSchedule) ReflectionTestUtils.getField(session, "schedule");
+            return session == null ? null : (LiveSessionSchedule) ReflectionTestUtils.getField(session, "schedule");
         }
         void awaitCleanupPending() throws InterruptedException {
             long until=System.nanoTime()+TimeUnit.SECONDS.toNanos(4);

@@ -1,6 +1,9 @@
 package com.bettingproject.sofascorelocal.application.live;
 
 import com.bettingproject.sofascorelocal.application.network.ManualProviderRequestCoordinator;
+import com.bettingproject.sofascorelocal.application.network.J3CollectionExecutor;
+import com.bettingproject.sofascorelocal.domain.scheduledevents.J3AutomationData.Order;
+import java.util.function.Supplier;
 import com.bettingproject.sofascorelocal.application.network.playwright.*;
 import com.bettingproject.sofascorelocal.config.*;
 import com.bettingproject.sofascorelocal.domain.event.CanonicalEventIdentity;
@@ -34,6 +37,7 @@ public final class LiveCampaignService {
     private final LiveCampaignProperties properties;
     private final LiveAdmissionPolicy admission;
     private final LiveAdmissionPolicyV10 admissionV10;
+    private final LiveAdmissionPolicyV11 admissionV11;
     private final LiveCampaignStore store;
     private final CanonicalEventStore events;
     private final ManualProviderRequestCoordinator coordinator;
@@ -46,6 +50,125 @@ public final class LiveCampaignService {
     private final LiveOrphanProcessProbe orphanProcesses;
     private final LiveDiagnosticStore diagnostics;
     private final ProviderResilienceStore resilience;
+    private J3LivePauseStore j3Pauses;
+    @org.springframework.beans.factory.annotation.Autowired
+    void configureJ3Pauses(J3LivePauseStore pauses) { this.j3Pauses=pauses; }
+
+    @FunctionalInterface
+    public interface J3Work {
+        J3CollectionExecutor.Result execute(J3CollectionExecutor.ProviderAccess access, Supplier<String> cancellation);
+    }
+
+    /** The HTTP/scheduler thread requests a handoff. Only the existing live owner executes it. */
+    public String j3AvailabilityReason() {
+        Session s=active.get();
+        if(s==null) return null;
+        if(!"live-v11".equals(s.manifest.policyVersion()) || j3Pauses==null) return "J3_LIVE_POLICY_UNSUPPORTED";
+        if(s.finished || s.stopReason!=null) return "J3_LIVE_UNAVAILABLE";
+        return null;
+    }
+
+    public Optional<CompletableFuture<J3CollectionExecutor.Result>> submitJ3(Order order, J3Work work) {
+        Session s=active.get();
+        if(s==null) return Optional.empty();
+        s.dispatchLock.lock();
+        try {
+            if(s.finished || s.stopReason!=null || s.ownership==null || s.schedule==null)
+                throw new IllegalStateException("J3_LIVE_UNAVAILABLE");
+            if(!"live-v11".equals(s.manifest.policyVersion()) || j3Pauses==null)
+                throw new IllegalStateException("J3_LIVE_POLICY_UNSUPPORTED");
+            if(s.j3!=null) throw new IllegalStateException("J3_LIVE_BUSY");
+            Instant deadline=order.deadline().isBefore(s.timeOrigin.plus(s.manifest.duration()))
+                    ?order.deadline():s.timeOrigin.plus(s.manifest.duration());
+            if(!clock.instant().plusSeconds(130).isBefore(deadline))
+                throw new IllegalStateException("J3_LIVE_DEADLINE_TOO_CLOSE");
+            J3Handoff handoff=new J3Handoff(order,deadline,work);
+            // A lost SQL response must keep emission excluded until full live cleanup.
+            s.j3=handoff;
+            try { j3Pauses.request(order.id(),s.ownership,clock.instant(),deadline); }
+            catch(RuntimeException failure) {
+                s.stopAll("STOPPED_ERROR"); handoff.future.completeExceptionally(failure); throw failure;
+            }
+            return Optional.of(handoff.future);
+        } finally { s.dispatchLock.unlock(); }
+    }
+
+    private static final class J3Handoff {
+        final Order order; final Instant deadline; final J3Work work;
+        final CompletableFuture<J3CollectionExecutor.Result> future=new CompletableFuture<>();
+        String phase="REQUESTED";
+        J3Handoff(Order order,Instant deadline,J3Work work) { this.order=order;this.deadline=deadline;this.work=work; }
+    }
+
+    private void j3Transition(Session s,J3Handoff h,String phase,String reason,List<J3LivePauseStore.MissedSlot> missed) {
+        j3Pauses.transition(h.order.id(),s.ownership,h.phase,phase,clock.instant(),reason,missed);
+        h.phase=phase;
+    }
+
+    private void runJ3(Session s, LiveProviderSession transport, J3Handoff h) {
+        try {
+            s.schedule.pauseForJ3(s.now());
+            j3Transition(s,h,"QUIESCENT",null,List.of());
+            publishStates(s);
+            Supplier<String> cancelled=()-> s.stopReason!=null ? "LIVE_CAMPAIGN_STOPPED"
+                    : !clock.instant().isBefore(h.deadline) ? "LIVE_J3_DEADLINE_EXPIRED" : null;
+            var access=new J3CollectionExecutor.ProviderAccess() {
+                PlaywrightProviderCampaign scope;
+                boolean closed;
+                @Override public ScheduledEventsTransportResponse execute(ScheduledEventsProviderPageRequest request,Runnable dispatch) {
+                    if(closed || cancelled.get()!=null) throw new PlaywrightDispatchCancelledException();
+                    if(scope==null) {
+                        scope=transport.openJ3SubOperation(new J3ProviderSubOperation(h.order.id(),h.order.date(),h.deadline));
+                        j3Transition(s,h,"J3_ACTIVE",null,List.of());
+                    }
+                    var response=scope.execute(PlaywrightProviderRequest.scheduledEvents(request.date(),request.page()),
+                        new PlaywrightDispatchAdmission() {
+                            public void check() {
+                                if(cancelled.get()!=null || !guard.isOwned(s.ownership)) throw new PlaywrightDispatchCancelledException();
+                            }
+                            public Permit acquireDispatchPermit() {
+                                s.dispatchLock.lock();
+                                try { check();dispatch.run();return s.dispatchLock::unlock; }
+                                catch(RuntimeException failure) {s.dispatchLock.unlock();throw failure;}
+                            }
+                        });
+                    return new ScheduledEventsTransportResponse(request.requestKey(),response.requestedAt(),response.receivedAt(),
+                            response.httpStatus(),response.contentType().isBlank()?"application/octet-stream":response.contentType(),
+                            response.latency(),response.payload());
+                }
+                @Override public void close() {
+                    if(closed) return;
+                    if(scope!=null) scope.close();
+                    closed=true;
+                }
+            };
+            J3CollectionExecutor.Result result;
+            try(access) { result=h.work.execute(access,cancelled); }
+            // Publication failure, refusal, transport loss or uncertain context closure cannot resume live.
+            s.dispatchLock.lock();
+            try {
+            if(!result.safeToResumeLive() || cancelled.get()!=null || !guard.isOwned(s.ownership)) {
+                s.stopAll(cancelled.get()!=null?"STOPPED_INTERRUPTED":"STOPPED_ERROR");
+                j3Transition(s,h,"STOPPED",result.proof().terminalCode(),List.of());
+            } else {
+                j3Transition(s,h,"CLEANED",result.proof().terminalCode(),List.of());
+                j3Transition(s,h,"RESUMING",null,List.of());
+                var missed=s.schedule.resumeAfterJ3(s.now());
+                publishStates(s);
+                j3Transition(s,h,"RESUMED",null,missed);
+            }
+            if(s.j3==h) s.j3=null;
+            }
+            finally { s.dispatchLock.unlock(); }
+            h.future.complete(result);
+        } catch(RuntimeException failure) {
+            s.stopAll("STOPPED_ERROR");
+            try { if(!Set.of("STOPPED","RESUMED").contains(h.phase)) j3Transition(s,h,"STOPPED","J3_PAUSE_FAILED",List.of()); }
+            catch(RuntimeException unavailable) { /* Keep the guard excluded until owner cleanup is verified. */ }
+            h.future.completeExceptionally(failure);
+            throw failure;
+        }
+    }
 
     @org.springframework.beans.factory.annotation.Autowired
     public LiveCampaignService(SofascoreProperties provider, ProviderPlaywrightProperties playwright,
@@ -94,6 +217,7 @@ public final class LiveCampaignService {
             LiveOrphanProcessProbe orphanProcesses, LiveDiagnosticStore diagnostics, ProviderResilienceStore resilience) {
         this.provider = provider; this.playwright = playwright; this.properties = properties;
         this.admission = admission; this.admissionV10 = new LiveAdmissionPolicyV10(properties, admission);
+        this.admissionV11 = new LiveAdmissionPolicyV11(properties, admission);
         this.store = store; this.events = events; this.coordinator = coordinator;
         this.guard = guard; this.factory = factory; this.supervisor = supervisor; this.processor = processor;
         this.clock = Objects.requireNonNull(clock);
@@ -133,14 +257,14 @@ public final class LiveCampaignService {
                 .map(event -> new Target(event.identity().value(), event.identity().providerEventId(),
                         event.observationId(), event.source().snapshotId().orElseThrow())).toList();
         if (targets.isEmpty()) return new Preparation(null, excludedFinished, excludedPostponed);
-        AdmissionProfile profile = currentAdmissionProfile("live-v10");
-        admissionV10.admit(targets.size(), profile.groupedProfile());
+        AdmissionProfile profile = currentAdmissionProfile("live-v11");
+        admissionV11.admit(targets.size(), profile.groupedProfile());
         Duration cycleInterval = Duration.ofSeconds(60);
         UUID id = UUID.randomUUID(); Instant now = clock.instant().truncatedTo(java.time.temporal.ChronoUnit.MICROS);
         long bytes = admission.maximumBytesV5(targets.size());
         // Fixed order and explicit rules: a historic proof or a changed family envelope cannot
         // silently authorize a new grouped manifest.
-        String material = id + "|live-v10|" + now + "|" + properties.getDuration() + "|2500|20000|" + bytes
+        String material = id + "|live-v11|" + now + "|" + properties.getDuration() + "|2500|20000|" + bytes
                 + "|" + selectionMaximum() + "|" + profile + "|critical=60|lineups=J4-capability-gated|prematch=J4,optional-lineups,T-5quiet,T0J4each60"
                 + "|finalResultOnly=true=stop-no-J5|detailId=1=normal-J5|detailId=absent=statistics-404x3-suppress-plus-terminal-once"
                 + "|status=notstarted,postponed,delayed:no-statistics-incidents|status=suspended:J4-only@60s-no-J5-until-inprogress"
@@ -149,9 +273,9 @@ public final class LiveCampaignService {
                 + "|intra=0|inter=0.5|sequential|maxGroup=4|order=J4,incidents,statistics,lineups"
                 + "|initialWaveHeadroom=4xN-local-under-exclusive-lease-not-reserved"
                 + "|temporalV54=groupReservation*N<=60s|hourlyPlanning=1984/2100|hourlyHeadroom=116"
-                + "|provider-resilience-v1|departureProfile=live-v10"
+                + "|provider-resilience-v1|departureProfile=live-v10|J3pause=context-isolated-v1,deadline=20m,no-replay"
                 + "|finishFence=0.5|rate=35/60,2100/3600|304=logical-cache-revalidation|404=300,600,900|" + targets;
-        Manifest manifest = new Manifest(id, Sha256.hex(material.getBytes(StandardCharsets.UTF_8)), "live-v10",
+        Manifest manifest = new Manifest(id, Sha256.hex(material.getBytes(StandardCharsets.UTF_8)), "live-v11",
                 now, now.plusSeconds(300), properties.getDuration(), 2500, 20000, bytes,
                 selectionMaximum(), targets, profile, cycleInterval);
         return new Preparation(store.prepare(manifest), excludedFinished, excludedPostponed);
@@ -222,7 +346,9 @@ public final class LiveCampaignService {
     }
     private int selectionMaximum(String policyVersion) {
         try { return Math.min(properties.getQualifiedMatchCapacity(),
-                "live-v10".equals(policyVersion)
+                "live-v11".equals(policyVersion)
+                        ? LiveAdmissionPolicyV11.qualifiedCapacity(properties.groupedAdmissionProfileV11())
+                        : "live-v10".equals(policyVersion)
                         ? LiveAdmissionPolicyV10.qualifiedCapacity(properties.groupedAdmissionProfileV10())
                         : "live-v9".equals(policyVersion)
                         ? LiveAdmissionPolicy.qualifiedCapacityV9(properties.groupedAdmissionProfileV9())
@@ -290,7 +416,9 @@ public final class LiveCampaignService {
                 || !current.manifest().duration().equals(properties.getDuration()))
             throw new IllegalArgumentException("LIVE_PREPARED_POLICY_CHANGED");
         int activeTargetCount=current.manifest().targets().size() - alreadyExcluded.size();
-        if ("live-v10".equals(policyVersion)) admissionV10.admit(activeTargetCount,
+        if ("live-v11".equals(policyVersion)) admissionV11.admit(activeTargetCount,
+                current.manifest().admissionProfile().groupedProfile());
+        else if ("live-v10".equals(policyVersion)) admissionV10.admit(activeTargetCount,
                 current.manifest().admissionProfile().groupedProfile());
         else if ("live-v9".equals(policyVersion)) admission.admitV9(activeTargetCount,
                 current.manifest().admissionProfile().groupedProfile());
@@ -407,6 +535,7 @@ public final class LiveCampaignService {
                     case "live-v8" -> properties.groupedAdmissionProfileV8();
                     case "live-v9" -> properties.groupedAdmissionProfileV9();
                     case "live-v10" -> properties.groupedAdmissionProfileV10();
+                    case "live-v11" -> properties.groupedAdmissionProfileV11();
                     default -> null;
                 });
     }
@@ -417,7 +546,7 @@ public final class LiveCampaignService {
 
     private static boolean resilientPolicy(String policyVersion) {
         return "live-v6".equals(policyVersion) || "live-v7".equals(policyVersion) || "live-v8".equals(policyVersion)
-                || "live-v9".equals(policyVersion) || "live-v10".equals(policyVersion);
+                || "live-v9".equals(policyVersion) || ("live-v10".equals(policyVersion) || "live-v11".equals(policyVersion));
     }
 
     private boolean providerCleanupRequired() {
@@ -617,7 +746,7 @@ public final class LiveCampaignService {
             // the HTTP thread can otherwise become stale while another local
             // provider operation consumes one of the initial V8 slots.
             int activeTargetCount = s.manifest.targets().size() - s.alreadyExcluded.size();
-            if ("live-v10".equals(s.manifest.policyVersion()) && activeTargetCount > 0)
+            if (("live-v10".equals(s.manifest.policyVersion()) || "live-v11".equals(s.manifest.policyVersion())) && activeTargetCount > 0)
                 requireV10InitialWaveCapacity(resilience, activeTargetCount, clock.instant());
             else if ("live-v9".equals(s.manifest.policyVersion()) && activeTargetCount > 0)
                 requireV9InitialWaveCapacity(resilience, activeTargetCount, clock.instant());
@@ -631,7 +760,7 @@ public final class LiveCampaignService {
             GroupedAdmissionProfile scheduleProfile = "live-v10".equals(s.manifest.policyVersion())
                     ? V10GroupedScheduleProfile.asV9SchedulerProfile(s.manifest.admissionProfile().groupedProfile())
                     : s.manifest.admissionProfile().groupedProfile();
-            s.schedule = new LiveSchedule(s.manifest.targets().stream().map(Target::canonicalEventId).toList(),
+            s.schedule = new LiveSessionSchedule(s.manifest.targets().stream().map(Target::canonicalEventId).toList(),
                     started.startedAt(), started.endsAt(), s.manifest.cycleInterval(), schedulePolicy, s.manifest.campaignId(),
                     scheduleProfile);
             // Recheck local observations after admission and acquisition, before any browser exists.
@@ -652,6 +781,11 @@ public final class LiveCampaignService {
                 long monotonicDelta = TimeUnit.NANOSECONDS.toMillis(monotonic - lastWake);
                 if (monotonicDelta > 2500 || Math.abs(wallDelta - monotonicDelta) > 2000) {
                     s.stopAll("STOPPED_INTERRUPTED"); break;
+                }
+                if(s.j3!=null) {
+                    runJ3(s,transport,s.j3);
+                    lastWake=System.nanoTime(); lastWall=clock.instant();
+                    continue;
                 }
                 s.phase = SCHEDULING;
                 for (UUID stopped : s.stoppedEvents) s.schedule.stopEvent(stopped, "STOPPED_OPERATOR");
@@ -675,6 +809,11 @@ public final class LiveCampaignService {
             s.launched.completeExceptionally(new IllegalStateException(code));
         } finally {
             s.finished = true;
+            if(s.j3!=null && !s.j3.future.isDone()) {
+                try { j3Transition(s,s.j3,"STOPPED","LIVE_CAMPAIGN_STOPPED",List.of()); }
+                catch(RuntimeException unavailable) { /* The guard remains excluded. */ }
+                s.j3.future.completeExceptionally(new IllegalStateException("J3_LIVE_UNAVAILABLE"));
+            }
             if (s.schedule != null && s.stopReason != null) s.schedule.stopAll(s.stopReason);
             s.beginCleanup();
             boolean cleaned = cleanup(s, transport, lease);
@@ -851,7 +990,7 @@ public final class LiveCampaignService {
                     if(s.firstFailure.get()!=null) persistDiagnostics(s);
                 }
                 @Override public void check() {
-                    if (s.stopReason != null || s.stoppedEvents.contains(due.eventId())
+                    if (s.j3 != null || s.stopReason != null || s.stoppedEvents.contains(due.eventId())
                             || !s.schedule.mayDispatch(due, s.now())
                             || !clock.instant().isBefore(s.timeOrigin.plus(s.manifest.duration())))
                         throw new PlaywrightDispatchCancelledException();
@@ -925,9 +1064,9 @@ public final class LiveCampaignService {
         } catch (PlaywrightDispatchCancelledException cancelled) {
             transport.discardConditionalState(attempt.providerEventId(), due.endpoint());
             s.phase = RESULT_PUBLICATION;
-            store.publishResult(s.ownership, attempt.attemptId(), new Publication("NOT_DISPATCHED", "EVENT", "DISPATCH_CANCELLED",
+            store.publishResult(s.ownership, attempt.attemptId(), new Publication("NOT_DISPATCHED", "EVENT", s.j3!=null ? "J3_PAUSE_REQUESTED" : "DISPATCH_CANCELLED",
                     clock.instant(), null, false, null), NormalizedReferences::none);
-            if (s.schedule.mayDispatch(due, s.now()) && !s.stoppedEvents.contains(due.eventId())) s.stopAll("STOPPED_ERROR");
+            if (s.j3==null && s.schedule.mayDispatch(due, s.now()) && !s.stoppedEvents.contains(due.eventId())) s.stopAll("STOPPED_ERROR");
         } catch (RuntimeException failure) {
             transport.discardConditionalState(attempt.providerEventId(), due.endpoint());
             if (failure instanceof PlaywrightProviderException timeout && timeout.recoverableTimeout()
@@ -1073,7 +1212,7 @@ public final class LiveCampaignService {
     /** Keep V8/V9/V10 fixed-minute phases tied to an authenticated worker departure, not IPC admission. */
     private static void recordObservedV8Departure(Session s, LiveSchedule.Due due, Instant requestedAt) {
         if (requestedAt == null || (!"live-v8".equals(s.manifest.policyVersion())
-                && !"live-v9".equals(s.manifest.policyVersion()) && !"live-v10".equals(s.manifest.policyVersion()))) return;
+                && !"live-v9".equals(s.manifest.policyVersion()) && !"live-v10".equals(s.manifest.policyVersion()) && !"live-v11".equals(s.manifest.policyVersion()))) return;
         s.dispatchLock.lock();
         try {
             if (s.schedule != null) s.schedule.departed(due, requestedAt);
@@ -1081,7 +1220,7 @@ public final class LiveCampaignService {
     }
 
     private static ProviderResilienceData.DepartureProfile departureProfile(String policyVersion) {
-        if ("live-v10".equals(policyVersion)) return ProviderResilienceData.DepartureProfile.LIVE_V10;
+        if (("live-v10".equals(policyVersion) || "live-v11".equals(policyVersion))) return ProviderResilienceData.DepartureProfile.LIVE_V10;
         if ("live-v8".equals(policyVersion) || "live-v9".equals(policyVersion))
             return ProviderResilienceData.DepartureProfile.LIVE_V8;
         return null;
@@ -1167,7 +1306,8 @@ public final class LiveCampaignService {
         final Map<UUID,String> publishedStates = new HashMap<>(); final Map<UUID,LiveSchedule.EventState> publishedMetrics = new HashMap<>();
         final Map<String,FamilySchedule> publishedFamilies = new HashMap<>();
         final LiveTimeoutRecoveryPolicy timeoutRecovery = new LiveTimeoutRecoveryPolicy();
-        volatile String stopReason; volatile LiveSchedule schedule; volatile Ownership ownership; volatile boolean finished;
+        volatile J3Handoff j3;
+        volatile String stopReason; volatile LiveSessionSchedule schedule; volatile Ownership ownership; volatile boolean finished;
         volatile LiveCampaignDiagnostic.Phase phase = LEASE_ACQUISITION;
         final AtomicReference<LiveCampaignDiagnostic> firstFailure = new AtomicReference<>();
         volatile LiveCampaignDiagnostic cleanupFailure;

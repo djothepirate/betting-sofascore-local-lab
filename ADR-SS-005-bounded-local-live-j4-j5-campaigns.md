@@ -1,6 +1,19 @@
 # ADR-SS-005 — Campagnes live locales et bornées J4/J5
 
-- **Version :** 0.11.
+**Amendement v0.12 — WO-060, 14 septembre 2026 :**
+l'instruction propriétaire de réaliser WO-060 adopte
+[ADR-SS-007 v0.2](ADR-SS-007-j3-automation-durable-catalog-and-live-pause.md).
+Les nouvelles préparations utilisent live-v11 et un profil qualifié distinct. Une demande J3
+suspend tous les nouveaux départs J4/J5, attend la publication de l'échange en vol puis utilise
+un contexte J3 neuf et isolé dans le même worker, sous le même propriétaire et la même génération.
+La fermeture prouvée de ce contexte et le terminal durable J3 précèdent la reprise du contexte
+live initial par un nouveau J4. Aucun groupe abandonné, événement arrêté, budget ou échéance
+n'est réarmé. Le protocole 10 explicite cette capacité ; aucun manifeste V1–V10 n'est converti.
+Le profil V11 conserve huit rencontres, 35 départs/60 s et 2 100/heure. Sa qualification locale
+de replay et d'isolation ne constitue aucune mesure de capacité ou de quota fournisseur.
+Les dispositions suivantes et leurs preuves restent la référence historique hors de cette exception.
+
+- **Version :** 0.12 — exception J3 WO-060 ; v0.11 historique conservée dans Git.
 - **Statut :** `ACCEPTED` — v0.1 formellement acceptée ; capacité adaptative puis collecte des compositions avant le début explicitement demandées par le propriétaire le 7 septembre.
 - **Date :** 2026-09-12.
 - **Décideur :** propriétaire du Betting Project.

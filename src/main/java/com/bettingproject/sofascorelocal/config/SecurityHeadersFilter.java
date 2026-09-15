@@ -26,6 +26,8 @@ public class SecurityHeadersFilter extends OncePerRequestFilter {
     /** A local form page needs its exact loopback origin preserved for Chromium navigation POSTs. */
     private static final Pattern PROVIDER_ACCESS_PAGE_PATH = Pattern.compile(
             "^/provider-access(?:;[^/]*)?/?$");
+    private static final Pattern DASHBOARD_PAGE_PATH = Pattern.compile(
+            "^/(?:dashboard(?:;[^/]*)?/?|;[^/]*)?$");
     private static final Pattern LIVE_STATE_PATH = Pattern.compile(
             "^/(?:live-campaigns(?:/.*)?|events/(?:[0-9a-fA-F-]{36}/)?state)(?:;[^/]*)?/?$");
     private static final String STRICT_CACHE_CONTROL =
@@ -57,6 +59,7 @@ public class SecurityHeadersFilter extends OncePerRequestFilter {
                 "Content-Security-Policy",
                 CONTENT_SECURITY_POLICY_PREFIX
                         + (isJ5OfflineBatchRequest(request) || isJ5ManualViewRequest(request) || isLivePageRequest(request)
+                                || DASHBOARD_PAGE_PATH.matcher(applicationPath(request)).matches()
                                 ? "script-src 'self'"
                                 : "script-src 'none'")
                         + CONTENT_SECURITY_POLICY_SUFFIX);
@@ -85,7 +88,8 @@ public class SecurityHeadersFilter extends OncePerRequestFilter {
         String applicationPath = applicationPath(request);
         return LIVE_PAGE_PATH.matcher(applicationPath).matches()
                 || J5_MANUAL_VIEW_PATH.matcher(applicationPath).matches()
-                || PROVIDER_ACCESS_PAGE_PATH.matcher(applicationPath).matches();
+                || PROVIDER_ACCESS_PAGE_PATH.matcher(applicationPath).matches()
+                || DASHBOARD_PAGE_PATH.matcher(applicationPath).matches();
     }
 
     private static boolean isLivePageRequest(HttpServletRequest request) {

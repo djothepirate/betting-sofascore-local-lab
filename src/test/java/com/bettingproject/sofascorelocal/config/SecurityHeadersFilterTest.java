@@ -85,6 +85,27 @@ class SecurityHeadersFilterTest {
                 .contains("script-src 'none'", "form-action 'self'");
     }
 
+    @ParameterizedTest
+    @ValueSource(strings = {"/", "/;jsessionid=LOCAL_TEST_SESSION", "/dashboard", "/dashboard/",
+            "/dashboard;jsessionid=LOCAL_TEST_SESSION"})
+    void preservesTheDashboardOriginForJ3SettingsAndOtherLocalForms(String path) throws Exception {
+        MockHttpServletResponse response = filter(path);
+
+        assertThat(response.getHeader("Referrer-Policy")).isEqualTo("same-origin");
+        assertThat(response.getHeader("Cache-Control")).contains("no-store");
+        assertThat(response.getHeader("Content-Security-Policy"))
+                .contains("script-src 'self'", "form-action 'self'", "frame-ancestors 'none'")
+                .doesNotContain("unsafe-inline", "unsafe-eval");
+    }
+
+    @Test
+    void preservesTheDashboardOriginWithAContextPath() throws Exception {
+        MockHttpServletRequest request = new MockHttpServletRequest("GET", "/local-lab/dashboard");
+        request.setContextPath("/local-lab");
+        assertThat(filter(request, new MockFilterChain()).getHeader("Referrer-Policy"))
+                .isEqualTo("same-origin");
+    }
+
     @Test
     void appliesStrictReadOnlyHeadersToTheBenchmarkRoute() throws Exception {
         MockHttpServletResponse response = filter("/benchmark");
@@ -154,9 +175,12 @@ class SecurityHeadersFilterTest {
         "/events/12345678-1234-1234-1234-123456789012/state",
         "/live-campaigns/12345678-1234-1234-1234-123456789012/state",
         "/live-campaigns-adjacent",
+        "/dashboard-adjacent",
+        "/dashboard/settings",
+        "/prefix/dashboard",
         "/prefix/live-campaigns/12345678-1234-1234-1234-123456789012"
     })
-    void keepsNoReferrerOutsideJ7ExportsAndExplicitLivePages(String path) throws Exception {
+    void keepsNoReferrerOutsideJ7ExportsAndExplicitLocalFormPages(String path) throws Exception {
         MockHttpServletResponse response = filter(path);
 
         assertThat(response.getHeader("Referrer-Policy"))

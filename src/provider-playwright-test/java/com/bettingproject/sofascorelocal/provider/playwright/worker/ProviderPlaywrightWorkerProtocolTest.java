@@ -65,7 +65,7 @@ class ProviderPlaywrightWorkerProtocolTest {
 
     @Test
     void identifiesTheExplicitV9ConditionalTransportProtocol() {
-        assertThat(ProviderPlaywrightWorkerProtocol.VERSION).isEqualTo(9);
+        assertThat(ProviderPlaywrightWorkerProtocol.VERSION).isEqualTo(10);
         assertThat(ProviderPlaywrightWorkerProtocol.GET_LIVE_V9).isNotEqualTo(
                 ProviderPlaywrightWorkerProtocol.GET);
         assertThat(ProviderPlaywrightWorkerProtocol.RESPONSE_V9).isNotEqualTo(

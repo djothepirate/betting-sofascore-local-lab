@@ -1084,7 +1084,7 @@ class LiveCampaignControllerTest {
             "LIVE_STORAGE_PROBE_INVALID,ne peut pas être mesuré", "LIVE_STORAGE_PROBE_INTERRUPTED,interrompu",
             "LIVE_STORAGE_CAPACITY_REFUSED,insuffisant", "LIVE_POLICY_INVALID,limites",
             "LIVE_CAPACITY_QUALIFICATION_REQUIRED,preuve de qualification",
-            "LIVE_GROUPED_QUALIFICATION_REQUIRED,SOFASCORE_LIVE_GROUPED_V10_QUALIFICATION_SHA256",
+            "LIVE_GROUPED_QUALIFICATION_REQUIRED,SOFASCORE_LIVE_GROUPED_V11_QUALIFICATION_SHA256",
             "LIVE_V8_FRESHNESS_CAPACITY_UNAVAILABLE,fraîcheur de 60 secondes",
             "LIVE_V9_FRESHNESS_CAPACITY_UNAVAILABLE,fraîcheur de 60 secondes",
             "LIVE_V10_FRESHNESS_CAPACITY_UNAVAILABLE,fraîcheur de 60 secondes"})
@@ -1112,7 +1112,7 @@ class LiveCampaignControllerTest {
                 .andExpect(status().isBadRequest())
                 .andExpect(model().attribute("liveErrorCode", code))
                 .andExpect(content().string(containsString("Réduire la sélection")))
-                .andExpect(content().string(containsString("profil live-v10")));
+                .andExpect(content().string(containsString("profil live-v11")));
         doThrow(new IllegalStateException("SECRET_PRIVATE_RUNTIME")).when(service).prepareSelection(List.of(EVENT_ID));
         mvc.perform(post("/live-campaigns/prepare").header("Host", HOST).session(session)
                         .param("localFormToken", tokens.issue(session)).param("eventId", EVENT_ID.toString()))

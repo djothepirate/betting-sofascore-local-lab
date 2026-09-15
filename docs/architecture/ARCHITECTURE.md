@@ -1,5 +1,17 @@
 # Architecture J0 à J8 — SofaScore Local Lab
 
+**Architecture WO-060 — 14 septembre 2026 :** [ADR-SS-007 v0.2](../../ADR-SS-007-j3-automation-durable-catalog-and-live-pause.md)
+adopte les ordres J3 durables, le résultat par date et la pause live. V55 publie atomiquement les
+pages, le catalogue et le dernier succès ; V56 sérialise paramètres, occurrences et admission ;
+V57 conserve les transitions de pause sous la génération du garde live. Le terminal J8 partage
+la transaction du succès J3. `J3RuntimeService` s’active uniquement après disponibilité de
+l’application web locale, reconstruit les preuves historiques, puis utilise un consommateur
+sériel. Les commandes de maintenance et les tests standards ne démarrent pas ce moteur.
+Le protocole worker 10 et `live-v11` réservent un contexte J3 temporaire dans le worker live,
+avec un seul droit d’émettre ; l’ordonnanceur live abandonne les groupes incomplets et reprend
+par J4 dans sa fenêtre initiale. Les architectures J3 en mémoire et les politiques live
+antérieures décrites plus bas restent leurs références historiques.
+
 ## 1. Positionnement
 
 Le laboratoire est un composant expérimental séparé du Betting Project. Il ne partage ni base, ni déploiement, ni responsabilité opérationnelle avec le cœur du projet global.

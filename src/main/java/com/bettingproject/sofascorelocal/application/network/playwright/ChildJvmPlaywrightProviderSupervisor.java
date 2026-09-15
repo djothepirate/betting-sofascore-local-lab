@@ -57,12 +57,14 @@ public final class ChildJvmPlaywrightProviderSupervisor
         implements PlaywrightProviderCampaignFactory, PlaywrightProviderSupervisor {
 
     static final int MAGIC = 0x53335057;
-    static final int VERSION = 9;
+    static final int VERSION = 10;
     static final byte GET = 1;
     static final byte GET_LIVE_V6 = 4;
     static final byte GET_LIVE_V9 = 5;
     static final byte CLOSE = 2;
     static final byte START = 3;
+    static final byte BEGIN_J3=6, START_WITH_J3_PAUSE=7, GET_J3=8, END_J3=9;
+    static final byte J3_READY=17, J3_CLOSED=18;
     static final byte RESPONSE = 10;
     static final byte FAILURE = 11;
     static final byte CLOSED = 12;
@@ -256,6 +258,13 @@ public final class ChildJvmPlaywrightProviderSupervisor
         return open(campaignId, allowedEndpoints, LiveProviderGroupTracker.Authority.LIVE_V10);
     }
 
+    @Override public PlaywrightProviderCampaign openLiveGroupedV11(UUID campaignId,Set<SofascoreEndpointType> allowedEndpoints) {
+        if(!allowedEndpoints.equals(Set.of(SofascoreEndpointType.EVENT_DETAILS,SofascoreEndpointType.EVENT_STATISTICS,
+                SofascoreEndpointType.EVENT_INCIDENTS,SofascoreEndpointType.EVENT_LINEUPS)))
+            throw new PlaywrightProviderException(PlaywrightProviderFailure.INVALID_ENDPOINT);
+        return open(campaignId,allowedEndpoints,LiveProviderGroupTracker.Authority.LIVE_V11);
+    }
+
     @Override
     public PlaywrightProviderCampaign openManualJ5Grouped(
             UUID campaignId, Set<SofascoreEndpointType> allowedEndpoints) {
@@ -322,7 +331,7 @@ public final class ChildJvmPlaywrightProviderSupervisor
             state.attach(socket, input, output);
             authenticate(input, token);
             requireStartupAllowed(state, tombstones, campaignId);
-            startWorkerRuntime(input, output);
+            startWorkerRuntime(input, output,state.j3PauseCapable);
             requireStartupAllowed(state, tombstones, campaignId);
             ProcessRegistration registration = state.processRegistration.getNow(null);
             ProcessTreeSnapshot initialInventory = captureInitialProcessInventory(
@@ -481,16 +490,23 @@ public final class ChildJvmPlaywrightProviderSupervisor
             CampaignState state,
             PlaywrightProviderRequest request,
             PlaywrightDispatchAdmission admission, LiveProviderDispatchGroup group) {
+        return execute(state,request,admission,group,null);
+    }
+
+    private PlaywrightProviderResponse execute(CampaignState state,PlaywrightProviderRequest request,
+            PlaywrightDispatchAdmission admission,LiveProviderDispatchGroup group,J3ProviderSubOperation j3Scope) {
         Objects.requireNonNull(request, "request");
         requireActive(state);
-        if (!state.allowedEndpoints.contains(request.endpoint())) {
+        requireDispatchScope(state,request,j3Scope);
+        LiveProviderGroupTracker groups=j3Scope==null?state.liveGroups:null;
+        if (j3Scope==null && !state.allowedEndpoints.contains(request.endpoint())) {
             throw new PlaywrightProviderException(PlaywrightProviderFailure.INVALID_ENDPOINT);
         }
         if (request.ifNoneMatch().isPresent()
-                && (state.liveGroups == null || !state.liveGroups.usesConditionalRevalidation())) {
+                && (groups == null || !groups.usesConditionalRevalidation())) {
             throw new PlaywrightProviderException(PlaywrightProviderFailure.INVALID_REQUEST);
         }
-        if (group != null && state.liveGroups == null)
+        if (group != null && groups == null)
             throw new PlaywrightProviderException(PlaywrightProviderFailure.INVALID_REQUEST);
         state.ioLock.lock();
         boolean dispatchStarted = false;
@@ -505,31 +521,34 @@ public final class ChildJvmPlaywrightProviderSupervisor
                 int timeoutMillis = toMillis(properties.getRequestTimeout());
                 long responseDeadline;
                 long requestDeadline;
-                boolean conditionalWire = state.liveGroups != null && state.liveGroups.usesConditionalRevalidation();
-                boolean continuation = state.liveGroups != null && state.liveGroups.isContinuation(request, group);
-                Runnable continuationGuard = () -> { requireActive(state); admission.check(); };
+                boolean conditionalWire = groups != null && groups.usesConditionalRevalidation();
+                boolean continuation = groups != null && groups.isContinuation(request, group);
+                Runnable continuationGuard = () -> { requireActive(state); requireDispatchScope(state,request,j3Scope); admission.check(); };
                 // Historical grouped continuations retain their no-pause protocol. V8, V9 and V10
                 // deliberately share the qualified 500 ms local-pressure fence after every
                 // family exchange, including J5 continuations.
-                if (continuation && !state.liveGroups.requiresPostExchangeFenceForContinuation())
+                if (continuation && !groups.requiresPostExchangeFenceForContinuation())
                     providerNetworkStartDelayGate.admitGroupContinuation(continuationGuard);
                 else providerNetworkStartDelayGate.awaitNextGroupDispatch(
-                        group == null ? null : state.liveGroups, continuationGuard);
+                        group == null ? null : groups, continuationGuard);
                 try (PlaywrightDispatchAdmission.Permit permit = admission.acquireDispatchPermit()) {
                     // Admission may perform durable checks. Never hold the supervisor stop lock during SQL.
                     state.dispatchLock.lock();
                     try {
                     requireActive(state);
-                    if (state.liveGroups != null) state.liveGroups.dispatched(request, group);
+                    requireDispatchScope(state,request,j3Scope);
+                    if(j3Scope!=null)state.lastJ3Page=request.page();
+                    if (groups != null) groups.dispatched(request, group);
                     state.providerDispatchStarted.set(true);
                     dispatchStarted = true;
-                    boolean supportsProvenTimeoutRecovery = state.liveGroups != null
-                            && state.liveGroups.supportsProvenTimeoutRecovery();
+                    boolean supportsProvenTimeoutRecovery = groups != null
+                            && groups.supportsProvenTimeoutRecovery();
                     requestDeadline = System.nanoTime() + properties.getRequestTimeout().toNanos();
                     responseDeadline = requestDeadline + Duration.ofSeconds(
                             supportsProvenTimeoutRecovery ? 3 : 1).toNanos();
-                    output.writeByte(conditionalWire ? GET_LIVE_V9
+                    output.writeByte(j3Scope!=null ? GET_J3 : conditionalWire ? GET_LIVE_V9
                             : supportsProvenTimeoutRecovery ? GET_LIVE_V6 : GET);
+                    if(j3Scope!=null)output.writeUTF(j3Scope.runId().toString());
                     output.writeUTF(request.endpoint().name());
                     switch (request.endpoint()) {
                         case SCHEDULED_EVENTS -> {
@@ -599,7 +618,7 @@ public final class ChildJvmPlaywrightProviderSupervisor
                 if (frame == TIMEOUT_ENDED) {
                     Instant endedAt = diagnosticInstant(input.readLong());
                     int endReason = input.readUnsignedByte();
-                    if (state.liveGroups == null || !state.liveGroups.supportsProvenTimeoutRecovery() || diagnostic == null
+                    if (groups == null || !groups.supportsProvenTimeoutRecovery() || diagnostic == null
                             || diagnostic.requestedAt() == null || endedAt == null
                             || endReason < 1 || endReason > 2 || state.terminationRequested.get()
                             || System.nanoTime() < requestDeadline || endedAt.isAfter(clock.instant()))
@@ -725,12 +744,12 @@ public final class ChildJvmPlaywrightProviderSupervisor
             try {
                 if (dispatchStarted) {
                     if (recoverableTimeoutEvidence) {
-                        providerNetworkStartDelayGate.recordRecoverableTimeoutFinished(state.liveGroups);
-                        state.liveGroups.finishedRecoverableTimeout();
+                        providerNetworkStartDelayGate.recordRecoverableTimeoutFinished(groups);
+                        groups.finishedRecoverableTimeout();
                     } else {
                         providerNetworkStartDelayGate.recordDispatchFinished(
-                                usableResponseEvidence, group == null ? null : state.liveGroups);
-                        if (state.liveGroups != null) state.liveGroups.finished(usableResponseEvidence);
+                                usableResponseEvidence, group == null ? null : groups);
+                        if (groups != null) groups.finished(usableResponseEvidence);
                     }
                 }
             } finally {
@@ -744,6 +763,65 @@ public final class ChildJvmPlaywrightProviderSupervisor
         if (value < 1 || value > 253_402_300_799_999L)
             throw new PlaywrightProviderException(PlaywrightProviderFailure.PROTOCOL_ERROR);
         return Instant.ofEpochMilli(value);
+    }
+
+    private void requireDispatchScope(CampaignState state,PlaywrightProviderRequest request,J3ProviderSubOperation scope) {
+        if(scope==null) {
+            if(state.j3Scope!=null)throw new PlaywrightProviderException(PlaywrightProviderFailure.INVALID_REQUEST);
+            return;
+        }
+        if(!scope.equals(state.j3Scope) || Thread.currentThread()!=state.controlOwner
+                || request.endpoint()!=SofascoreEndpointType.SCHEDULED_EVENTS || !scope.date().equals(request.date())
+                || request.page()<=state.lastJ3Page || request.page()>35 || request.ifNoneMatch().isPresent()
+                || !clock.instant().plus(properties.getRequestTimeout()).plusSeconds(5).isBefore(scope.deadline()))
+            throw new PlaywrightProviderException(PlaywrightProviderFailure.INVALID_REQUEST);
+    }
+
+    private PlaywrightProviderCampaign beginJ3(CampaignState state,J3ProviderSubOperation scope) {
+        Objects.requireNonNull(scope);requireActive(state);
+        if(!state.j3PauseCapable || state.controlOwner!=Thread.currentThread() || state.j3Scope!=null
+                || !clock.instant().isBefore(scope.deadline()) || scope.deadline().isAfter(clock.instant().plusSeconds(1200)))
+            throw new PlaywrightProviderException(PlaywrightProviderFailure.INVALID_REQUEST);
+        state.ioLock.lock();
+        try {
+            requireActive(state);state.j3Scope=scope;state.lastJ3Page=0;
+            state.socket.setSoTimeout(toMillis(properties.getStartupTimeout()));
+            state.output.writeByte(BEGIN_J3);state.output.writeUTF(scope.runId().toString());
+            state.output.writeUTF(scope.date().toString());state.output.writeLong(scope.deadline().toEpochMilli());state.output.flush();
+            requireScopeAcknowledgement(state,J3_READY,scope);
+            state.liveGroups.abandonForJ3();
+        } catch(IOException failure) {throw new PlaywrightProviderException(PlaywrightProviderFailure.PROTOCOL_ERROR,failure);}
+        finally {state.ioLock.unlock();}
+        return new PlaywrightProviderCampaign() {
+            private boolean closed;
+            @Override public PlaywrightProviderResponse execute(PlaywrightProviderRequest request) {
+                return execute(request,PlaywrightDispatchAdmission.UNRESTRICTED);
+            }
+            @Override public PlaywrightProviderResponse execute(PlaywrightProviderRequest request,PlaywrightDispatchAdmission admission) {
+                if(closed)throw new PlaywrightProviderException(PlaywrightProviderFailure.OPERATOR_STOP);
+                return ChildJvmPlaywrightProviderSupervisor.this.execute(state,request,admission,null,scope);
+            }
+            @Override public void close() {if(!closed){endJ3(state,scope);closed=true;}}
+        };
+    }
+
+    private void endJ3(CampaignState state,J3ProviderSubOperation scope) {
+        if(state.controlOwner!=Thread.currentThread() || !scope.equals(state.j3Scope))
+            throw new PlaywrightProviderException(PlaywrightProviderFailure.INVALID_REQUEST);
+        state.ioLock.lock();
+        try {
+            requireActive(state);state.socket.setSoTimeout(toMillis(properties.getGracefulCloseTimeout()));
+            state.output.writeByte(END_J3);state.output.writeUTF(scope.runId().toString());state.output.flush();
+            requireScopeAcknowledgement(state,J3_CLOSED,scope);
+            state.j3Scope=null;state.lastJ3Page=0;
+        } catch(IOException failure) {throw new PlaywrightProviderException(PlaywrightProviderFailure.PROTOCOL_ERROR,failure);}
+        finally {state.ioLock.unlock();}
+    }
+    private static void requireScopeAcknowledgement(CampaignState state,int expected,J3ProviderSubOperation scope)throws IOException {
+        int frame=state.input.readUnsignedByte();
+        if(frame==FAILURE)throw workerFailure(state.input.readUTF());
+        if(frame!=expected || !scope.runId().toString().equals(state.input.readUTF()))
+            throw new PlaywrightProviderException(PlaywrightProviderFailure.PROTOCOL_ERROR);
     }
 
     /** Progress frames cannot restart the configured whole-request deadline. */
@@ -1236,8 +1314,8 @@ public final class ChildJvmPlaywrightProviderSupervisor
 
     private static void startWorkerRuntime(
             DataInputStream input,
-            DataOutputStream output) throws IOException {
-        output.writeByte(START);
+            DataOutputStream output,boolean j3PauseCapable) throws IOException {
+        output.writeByte(j3PauseCapable?START_WITH_J3_PAUSE:START);
         output.flush();
         int frame = input.readUnsignedByte();
         if (frame == FAILURE) {
@@ -1693,6 +1771,12 @@ public final class ChildJvmPlaywrightProviderSupervisor
         private final CampaignState state;
         private volatile boolean closeRequested;
 
+        @Override public PlaywrightProviderCampaign openJ3SubOperation(J3ProviderSubOperation scope) {
+            var current=owner;
+            if(current==null || closeRequested)throw new PlaywrightProviderException(PlaywrightProviderFailure.OPERATOR_STOP);
+            return current.beginJ3(state,scope);
+        }
+
         private Campaign(
                 ChildJvmPlaywrightProviderSupervisor owner,
                 CampaignState state) {
@@ -1741,6 +1825,10 @@ public final class ChildJvmPlaywrightProviderSupervisor
         private final UUID campaignId;
         private final Set<SofascoreEndpointType> allowedEndpoints;
         private final LiveProviderGroupTracker liveGroups;
+        private final boolean j3PauseCapable;
+        private final Thread controlOwner=Thread.currentThread();
+        private J3ProviderSubOperation j3Scope;
+        private int lastJ3Page;
         private final ReentrantLock ioLock = new ReentrantLock();
         private final ReentrantLock dispatchLock = new ReentrantLock();
         private final Object processInventoryLock = new Object();
@@ -1770,6 +1858,7 @@ public final class ChildJvmPlaywrightProviderSupervisor
             this.campaignId = campaignId;
             this.allowedEndpoints = allowedEndpoints;
             this.liveGroups = groupAuthority == null ? null : new LiveProviderGroupTracker(campaignId, groupAuthority);
+            this.j3PauseCapable=groupAuthority==LiveProviderGroupTracker.Authority.LIVE_V11;
         }
 
         private void publishProcess(Process process, Instant processStartedAt) {

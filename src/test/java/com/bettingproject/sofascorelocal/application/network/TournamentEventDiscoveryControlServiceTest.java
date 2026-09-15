@@ -38,6 +38,108 @@ class TournamentEventDiscoveryControlServiceTest {
             UUID.fromString("7618a727-9ab0-4e96-a2de-9cd4898db29e");
 
     @Test
+    void directClickResolvesTheExactCollectionAndCreatesNoConfirmation() {
+        var catalogs = mock(J3TournamentCatalogService.class);
+        var date = LocalDate.of(2026, 8, 18);
+        when(catalogs.forCollection(REQUEST_ID, date)).thenReturn(catalog(option(7)));
+        var control = control(Clock.systemUTC(), catalogs);
+
+        var claim = control.claimDirect(REQUEST_ID, date, 119_880);
+
+        assertThat(claim.selection()).isEqualTo(option(7));
+        assertThat(claim.collectionDate()).isEqualTo(date);
+        assertThat(control.snapshot().state()).isEqualTo(TournamentEventDiscoveryState.EXECUTING);
+        assertThat(control.snapshot().confirmationPhrase()).isNull();
+        assertThat(control.snapshot().expiresAt()).isNull();
+        org.mockito.Mockito.verify(catalogs, org.mockito.Mockito.never()).latest();
+        assertThatThrownBy(() -> control.claimDirectLocalImport(REQUEST_ID, date, 119_880))
+                .isInstanceOf(TournamentEventDiscoveryControlException.class);
+        control.complete(claim.requestId());
+        assertThat(control.claimDirectLocalImport(REQUEST_ID, date, 119_880).selection())
+                .isEqualTo(option(7));
+    }
+
+    @Test
+    void directClickRejectsUnknownPhaseAndWrongCollectionDateWithoutLeavingAnIntent() {
+        var catalogs = mock(J3TournamentCatalogService.class);
+        var date = LocalDate.of(2026, 8, 18);
+        when(catalogs.forCollection(REQUEST_ID, date)).thenReturn(catalog(option(7)));
+        when(catalogs.forCollection(REQUEST_ID, date.plusDays(1))).thenReturn(catalog(option(7)));
+        var control = control(Clock.systemUTC(), catalogs);
+
+        assertThatThrownBy(() -> control.claimDirect(REQUEST_ID, date, 123))
+                .isInstanceOf(TournamentEventDiscoveryControlException.class);
+        assertThatThrownBy(() -> control.claimDirect(REQUEST_ID, date.plusDays(1), 119_880))
+                .isInstanceOf(TournamentEventDiscoveryControlException.class);
+        assertThat(control.snapshot().state()).isEqualTo(TournamentEventDiscoveryState.LOCKED);
+        assertThat(control.snapshot().requestId()).isNull();
+    }
+
+    @Test
+    void directLocalImportRemainsAvailableWithoutProviderTransport() {
+        var catalogs = mock(J3TournamentCatalogService.class);
+        var date = LocalDate.of(2026, 8, 18);
+        when(catalogs.forCollection(REQUEST_ID, date)).thenReturn(catalog(option(7)));
+        var control = new TournamentEventDiscoveryControlService(Clock.systemUTC(),
+                () -> REQUEST_ID, () -> { throw new AssertionError("No confirmation code expected"); },
+                () -> TournamentEventDiscoveryQualificationSnapshot.blocked(List.of("TRANSPORT_DISABLED")),
+                () -> TournamentEventDiscoveryQualificationSnapshot.available(
+                        URI.create(EventDetailsProviderRequest.EXPECTED_ORIGIN)), catalogs);
+
+        assertThatThrownBy(() -> control.claimDirect(REQUEST_ID, date, 119_880))
+                .isInstanceOf(TournamentEventDiscoveryControlException.class);
+        assertThat(control.snapshot().state()).isEqualTo(TournamentEventDiscoveryState.LOCKED);
+        assertThat(control.claimDirectLocalImport(REQUEST_ID, date, 119_880).selection())
+                .isEqualTo(option(7));
+    }
+
+    @Test
+    void concurrentDirectProviderAndImportClicksHaveOnlyOneOwner() throws Exception {
+        var catalogs = mock(J3TournamentCatalogService.class);
+        var date = LocalDate.of(2026, 8, 18);
+        when(catalogs.forCollection(REQUEST_ID, date)).thenReturn(catalog(option(7)));
+        var control = control(Clock.systemUTC(), catalogs);
+        var start = new CountDownLatch(1);
+        try (var executor = Executors.newFixedThreadPool(2)) {
+            var provider = executor.submit(() -> {
+                awaitLatch(start);
+                try { control.claimDirect(REQUEST_ID, date, 119_880); return true; }
+                catch (TournamentEventDiscoveryControlException rejected) {
+                    assertThat(rejected.error()).isEqualTo(TournamentEventDiscoveryControlError.ACTIVE_REQUEST_EXISTS);
+                    return false;
+                }
+            });
+            var local = executor.submit(() -> {
+                awaitLatch(start);
+                try { control.claimDirectLocalImport(REQUEST_ID, date, 119_880); return true; }
+                catch (TournamentEventDiscoveryControlException rejected) {
+                    assertThat(rejected.error()).isEqualTo(TournamentEventDiscoveryControlError.ACTIVE_REQUEST_EXISTS);
+                    return false;
+                }
+            });
+            start.countDown();
+            assertThat(List.of(provider.get(5, TimeUnit.SECONDS), local.get(5, TimeUnit.SECONDS)))
+                    .containsExactlyInAnyOrder(true, false);
+        }
+    }
+
+    @Test
+    void directClicksPreserveFailureAndOperatorStopLocks() {
+        var catalogs = mock(J3TournamentCatalogService.class);
+        var date = LocalDate.of(2026, 8, 18);
+        when(catalogs.forCollection(REQUEST_ID, date)).thenReturn(catalog(option(7)));
+        for (boolean stop : List.of(true, false)) {
+            var control = control(Clock.systemUTC(), catalogs);
+            var claim = control.claimDirect(REQUEST_ID, date, 119_880);
+            if (stop) control.stop(); else control.fail(claim.requestId(), "HTTP_FORBIDDEN");
+            assertThatThrownBy(() -> control.claimDirectLocalImport(REQUEST_ID, date, 119_880))
+                    .isInstanceOf(TournamentEventDiscoveryControlException.class);
+            assertThatThrownBy(() -> control.claimDirect(REQUEST_ID, date, 119_880))
+                    .isInstanceOf(TournamentEventDiscoveryControlException.class);
+        }
+    }
+
+    @Test
     void preparesWithoutTransportAndClaimsOnlyTheExactServerResolvedSelection() {
         MutableClock clock = new MutableClock(Instant.parse("2026-08-20T08:00:00Z"));
         J3TournamentCatalogService catalogService = mock(J3TournamentCatalogService.class);

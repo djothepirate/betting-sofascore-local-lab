@@ -30,7 +30,7 @@ class LiveCampaignPropertiesTest {
         var properties = bind(Map.of());
 
         assertThat(properties.isEnabled()).isFalse();
-        assertThat(properties.getPreparationPolicyVersion()).isEqualTo("live-v10");
+        assertThat(properties.getPreparationPolicyVersion()).isEqualTo("live-v11");
         assertThat(properties.getQualifiedMatchCapacity()).isEqualTo(1);
         assertThat(properties.getPostgresContainer()).isEqualTo("betting-sofascore-local-lab-postgres");
         assertThat(properties.getDuration()).isEqualTo(Duration.ofHours(4));
@@ -265,7 +265,7 @@ class LiveCampaignPropertiesTest {
 
         // The V10 evidence and configuration are independent. The nested profile
         // retains V9's immutable scheduler shape so historic V9 evidence remains valid.
-        assertThat(properties.getPreparationPolicyVersion()).isEqualTo("live-v10");
+        assertThat(properties.getPreparationPolicyVersion()).isEqualTo("live-v11");
         assertThat(profile.policyVersion()).isEqualTo("live-v9");
         assertThat(profile.qualificationSha256()).isEqualTo("b".repeat(64));
         assertThat(profile.criticalInterval()).isEqualTo(Duration.ofSeconds(60));

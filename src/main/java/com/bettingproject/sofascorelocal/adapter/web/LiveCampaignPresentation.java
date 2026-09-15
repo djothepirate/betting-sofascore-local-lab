@@ -39,6 +39,21 @@ public class LiveCampaignPresentation {
     private final LiveDiagnosticStore diagnostics;
     private final LineupCountryOverlayResolver lineupCountries;
     private final LiveCampaignPressureReadStore pressure;
+    private com.bettingproject.sofascorelocal.port.J3LivePauseStore j3Pauses;
+    @Autowired
+    void configureJ3(org.springframework.beans.factory.ObjectProvider<com.bettingproject.sofascorelocal.port.J3LivePauseStore> stores) {
+        j3Pauses=stores.getIfAvailable();
+    }
+    private J3Pause j3Pause(CampaignView view) {
+        if(j3Pauses==null || !"live-v11".equals(view.manifest().policyVersion())) return null;
+        return j3Pauses.latest(view.manifest().campaignId()).map(p->new J3Pause(p.runId(),p.phase(),switch(p.phase()) {
+            case "REQUESTED" -> "J3 en attente de pause live : l’échange en cours se termine.";
+            case "QUIESCENT","J3_ACTIVE" -> "Live en pause pour J3. Aucun nouvel appel J4 ou J5.";
+            case "CLEANED","RESUMING" -> "J3 terminé. Reprise live en préparation.";
+            case "RESUMED" -> "Live repris après J3, sur de futurs créneaux avec un nouveau contrôle J4.";
+            default -> "Live arrêté pendant la collecte J3. Consultez les diagnostics.";
+        },p.changedAt())).orElse(null);
+    }
     private static final JsonMapper JSON = JsonMapper.builder().build();
     private static final List<SofascoreEndpointType> FAMILIES = List.of(SofascoreEndpointType.EVENT_DETAILS,
             SofascoreEndpointType.EVENT_STATISTICS, SofascoreEndpointType.EVENT_INCIDENTS,
@@ -124,7 +139,7 @@ public class LiveCampaignPresentation {
                                 : runtimeStatus.cleanupPending() ? "Collecte arrêtée / clôture locale requise."
                                 : runtimeStatus.collectionStopped() ? "Collecte arrêtée."
                                 : "Collecte en cours ; un incident a été enregistré.", runtimeStatus.firstFailure(), runtimeStatus.cleanupFailure()),
-                cadence(view, observedAt, runtimeStatus), pagination, pressure(view.manifest().campaignId()));
+                cadence(view, observedAt, runtimeStatus), pagination, pressure(view.manifest().campaignId()),j3Pause(view));
     }
 
     private Pressure pressure(UUID campaignId) {
@@ -152,13 +167,13 @@ public class LiveCampaignPresentation {
         if (!grouped(policyVersion)) return null;
         long interval = view.manifest().cycleInterval().toSeconds();
         boolean minutePolicy = "live-v7".equals(policyVersion) || "live-v8".equals(policyVersion)
-                || "live-v9".equals(policyVersion) || "live-v10".equals(policyVersion);
+                || "live-v9".equals(policyVersion) || ("live-v10".equals(policyVersion) || "live-v11".equals(policyVersion));
         // Prematch V7/V8/V9/V10 is sparse; one J4/minute at kickoff is the conservative waiting rate.
         double waitingRate = minutePolicy ? 1 : 120.0 / interval;
         double playingRate = minutePolicy ? 240.0 / interval : 180.0 / interval + 0.2;
         List<EventView> active = view.events().stream().filter(e -> !terminal(e.state())).toList();
         boolean stopped = terminal(view.state()) || runtimeStatus != null && runtimeStatus.collectionStopped();
-        double rate = stopped ? 0 : active.stream().mapToDouble(e -> "WAITING_START".equals(e.state()) ? waitingRate : playingRate).sum();
+        double rate = stopped ? 0 : active.stream().mapToDouble(e -> "PAUSED_J3".equals(e.state()) ? 0 : "WAITING_START".equals(e.state()) ? waitingRate : playingRate).sum();
         long seconds = 0;
         if (rate > 0 && !terminal(view.state())) {
             // Four calls per active match remain reserved for a last status/final-family pass.
@@ -179,7 +194,7 @@ public class LiveCampaignPresentation {
         return "live-v4".equals(policyVersion) || "live-v5".equals(policyVersion)
                 || "live-v6".equals(policyVersion) || "live-v7".equals(policyVersion)
                 || "live-v8".equals(policyVersion) || "live-v9".equals(policyVersion)
-                || "live-v10".equals(policyVersion);
+                || ("live-v10".equals(policyVersion) || "live-v11".equals(policyVersion));
     }
 
     private Event event(CampaignView campaign, EventView event, Instant observedAt) {
@@ -237,13 +252,13 @@ public class LiveCampaignPresentation {
      * durable scheduler state remains terminal; only this policy exposes the incomplete cycle.
      */
     private static String displayedState(String policyVersion, EventView event) {
-        return ("live-v9".equals(policyVersion) || "live-v10".equals(policyVersion))
+        return ("live-v9".equals(policyVersion) || ("live-v10".equals(policyVersion) || "live-v11".equals(policyVersion)))
                 && "FINISHED_CONFIRMED".equals(event.state()) && !event.finalComplete()
                 ? "FINISHED_J5_INCOMPLETE" : event.state();
     }
 
     private static String displayedReason(String policyVersion, EventView event) {
-        if (("live-v9".equals(policyVersion) || "live-v10".equals(policyVersion)) && "FINISHED_CONFIRMED".equals(event.state())
+        if (("live-v9".equals(policyVersion) || ("live-v10".equals(policyVersion) || "live-v11".equals(policyVersion))) && "FINISHED_CONFIRMED".equals(event.state())
                 && !event.finalComplete()) {
             return "Résultat final J4 confirmé ; dernier cycle J5 incomplet.";
         }
@@ -481,7 +496,7 @@ public class LiveCampaignPresentation {
      */
     private Instant acceptedV9CacheRevalidatedAt(CampaignView campaign, FamilyCursor cursor) {
         Result result = cursor.latestResult();
-        if (!("live-v9".equals(campaign.manifest().policyVersion()) || "live-v10".equals(campaign.manifest().policyVersion())) || result == null
+        if (!("live-v9".equals(campaign.manifest().policyVersion()) || "live-v10".equals(campaign.manifest().policyVersion()) || "live-v11".equals(campaign.manifest().policyVersion())) || result == null
                 || cursor.lastAttemptId() == null || !cursor.lastAttemptId().equals(result.attemptId())
                 || diagnostics == null) return null;
         AttemptView attempt = campaign.attempts().stream()
@@ -611,7 +626,14 @@ public class LiveCampaignPresentation {
     public record Campaign(UUID campaignId, long revision, String state, String reason, Instant preparedAt,
                            Instant startedAt, Instant endsAt, int reservedCalls, int maximumCalls,
                            long receivedBytes, long maximumBytes, List<Event> events, RuntimeObservation runtimeStatus,
-                           Cadence cadence, Pagination pagination, Pressure pressure) {
+                           Cadence cadence, Pagination pagination, Pressure pressure,J3Pause j3Pause) {
+        public Campaign(UUID campaignId, long revision, String state, String reason, Instant preparedAt,
+                Instant startedAt, Instant endsAt, int reservedCalls, int maximumCalls, long receivedBytes,
+                long maximumBytes, List<Event> events, RuntimeObservation runtimeStatus, Cadence cadence,
+                Pagination pagination,Pressure pressure) {
+            this(campaignId,revision,state,reason,preparedAt,startedAt,endsAt,reservedCalls,maximumCalls,
+                    receivedBytes,maximumBytes,events,runtimeStatus,cadence,pagination,pressure,null);
+        }
         public Campaign(UUID campaignId, long revision, String state, String reason, Instant preparedAt,
                 Instant startedAt, Instant endsAt, int reservedCalls, int maximumCalls, long receivedBytes,
                 long maximumBytes, List<Event> events, RuntimeObservation runtimeStatus, Cadence cadence,
@@ -635,6 +657,7 @@ public class LiveCampaignPresentation {
                     Pressure.noObservedDepartures());
         }
     }
+    public record J3Pause(UUID runId,String phase,String label,Instant changedAt) { }
     public record Pagination(int number, int size, int totalElements, int totalPages) {
         public int firstElement() { return totalElements == 0 ? 0 : (number - 1) * size + 1; }
         public int lastElement() { return Math.min(number * size, totalElements); }

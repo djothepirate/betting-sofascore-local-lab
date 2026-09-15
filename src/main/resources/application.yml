@@ -196,6 +196,22 @@ sofascore:
         EVENT_LINEUPS:
           request-envelope: ${SOFASCORE_LIVE_GROUPED_V10_LINEUPS_REQUEST_ENVELOPE:10s}
           processing-envelope: ${SOFASCORE_LIVE_GROUPED_V10_LINEUPS_PROCESSING_ENVELOPE:1s}
+    # V11 requires its own worker/context-pause qualification; V10 evidence is not reused.
+    grouped-v11:
+      qualification-sha256: ${SOFASCORE_LIVE_GROUPED_V11_QUALIFICATION_SHA256:}
+      endpoints:
+        EVENT_DETAILS:
+          request-envelope: ${SOFASCORE_LIVE_GROUPED_V11_J4_REQUEST_ENVELOPE:10s}
+          processing-envelope: ${SOFASCORE_LIVE_GROUPED_V11_J4_PROCESSING_ENVELOPE:1s}
+        EVENT_INCIDENTS:
+          request-envelope: ${SOFASCORE_LIVE_GROUPED_V11_INCIDENTS_REQUEST_ENVELOPE:10s}
+          processing-envelope: ${SOFASCORE_LIVE_GROUPED_V11_INCIDENTS_PROCESSING_ENVELOPE:1s}
+        EVENT_STATISTICS:
+          request-envelope: ${SOFASCORE_LIVE_GROUPED_V11_STATISTICS_REQUEST_ENVELOPE:10s}
+          processing-envelope: ${SOFASCORE_LIVE_GROUPED_V11_STATISTICS_PROCESSING_ENVELOPE:1s}
+        EVENT_LINEUPS:
+          request-envelope: ${SOFASCORE_LIVE_GROUPED_V11_LINEUPS_REQUEST_ENVELOPE:10s}
+          processing-envelope: ${SOFASCORE_LIVE_GROUPED_V11_LINEUPS_PROCESSING_ENVELOPE:1s}
   playwright:
     enabled: ${SOFASCORE_PLAYWRIGHT_ENABLED:false}
     worker-jar: ${SOFASCORE_PLAYWRIGHT_WORKER_JAR:}
@@ -205,6 +221,8 @@ sofascore:
     graceful-close-timeout: ${SOFASCORE_PLAYWRIGHT_GRACEFUL_CLOSE_TIMEOUT:5s}
     loopback-qualification: ${SOFASCORE_PLAYWRIGHT_LOOPBACK_QUALIFICATION:false}
     loopback-origin: ${SOFASCORE_PLAYWRIGHT_LOOPBACK_ORIGIN:}
+  j3:
+    runtime-enabled: ${SOFASCORE_J3_RUNTIME_ENABLED:true}
   j3-qualification-enabled: ${SOFASCORE_J3_QUALIFICATION_ENABLED:false}
   j4-event-details-qualification-enabled: ${SOFASCORE_J4_EVENT_DETAILS_QUALIFICATION_ENABLED:false}
   j4-event-details-phase2-enabled: ${SOFASCORE_J4_EVENT_DETAILS_PHASE2_ENABLED:false}

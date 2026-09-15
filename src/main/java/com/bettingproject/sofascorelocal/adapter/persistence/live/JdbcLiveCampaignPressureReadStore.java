@@ -44,7 +44,7 @@ public class JdbcLiveCampaignPressureReadStore implements LiveCampaignPressureRe
                    and verified.endpoint_type = call.endpoint
                   join live_campaign campaign on campaign.campaign_id = call.campaign_id
                   where result.attempt_id = call.attempt_id
-                    and campaign.policy_version in ('live-v9','live-v10')
+                    and campaign.policy_version in ('live-v9','live-v10','live-v11')
                     and result.outcome = 'NOT_MODIFIED'
                     and result.scope = 'NONE'
                     and result.code = 'HTTP_304'

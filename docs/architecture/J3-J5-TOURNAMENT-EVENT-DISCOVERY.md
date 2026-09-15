@@ -4,7 +4,7 @@
 
 Cette évolution relie une collecte J3 paginée et complète à des identités canoniques directement
 exploitables par J5. Elle ajoute au tableau de bord une liste des occurrences de tournois
-réellement observées, puis un appel manuel distinct et confirmé permettant de découvrir les
+réellement observées, puis un clic de collecte manuel distinct permettant de découvrir les
 rencontres de l'occurrence sélectionnée.
 
 ```text
@@ -24,13 +24,13 @@ La fiche structurelle faisant autorité est
 ## 2. Chaîne fonctionnelle
 
 ```text
-confirmation J3 puis choix exclusif
+clic J3 ou ordre J3 autorisé, choix exclusif
         ├─ cache SCHEDULED_EVENTS / GET directs page 1..N
         └─ lot local des corps JSON page-1..page-N, zéro transport/cache
         │  même parseur, provenance MANUAL_LOCAL_JSON_IMPORT
         ▼
 collecte J3 1..N terminée COMPLETED
-        │ preuve terminale exacte du processus courant
+        │ preuve terminale durable de la collecte consultée (WO-060)
         ▼
 relecture et contrôle des snapshots SCHEDULED_EVENTS référencés
         │ toutes les pages contiguës, intègres et parsables
@@ -39,10 +39,10 @@ catalogue serveur d'occurrences tournament.id
         │ category.name présent + filtre timezoneEventCount ∩ offsets(date, Europe/Paris)
         │ <select> : libellé tournament.name - tournament.category.name, valeur tournament.id
         ▼
-préparation + confirmation exacte de cinq minutes
-        │ aucun réseau pendant la sélection ou la préparation
+sélection de la phase dans la collecte/date affichées
+        │ aucun réseau pendant la sélection
         ▼
-choix exclusif après confirmation
+clic exclusif A ou B, résolution serveur et admission atomique
         ├─ cache TOURNAMENT_SCHEDULED_EVENTS ou un GET fournisseur au maximum
         │  uniqueTournament.id numérique résolu côté serveur
         └─ import local du seul corps JSON, zéro réseau et zéro cache fournisseur
@@ -60,9 +60,10 @@ liens /events/{canonicalEventId}/statistics?zone=Europe%2FParis
 
 ### 3.1 Source autorisée
 
-`J3TournamentCatalogService` consulte la preuve J3 la plus récente du **processus courant**. Cette
-preuve doit elle-même être terminale `COMPLETED`; il n'existe aucun repli vers un lot plus ancien
-si la preuve courante est absente, incomplète ou invalide.
+Depuis WO-060, `J3TournamentCatalogService` consulte le dernier succès durable de la date
+affichée. Au clic, `forCollection(collectionId, date)` résout cette collecte précise et sa
+projection ; une collecte ou date absente/incompatible est refusée. Aucun autre succès
+global n'est substitué à la sélection de l'onglet.
 
 Le catalogue est reconstruit uniquement depuis les `snapshotId` exacts de cette preuve, y compris
 lorsque les pages J3 ont été résolues par le cache ou importées sous forme d'un lot JSON local.
@@ -160,15 +161,12 @@ un tableau vide, est comptée parmi les exclusions et n'entre pas dans
 valeur postée manuellement est refusée avant préparation. Le filtre n'emploie jamais le fuseau
 système et n'exécute aucun transport.
 
-### 3.4 Durée de vie volontairement en mémoire
+### 3.4 Catalogue durable et contrôle d'exécution en mémoire
 
-La preuve terminale J3 n'est pas un manifeste durable. Après redémarrage, les snapshots et les
-checkpoints de cache restent en PostgreSQL, mais ils ne suffisent pas à prouver qu'ils appartiennent
-au même lot complet. Le catalogue redevient indisponible jusqu'à une nouvelle collecte J3
-explicite, laquelle peut être satisfaite par ses caches frais et recréer une preuve `COMPLETED`.
-
-Cette règle empêche d'assembler implicitement des pages historiques de dates, de tentatives ou de
-parsers différents. Aucune migration de manifeste J3 n'est introduite par cette évolution.
+WO-060 remplace la preuve limitée au processus par des collections et projections PostgreSQL
+durables, liées aux sources exactes. Le contrôle d'une découverte tournoi reste en mémoire :
+aucune exécution en cours n'est reprise automatiquement après redémarrage. Le complément
+du clic direct ne modifie pas le schéma de persistance.
 
 ## 4. Requête fermée par identifiant numérique
 
@@ -249,11 +247,11 @@ V24 ne modifie aucune migration V1–V23, ne crée pas de manifeste de collecte 
 tables canoniques. Les checks d'intégrité du cache continuent d'exiger endpoint, clé, snapshot,
 statut, parseur, taille, SHA-256 et fraîcheur cohérents.
 
-L'autre action disponible après la même confirmation reçoit uniquement un fichier contenant le
+L'action B disponible après sélection reçoit uniquement un fichier contenant le
 corps JSON du second endpoint. Elle n'appelle pas le transport, ne consulte ni n'alimente le cache
 fournisseur et persiste le brut sous `MANUAL_LOCAL_JSON_IMPORT` avant d'utiliser le même parseur,
 la même projection et la même transaction canonique. Le scanner sensible refuse avant
-consommation de la confirmation tout HAR, en-tête `Authorization`/`Cookie`, secret, jeton ou clé
+admission de l'exécution tout HAR, en-tête `Authorization`/`Cookie`, secret, jeton ou clé
 privée ; la taille est bornée à 5 Mio. Nom de fichier, chemin et métadonnées multipart ne sont pas
 persistés.
 
@@ -272,18 +270,24 @@ La machine `TournamentEventDiscoveryControlService` commence à `LOCKED` :
 
 | Transition | Effet |
 |---|---|
-| `prepare(tournament.id)` | revalide configuration et catalogue, crée une intention `AWAITING_CONFIRMATION`, zéro transport |
-| confirmation exacte et acquittée | revalide le catalogue, consomme l'intention et passe à `EXECUTING` |
-| fin valide | `COMPLETED`; une nouvelle préparation explicite est permise |
+| clic A ou B avec jeton local unique | vérifie la qualification, résout collecte/date/phase et passe atomiquement à `EXECUTING` |
+| fin valide | `COMPLETED`; une nouvelle collecte volontaire est permise |
 | erreur | `FAILED_LOCKED` jusqu'au redémarrage |
-| expiration à cinq minutes | `EXPIRED_LOCKED` jusqu'au redémarrage |
+| intention historique expirée | `EXPIRED_LOCKED` jusqu'au redémarrage ; aucun nouveau POST direct ne crée une telle intention |
 | arrêt opérateur | `STOPPED_LOCKED` jusqu'au redémarrage |
 
-Une confirmation autorise au plus une exécution. L'opérateur choisit soit la voie directe qui, sur
+Un clic autorise au plus une exécution. L'opérateur choisit soit la voie directe qui, sur
 cache miss, autorise au plus un GET, soit l'import local qui autorise zéro transport. Le
 `ManualProviderRequestCoordinator` sérialise uniquement la voie réseau avec J3/J4/J5 et conserve
 le délai minimal commun de trois secondes entre deux départs fournisseur. Tout incident terminal
 interdit le retry ; un échec du GET ne bascule jamais automatiquement vers l'import.
+
+Le complément propriétaire du 15 septembre 2026 (ADR-SS-001 v1.6, ADR-SS-007 v0.3) retire
+les formulaires de préparation, phrase et acquittement. Les anciens POST répondent 410.
+Les méthodes internes historiques restent couvertes pour les outils qui les utilisent ; les
+actions Web directes ne les appellent pas et ne fabriquent aucune confirmation implicite.
+Un rejet avant admission ne crée aucune intention. Le contrôleur ne termine que le claim
+qu'il a lui-même obtenu. Le jeton consommé interdit de rejouer le même formulaire après succès.
 
 L'éligibilité exige simultanément l'opt-in général, l'opt-in J3, l'opt-in de découverte, le stockage
 brut, une concurrence maximale de un, l'absence de live/polling et l'ensemble exact des endpoints

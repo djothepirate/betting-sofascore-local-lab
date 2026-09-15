@@ -9,6 +9,7 @@ import com.bettingproject.sofascorelocal.application.retention.J6RetentionError;
 import com.bettingproject.sofascorelocal.application.retention.J6RetentionException;
 import com.bettingproject.sofascorelocal.application.snapshot.RawSnapshotJsonInspectionService;
 import com.bettingproject.sofascorelocal.security.LocalFormTokenService;
+import com.bettingproject.sofascorelocal.domain.scheduledevents.J3DatePolicy;
 import jakarta.servlet.http.HttpSession;
 import org.springframework.dao.DataAccessException;
 import org.springframework.stereotype.Controller;
@@ -26,6 +27,13 @@ public class DashboardController {
     private final RawSnapshotJsonInspectionService snapshotInspectionService;
     private final J6RawPayloadRetentionService retentionService;
     private final LocalFormTokenService formTokenService;
+    private com.bettingproject.sofascorelocal.application.network.J3RuntimeService j3Runtime;
+    private com.bettingproject.sofascorelocal.port.J3CollectionStore j3Collections;
+    @org.springframework.beans.factory.annotation.Autowired
+    void configureJ3(com.bettingproject.sofascorelocal.application.network.J3RuntimeService runtime,
+                     com.bettingproject.sofascorelocal.port.J3CollectionStore collections) {
+        this.j3Runtime=runtime;this.j3Collections=collections;
+    }
 
     public DashboardController(
             DashboardService dashboardService,
@@ -46,8 +54,29 @@ public class DashboardController {
         this.formTokenService = formTokenService;
     }
 
-    @GetMapping({"/", "/dashboard"})
     public String dashboard(Model model, HttpSession session) {
+        return dashboard(model,session,null);
+    }
+    public String dashboard(Model model, HttpSession session, java.time.LocalDate j3Date) {
+        return dashboard(model, session, j3Date, false, false);
+    }
+
+    @GetMapping({"/", "/dashboard"})
+    public String dashboard(Model model, HttpSession session,
+            @org.springframework.web.bind.annotation.RequestParam(required=false) java.time.LocalDate j3Date,
+            @org.springframework.web.bind.annotation.RequestParam(defaultValue="false") boolean includeAmateur,
+            @org.springframework.web.bind.annotation.RequestParam(defaultValue="false") boolean includeQualification) {
+        var selectedDate=j3Date==null?java.time.LocalDate.now(
+                com.bettingproject.sofascorelocal.domain.scheduledevents.J3AutomationData.ZONE):j3Date;
+        var now=java.time.Instant.now();
+        model.addAttribute("includeAmateur", includeAmateur);
+        model.addAttribute("includeQualification", includeQualification);
+        model.addAttribute("j3MenuDate", selectedDate);
+        model.addAttribute("j3MinimumDate",J3DatePolicy.MINIMUM_COLLECTION_DATE);
+        model.addAttribute("j3MaximumDate",J3DatePolicy.maximumDate(now));
+        model.addAttribute("j3PlanMinimumTime",java.time.LocalDate.ofInstant(now,
+                com.bettingproject.sofascorelocal.domain.scheduledevents.J3AutomationData.ZONE).atStartOfDay());
+        model.addAttribute("j3PlanMaximumTime",J3DatePolicy.maximumDate(now).atTime(23,59));
         model.addAttribute("dashboard", dashboardService.load());
         model.addAttribute(
                 "manualCall",
@@ -56,9 +85,29 @@ public class DashboardController {
                 "collectionEvidence",
                 collectionEvidenceService.latestDocument().orElse(null));
         try {
-            model.addAttribute("tournamentCatalog", tournamentCatalogService.latest());
+            var catalog = j3Collections==null?tournamentCatalogService.latest():tournamentCatalogService.forDate(selectedDate);
+            model.addAttribute("tournamentCatalog", catalog);
+            model.addAttribute("tournamentMenuOptions", tournamentCatalogService.menuOptions(catalog, includeAmateur, includeQualification));
+            if(j3Runtime!=null) {
+                var saved=j3Collections.latest(selectedDate).orElse(null);
+                model.addAttribute("j3Date",selectedDate);
+                model.addAttribute("j3Collection",saved);
+                model.addAttribute("j3HistoryUnavailable",saved==null && j3Collections.hasSuccess(selectedDate));
+                model.addAttribute("j3Dates",j3Collections.dates(3660));
+                model.addAttribute("j3Settings",j3Runtime.settings());
+                model.addAttribute("j3Orders",j3Runtime.orders());
+                model.addAttribute("j3OrderId",java.util.UUID.randomUUID());
+                model.addAttribute("j3RuleId",java.util.UUID.randomUUID());
+                String providerReason=j3Runtime.providerUnavailableReason();
+                model.addAttribute("j3ProviderReady",providerReason==null && j3Runtime.runtimeReason()==null);
+                model.addAttribute("j3ProviderReason",J3Presentation.reason(providerReason));
+                model.addAttribute("j3RuntimeReason",J3Presentation.reason(j3Runtime.runtimeReason()));
+                model.addAttribute("j3CleanupPending",j3Runtime.cleanupPending());
+            }
         }
         catch (DataAccessException | IllegalArgumentException | IllegalStateException exception) {
+            model.addAttribute("j3Settings",null);
+            model.addAttribute("j3ProviderReady",false);
             model.addAttribute("tournamentCatalogUnavailable", true);
         }
         model.addAttribute(

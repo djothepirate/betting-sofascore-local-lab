@@ -94,8 +94,20 @@ class DashboardControllerTest {
     @MockitoBean
     private J6RawPayloadRetentionService retentionService;
 
+    @MockitoBean private com.bettingproject.sofascorelocal.application.network.J3RuntimeService j3Runtime;
+    @MockitoBean private com.bettingproject.sofascorelocal.port.J3CollectionStore j3Collections;
+
     @BeforeEach
     void snapshotInspectionIsUnavailableByDefault() {
+        when(j3Runtime.settings()).thenReturn(new com.bettingproject.sofascorelocal.domain.scheduledevents.J3AutomationData.Settings(
+                true,com.bettingproject.sofascorelocal.domain.scheduledevents.J3AutomationData.Mode.STARTUP_OR_DAY_CHANGE,null,1,
+                Instant.parse("2026-09-13T08:00:00Z")));
+        when(j3Runtime.orders()).thenReturn(List.of());
+        when(j3Collections.dates(3660)).thenReturn(List.of());
+        when(tournamentCatalogService.forDate(any(LocalDate.class))).thenAnswer(ignored->tournamentCatalogService.latest());
+        when(tournamentCatalogService.menuOptions(any(), org.mockito.ArgumentMatchers.anyBoolean(), org.mockito.ArgumentMatchers.anyBoolean()))
+                .thenAnswer(call -> ((J3TournamentCatalog) call.getArgument(0)).options());
+
         when(tournamentCatalogService.latest()).thenReturn(J3TournamentCatalog.unavailable(
                 J3TournamentCatalogStatus.NO_COLLECTION_EVIDENCE,
                 Optional.empty()));
@@ -210,6 +222,43 @@ class DashboardControllerTest {
                 J3CircuitReason.STARTUP_LOCK, Instant.parse("2026-09-08T21:22:49Z"), null, LocalDate.parse("2026-09-08"),
                 null, false, false, List.of("CONNECTOR_GATE_LOCKED")));
         when(formTokenService.issue(any(HttpSession.class))).thenReturn("local-form-token");
+    }
+
+    @Test
+    void amateurFilterIsUncheckedByDefaultAndSubmittedAsLocalGetWithTheConsultedDate() throws Exception {
+        arrangeDashboardForRetention();
+        var date = LocalDate.parse("2026-09-14");
+        var catalog = J3TournamentCatalog.available(date, List.of(1L), List.of(
+                new J3TournamentCatalogOption(1L,"League","France",1L,"League",Map.of(7200,1),List.of(1L))),0);
+        when(tournamentCatalogService.latest()).thenReturn(catalog);
+        var defaultResponse = mockMvc.perform(get("/").param("j3Date",date.toString()))
+                .andExpect(status().isOk())
+                .andExpect(model().attribute("includeAmateur",false))
+                .andReturn().getResponse().getContentAsString();
+        var checkbox = java.util.regex.Pattern.compile("<input[^>]*id=\"include-amateur\"[^>]*>");
+        var unchecked = checkbox.matcher(defaultResponse);
+        org.assertj.core.api.Assertions.assertThat(unchecked.find()).isTrue();
+        org.assertj.core.api.Assertions.assertThat(unchecked.group()).doesNotContain("checked");
+        org.assertj.core.api.Assertions.assertThat(defaultResponse)
+                .contains("method=\"get\" action=\"/#tournament-event-discovery\"")
+                .contains("name=\"j3Date\" value=\"2026-09-14\"");
+        org.assertj.core.api.Assertions.assertThat(defaultResponse)
+                .doesNotContain("Appliquer le filtre")
+                .contains("/js/tournament-menu-filters.js", "id=\"include-qualification\"");
+        verify(tournamentCatalogService).menuOptions(catalog,false,false);
+        var filteredResponse = mockMvc.perform(get("/").param("j3Date",date.toString()).param("includeAmateur","true"))
+                .andExpect(status().isOk())
+                .andExpect(model().attribute("includeAmateur",true))
+                .andReturn().getResponse().getContentAsString();
+        var checked = checkbox.matcher(filteredResponse);
+        org.assertj.core.api.Assertions.assertThat(checked.find()).isTrue();
+        org.assertj.core.api.Assertions.assertThat(checked.group()).contains("checked=\"checked\"");
+        verify(tournamentCatalogService).menuOptions(catalog,true,false);
+        mockMvc.perform(get("/").param("j3Date",date.toString())
+                        .param("includeAmateur","true").param("includeQualification","true"))
+                .andExpect(status().isOk()).andExpect(model().attribute("includeAmateur",true))
+                .andExpect(model().attribute("includeQualification",true));
+        verify(tournamentCatalogService).menuOptions(catalog,true,true);
     }
 
     @Test
@@ -342,10 +391,10 @@ class DashboardControllerTest {
                 .andExpect(content().string(containsString("12 / 12 disponibles")))
                 .andExpect(content().string(containsString("scheduled-events-v1")))
                 .andExpect(content().string(containsString("VALIDÉ")))
-                .andExpect(content().string(containsString("ARRÊT GLOBAL ACTIF")))
-                .andExpect(content().string(containsString("REAL_CALL_NOT_AUTHORIZED")))
+                .andExpect(content().string(not(containsString("ARRÊT GLOBAL ACTIF"))))
+                .andExpect(content().string(containsString("Collecte automatique")))
                 .andExpect(content().string(containsString(
-                        "Verrous du transport fournisseur")))
+                        "Consulter cette date")))
                 .andExpect(content().string(containsString(
                         "J3 / Inspection locale en lecture seule")))
                 .andExpect(content().string(containsString(
@@ -355,7 +404,7 @@ class DashboardControllerTest {
                         "SCHEDULED_EVENTS|date=2026-08-14|page=1")))
                 .andExpect(content().string(containsString("Inspecter le JSON")))
                 .andExpect(content().string(containsString(
-                        "Lancer la collecte fournisseur — BLOQUÉE")))
+                        "A. Lancer la collecte paginée — APPELS FOURNISSEUR")))
                 .andExpect(content().string(containsString(
                         "Rencontres datées et accès direct à J5")))
                 .andExpect(content().string(containsString("value=\"119880\"")))
@@ -400,20 +449,25 @@ class DashboardControllerTest {
         mockMvc.perform(get("/dashboard"))
                 .andExpect(status().isOk())
                 .andExpect(content().string(containsString(
-                        "action=\"/tournament-event-discovery/import-json\"")))
+                        "formaction=\"/tournament-event-discovery/import\"")))
+                .andExpect(content().string(containsString(
+                        "action=\"/tournament-event-discovery/collect\"")))
+                .andExpect(content().string(not(containsString("Préparer sans réseau"))))
+                .andExpect(content().string(not(containsString("CONFIRMER EVENEMENTS TOURNOI"))))
                 .andExpect(content().string(not(containsString(
                         "action=\"/tournament-event-discovery/execute\""))))
                 .andExpect(content().string(containsString(
                         "enctype=\"multipart/form-data\"")))
                 .andExpect(content().string(containsString("name=\"jsonFile\"")))
-                .andExpect(content().string(containsString(preparedRequestId.toString())))
+                .andExpect(content().string(not(containsString("id=\"tournament-confirmation-text\""))))
+                .andExpect(content().string(not(containsString("id=\"tournament-acknowledged\""))))
                 .andExpect(content().string(containsString(
-                        "Importer, valider et relier à J5")));
+                        "Importer et relier à J5")));
 
     }
 
     @Test
-    void rendersTheConfirmedDynamicManualCollectionAction() throws Exception {
+    void rendersBothJ3ActionsWithoutLegacyBarriers() throws Exception {
         DashboardView dashboardView = new DashboardView(
                 "2026-08-14T00:00:00Z",
                 "EXPERIMENTAL",
@@ -471,37 +525,18 @@ class DashboardControllerTest {
         when(manualCallControlService.snapshot()).thenReturn(manualCallSnapshot);
         when(formTokenService.issue(any(HttpSession.class))).thenReturn("local-form-token");
 
-        mockMvc.perform(get("/dashboard"))
+        mockMvc.perform(get("/dashboard").param("j3Date","2026-08-13"))
                 .andExpect(status().isOk())
-                .andExpect(content().string(containsString(
-                        "LOCKED_OFFLINE_J3_POLICY")))
-                .andExpect(content().string(containsString(
-                        "COLLECTE MANUELLE DYNAMIQUE PRÊTE")))
-                .andExpect(content().string(containsString(
-                        "SCHEDULED_EVENTS|date=2026-08-13|pagination=has-next-page|max=35")))
-                .andExpect(content().string(containsString(
-                        "Le plafond local est fixé à 35 pages.")))
-                .andExpect(content().string(containsString(
-                        "5 Mio maximum par page, 25 Mio pour le lot, 35 pages maximum.")))
-                .andExpect(content().string(containsString(
-                        "Option A — Collecte fournisseur directe")))
-                .andExpect(content().string(containsString(
-                        "action=\"/manual-call/execute\"")))
-                .andExpect(content().string(containsString(
-                        "5A. Lancer la collecte paginée — APPELS FOURNISSEUR")))
-                .andExpect(content().string(org.hamcrest.Matchers.not(containsString(
-                        "Lancer la collecte fournisseur — BLOQUÉE"))))
-                .andExpect(content().string(containsString(
-                        "action=\"/manual-call/import-json-pages\"")))
-                .andExpect(content().string(containsString(
-                        "enctype=\"multipart/form-data\"")))
-                .andExpect(content().string(containsString(
-                        "name=\"pageFiles\"")))
-                .andExpect(content().string(containsString(
-                        "Option B — Import J3 paginé sans réseau")))
-                .andExpect(content().string(containsString(
-                        "Importer et valider J3 — ZÉRO APPEL")))
-                .andExpect(content().string(org.hamcrest.Matchers.not(containsString(
-                        "REPRISE PAGES 3-5"))));
+                .andExpect(content().string(containsString("value=\"2026-08-13\"")))
+                .andExpect(content().string(containsString("action=\"/j3/collect\"")))
+                .andExpect(content().string(containsString("formaction=\"/j3/import\"")))
+                .andExpect(content().string(containsString("A. Lancer la collecte paginée — APPELS FOURNISSEUR")))
+                .andExpect(content().string(containsString(">B. Importer et valider J3 — ZÉRO APPEL</button>")))
+                .andExpect(content().string(containsString("enctype=\"multipart/form-data\"")))
+                .andExpect(content().string(containsString("name=\"pageFiles\"")))
+                .andExpect(content().string(not(containsString("Confirmer l’intention locale"))))
+                .andExpect(content().string(not(containsString("Lever l’arrêt global"))))
+                .andExpect(content().string(not(containsString("Activer le circuit"))))
+                .andExpect(content().string(containsString("name=\"enabled\"")));
     }
 }

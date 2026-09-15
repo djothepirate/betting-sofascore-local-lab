@@ -66,23 +66,17 @@ class TournamentEventDiscoveryControllerTest {
     private CacheManager cacheManager;
 
     @Test
-    void preparationPostsOnlyThePhaseIdentityAndDoesNotExecuteTransport() throws Exception {
-        mockMvc.perform(post("/tournament-event-discovery/prepare")
-                        .param("localFormToken", "token")
-                        .param("tournamentId", "119880"))
-                .andExpect(status().is3xxRedirection())
-                .andExpect(redirectedUrl("/dashboard#tournament-event-discovery"))
-                .andExpect(flash().attribute("tournamentDiscoveryMessageKind", "safe"));
-
-        verify(formTokenService).consume(any(HttpSession.class), org.mockito.ArgumentMatchers.eq("token"));
-        verify(controlService).prepare(119_880);
-        verify(discoveryService, never()).execute(any());
+    void staleConfirmationFormsAreGoneWithoutExecutingAnything() throws Exception {
+        for (String route : List.of("prepare", "execute", "import-json")) {
+            mockMvc.perform(post("/tournament-event-discovery/" + route).header("Host", "localhost:8087"))
+                    .andExpect(status().isGone());
+        }
+        org.mockito.Mockito.verifyNoInteractions(controlService, discoveryService);
     }
-
     @Test
-    void exactConfirmationExecutesTheSingleDiscoveryClaim() throws Exception {
+    void oneClickExecutesTheServerResolvedDiscoveryClaim() throws Exception {
         TournamentEventDiscoveryExecutionClaim claim = claim();
-        when(controlService.confirmAndClaim(REQUEST_ID, "phrase exacte", true))
+        when(controlService.claimDirect(REQUEST_ID, LocalDate.parse("2026-09-13"), 119_880))
                 .thenReturn(claim);
         TournamentEventDiscoveryResult result = new TournamentEventDiscoveryResult(
                 REQUEST_ID,
@@ -105,13 +99,13 @@ class TournamentEventDiscoveryControllerTest {
                 List.of());
         when(discoveryService.execute(claim)).thenReturn(result);
 
-        mockMvc.perform(post("/tournament-event-discovery/execute")
-                        .param("localFormToken", "token")
-                        .param("requestId", REQUEST_ID.toString())
-                        .param("confirmationText", "phrase exacte")
-                        .param("acknowledged", "true"))
+        mockMvc.perform(multipart("/tournament-event-discovery/collect")
+                        .header("Host", "localhost:8087").header("Origin", "http://localhost:8087").param("localFormToken", "token")
+                        .param("collectionId", REQUEST_ID.toString())
+                        .param("date", "2026-09-13")
+                        .param("tournamentId", "119880"))
                 .andExpect(status().is3xxRedirection())
-                .andExpect(redirectedUrl("/dashboard#tournament-event-discovery"))
+                .andExpect(redirectedUrl("/dashboard?j3Date=2026-09-13#tournament-event-discovery"))
                 .andExpect(flash().attribute("tournamentDiscoveryResult", result))
                 .andExpect(flash().attribute("tournamentDiscoveryMessageKind", "safe"));
 
@@ -119,28 +113,28 @@ class TournamentEventDiscoveryControllerTest {
     }
 
     @Test
-    void invalidConfirmationNeverReachesTheDiscoveryService() throws Exception {
-        when(controlService.confirmAndClaim(REQUEST_ID, "wrong", true))
+    void invalidSelectionNeverReachesTheDiscoveryService() throws Exception {
+        when(controlService.claimDirect(REQUEST_ID, LocalDate.parse("2026-09-13"), 119_880))
                 .thenThrow(new TournamentEventDiscoveryControlException(
-                        TournamentEventDiscoveryControlError.CONFIRMATION_TEXT_MISMATCH));
+                        TournamentEventDiscoveryControlError.TOURNAMENT_SELECTION_NOT_ALLOWED));
 
-        mockMvc.perform(post("/tournament-event-discovery/execute")
-                        .param("localFormToken", "token")
-                        .param("requestId", REQUEST_ID.toString())
-                        .param("confirmationText", "wrong")
-                        .param("acknowledged", "true"))
+        mockMvc.perform(multipart("/tournament-event-discovery/collect")
+                        .header("Host", "localhost:8087").header("Origin", "http://localhost:8087").param("localFormToken", "token")
+                        .param("collectionId", REQUEST_ID.toString())
+                        .param("date", "2026-09-13")
+                        .param("tournamentId", "119880"))
                 .andExpect(status().is3xxRedirection())
                 .andExpect(flash().attribute(
                         "tournamentDiscoveryErrorCode",
-                        "CONFIRMATION_TEXT_MISMATCH"));
+                        "TOURNAMENT_SELECTION_NOT_ALLOWED"));
 
         verify(discoveryService, never()).execute(any());
     }
 
     @Test
-    void importsOnlyTheJsonResponseBodyAfterTheExistingExactConfirmation() throws Exception {
+    void oneClickImportsTheJsonResponseBodyWithoutProviderTransport() throws Exception {
         TournamentEventDiscoveryLocalImportClaim claim = localImportClaim();
-        when(controlService.confirmAndClaimLocalImport(REQUEST_ID, "phrase exacte", true))
+        when(controlService.claimDirectLocalImport(REQUEST_ID, LocalDate.parse("2026-09-13"), 119_880))
                 .thenReturn(claim);
         TournamentEventDiscoveryResult result = localImportResult();
         when(discoveryService.importLocalJson(
@@ -153,19 +147,19 @@ class TournamentEventDiscoveryControllerTest {
                 "application/json",
                 "{\"events\":[]}".getBytes(StandardCharsets.UTF_8));
 
-        mockMvc.perform(multipart("/tournament-event-discovery/import-json")
+        mockMvc.perform(multipart("/tournament-event-discovery/import")
                         .file(jsonFile)
-                        .param("localFormToken", "token")
-                        .param("requestId", REQUEST_ID.toString())
-                        .param("confirmationText", "phrase exacte")
-                        .param("acknowledged", "true"))
+                        .header("Host", "localhost:8087").header("Origin", "http://localhost:8087").param("localFormToken", "token")
+                        .param("collectionId", REQUEST_ID.toString())
+                        .param("date", "2026-09-13")
+                        .param("tournamentId", "119880"))
                 .andExpect(status().is3xxRedirection())
-                .andExpect(redirectedUrl("/dashboard#tournament-event-discovery"))
+                .andExpect(redirectedUrl("/dashboard?j3Date=2026-09-13#tournament-event-discovery"))
                 .andExpect(flash().attribute("tournamentDiscoveryResult", result))
                 .andExpect(flash().attribute("tournamentDiscoveryMessageKind", "safe"));
 
-        verify(controlService).confirmAndClaimLocalImport(
-                REQUEST_ID, "phrase exacte", true);
+        verify(controlService).claimDirectLocalImport(
+                REQUEST_ID, LocalDate.parse("2026-09-13"), 119_880);
         verify(discoveryService).importLocalJson(
                 org.mockito.ArgumentMatchers.eq(claim),
                 any(RawPayloadEvidence.class));
@@ -173,58 +167,58 @@ class TournamentEventDiscoveryControllerTest {
     }
 
     @Test
-    void rejectsAFileContainingCookieHeadersBeforeConsumingTheConfirmation() throws Exception {
+    void rejectsAFileContainingCookieHeadersBeforeClaimingTheSelection() throws Exception {
         MockMultipartFile jsonFile = new MockMultipartFile(
                 "jsonFile",
                 "not-a-response-body.txt",
                 "text/plain",
                 "Cookie: session=value\n{\"events\":[]}".getBytes(StandardCharsets.UTF_8));
 
-        mockMvc.perform(multipart("/tournament-event-discovery/import-json")
+        mockMvc.perform(multipart("/tournament-event-discovery/import")
                         .file(jsonFile)
-                        .param("localFormToken", "token")
-                        .param("requestId", REQUEST_ID.toString())
-                        .param("confirmationText", "phrase exacte")
-                        .param("acknowledged", "true"))
+                        .header("Host", "localhost:8087").header("Origin", "http://localhost:8087").param("localFormToken", "token")
+                        .param("collectionId", REQUEST_ID.toString())
+                        .param("date", "2026-09-13")
+                        .param("tournamentId", "119880"))
                 .andExpect(status().is3xxRedirection())
                 .andExpect(flash().attribute(
                         "tournamentDiscoveryErrorCode",
                         "LOCAL_IMPORT_SENSITIVE_CONTENT"));
 
-        verify(controlService, never()).confirmAndClaimLocalImport(
-                any(), any(), org.mockito.ArgumentMatchers.anyBoolean());
+        verify(controlService, never()).claimDirectLocalImport(
+                any(), any(), org.mockito.ArgumentMatchers.anyLong());
         verify(discoveryService, never()).importLocalJson(any(), any());
         verify(discoveryService, never()).execute(any());
     }
 
     @Test
-    void rejectsAnOversizedLocalImportBeforeConsumingTheConfirmation() throws Exception {
+    void rejectsAnOversizedLocalImportBeforeClaimingTheSelection() throws Exception {
         MockMultipartFile jsonFile = new MockMultipartFile(
                 "jsonFile",
                 "response.json",
                 "application/json",
                 new byte[RawPayloadEvidence.MAXIMUM_BYTES + 1]);
 
-        mockMvc.perform(multipart("/tournament-event-discovery/import-json")
+        mockMvc.perform(multipart("/tournament-event-discovery/import")
                         .file(jsonFile)
-                        .param("localFormToken", "token")
-                        .param("requestId", REQUEST_ID.toString())
-                        .param("confirmationText", "phrase exacte")
-                        .param("acknowledged", "true"))
+                        .header("Host", "localhost:8087").header("Origin", "http://localhost:8087").param("localFormToken", "token")
+                        .param("collectionId", REQUEST_ID.toString())
+                        .param("date", "2026-09-13")
+                        .param("tournamentId", "119880"))
                 .andExpect(status().is3xxRedirection())
                 .andExpect(flash().attribute(
                         "tournamentDiscoveryErrorCode",
                         "LOCAL_IMPORT_TOO_LARGE"));
 
-        verify(controlService, never()).confirmAndClaimLocalImport(
-                any(), any(), org.mockito.ArgumentMatchers.anyBoolean());
+        verify(controlService, never()).claimDirectLocalImport(
+                any(), any(), org.mockito.ArgumentMatchers.anyLong());
         verify(discoveryService, never()).importLocalJson(any(), any());
     }
 
     @Test
     void delegatesTheStopToTheWorkerFirstApplicationOrchestrator() throws Exception {
         mockMvc.perform(post("/tournament-event-discovery/stop")
-                        .param("localFormToken", "token"))
+                        .header("Host", "localhost:8087").header("Origin", "http://localhost:8087").param("localFormToken", "token"))
                 .andExpect(status().is3xxRedirection())
                 .andExpect(redirectedUrl("/dashboard#tournament-event-discovery"))
                 .andExpect(flash().attribute(
@@ -235,13 +229,88 @@ class TournamentEventDiscoveryControllerTest {
     }
 
     @Test
+    void repeatedClickCannotReuseTheConsumedLocalFormToken() throws Exception {
+        var realTokens = new LocalFormTokenService();
+        var session = new org.springframework.mock.web.MockHttpSession();
+        String token = realTokens.issue(session);
+        org.mockito.Mockito.doAnswer(invocation -> {
+            realTokens.consume(invocation.getArgument(0), invocation.getArgument(1));
+            return null;
+        }).when(formTokenService).consume(any(), any());
+        when(controlService.claimDirect(REQUEST_ID, LocalDate.parse("2026-09-13"), 119_880))
+                .thenReturn(claim());
+        when(discoveryService.execute(claim())).thenReturn(localImportResult());
+
+        mockMvc.perform(multipart("/tournament-event-discovery/collect").session(session)
+                        .header("Host", "localhost:8087").header("Origin", "http://localhost:8087").param("localFormToken", token).param("collectionId", REQUEST_ID.toString())
+                        .param("date", "2026-09-13").param("tournamentId", "119880"))
+                .andExpect(status().is3xxRedirection());
+        mockMvc.perform(multipart("/tournament-event-discovery/collect").session(session)
+                        .header("Host", "localhost:8087").header("Origin", "http://localhost:8087").param("localFormToken", token).param("collectionId", REQUEST_ID.toString())
+                        .param("date", "2026-09-13").param("tournamentId", "119880"))
+                .andExpect(status().isBadRequest());
+        verify(discoveryService).execute(claim());
+    }
+
+    @Test
+    void missingCollectionOrPhaseCannotTriggerACollection() throws Exception {
+        mockMvc.perform(post("/tournament-event-discovery/collect")
+                        .header("Host", "localhost:8087").header("Origin", "http://localhost:8087").param("localFormToken", "token").param("date", "2026-09-13")
+                        .param("tournamentId", "119880"))
+                .andExpect(status().isBadRequest());
+        mockMvc.perform(post("/tournament-event-discovery/collect")
+                        .header("Host", "localhost:8087").header("Origin", "http://localhost:8087").param("localFormToken", "token").param("date", "2026-09-13")
+                        .param("collectionId", REQUEST_ID.toString()))
+                .andExpect(status().isBadRequest());
+        org.mockito.Mockito.verifyNoInteractions(controlService, discoveryService);
+    }
+
+    @Test
+    void foreignOpaqueAndMismatchedOriginsAreRejectedBeforeReadingTheForm() throws Exception {
+        for (String path : List.of("collect", "import")) {
+            for (String origin : List.of("https://foreign.invalid", "null", "http://127.0.0.1:8087")) {
+                mockMvc.perform(multipart("/tournament-event-discovery/" + path)
+                                .header("Host", "localhost:8087").header("Origin", origin))
+                        .andExpect(status().isForbidden());
+            }
+            mockMvc.perform(multipart("/tournament-event-discovery/" + path)
+                            .header("Host", "foreign.invalid").header("Origin", "http://foreign.invalid"))
+                    .andExpect(status().isForbidden());
+        }
+        org.mockito.Mockito.verifyNoInteractions(formTokenService, controlService, discoveryService);
+    }
+
+    @Test
+    void emptyImportIsRejectedBeforeClaiming() throws Exception {
+        mockMvc.perform(multipart("/tournament-event-discovery/import")
+                        .file(new MockMultipartFile("jsonFile", new byte[0]))
+                        .header("Host", "localhost:8087").header("Origin", "http://localhost:8087").param("localFormToken", "token").param("collectionId", REQUEST_ID.toString())
+                        .param("date", "2026-09-13").param("tournamentId", "119880"))
+                .andExpect(flash().attribute("tournamentDiscoveryErrorCode", "LOCAL_IMPORT_EMPTY"));
+        org.mockito.Mockito.verifyNoInteractions(controlService, discoveryService);
+    }
+
+    @Test
+    void unexpectedFailureLocksOnlyTheClaimOwnedByThisClick() throws Exception {
+        when(controlService.claimDirect(REQUEST_ID, LocalDate.parse("2026-09-13"), 119_880))
+                .thenReturn(claim());
+        when(discoveryService.execute(claim())).thenThrow(new IllegalStateException("internal detail"));
+        when(controlService.executionMayContinue(REQUEST_ID)).thenReturn(true);
+        mockMvc.perform(post("/tournament-event-discovery/collect")
+                        .header("Host", "localhost:8087").header("Origin", "http://localhost:8087").param("localFormToken", "token").param("collectionId", REQUEST_ID.toString())
+                        .param("date", "2026-09-13").param("tournamentId", "119880"))
+                .andExpect(flash().attribute("tournamentDiscoveryErrorCode", "LOCAL_EXECUTION_FAILURE"));
+        verify(controlService).fail(REQUEST_ID, "LOCAL_EXECUTION_FAILURE");
+    }
+
+    @Test
     void exposesOnlyASafeMessageWhenWorkerStopCannotBeConfirmed() throws Exception {
         when(providerCampaignStopService.stopTournamentDiscovery())
                 .thenThrow(new J3ProviderCampaignStopException(
                         new IllegalStateException("internal detail")));
 
         mockMvc.perform(post("/tournament-event-discovery/stop")
-                        .param("localFormToken", "token"))
+                        .header("Host", "localhost:8087").header("Origin", "http://localhost:8087").param("localFormToken", "token"))
                 .andExpect(status().is3xxRedirection())
                 .andExpect(redirectedUrl("/dashboard#tournament-event-discovery"))
                 .andExpect(flash().attribute(

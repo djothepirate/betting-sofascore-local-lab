@@ -171,6 +171,9 @@
         <artifactId>maven-surefire-plugin</artifactId>
         <configuration>
           <argLine>${j7.no-automatic-retry.jvm-arguments} @{jacoco.agent.argLine}</argLine>
+          <systemPropertyVariables>
+            <sofascore.j3.runtime-enabled>false</sofascore.j3.runtime-enabled>
+          </systemPropertyVariables>
         </configuration>
       </plugin>
       <plugin>
@@ -178,6 +181,9 @@
         <artifactId>maven-failsafe-plugin</artifactId>
         <configuration>
           <argLine>${j7.no-automatic-retry.jvm-arguments} @{jacoco.agent.argLine}</argLine>
+          <systemPropertyVariables>
+            <sofascore.j3.runtime-enabled>false</sofascore.j3.runtime-enabled>
+          </systemPropertyVariables>
         </configuration>
       </plugin>
       <plugin>

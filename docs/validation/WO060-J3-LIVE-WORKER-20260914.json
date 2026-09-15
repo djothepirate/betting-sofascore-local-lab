@@ -1,0 +1,19 @@
+{
+  "pauseThroughResumedJ4Millis" : 9290,
+  "sharedStartIntervalsMillis" : [ 3164, 3093, 3094 ],
+  "workerCount" : 1,
+  "requestCount" : 4,
+  "status" : "PASS",
+  "policyVersion" : "live-v11",
+  "workerProtocolVersion" : 10,
+  "scope" : "EXPERIMENTAL LOCAL_ONLY NOT_PRODUCTION_APPROVED NO_CRITICAL_DEPENDENCY",
+  "startedAt" : "2026-09-13T23:03:55.200642100Z",
+  "finishedAt" : "2026-09-13T23:04:07.973168900Z",
+  "phases" : [ "LIVE_READY", "J3_ACTIVE", "J3_CLOSED_LIVE_CONTEXT_VERIFIED", "LIVE_J4_RESUMED", "FULL_TREE_CLOSED" ],
+  "realProviderCalls" : 0,
+  "operatorDatabaseUsed" : false,
+  "sessionDataTransferred" : false,
+  "liveBrowserRecreated" : false,
+  "qualificationLimit" : "Native context and authority transition; admission/capacity and SQL are independently tested.",
+  "workerJarSha256" : "a0d0b94d53245c4759aefcf37a8588d419cef6bb48e72a9df97d63f5f9321d61"
+}

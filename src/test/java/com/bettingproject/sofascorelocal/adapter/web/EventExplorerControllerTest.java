@@ -20,6 +20,7 @@ import com.bettingproject.sofascorelocal.application.network.J4RealEventDetailsP
 import com.bettingproject.sofascorelocal.application.network.J4RealEventDetailsUnavailableResult;
 import com.bettingproject.sofascorelocal.application.network.J4RealPhase1ControlService;
 import com.bettingproject.sofascorelocal.application.network.J4RealPhase2ControlService;
+import com.bettingproject.sofascorelocal.config.LiveCampaignProperties;
 import com.bettingproject.sofascorelocal.domain.event.CanonicalEventIdentity;
 import com.bettingproject.sofascorelocal.domain.event.CanonicalEventObservationView;
 import com.bettingproject.sofascorelocal.domain.event.EventSourceTrace;
@@ -224,8 +225,11 @@ class EventExplorerControllerTest {
         String html = response.getContentAsString();
         assertThat(html).doesNotContain("La politique live-v5 attend");
         if (capacity == 0) {
+            String currentPolicy = new LiveCampaignProperties().getPreparationPolicyVersion();
+            String currentProfile = currentPolicy.substring("live-".length()).toUpperCase(java.util.Locale.ROOT);
             assertThat(html).contains("La préparation des campagnes est indisponible",
-                    "profil local live-v10 qualifié", "Show-LiveGroupedV10LauncherConfiguration.ps1",
+                    "profil local " + currentPolicy + " qualifié", "Show-LiveGrouped" + currentProfile + "LauncherConfiguration.ps1",
+                    "SOFASCORE_LIVE_GROUPED_" + currentProfile + "_QUALIFICATION_SHA256",
                     "SOFASCORE_LIVE_QUALIFIED_MATCH_CAPACITY=8", "n’active pas le live");
             var prepare = Pattern.compile("<button\\b[^>]*data-live-prepare[^>]*>").matcher(html);
             assertThat(prepare.find()).isTrue();

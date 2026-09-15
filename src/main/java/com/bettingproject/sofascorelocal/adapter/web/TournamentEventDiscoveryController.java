@@ -11,12 +11,15 @@ import com.bettingproject.sofascorelocal.security.LocalFormTokenService;
 import jakarta.servlet.http.HttpSession;
 import org.springframework.stereotype.Controller;
 import org.springframework.http.MediaType;
+import org.springframework.http.HttpStatus;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestParam;
+import org.springframework.web.bind.annotation.ResponseStatus;
 import org.springframework.web.multipart.MultipartFile;
 import org.springframework.web.servlet.mvc.support.RedirectAttributes;
 
 import java.io.IOException;
+import java.time.LocalDate;
 import java.util.UUID;
 
 @Controller
@@ -41,87 +44,84 @@ public class TournamentEventDiscoveryController {
         this.formTokenService = formTokenService;
     }
 
-    @PostMapping("/tournament-event-discovery/prepare")
-    public String prepare(
-            @RequestParam("localFormToken") String localFormToken,
-            @RequestParam("tournamentId") long tournamentId,
+    @PostMapping({"/tournament-event-discovery/prepare", "/tournament-event-discovery/execute",
+            "/tournament-event-discovery/import-json"})
+    @ResponseStatus(value = HttpStatus.GONE, reason = "Ancien formulaire : rechargez le tableau de bord.")
+    public void retiredConfirmationForms() {
+        // Old pages must be reloaded; stale intentions never become direct actions.
+    }
+
+    @PostMapping("/tournament-event-discovery/collect")
+    public String collect(
+            @RequestParam String localFormToken,
+            @RequestParam UUID collectionId,
+            @RequestParam LocalDate date,
+            @RequestParam long tournamentId,
             HttpSession session,
             RedirectAttributes redirectAttributes) {
         formTokenService.consume(session, localFormToken);
+        UUID claimedId = null;
         try {
-            controlService.prepare(tournamentId);
-            redirectAttributes.addFlashAttribute(
-                    "tournamentDiscoveryMessage",
-                    "Sélection résolue côté serveur et préparation terminée sans réseau. "
-                            + "Recopiez exactement la phrase affichée puis choisissez une seule "
-                            + "action : au plus un GET ou un import JSON local sans réseau.");
-            redirectAttributes.addFlashAttribute("tournamentDiscoveryMessageKind", "safe");
+            var claim = controlService.claimDirect(collectionId, date, tournamentId);
+            claimedId = claim.requestId();
+            addResult(redirectAttributes, discoveryService.execute(claim));
         }
         catch (TournamentEventDiscoveryControlException | IllegalArgumentException exception) {
+            failOwnedClaim(claimedId, "LOCAL_EXECUTION_FAILURE");
             addError(redirectAttributes, safeCode(exception));
         }
-        return REDIRECT;
-    }
-
-    @PostMapping("/tournament-event-discovery/execute")
-    public String execute(
-            @RequestParam("localFormToken") String localFormToken,
-            @RequestParam("requestId") UUID requestId,
-            @RequestParam("confirmationText") String confirmationText,
-            @RequestParam(name = "acknowledged", defaultValue = "false") boolean acknowledged,
-            HttpSession session,
-            RedirectAttributes redirectAttributes) {
-        formTokenService.consume(session, localFormToken);
-        try {
-            var claim = controlService.confirmAndClaim(
-                    requestId, confirmationText, acknowledged);
-            var result = discoveryService.execute(claim);
-            addResult(redirectAttributes, result);
-        }
-        catch (TournamentEventDiscoveryControlException exception) {
-            addError(redirectAttributes, exception.error().name());
-        }
         catch (RuntimeException exception) {
-            if (controlService.executionMayContinue(requestId)) {
-                controlService.fail(requestId, "LOCAL_EXECUTION_FAILURE");
-            }
+            failOwnedClaim(claimedId, "LOCAL_EXECUTION_FAILURE");
             addError(redirectAttributes, "LOCAL_EXECUTION_FAILURE");
         }
-        return REDIRECT;
+        return dateRedirect(date);
     }
 
-    @PostMapping(
-            value = "/tournament-event-discovery/import-json",
+    @PostMapping(value = "/tournament-event-discovery/import",
             consumes = MediaType.MULTIPART_FORM_DATA_VALUE)
     public String importJson(
-            @RequestParam("localFormToken") String localFormToken,
-            @RequestParam("requestId") UUID requestId,
-            @RequestParam("confirmationText") String confirmationText,
-            @RequestParam(name = "acknowledged", defaultValue = "false") boolean acknowledged,
+            @RequestParam String localFormToken,
+            @RequestParam UUID collectionId,
+            @RequestParam LocalDate date,
+            @RequestParam long tournamentId,
             @RequestParam("jsonFile") MultipartFile jsonFile,
             HttpSession session,
             RedirectAttributes redirectAttributes) {
         formTokenService.consume(session, localFormToken);
         RawPayloadEvidence payload = readLocalJson(jsonFile, redirectAttributes);
         if (payload == null) {
-            return REDIRECT;
+            return dateRedirect(date);
         }
+        UUID claimedId = null;
         try {
-            var claim = controlService.confirmAndClaimLocalImport(
-                    requestId, confirmationText, acknowledged);
-            var result = discoveryService.importLocalJson(claim, payload);
-            addResult(redirectAttributes, result);
+            var claim = controlService.claimDirectLocalImport(collectionId, date, tournamentId);
+            claimedId = claim.requestId();
+            addResult(redirectAttributes, discoveryService.importLocalJson(claim, payload));
         }
-        catch (TournamentEventDiscoveryControlException exception) {
-            addError(redirectAttributes, exception.error().name());
+        catch (TournamentEventDiscoveryControlException | IllegalArgumentException exception) {
+            failOwnedClaim(claimedId, "LOCAL_IMPORT_FAILURE");
+            addError(redirectAttributes, safeCode(exception));
         }
         catch (RuntimeException exception) {
-            if (controlService.executionMayContinue(requestId)) {
-                controlService.fail(requestId, "LOCAL_IMPORT_FAILURE");
-            }
+            failOwnedClaim(claimedId, "LOCAL_IMPORT_FAILURE");
             addError(redirectAttributes, "LOCAL_IMPORT_FAILURE");
         }
-        return REDIRECT;
+        return dateRedirect(date);
+    }
+
+    private void failOwnedClaim(UUID claimedId, String code) {
+        if (claimedId != null && controlService.executionMayContinue(claimedId)) {
+            try {
+                controlService.fail(claimedId, code);
+            }
+            catch (TournamentEventDiscoveryControlException stopped) {
+                // The operator stop won the race; never overwrite its terminal state.
+            }
+        }
+    }
+
+    private static String dateRedirect(LocalDate date) {
+        return "redirect:/dashboard?j3Date=" + date + "#tournament-event-discovery";
     }
 
     @PostMapping("/tournament-event-discovery/stop")
@@ -208,7 +208,7 @@ public class TournamentEventDiscoveryController {
                         + result.providerCallAttempts() + " appel(s) fournisseur, "
                         + sourceDescription + ", "
                         + result.events().size() + " rencontre(s) canonique(s). "
-                        + "Une autre sélection exige une nouvelle préparation et une nouvelle confirmation.");
+                        + "Vous pouvez sélectionner un autre tournoi et lancer une nouvelle collecte.");
         redirectAttributes.addFlashAttribute("tournamentDiscoveryMessageKind", "safe");
     }
 
