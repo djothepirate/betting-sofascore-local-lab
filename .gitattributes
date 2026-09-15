@@ -69,3 +69,11 @@ docs/skills/evaluations/WO-062/ss-football-quality/run-01/cases/*/response.md wh
 docs/skills/evaluations/WO-062/ss-football-quality/run-01/review-*.md whitespace=-blank-at-eol,space-before-tab,cr-at-eol,-blank-at-eof
 docs/skills/evaluations/WO-062/ss-ci-security/run-01/cases/*/response.md whitespace=-blank-at-eol,space-before-tab,cr-at-eol,-blank-at-eof
 docs/skills/evaluations/WO-062/ss-ci-security/run-01/review-*.md whitespace=-blank-at-eol,space-before-tab,cr-at-eol,-blank-at-eof
+
+# Frozen C1/C2 preparation and independent evaluation evidence.
+docs/skills/evaluations/WO-062/ss-java-module/** -text whitespace=blank-at-eol,space-before-tab,cr-at-eol,-blank-at-eof
+docs/skills/evaluations/WO-062/ss-windows-runtime/** -text whitespace=blank-at-eol,space-before-tab,cr-at-eol,-blank-at-eof
+docs/skills/evaluations/WO-062/ss-java-module/run-*/cases/*/response.md whitespace=-blank-at-eol,space-before-tab,cr-at-eol,-blank-at-eof
+docs/skills/evaluations/WO-062/ss-java-module/run-*/review-*.md whitespace=-blank-at-eol,space-before-tab,cr-at-eol,-blank-at-eof
+docs/skills/evaluations/WO-062/ss-windows-runtime/run-*/cases/*/response.md whitespace=-blank-at-eol,space-before-tab,cr-at-eol,-blank-at-eof
+docs/skills/evaluations/WO-062/ss-windows-runtime/run-*/review-*.md whitespace=-blank-at-eol,space-before-tab,cr-at-eol,-blank-at-eof
