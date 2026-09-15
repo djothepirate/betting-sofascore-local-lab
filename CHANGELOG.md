@@ -4,6 +4,20 @@ Les évolutions notables du SofaScore Local Lab sont consignées dans ce fichier
 
 ## [Non publié]
 
+### WO-061 — CI locale et maîtrise des quotas
+
+- Limite GitHub Actions aux PR et aux demandes manuelles, en conservant les deux validations
+  bloquantes Windows et Linux/PostgreSQL ; retire les doubles exécutions push/PR, le packaging
+  intermédiaire et son archivage automatique.
+- Limite GitLab aux MR de promotion, tags et demandes manuelles ; supprime les snapshots
+  automatiques et les observations répétées de qualité/dépendances. Le scan strict des secrets
+  et les tests restent obligatoires ; Secret Detection ne refait plus son scan historique complet.
+- Sépare l'export Javadoc manuel facultatif des tests et preuves exigées. Vérifie les XML
+  Surefire/Failsafe avant validation et limite leur rétention à trois jours, sans tolérer
+  l'échec de leur conservation sur GitHub.
+- Adapte ADR-SS-004 et le [guide CI](docs/runbooks/CI-LOCAL-QUOTAS.md) à l'usage Windows local
+  avec GitHub Desktop ; aucune politique de déploiement VPS n'est ajoutée.
+
 ### WO-060 — automatisation J3, résultats durables et pause live
 
 - Prépare la clôture documentaire autorisée le 15 septembre 2026 et la fusion de la

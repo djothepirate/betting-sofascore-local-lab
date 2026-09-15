@@ -74,20 +74,4 @@ if [ "$failure_status" -ne 42 ]; then
     exit 1
 fi
 
-dependency_job=$(awk '
-    /^security:dependencies:/ { in_job = 1 }
-    in_job && /^\.package-local-only:/ { exit }
-    in_job { print }
-' .gitlab-ci.yml)
-if ! printf '%s\n' "$dependency_job" | grep -Fxq '  cache: []' ||
-   ! printf '%s\n' "$dependency_job" | grep -Fxq '  allow_failure: true' ||
-   ! printf '%s\n' "$dependency_job" | grep -Fxq '    - sh ci/run-dependency-check.sh'; then
-    echo 'FAIL: le job doit utiliser le lanceur et conserver son niveau observation explicite.' >&2
-    exit 1
-fi
-if printf '%s\n' "$dependency_job" | grep -Eq -- '-DnvdApi|failOnError=false|dependency-check.skip'; then
-    echo 'FAIL: le job ne doit ni revenir à la voie API ni neutraliser le scan.' >&2
-    exit 1
-fi
-
 printf 'DEPENDENCY_CHECK_ARGUMENTS=PASS_LOCAL_ONLY_OBSERVATION\n'

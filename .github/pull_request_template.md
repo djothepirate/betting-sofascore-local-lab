@@ -21,6 +21,8 @@ Version Maven : `<!-- X.Y.Z[-SNAPSHOT], X.Y.Z-rc.N ou X.Y.Z-rc.N-SNAPSHOT selon 
 - [ ] Diff relu et sans secret.
 - [ ] Vérification locale proportionnée consignée avec sa commande et son résultat.
 - [ ] Checks GitHub Windows et Linux verts sur le HEAD courant.
+- [ ] Rapports XML de tests contrôlés et conservés ; toute autre preuve exigée par le WO est disponible.
+- [ ] Un éventuel avertissement concerne uniquement un export documentaire facultatif, aucun test ni preuve exigée.
 - [ ] Revue humaine terminée et fils actionnables résolus.
 - [ ] Les statuts `EXPERIMENTAL`, `LOCAL_ONLY`, `NOT_PRODUCTION_APPROVED` et
   `NO_CRITICAL_DEPENDENCY` restent inchangés.
