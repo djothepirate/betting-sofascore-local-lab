@@ -222,6 +222,9 @@ Une [revue indépendante de cohérence Java](../skills/evaluations/WO-062/ss-jav
 au commit `3f75849` confirme les compteurs, omissions et constats de la partie Java,
 avec 86 contrôles mécaniques et cinq appréciations de contenu. La partie Windows
 du rapport était alors provisoire ; sa qualification repose sur ses revues propres.
+La [revue finale du delta de synthèse](../skills/evaluations/WO-062/ss-windows-runtime/final-summary-review/c-final-summary-review.md)
+au commit `e74f1b2` confirme les compteurs et les limites Windows sur douze contrôles,
+sans correction demandée. Ce PASS documentaire ne relève aucun verdict de skill.
 
 WR-H01 concerne une capture native d'arguments sous PowerShell 7, sans lancement de
 l'application Java. WR-N01 concerne une petite sonde Java 25 sous Windows PowerShell

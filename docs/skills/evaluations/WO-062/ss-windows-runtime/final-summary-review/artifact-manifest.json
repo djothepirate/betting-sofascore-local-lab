@@ -1,0 +1,17 @@
+{
+  "schema": "wo062-support-evidence-manifest-v1",
+  "created_at_utc": "2026-09-15T22:20:34.209722+00:00",
+  "scope": "Independent consistency review of final summary delta at e74f1b2; does not replace skill-case verdicts.",
+  "files": [
+    {
+      "path": "c-final-summary-review.json",
+      "bytes": 6956,
+      "sha256": "d51917c7e21bd97140219c7a5becd03b6ca97edd7b00a967497fa71af66cb5dd"
+    },
+    {
+      "path": "c-final-summary-review.md",
+      "bytes": 2993,
+      "sha256": "1a60f76560315623713cc5d35e1930c1f6b25684ac2efbb9cea243f295511a31"
+    }
+  ]
+}

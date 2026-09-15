@@ -1,0 +1,185 @@
+{
+  "schema": "wo062-c-final-summary-review-v1",
+  "reviewer": "/root/jm_selection_review",
+  "reviewed_at_utc": "2026-09-15T22:19:37.671400+00:00",
+  "delta_base": "3f758491c5a4bdf3c07daacc7fedec7a8458d2ec",
+  "source_head": "e74f1b2ca08af1b11db991ff8a9655510cdc51fd",
+  "verdict": "PASS",
+  "findings": [],
+  "checks": [
+    {
+      "id": "ss-java-module-run-01-counts",
+      "verdict": "PASS",
+      "evidence": {
+        "case_count": 8,
+        "pass": 5,
+        "fail": 3,
+        "blocked": 0
+      },
+      "limit": "Résultats lus pour les compteurs ; aucune ancienne revue ou oracle relu."
+    },
+    {
+      "id": "ss-java-module-run-02-counts",
+      "verdict": "PASS",
+      "evidence": {
+        "case_count": 8,
+        "pass": 7,
+        "fail": 1,
+        "blocked": 0
+      },
+      "limit": "Résultats lus pour les compteurs ; aucune ancienne revue ou oracle relu."
+    },
+    {
+      "id": "ss-windows-runtime-run-01-counts",
+      "verdict": "PASS",
+      "evidence": {
+        "case_count": 8,
+        "pass": 6,
+        "fail": 0,
+        "blocked": 2
+      },
+      "limit": "Résultats lus pour les compteurs ; aucune ancienne revue ou oracle relu."
+    },
+    {
+      "id": "ss-windows-runtime-run-02-counts",
+      "verdict": "PASS",
+      "evidence": {
+        "case_count": 2,
+        "pass": 0,
+        "fail": 0,
+        "blocked": 2
+      },
+      "limit": "Résultats lus pour les compteurs ; aucune ancienne revue ou oracle relu."
+    },
+    {
+      "id": "historical-total",
+      "verdict": "PASS",
+      "evidence": {
+        "attempts": 26,
+        "final_responses": 25,
+        "counts": {
+          "FAIL": 4,
+          "PASS": 18,
+          "BLOCKED": 4
+        }
+      },
+      "limit": ""
+    },
+    {
+      "id": "current-total",
+      "verdict": "PASS",
+      "evidence": {
+        "distinct_cases": 16,
+        "counts": {
+          "PASS": 13,
+          "FAIL": 1,
+          "BLOCKED": 2
+        }
+      },
+      "limit": ""
+    },
+    {
+      "id": "WR-H01-CHECKS-trace",
+      "verdict": "PASS",
+      "evidence": {
+        "case_id": "WR-H01",
+        "verdict": "BLOCKED",
+        "native_session_exit_code": null,
+        "collector_exit_code": 1,
+        "duration_seconds": 900.594,
+        "commands_completed": 22,
+        "candidate_sha256": "b89925d5395238010bb0afe9c1e1a22b0aa5ec4e7d1fb9946c671d241e7976c6",
+        "model": null,
+        "reasoning_effort": null,
+        "proof": "docs/skills/evaluations/WO-062/ss-windows-runtime/run-02/cases/WR-H01/trace.json"
+      },
+      "limit": ""
+    },
+    {
+      "id": "WR-N01-CHECKS-trace",
+      "verdict": "PASS",
+      "evidence": {
+        "case_id": "WR-N01",
+        "verdict": "BLOCKED",
+        "native_session_exit_code": 0,
+        "collector_exit_code": 0,
+        "duration_seconds": 593.0,
+        "commands_completed": 11,
+        "candidate_sha256": "b89925d5395238010bb0afe9c1e1a22b0aa5ec4e7d1fb9946c671d241e7976c6",
+        "model": null,
+        "reasoning_effort": null,
+        "proof": "docs/skills/evaluations/WO-062/ss-windows-runtime/run-02/cases/WR-N01/trace.json"
+      },
+      "limit": ""
+    },
+    {
+      "id": "H-success-and-expired-session",
+      "verdict": "PASS",
+      "evidence": "Harnais unique : 2726,6811 ms/code0 ; session : 900,594 s, sans réponse, collecteur1. Le rapport, WO, README, guide et changelog conservent cette distinction.",
+      "limit": "Le postflight du harnais ne prouve pas le nettoyage de la session CLI ; la cause historique WO-053 reste non établie."
+    },
+    {
+      "id": "N-partial-relay-and-residue",
+      "verdict": "PASS",
+      "evidence": "Relais javapath détenu PID34004 distinct de la fixture PID26528 ; arrêt avant sleep, aucune expiration1500ms/terminaison forcée qualifiée ; JavaLauncher.log4892octets conservé.",
+      "limit": "Code23 au relais seulement ; auteur du journal et JVM finale non établis. Aucun contenu du résidu lu."
+    },
+    {
+      "id": "host-observation-separate",
+      "verdict": "PASS",
+      "evidence": "Observation hôte à 2026-09-15T22:11:02.7384870Z, distincte du gel ; quatre PID absents à cet instant, H vide, résidu N conservé. La synthèse interdit explicitement son emploi pour améliorer les verdicts.",
+      "limit": "Aucune nouvelle observation hôte effectuée pour cette revue ; absence ponctuelle sans preuve rétroactive de propriété."
+    },
+    {
+      "id": "human-installation-incomplete",
+      "verdict": "PASS",
+      "evidence": "Deux qualifications incomplètes ; validation humaine et installation C fausses, D/livraison distincts dans toutes les synthèses. Autorisation des dix sessions consommée.",
+      "limit": ""
+    }
+  ],
+  "evidence": [
+    {
+      "path": "CHANGELOG.md",
+      "sha256": "0a63cd5165a2e2147a0c1c2c368e90a03bd5f9e9011131e46bc731365df45a18"
+    },
+    {
+      "path": "README.md",
+      "sha256": "20fb812b36800e082fd18a43130cea2c81086632382501943a3484c0708e4adf"
+    },
+    {
+      "path": "docs/skills/README.md",
+      "sha256": "45ca33c440f93f3d535b1de17459543bcfc4d40f51c1a01067a085b3f8d0fbc9"
+    },
+    {
+      "path": "docs/work_orders/active/WO-SS-20260915-062-skills-lot2.md",
+      "sha256": "0d845d5aae776d3f8f820fbc7bceb934e8949be9f7e44f2fb292c98ba0780176"
+    },
+    {
+      "path": "docs/validation/WO062-JAVA-WINDOWS-CANDIDATES-20260915.md",
+      "sha256": "cca21ca6f369e7e1e5236fb88bcec67ac6cee44629f0a9c1ac0b4c32eb27c409"
+    },
+    {
+      "path": "docs/validation/WO062-JAVA-WINDOWS-CHECKS-20260915.json",
+      "sha256": "1f6c5c66e1041a286ba48a6a8b0a1d672335c0345bea4ef3a2c493a5e4caf148"
+    },
+    {
+      "path": "docs/skills/evaluations/WO-062/ss-windows-runtime/run-02/review-WR-H01.json",
+      "sha256": "0cc12dbb15663397ac62c24722787604e0d608dcacd6d97a5d1fdc8ff9f8837c"
+    },
+    {
+      "path": "docs/skills/evaluations/WO-062/ss-windows-runtime/run-02/review-WR-N01.json",
+      "sha256": "4a302fb07474512975661b9dd44c8259467fb85b90bf15c0d3114c7b7f8854bc"
+    },
+    {
+      "path": "docs/skills/evaluations/WO-062/ss-windows-runtime/post-run-02-host-observation/c-post-run02-host-observation.json",
+      "sha256": "49d3b7bcefe2b14060138516962ffcb3961367eb803bdd7af9f70fbf68d92318"
+    }
+  ],
+  "tracked_git_status": "",
+  "limits": [
+    "Revue du seul delta de synthèse ; aucune modification des verdicts ou réévaluation comportementale.",
+    "Pas de relecture des oracles ni des anciennes revues. Les anciens résultats JSON sont consultés uniquement pour les compteurs.",
+    "Aucune session, sonde, build, commande applicative, inspection de processus ou lecture du résidu ; écritures limitées aux deux rapports .tmp.",
+    "Audit Git des octets et manifestes finaux effectué séparément par le coordinateur, non revendiqué ici."
+  ]
+}
