@@ -6,6 +6,9 @@ Les évolutions notables du SofaScore Local Lab sont consignées dans ce fichier
 
 ### WO-061 — CI locale et maîtrise des quotas
 
+- Prépare la clôture documentaire et la fusion de la [PR #37](https://github.com/djothepirate/betting-sofascore-local-lab/pull/37)
+  autorisées le 15 septembre 2026 : WO classé dans `completed`, deux checks et preuves XML verts
+  sur `965caac`. Le commit documentaire final reste soumis aux checks ; la clôture devient effective à la fusion.
 - Limite GitHub Actions aux PR et aux demandes manuelles, en conservant les deux validations
   bloquantes Windows et Linux/PostgreSQL ; retire les doubles exécutions push/PR, le packaging
   intermédiaire et son archivage automatique.

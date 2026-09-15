@@ -205,7 +205,7 @@ train feature exact ou sa release exacte. Les branches WO, le bootstrap et les r
 historiques sont refusés ; les MR et tags suivent leurs contrôles dédiés et un contexte sans source
 ou référence déterminée échoue fermé.
 
-Le [WO-061](docs/work_orders/active/WO-SS-20260915-061-ci-local-quotas.md) retire la fabrication
+Le [WO-061](docs/work_orders/completed/WO-SS-20260915-061-ci-local-quotas.md) retire la fabrication
 et l'archivage automatiques des bundles intermédiaires, y compris depuis les trains feature.
 GitHub qualifie les PR et les demandes manuelles avec ses deux jobs bloquants Windows et
 Linux/PostgreSQL ; les pushes ne doublonnent plus les suites. GitLab qualifie les MR de

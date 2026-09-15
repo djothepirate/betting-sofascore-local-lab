@@ -1,11 +1,12 @@
 # WO-SS-20260915-061 — CI locale et maîtrise des quotas
 
-- **Statut :** READY_FOR_REVIEW — qualification locale réussie ; CI distante, revue humaine et fusion requises
+- **Statut :** `COMPLETED_OWNER_AUTHORIZED_PREMERGE` — qualification locale et CI du candidat réussies ; clôture et fusion autorisées par le propriétaire le 15 septembre 2026. Le classement documentaire précède la fusion ; la clôture effective est liée à l'état fusionné de la PR #37 vers `feature/V0.1.0-RC01`.
 - **Date :** 2026-09-15
 - **Autorité :** demande propriétaire de retirer les politiques CI inutiles, l'archivage automatique
   des bundles intermédiaires et les coûts évitables, en préservant tests et preuves obligatoires
 - **Branche :** `feature/V0.1.0-RC01-CODEX-WO-SS-20260915-061`
 - **Cible de PR :** `feature/V0.1.0-RC01`
+- **PR :** [#37 — CI locale, preuves obligatoires et suppression des bundles intermédiaires](https://github.com/djothepirate/betting-sofascore-local-lab/pull/37)
 - **Base canonique vérifiée :** `59b4daedd089b778d1fd2560799f20dd16658cf1`
 - **Version Maven :** `0.1.0-rc.1-SNAPSHOT`
 - **Worktree :** `.tmp/wo061-ci-local-quota`, distinct du checkout du train et d'Eclipse
@@ -46,7 +47,35 @@ la revue humaine avant fusion, Java 25, Spring Boot 4.1.0, la localité et les s
 - [x] Aucun upload automatique de bundle intermédiaire GitHub/GitLab, aucun double run push/PR.
 - [x] Les gardes branches, versions, promotion et secrets continuent à refuser les contre-exemples.
 - [x] Qualification locale et revue indépendante consignées dans le [rapport](../../validation/WO061-CI-LOCAL-QUOTAS-20260915.md).
-- [ ] CI distante du candidat et revue humaine avant fusion ; WO actif jusqu'à fusion.
+- [x] CI distante du candidat `965caac` réussie et validation propriétaire ; fusion autorisée.
+- [ ] Checks du commit documentaire final réussis puis fusion de la PR #37 ; clôture effective à cette fusion.
+
+## Clôture autorisée — 15 septembre 2026
+
+Le propriétaire confirme : « tout est OK, la fusion et la clôture de la PR peut se faire ».
+Cette décision autorise le classement documentaire, sa publication et la fusion dans le
+train cible. Le [run 34966547646](https://github.com/djothepirate/betting-sofascore-local-lab/actions/runs/34966547646)
+qualifie le candidat exact `965caac439184813be2ec1eb1be2fe727f42f518` :
+
+| Check obligatoire | Résultat constaté |
+| --- | --- |
+| [Windows — garde locale et tests standards](https://github.com/djothepirate/betting-sofascore-local-lab/actions/runs/34966547646/job/104372248002) | `SUCCESS`, contrôle et archivage des preuves XML réussis |
+| [Linux — sécurité, PostgreSQL et distribution locale](https://github.com/djothepirate/betting-sofascore-local-lab/actions/runs/34966547646/job/104372248251) | `SUCCESS`, contrôle et archivage des preuves XML réussis |
+
+L'inventaire API de ce run contient uniquement les deux preuves XML, soit 2 714 245 octets
+(environ 2,71 Mo), avec expiration le 18 septembre après trois jours ; aucun bundle intermédiaire.
+
+Le dernier changement fonctionnel reste `a3ed5e7c854369f82d74291255fdcefdb3727792`.
+La préparation de clôture ne modifie que le WO déplacé, les liens du README et du guide CI,
+et le changelog. Le [rapport de qualification](../../validation/WO061-CI-LOCAL-QUOTAS-20260915.md)
+reste une photographie historique inchangée : sa liste de fichiers et ses mentions d'attente
+décrivent l'état lors de sa rédaction ; la présente décision les actualise pour la clôture.
+
+Le commit documentaire final doit obtenir ses propres checks verts avant fusion. Les succès
+ci-dessus ne sont pas attribués à un commit futur. Le classement dans `completed` ne prouve
+pas à lui seul la fusion : la PR #37 porte son état effectif, son SHA et son horodatage de
+fusion lorsqu'elle est réalisée. Aucun nouveau build local complet n'est requis pour cette
+seule mise à jour documentaire, sans modification de code, test, configuration ou migration.
 
 ## Livraison et limites
 

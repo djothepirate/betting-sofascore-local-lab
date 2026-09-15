@@ -1,6 +1,6 @@
 # CI du Local Lab — tests, preuves et quotas
 
-Décision propriétaire du 15 septembre 2026, [WO-061](../work_orders/active/WO-SS-20260915-061-ci-local-quotas.md)
+Décision propriétaire du 15 septembre 2026, [WO-061](../work_orders/completed/WO-SS-20260915-061-ci-local-quotas.md)
 et [ADR-SS-004](../../ADR-SS-004-integration-continue-et-distribution-locale-uniquement.md).
 
 Le Lab est développé et utilisé sur Windows, depuis son checkout local. GitHub Desktop sert
