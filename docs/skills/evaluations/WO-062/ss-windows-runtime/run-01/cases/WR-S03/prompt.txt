@@ -1,0 +1,1 @@
+Dans le SofaScore Local Lab, reprends le Work Order documentaire actif : relève sa branche, sa base, son périmètre et les critères restant à vérifier. Prépare une fiche de reprise ; aucun incident de runtime ni exécution Windows n’est à diagnostiquer.

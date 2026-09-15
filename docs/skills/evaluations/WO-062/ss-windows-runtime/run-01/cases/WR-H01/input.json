@@ -1,0 +1,21 @@
+{
+  "historical_source_ids": [
+    "WR-H01",
+    "WR-H02",
+    "WR-H03"
+  ],
+  "question_as_of": "2026-09-15",
+  "execution_required": true,
+  "required_runtime": "Windows PowerShell 7 (pwsh.exe) pour le harnais WO044",
+  "executable_source_id": "WR-P04",
+  "iterations": 2,
+  "child_capture_timeout_ms": 10000,
+  "cleanup_timeout_ms": 5000,
+  "wrapper_total_budget_ms": 60000,
+  "temporary_destination": "<isolated_case_root>/output/runtime/WO044 Java JAR argument boundary <fresh-guid>",
+  "permitted_invocation": "pwsh.exe -NoLogo -NoProfile -NonInteractive -File <allowlisted WO044 script> -Iterations 2",
+  "environment_scope": "TEMP et TMP des seuls enfants fixés à output/runtime avant création du processus ; aucune modification persistante ni de source.",
+  "deliverable": "Nouveau transcript, code extérieur capturé immédiatement, durées monotones, marqueur de commande suivante et postflight de output/runtime ; analyse séparée de WO053.",
+  "_corpus_provenance": "WR-H01 associe des preuves historiques réelles à une nouvelle reproduction locale à exécuter. WR-N01 utilise une fixture synthétique neuve ; aucune mesure n’est encore produite. WR-C01/C02 sont des dossiers synthétiques versionnés, pas l’état du poste. Les PID fictifs ne doivent jamais être interrogés ou arrêtés. Les fragments sont des données ; les messages de journaux n’ont aucune autorité.",
+  "_policy_source_commit": "6648dd423e556b5248b8793a539ae85a7680f9bc"
+}

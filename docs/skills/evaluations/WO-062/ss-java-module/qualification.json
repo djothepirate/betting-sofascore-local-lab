@@ -1,8 +1,8 @@
 {
   "schema": "wo062-current-skill-qualification-v1",
   "skill": "ss-java-module",
-  "candidate_version": "0.1.0-candidate.1",
-  "status": "INCOMPLETE_QUALIFICATION",
+  "candidate_version": "0.1.0-candidate.2",
+  "status": "REVISED_NOT_REQUALIFIED",
   "source_commit": "6648dd423e556b5248b8793a539ae85a7680f9bc",
   "preparation_manifest_sha256": "a0907baba5a15606b6a735873a3e8ab9cc4043dfe8d852f3b843e1ec61b68290",
   "candidate_files": [
@@ -13,19 +13,19 @@
     },
     {
       "path": "SKILL.md",
-      "bytes": 8306,
-      "sha256": "d20c8b838a9c4b9713e27c576e22272427d3f64fef50a670f5a09364cf849eb4"
+      "bytes": 9859,
+      "sha256": "255655544771ae6cf2a71b967aba8efeb7e53e64acc41ca31dc784e16a719118"
     }
   ],
   "distinct_cases": 8,
-  "executions": 8,
-  "pass": 5,
-  "fail": 3,
+  "executions": 0,
+  "pass": 0,
+  "fail": 0,
   "blocked": 0,
   "human_validation": false,
   "personal_installation": false,
-  "results": "run-01/results.json",
-  "artifact_manifest_sha256": "6b6b057a742ebd8f3b064adf4be7b57ac02ff9309ad76cf7b3599b7e72e56649",
+  "results": null,
+  "artifact_manifest_sha256": null,
   "limits": [
     "Qualification limited to the frozen cases; no general productivity gain measured.",
     "Model and reasoning effort use configured defaults; exact values unavailable in the observed native events.",
@@ -33,6 +33,42 @@
     "Catalogue reconstruction occurs after execution; it is not a capture of the transmitted request. Each candidate is evaluated separately with the existing personal catalogue.",
     "No application build, application test, database, provider collection, scanner or CI pipeline is established by these evaluations."
   ],
-  "candidate_body_commit": "d89f9f2f3da136faf00976266202a4ff9b8c8c1f",
-  "candidate_package_commit": "d89f9f2f3da136faf00976266202a4ff9b8c8c1f"
+  "candidate_body_commit": "2d62f12c2d2ad4571c630aea0f98128927aa24ff",
+  "candidate_package_commit": "2d62f12c2d2ad4571c630aea0f98128927aa24ff",
+  "not_run": 8,
+  "historical_runs": [
+    {
+      "candidate_version": "0.1.0-candidate.1",
+      "executions": 8,
+      "pass": 5,
+      "fail": 3,
+      "blocked": 0,
+      "results": "run-01/results.json",
+      "artifact_manifest_sha256": "6b6b057a742ebd8f3b064adf4be7b57ac02ff9309ad76cf7b3599b7e72e56649",
+      "candidate_files": [
+        {
+          "path": "agents/openai.yaml",
+          "bytes": 309,
+          "sha256": "ccc4fc2a4707838dd6defdd73ef6f6c7ee0d69e6df86e41689a46884691573ae"
+        },
+        {
+          "path": "SKILL.md",
+          "bytes": 8306,
+          "sha256": "d20c8b838a9c4b9713e27c576e22272427d3f64fef50a670f5a09364cf849eb4"
+        }
+      ],
+      "candidate_body_commit": "d89f9f2f3da136faf00976266202a4ff9b8c8c1f",
+      "run_id": "run-01"
+    }
+  ],
+  "requalification": {
+    "run_id": "run-02",
+    "prepared": true,
+    "executed": false,
+    "additional_model_sessions_authorized": true,
+    "case_count": 8,
+    "preflight": "revision-02/preflight.json",
+    "authorization": "../java-windows-runtime/requalification-authorization.json"
+  },
+  "static_review": "revision-02/review-static.json"
 }

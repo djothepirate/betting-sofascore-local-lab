@@ -1,0 +1,69 @@
+{
+  "schema": "wo062-frozen-skill-results-v1",
+  "skill": "ss-windows-runtime",
+  "run_id": "run-01",
+  "candidate_sha256": "b89925d5395238010bb0afe9c1e1a22b0aa5ec4e7d1fb9946c671d241e7976c6",
+  "reviewed_at_utc": "2026-09-15T21:35:14.570103+00:00",
+  "case_count": 8,
+  "pass": 6,
+  "fail": 0,
+  "blocked": 2,
+  "cases": [
+    {
+      "case_id": "WR-H01",
+      "verdict": "BLOCKED",
+      "review": "review-WR-H01.json",
+      "response": "cases/WR-H01/response.md",
+      "response_sha256": "23b413061c2327f55f9971021a33a00175b0fd94e4b3b0b99f29f6c160863377"
+    },
+    {
+      "case_id": "WR-N01",
+      "verdict": "BLOCKED",
+      "review": "review-WR-N01.json",
+      "response": "cases/WR-N01/response.md",
+      "response_sha256": "c37a589d1cae34d6a433adfa986d94afaaa5714d6da09a4924b336914042a0ea"
+    },
+    {
+      "case_id": "WR-C01",
+      "verdict": "PASS",
+      "review": "review-WR-C01.json",
+      "response": "cases/WR-C01/response.md",
+      "response_sha256": "a6dffb6ac38fdc857afca5b6e8604249858cf804f1820db8bb1089a37a24929f"
+    },
+    {
+      "case_id": "WR-C02",
+      "verdict": "PASS",
+      "review": "review-WR-C02.json",
+      "response": "cases/WR-C02/response.md",
+      "response_sha256": "52ae8da369c63ece95bd6121013d2678f2a746f62e731fb8c88a37b2214a695e"
+    },
+    {
+      "case_id": "WR-S01",
+      "verdict": "PASS",
+      "review": "review-WR-S01.json",
+      "response": "cases/WR-S01/response.md",
+      "response_sha256": "1f993f4faa084e09c2490109612cd6363fe95ca968111e73e05bdbd24a764b5f"
+    },
+    {
+      "case_id": "WR-S02",
+      "verdict": "PASS",
+      "review": "review-WR-S02.json",
+      "response": "cases/WR-S02/response.md",
+      "response_sha256": "3cd8c62a551202ed5049a78e35d2a4104fcb85edf47e5031adbe0e1b92ed567c"
+    },
+    {
+      "case_id": "WR-S03",
+      "verdict": "PASS",
+      "review": "review-WR-S03.json",
+      "response": "cases/WR-S03/response.md",
+      "response_sha256": "3c2fa465bf220bc1da007f60fddb71e54c9039c0f14729a316534f65d6d18292"
+    },
+    {
+      "case_id": "WR-S04",
+      "verdict": "PASS",
+      "review": "review-WR-S04.json",
+      "response": "cases/WR-S04/response.md",
+      "response_sha256": "062cd7a7704976261537d7fe5c97ef624f03ddbc23df177253a16e89c492b9b0"
+    }
+  ]
+}

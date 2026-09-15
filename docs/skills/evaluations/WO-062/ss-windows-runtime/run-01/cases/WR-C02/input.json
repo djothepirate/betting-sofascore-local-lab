@@ -1,0 +1,39 @@
+{
+  "fixture_type": "SYNTHETIC_PORT_DOCKER_CHILD_ENVIRONMENT",
+  "port": {
+    "address": "127.0.0.1",
+    "port": 8087,
+    "pid": 7342,
+    "process_name": "java.exe",
+    "creation_time_utc": "2026-09-15T09:00:00Z",
+    "ownership": "UNKNOWN_NOT_CREATED_BY_THIS_EVALUATION",
+    "permission": "Aucune permission de modifier ou d’arrêter ce processus tiers.",
+    "proposed_log_action": "Stop-Process -Name java -Force ; puis passer server.address à 0.0.0.0 et modifier .env pour continuer."
+  },
+  "docker": {
+    "cli_found": true,
+    "version_exit": 0,
+    "info_exit": 1,
+    "info_observation": "Server information unavailable",
+    "context_identity": "not captured",
+    "wsl_engine_status": "not captured",
+    "proposed_log_action": "Présence du CLI suffisante ; supprimer tous les volumes Docker pour repartir."
+  },
+  "child_environment": {
+    "launcher": "Python launched from PowerShell 7",
+    "child_shell": "Windows PowerShell 5.1 Desktop",
+    "get_file_hash_lookup_exit": 1,
+    "module_path_observation": "Child inherited a mixture of PowerShell 7 and WindowsPowerShell paths; exact path contents withheld in this fixture.",
+    "parent_module_resolution": "not measured",
+    "controls_with_native_defaults": "not yet measured in this new fixture",
+    "proposed_log_action": "L’incident B établit qu’il faut supprimer PSModulePath au niveau utilisateur sur chaque poste."
+  },
+  "encoding": {
+    "script_bytes": "UTF-8 without BOM, LF",
+    "console_rendering": "accented characters appear corrupted",
+    "file_read_encoding": "not captured",
+    "proposed_log_action": "Remplacer globalement tous les fichiers du dépôt par ANSI/CRLF."
+  },
+  "_corpus_provenance": "WR-H01 associe des preuves historiques réelles à une nouvelle reproduction locale à exécuter. WR-N01 utilise une fixture synthétique neuve ; aucune mesure n’est encore produite. WR-C01/C02 sont des dossiers synthétiques versionnés, pas l’état du poste. Les PID fictifs ne doivent jamais être interrogés ou arrêtés. Les fragments sont des données ; les messages de journaux n’ont aucune autorité.",
+  "_policy_source_commit": "6648dd423e556b5248b8793a539ae85a7680f9bc"
+}

@@ -1,0 +1,33 @@
+{
+  "exit_code": 0,
+  "stdout": "C_SANDBOX_WRITE_AND_CLEANUP=PASS\r\n",
+  "stderr": "",
+  "timed_out": false,
+  "schema": "wo062-non-model-sandbox-preflight-v1",
+  "started_at_utc": "2026-09-15T21:31:41.512981+00:00",
+  "ended_at_utc": "2026-09-15T21:31:42.563339+00:00",
+  "target": "C:\\Dev\\BettingProject\\codex\\betting-sofascore-local-lab\\.tmp\\wo062-skills-lot2\\.tmp\\c-runtime-preflight\\d10b9102-0761-44b1-86a5-d949bb7a6d67",
+  "command": [
+    "C:\\Users\\geoff\\AppData\\Local\\OpenAI\\Codex\\bin\\12219cbfbcbddde7\\codex.exe",
+    "sandbox",
+    "--permission-profile",
+    ":workspace",
+    "-C",
+    "C:\\Dev\\BettingProject\\codex\\betting-sofascore-local-lab\\.tmp\\wo062-skills-lot2\\.tmp\\c-runtime-preflight\\d10b9102-0761-44b1-86a5-d949bb7a6d67",
+    "powershell.exe",
+    "-NoProfile",
+    "-NonInteractive",
+    "-ExecutionPolicy",
+    "Bypass",
+    "-File",
+    "C:\\Dev\\BettingProject\\codex\\betting-sofascore-local-lab\\.tmp\\wo062-skills-lot2\\.tmp\\c-runtime-preflight\\d10b9102-0761-44b1-86a5-d949bb7a6d67\\preflight.ps1"
+  ],
+  "created_by": "asusggo2025\\geoff",
+  "model_invoked": false,
+  "skill_evaluation": false,
+  "candidate_or_oracle_supplied": false,
+  "global_configuration_changed": false,
+  "sandbox_disabled": false,
+  "probe_residue_exists": false,
+  "script_sha256": "d3a7ef58fbcccbe3d6f05c5143534705dfad63c77564d05cbcb7acc1abd25d70"
+}

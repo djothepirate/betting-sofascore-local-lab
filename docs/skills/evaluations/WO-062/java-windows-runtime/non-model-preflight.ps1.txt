@@ -1,0 +1,8 @@
+$ErrorActionPreference='Stop'
+$p=Join-Path $PSScriptRoot 'owned-proof.txt'
+if(Test-Path -LiteralPath $p){throw 'Preexisting probe target'}
+[IO.File]::WriteAllText($p,'C_SANDBOX_WRITE_OK',[Text.UTF8Encoding]::new($false))
+if([IO.File]::ReadAllText($p) -cne 'C_SANDBOX_WRITE_OK'){throw 'Probe bytes differ'}
+Remove-Item -LiteralPath $p
+if(Test-Path -LiteralPath $p){throw 'Probe residue'}
+Write-Output 'C_SANDBOX_WRITE_AND_CLEANUP=PASS'

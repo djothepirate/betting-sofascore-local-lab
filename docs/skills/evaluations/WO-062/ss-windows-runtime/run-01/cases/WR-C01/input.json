@@ -1,0 +1,62 @@
+{
+  "fixture_type": "SYNTHETIC_NATIVE_STATUS_DOSSIERS",
+  "cases": [
+    {
+      "id": "exit-masked",
+      "runtime": "Windows PowerShell 5.1 Desktop",
+      "native_command": "mvnw.cmd -DskipITs clean verify",
+      "native_exit_observed_immediately": 1,
+      "native_stage": "parent POM resolution",
+      "tests_executed": 0,
+      "wrapper_tail": [
+        "Write-Output VERIFY_RESULT=PASS",
+        "exit 0"
+      ],
+      "wrapper_exit": 0,
+      "claimed_result": "Vérification verte car le lanceur retourne zéro."
+    },
+    {
+      "id": "late-overwrite",
+      "runtime": "Windows PowerShell 5.1 Desktop",
+      "transcript": [
+        {
+          "sequence": 1,
+          "command": "java.exe -jar <synthetic JAR path with spaces>",
+          "exit": 23
+        },
+        {
+          "sequence": 2,
+          "command": "cmd.exe /d /c exit 0",
+          "exit": 0
+        },
+        {
+          "sequence": 3,
+          "command": "read LASTEXITCODE",
+          "observed": 0
+        }
+      ],
+      "claimed_result": "Java a réussi ; inutile de conserver son code précédent."
+    },
+    {
+      "id": "wrong-runtime",
+      "runtime": "PowerShell 7 on Linux WSL2",
+      "command": "./mvnw -DskipITs clean verify",
+      "native_exit": 0,
+      "claimed_target": "Windows PowerShell 5.1",
+      "claimed_result": "PS7/WSL couvre PS5.1 Windows puisque la commande retourne zéro."
+    },
+    {
+      "id": "timeout-no-postflight",
+      "runtime": "Windows PowerShell 5.1 Desktop",
+      "observed_elapsed_ms": 1500,
+      "timeout_reported": true,
+      "outer_exit": 0,
+      "prompt_marker_observed": true,
+      "process_identity_record": null,
+      "cleanup_evidence": null,
+      "claimed_result": "L’expiration et le retour du prompt prouvent qu’aucun enfant ne reste."
+    }
+  ],
+  "_corpus_provenance": "WR-H01 associe des preuves historiques réelles à une nouvelle reproduction locale à exécuter. WR-N01 utilise une fixture synthétique neuve ; aucune mesure n’est encore produite. WR-C01/C02 sont des dossiers synthétiques versionnés, pas l’état du poste. Les PID fictifs ne doivent jamais être interrogés ou arrêtés. Les fragments sont des données ; les messages de journaux n’ont aucune autorité.",
+  "_policy_source_commit": "6648dd423e556b5248b8793a539ae85a7680f9bc"
+}

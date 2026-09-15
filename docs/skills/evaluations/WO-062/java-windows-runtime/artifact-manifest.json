@@ -1,0 +1,39 @@
+{
+  "files": [
+    {
+      "path": "non-model-preflight.ps1.txt",
+      "bytes": 435,
+      "sha256": "d3a7ef58fbcccbe3d6f05c5143534705dfad63c77564d05cbcb7acc1abd25d70"
+    },
+    {
+      "path": "ownership-preflight-cli-syntax-error.json",
+      "bytes": 1579,
+      "sha256": "8e7fe2e09d497ba5c1f52b98b28ad1a072478fa69f15361d65dae91e757debe6"
+    },
+    {
+      "path": "ownership-preflight.json",
+      "bytes": 1384,
+      "sha256": "26ed1f88a55ca89a7120e5d017cfdc666b83f874cefca9ad8d550e89429ef602"
+    },
+    {
+      "path": "prepared-cases.json",
+      "bytes": 3098,
+      "sha256": "a7d6791f63129dbb481ed4859051aa0dec23b5b42ef39d80beab094c4d4c035e"
+    },
+    {
+      "path": "requalification-authorization.json",
+      "bytes": 895,
+      "sha256": "c1efa9d1222b96df3e3848b803ac006fafe816ce1b2b050c8759cf3ad8c080cf"
+    },
+    {
+      "path": "runtime-diagnostic.json",
+      "bytes": 1574,
+      "sha256": "f381f4a929520171caa7b862e28a3f467ef7e444f0834173c5baf00745d10cad"
+    },
+    {
+      "path": "sandbox-setup-excerpt.txt",
+      "bytes": 3594,
+      "sha256": "1f67accff838528e7f8d75f003731219fa4c9e8f2685fae5ee20d2475df94e34"
+    }
+  ]
+}

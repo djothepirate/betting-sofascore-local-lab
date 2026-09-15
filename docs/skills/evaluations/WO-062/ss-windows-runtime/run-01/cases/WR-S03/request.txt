@@ -1,0 +1,3 @@
+À partir de la demande ci-dessous et du catalogue réellement découvert, détermine les skills pertinents. Pour chaque skill retenu, lis intégralement son fichier SKILL.md avec un outil, puis indique le nom, le chemin effectivement lu et la raison de sa sélection. Si aucun skill ne convient, dis-le. Arrête-toi après ce routage : n’exécute pas la tâche métier. Ne lis aucun oracle, résultat antérieur, inventaire commenté ou plan d’évaluation. Demande à router :
+
+Dans le SofaScore Local Lab, reprends le Work Order documentaire actif : relève sa branche, sa base, son périmètre et les critères restant à vérifier. Prépare une fiche de reprise ; aucun incident de runtime ni exécution Windows n’est à diagnostiquer.

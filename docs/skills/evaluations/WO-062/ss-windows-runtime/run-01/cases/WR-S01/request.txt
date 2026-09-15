@@ -1,0 +1,3 @@
+À partir de la demande ci-dessous et du catalogue réellement découvert, détermine les skills pertinents. Pour chaque skill retenu, lis intégralement son fichier SKILL.md avec un outil, puis indique le nom, le chemin effectivement lu et la raison de sa sélection. Si aucun skill ne convient, dis-le. Arrête-toi après ce routage : n’exécute pas la tâche métier. Ne lis aucun oracle, résultat antérieur, inventaire commenté ou plan d’évaluation. Demande à router :
+
+Utilise $ss-windows-runtime pour diagnostiquer dans le SofaScore Local Lab un lanceur PowerShell 5.1 dont l’enfant Java échoue alors que la commande extérieure rend zéro.

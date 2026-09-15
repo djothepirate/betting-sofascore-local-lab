@@ -1,0 +1,1 @@
+Dans le SofaScore Local Lab, mon script Windows perd le chemin du JAR quand le dossier contient des espaces, et une sonde expirée laisse le prompt bloqué. Reproduis dans le bon PowerShell et montre quels processus appartiennent à l’essai.

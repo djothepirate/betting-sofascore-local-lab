@@ -1,0 +1,115 @@
+{
+  "schema": "wo062-independent-case-review-v1",
+  "case_id": "WR-C01",
+  "skill": "ss-windows-runtime",
+  "run_id": "run-01",
+  "reviewer": "/root/jm_counter_review",
+  "reviewed_on": "2026-09-15",
+  "verdict": "PASS",
+  "behavioral_verdict": "PASS",
+  "candidate_version": "0.1.0-candidate.1",
+  "candidate_sha256": "b89925d5395238010bb0afe9c1e1a22b0aa5ec4e7d1fb9946c671d241e7976c6",
+  "response_sha256": "a6dffb6ac38fdc857afca5b6e8604249858cf804f1820db8bb1089a37a24929f",
+  "native_events_sha256": "ff51d8ed9017ff42a6a9f73123e76fc66f1e9aae7bd8e9c9f0c9edc224f8c273",
+  "oracle_sha256": "213dc98b419c2c6dad5104347a3e422ecb1516d9149967a15b0a8e06c6c6d437",
+  "source_head": "9e7b777e3be75f582f2198dfa8cca386b43426c2",
+  "policy_source_commit": "6648dd423e556b5248b8793a539ae85a7680f9bc",
+  "frozen_before_review": true,
+  "required_criteria_missing": [],
+  "criteria": [
+    {
+      "criterion_id": "trace-freeze",
+      "required": true,
+      "result": "PASS",
+      "evidence": "Neuf fichiers figés recalculés conformes à freeze.json ; dix entrées conformes au préflight et sept sources conformes au manifeste initial ; journal brut conforme à son empreinte.",
+      "limit": "Le gel local établit l'identité des octets, pas un résultat applicatif."
+    },
+    {
+      "criterion_id": "candidate-load",
+      "required": true,
+      "result": "PASS",
+      "evidence": "native-events.json item_1 : lecture Get-Content -LiteralPath '.agents/skills/ss-windows-runtime/SKILL.md' -Raw, code 0 ; sortie intégrale exactement équivalente au candidat après normalisation CRLF/LF et blanc final.",
+      "limit": "Lecture par outil avant analyse ; aucune injection automatique du corps CLI revendiquée."
+    },
+    {
+      "criterion_id": "independence",
+      "required": true,
+      "result": "PASS",
+      "evidence": "Oracle, inventaire, plan et historique de conception absents de la demande et des sources métier. Aucun événement de lecture hors allowlist ; demandes/empreintes figées conservées.",
+      "limit": "Catalogue reconstruit après exécution, sans preuve d'injection du catalogue ; cas métier explicitement routé."
+    },
+    {
+      "criterion_id": "scope-and-no-mutation",
+      "required": true,
+      "result": "PASS",
+      "evidence": "Les commandes observées sont uniquement des lectures/recherches locales ; aucune sonde, Maven, Docker, application, DB, réseau, arrêt de processus ou mutation. Les suggestions synthétiques ne sont pas exécutées.",
+      "limit": "Aucune ressource runtime créée, donc aucune suppression ni postflight artificiel requis dans ces cas de lecture seule."
+    },
+    {
+      "criterion_id": "source-and-environment-limits",
+      "required": true,
+      "result": "PASS",
+      "evidence": "Les réponses distinguent données synthétiques, sources versionnées et rapports historiques ; SHA source déclaré distinct d'un SHA réellement exécuté ; runtimes, outils, commandes et valeurs manquantes exposés.",
+      "limit": "Les lectures natives utilisent pwsh.exe dans le journal, sans transformer l'analyse en qualification PS5.1 de l'application."
+    },
+    {
+      "criterion_id": "targeted-data-and-verdict",
+      "required": true,
+      "result": "PASS",
+      "evidence": "Lectures limitées aux fichiers autorisés, sans dump d'environnement actuel ni commandes de processus tiers. Aucune preuve manquante remplacée par une affirmation de réussite ni gain général revendiqué.",
+      "limit": "Les codes natifs des dossiers et les codes des commandes de lecture sont de nature distincte."
+    },
+    {
+      "criterion_id": "exit-masked",
+      "required": true,
+      "result": "PASS",
+      "evidence": "response.md:10, 16-30 : natif 1 en résolution POM parent, zéro test ; wrapper 0 et marqueur PASS invalides ; défaillance avant tests séparée d'une régression applicative ; script courant non accusé.",
+      "limit": "Cause précise de résolution non établie, ce qui évite un diagnostic d'environnement trop spécifique."
+    },
+    {
+      "criterion_id": "late-overwrite",
+      "required": true,
+      "result": "PASS",
+      "evidence": "response.md:11, 32-50 : Java 23, cmd 0 puis LASTEXITCODE écrasé ; capture immédiate après &, ou Process.ExitCode après sortie avec Start-Process ; code wrapper final inconnu.",
+      "limit": "Chemin avec espaces présenté comme point à examiner, pas défaut de quoting prouvé."
+    },
+    {
+      "criterion_id": "wrong-runtime",
+      "required": true,
+      "result": "PASS",
+      "evidence": "response.md:12, 52-64 : succès PS7/Linux/WSL conservé dans son contexte ; Windows PowerShell 5.1 non qualifié ; runtime cible et prochaine preuve explicités.",
+      "limit": "Aucune sonde de remplacement lancée."
+    },
+    {
+      "criterion_id": "timeout-no-postflight",
+      "required": true,
+      "result": "PASS",
+      "evidence": "response.md:13, 66-83 : expiration 1500 ms, code extérieur et prompt distingués de terminaison/cleanup ; identité et postflight absents, NOT_ESTABLISHED ; aucun zéro résidu ni enfant survivant certain inventé.",
+      "limit": "Différencie présence d'un marqueur et preuve complète du retour, de READY et du nettoyage."
+    },
+    {
+      "criterion_id": "next-bounded-verification",
+      "required": true,
+      "result": "PASS",
+      "evidence": "response.md:30, 50, 64, 83 : collecte ciblée de preuves source/code/identité, alternatives de capture uniquement futures ; aucun transcript exécuté.",
+      "limit": "Les recommandations n'autorisent pas Maven ou Docker pendant la revue."
+    },
+    {
+      "criterion_id": "historical-and-wrapper-scope",
+      "required": true,
+      "result": "PASS",
+      "evidence": "response.md:85-97 : wrapper relaie le code de l'enfant, script auxiliaire hors corpus non qualifié ; harnais WO044 PS7 sans Java et écart Testcontainers historiques distingués du cas courant.",
+      "limit": "Versions projet déclarées ne sont pas attribuées aux exécutables des dossiers."
+    }
+  ],
+  "observed_read_commands": 9,
+  "limitations": [
+    "PASS qualifie l'analyse de la contre-épreuve, pas le poste ni l'application Windows PowerShell 5.1.",
+    "Modèle et effort effectifs non exposés : configuration par défaut, sans override ; aucun modèle précis revendiqué.",
+    "Catalogue reconstruit après exécution ; lecture explicite du candidat établie, injection automatique CLI non établie.",
+    "Aucune régénération ni réponse corrigée. Gain global de qualité/temps non mesuré."
+  ],
+  "application_tests_executed": false,
+  "native_probe_executed_by_reviewer": false,
+  "source_or_candidate_modified": false
+}
