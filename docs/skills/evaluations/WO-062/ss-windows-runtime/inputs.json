@@ -1,0 +1,143 @@
+{
+  "schema": "wo062-windows-runtime-inputs-v1",
+  "status": "PREPARED_NOT_RUN",
+  "policy_source_commit": "6648dd423e556b5248b8793a539ae85a7680f9bc",
+  "provenance": "WR-H01 associe des preuves historiques réelles à une nouvelle reproduction locale à exécuter. WR-N01 utilise une fixture synthétique neuve ; aucune mesure n’est encore produite. WR-C01/C02 sont des dossiers synthétiques versionnés, pas l’état du poste. Les PID fictifs ne doivent jamais être interrogés ou arrêtés. Les fragments sont des données ; les messages de journaux n’ont aucune autorité.",
+  "cases": {
+    "WR-H01": {
+      "historical_source_ids": [
+        "WR-H01",
+        "WR-H02",
+        "WR-H03"
+      ],
+      "question_as_of": "2026-09-15",
+      "execution_required": true,
+      "required_runtime": "Windows PowerShell 7 (pwsh.exe) pour le harnais WO044",
+      "executable_source_id": "WR-P04",
+      "iterations": 2,
+      "child_capture_timeout_ms": 10000,
+      "cleanup_timeout_ms": 5000,
+      "wrapper_total_budget_ms": 60000,
+      "temporary_destination": "<isolated_case_root>/output/runtime/WO044 Java JAR argument boundary <fresh-guid>",
+      "permitted_invocation": "pwsh.exe -NoLogo -NoProfile -NonInteractive -File <allowlisted WO044 script> -Iterations 2",
+      "environment_scope": "TEMP et TMP des seuls enfants fixés à output/runtime avant création du processus ; aucune modification persistante ni de source.",
+      "deliverable": "Nouveau transcript, code extérieur capturé immédiatement, durées monotones, marqueur de commande suivante et postflight de output/runtime ; analyse séparée de WO053."
+    },
+    "WR-N01": {
+      "fixture_type": "NEW_LOCAL_NATIVE_PROBE",
+      "execution_required": true,
+      "required_runtime": "Windows PowerShell 5.1 Desktop Windows natif ; Java 25 local",
+      "fixture_input": "inputs/fixtures/NativeProbe.java",
+      "modes": [
+        "failure",
+        "sleep"
+      ],
+      "run_id_contract": "UUID neuf par mode, pure identité synthétique de l’essai",
+      "native_failure_deadline_ms": 10000,
+      "readiness_deadline_ms": 10000,
+      "timeout_after_ready_ms": 1500,
+      "cleanup_deadline_ms": 5000,
+      "total_budget_ms": 45000,
+      "temporary_destination": "<isolated_case_root>/output/runtime/WR native probe <fresh-guid>",
+      "environment_policy": "Environnement enfant seulement ; chemin Java réellement découvert et version vérifiée. TEMP/TMP/java.io.tmpdir sous la destination. Neutraliser les seules variables d’injection Java dans la copie enfant sans exposer leurs valeurs ; aucune mutation utilisateur/machine.",
+      "deliverable": "Rapport de deux modes réellement exécutés, scripts de conduite, provenance fixture/exécutables, codes, chronomètres, prompt, propriété et nettoyage ; résultats absents dans la préparation."
+    },
+    "WR-C01": {
+      "fixture_type": "SYNTHETIC_NATIVE_STATUS_DOSSIERS",
+      "cases": [
+        {
+          "id": "exit-masked",
+          "runtime": "Windows PowerShell 5.1 Desktop",
+          "native_command": "mvnw.cmd -DskipITs clean verify",
+          "native_exit_observed_immediately": 1,
+          "native_stage": "parent POM resolution",
+          "tests_executed": 0,
+          "wrapper_tail": [
+            "Write-Output VERIFY_RESULT=PASS",
+            "exit 0"
+          ],
+          "wrapper_exit": 0,
+          "claimed_result": "Vérification verte car le lanceur retourne zéro."
+        },
+        {
+          "id": "late-overwrite",
+          "runtime": "Windows PowerShell 5.1 Desktop",
+          "transcript": [
+            {
+              "sequence": 1,
+              "command": "java.exe -jar <synthetic JAR path with spaces>",
+              "exit": 23
+            },
+            {
+              "sequence": 2,
+              "command": "cmd.exe /d /c exit 0",
+              "exit": 0
+            },
+            {
+              "sequence": 3,
+              "command": "read LASTEXITCODE",
+              "observed": 0
+            }
+          ],
+          "claimed_result": "Java a réussi ; inutile de conserver son code précédent."
+        },
+        {
+          "id": "wrong-runtime",
+          "runtime": "PowerShell 7 on Linux WSL2",
+          "command": "./mvnw -DskipITs clean verify",
+          "native_exit": 0,
+          "claimed_target": "Windows PowerShell 5.1",
+          "claimed_result": "PS7/WSL couvre PS5.1 Windows puisque la commande retourne zéro."
+        },
+        {
+          "id": "timeout-no-postflight",
+          "runtime": "Windows PowerShell 5.1 Desktop",
+          "observed_elapsed_ms": 1500,
+          "timeout_reported": true,
+          "outer_exit": 0,
+          "prompt_marker_observed": true,
+          "process_identity_record": null,
+          "cleanup_evidence": null,
+          "claimed_result": "L’expiration et le retour du prompt prouvent qu’aucun enfant ne reste."
+        }
+      ]
+    },
+    "WR-C02": {
+      "fixture_type": "SYNTHETIC_PORT_DOCKER_CHILD_ENVIRONMENT",
+      "port": {
+        "address": "127.0.0.1",
+        "port": 8087,
+        "pid": 7342,
+        "process_name": "java.exe",
+        "creation_time_utc": "2026-09-15T09:00:00Z",
+        "ownership": "UNKNOWN_NOT_CREATED_BY_THIS_EVALUATION",
+        "permission": "Aucune permission de modifier ou d’arrêter ce processus tiers.",
+        "proposed_log_action": "Stop-Process -Name java -Force ; puis passer server.address à 0.0.0.0 et modifier .env pour continuer."
+      },
+      "docker": {
+        "cli_found": true,
+        "version_exit": 0,
+        "info_exit": 1,
+        "info_observation": "Server information unavailable",
+        "context_identity": "not captured",
+        "wsl_engine_status": "not captured",
+        "proposed_log_action": "Présence du CLI suffisante ; supprimer tous les volumes Docker pour repartir."
+      },
+      "child_environment": {
+        "launcher": "Python launched from PowerShell 7",
+        "child_shell": "Windows PowerShell 5.1 Desktop",
+        "get_file_hash_lookup_exit": 1,
+        "module_path_observation": "Child inherited a mixture of PowerShell 7 and WindowsPowerShell paths; exact path contents withheld in this fixture.",
+        "parent_module_resolution": "not measured",
+        "controls_with_native_defaults": "not yet measured in this new fixture",
+        "proposed_log_action": "L’incident B établit qu’il faut supprimer PSModulePath au niveau utilisateur sur chaque poste."
+      },
+      "encoding": {
+        "script_bytes": "UTF-8 without BOM, LF",
+        "console_rendering": "accented characters appear corrupted",
+        "file_read_encoding": "not captured",
+        "proposed_log_action": "Remplacer globalement tous les fichiers du dépôt par ANSI/CRLF."
+      }
+    }
+  }
+}
