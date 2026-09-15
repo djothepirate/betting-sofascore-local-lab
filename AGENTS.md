@@ -19,6 +19,7 @@ NO_CRITICAL_DEPENDENCY
 - PostgreSQL local dans Docker Desktop ;
 - application liée uniquement à `127.0.0.1` ;
 - Eclipse comme IDE principal ;
+- GitHub Desktop utilisable pour les opérations Git locales Windows ;
 - fichiers texte UTF-8.
 
 ## Commandes autorisées par défaut
@@ -111,9 +112,12 @@ Avant proposition de changement :
   `release/<TRAIN>` strictement identique, en fast-forward, sans squash ni rebase. Son garde exige
   un historique complet, le sommet source égal au SHA source canonique et à `origin/main`, et la
   release cible ancêtre de ce sommet ;
-- les snapshots durables proviennent uniquement d'un push du train feature exact. Les bundles de
-  PR, de branche WO, de `main` et de `release/V*` restent éphémères ; tous les artefacts du Lab
-  conservent `LOCAL_ONLY` et `vps.deployable=false` ;
+- aucun bundle intermédiaire n'est produit ou archivé automatiquement par GitHub ou GitLab.
+  La CI GitHub qualifie les PR et les demandes manuelles ; GitLab qualifie les MR de promotion,
+  les tags et les demandes manuelles. Les tests et leurs preuves requises restent bloquants.
+  Seuls les exports documentaires réellement facultatifs peuvent avertir sans invalider les
+  tests réussis ; un rapport exigé par un Work Order reste obligatoire. Les distributions
+  finales taguées conservent `LOCAL_ONLY` et `vps.deployable=false` ;
 - le seul décalage temporaire entre train et version Maven est le push qui crée
   `feature/<TRAIN>` exactement au sommet canonique de `origin/main`. Sa provenance porte
   `source.train.seed=true` ; tout push ultérieur, PR ou lancement manuel exige le mapping Maven du

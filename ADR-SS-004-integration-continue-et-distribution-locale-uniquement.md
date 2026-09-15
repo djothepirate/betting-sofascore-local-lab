@@ -8,19 +8,22 @@
 - **Work Order :** WO-SS-20260901-031
 - **Amendement :** 2026-09-05 — WO-SS-20260905-055, trains de version et promotion feature/release
 - **Amendement :** 2026-09-06 — WO-SS-20260906-056, développement RC snapshot et finalisation versionnée
+- **Amendement :** 2026-09-15 — WO-SS-20260915-061, CI à l'usage local et retrait des bundles intermédiaires automatiques
 
 ## Contexte
 
-Le Local Lab entre officiellement dans la fabrique CI du Betting Project. Il doit bénéficier des
-mêmes principes de traçabilité, de qualité et de sécurité sans perdre sa frontière expérimentale,
-locale et non critique.
+Le Local Lab conserve une validation traçable et bloquante adaptée à son usage expérimental,
+local et non critique. Le propriétaire confirme le 15 septembre 2026 que le Lab continue
+d'être développé et utilisé sur Windows, avec Eclipse et GitHub Desktop, sans déploiement VPS.
+L'héritage de la fabrique CI du Betting Project est réduit aux exigences utiles au Lab.
 
 ## Décision
 
 GitHub reste la source canonique de `main`, des trains `feature/*`, des branches de Work Order, des
 Pull Requests et des tags. Le projet GitLab privé
 `djothepirate-betting-project/betting-sofascore-local-lab` reçoit les SHA GitHub qualifiés, exécute
-les validations Linux, conserve les distributions locales et porte seul les branches
+les validations Linux des promotions ou demandes manuelles, conserve les distributions finales
+taguées et porte seul les branches
 `release/V*`. La synchronisation reste unidirectionnelle de GitHub vers GitLab et publie désormais
 le SHA qualifié de `main`, du train feature courant ou d'un tag commun.
 
@@ -89,23 +92,21 @@ promotion est refusée. Le tag n'est créé qu'après la promotion et désigne l
 exactement le commit tagué et extrait. Une release déjà scellée par son tag ne peut plus avancer.
 Toute autre base Maven est refusée avant packaging.
 
-Un snapshot durable porte l'IID du pipeline et le SHA court. Il est conservé uniquement depuis un
-push d'une branche d'intégration `feature/<TRAIN>` exacte, jamais depuis une PR, une branche WO,
-`main` ou `release/V*`. La construction effectuée sur ces autres références reste une preuve
-éphémère. La même version Maven snapshot peut être reconstruite autant de fois que nécessaire ;
-chaque pipeline conserve sa provenance et le rejeu d'un même build demeure reproductible. Un push
-ultérieur conforme utilise la politique normale avec `source.train.seed=false`, même si la
-feature a avancé au-delà de `main`.
-Les durées de rétention demeurent 14 jours sur GitHub et 30 jours sur GitLab pour les snapshots ;
-le rebuild sans limite de nombre n'implique pas une rétention illimitée.
+Aucun bundle intermédiaire n'est fabriqué ou archivé automatiquement sur GitHub ou GitLab,
+y compris sur un push de train feature exact. L'obligation antérieure de snapshots durables
+14 jours/30 jours est supprimée par WO-061. Le packaging reste disponible pour une production
+locale explicitement demandée et pour la distribution finale taguée GitLab, avec son IID,
+son SHA, son SBOM, sa provenance et ses contrôles de reproductibilité. Les gardes de provenance
+du script autonome sont conservés ; ils ne déclenchent aucune fabrication ou conservation.
 L'exception de bootstrap autorise seulement
 `codex/ss-20260905-055-version-branch-workflow` vers `main` sur la base
 `054fa4ca9301224aa5f96f478136208d2327d7f0`, avec la version Maven exacte
 `0.1.0-SNAPSHOT` ; elle ne crée aucun précédent.
 Le garde reçoit aussi le SHA de tête source, le résout dans le graphe et exige que cette base soit
 son ancêtre et sa merge-base exacte.
-Sur GitLab, tout pipeline de branche — push, Web, planifié, API, trigger ou pipeline enfant —
-accepte uniquement `main`, un train `feature/<TRAIN>` exact ou une branche
+Sur GitLab, seuls les événements MR, push de tag et Web créent un pipeline. Les synchronisations
+de branches, tâches planifiées, API, triggers et pipelines enfants ne lancent aucune qualification
+automatique. Une qualification Web sur branche accepte uniquement `main`, un train `feature/<TRAIN>` exact ou une branche
 `release/<TRAIN>` exacte. Les branches WO, le bootstrap et les références historiques restent
 propres à GitHub ou en lecture seule et sont refusés par ce contexte. Les pipelines de MR et de tag
 suivent leurs routes dédiées ; toute source ou référence indéterminée échoue fermée.
@@ -123,12 +124,28 @@ Les tests standards et d'intégration sont exécutés sans appel fournisseur. Le
 `sofascore-live-test`, `provider-playwright-runtime` et les qualifications fournisseur ne sont
 jamais lancés en CI. Les drapeaux réseau et d'intégration optionnelle restent désactivés.
 
-Dependency-Check 13 utilise le flux JSON 2.0 NVD officiel public sans clé API, avec une base propre
-au job, sans restauration ni publication de cache GitLab. `failOnError=true` restitue les erreurs
-effectives. Le job reste en observation (`allow_failure=true`, seuil CVSS 11) : son résultat doit
-être rapporté séparément de la réussite globale et ne constitue pas un gate de vulnérabilités.
+GitHub exécute ses deux jobs bloquants Windows et Linux/PostgreSQL sur les Pull Requests et les
+demandes manuelles. Les événements push et tag ne doublonnent plus ces suites. Les contrôles
+Git, de localité et de secrets restent bloquants ; GitLab conserve aussi Secret Detection sans
+répéter son scan historique intégral à chaque pipeline.
 
-Un artefact autorisé contient le JAR, le SBOM, une provenance, `SHA256SUMS` et les fichiers
+Les jobs automatiques d'observation SAST, JaCoCo/PMD/CPD et Dependency-Check sont retirés.
+Le script Dependency-Check reste utilisable pour une analyse explicite et conserve la remontée
+des erreurs ; son seuil d'observation historique ne constitue pas une validation de sécurité.
+
+Les tests obligatoires et leurs preuves exigées ne peuvent jamais être classés comme exports
+documentaires facultatifs. Les XML Surefire et, pour l'intégration, les XML et le résumé Failsafe
+sont contrôlés : présence, intégrité XML, compteurs, absence d'échecs/erreurs, exécution réelle.
+Leur rétention CI est de trois jours. Sur GitHub, l'indisponibilité de leur upload reste bloquante.
+La revue exige les preuves accessibles du candidat, puis une synthèse durable dans le WO.
+
+Seule Javadoc, produite à la demande dans un job sans tests, est un export documentaire
+facultatif (rétention un jour). Son indisponibilité peut être signalée sans invalider des tests
+réussis. Si un Work Order exige un rapport, y compris Javadoc ou couverture, comme preuve de
+validation, il doit être obtenu dans le parcours bloquant de ce WO ; le job facultatif ne le
+remplace pas. Voir le [guide CI](docs/runbooks/CI-LOCAL-QUOTAS.md).
+
+Une distribution locale autorisée contient le JAR, le SBOM, une provenance, `SHA256SUMS` et les fichiers
 d'exploitation locale. Son manifeste impose :
 
 ```text
@@ -150,13 +167,17 @@ Aucun stage de déploiement, environnement de production, secret de production, 
 bundle VPS n'est autorisé. Une release du Local Lab signifie uniquement « distribution locale
 versionnée » ; elle ne change aucune autorisation réseau ou production.
 
-La qualité suit le ratchet 3A d'ADR-008 : première mesure factuelle, puis couverture sans baisse,
-violations et duplications sans hausse. Les cibles communes restent 80 % lignes, 70 % branches,
-au plus 3 % de duplication et Javadoc valide pour toute nouvelle API publique ou protégée.
+Le ratchet 3A et les cibles générales d'ADR-008 (couverture, duplication, Javadoc systématique)
+ne sont plus des obligations héritées du Lab. Cette décision remplace leur généralisation
+antérieure ; elle ne rétrograde aucune preuve expressément exigée par un Work Order en cours
+et ne réécrit pas les rapports de qualification historiques.
 
 ## Conséquences
 
-- GitHub Actions couvre Windows et Linux ; GitLab Free couvre Linux/Testcontainers et les rapports.
+- GitHub Actions couvre Windows et Linux sur PR/demande manuelle ; GitLab couvre
+  Linux/Testcontainers et ses preuves sur MR de promotion, tag et demande manuelle.
+- Les bundles intermédiaires ne sont plus archivés automatiquement ; les preuves XML sont
+  courtes et les exports documentaires facultatifs sont séparés des tests.
 - GitHub qualifie les PR de Work Orders vers leur train et la PR finale du train vers `main` ; les
   contrôles de topologie refusent les autres couples source/cible.
 - GitLab protège uniquement `release/V*`. `main` et `feature/*` restent non protégées afin de
@@ -183,7 +204,7 @@ au plus 3 % de duplication et Javadoc valide pour toute nouvelle API publique ou
   `origin/main`, cible ancêtre, historique complet et aucun squash/rebase.
 - [ ] Les branches protégées sont limitées à `release/V*` et la règle séparée de tags protégés `v*`
   est active.
-- [ ] Seul un push du train feature exact conserve un snapshot durable.
+- [ ] Aucun bundle intermédiaire n'est fabriqué ou archivé automatiquement.
 - [ ] Le tag commun désigne le même commit que `main`, le train et la release GitLab.
 - [ ] Aucun job ou artefact déployable sur VPS.
-- [ ] Baseline qualité mesurée puis verrouillée sans régression.
+- [ ] Tests et preuves exigées restent bloquants ; seuls les exports réellement facultatifs tolèrent une indisponibilité.

@@ -202,13 +202,9 @@ if ! grep -Fq 'artifact.version=$artifact_version' ci/package-local-only.sh; the
     echo 'FAIL: la provenance doit porter la version canonique de l’artefact.' >&2
     exit 1
 fi
-cache_count=$(awk '/^[[:space:]]*cache:/ { count++ } END { print count + 0 }' .gitlab-ci.yml)
-dependency_job=$(awk '/^security:dependencies:$/ { capture=1 }
-    capture && /^\.package-local-only:$/ { exit }
-    capture { print }' .gitlab-ci.yml)
-if grep -Fq 'MAVEN_CACHE_POLICY' .gitlab-ci.yml || [ "$cache_count" -ne 1 ] ||
-   ! printf '%s\n' "$dependency_job" | grep -Fxq '  cache: []'; then
-    echo 'FAIL: le cache GitLab partagé reste interdit sans isolation serveur qualifiée.' >&2
+if grep -Eq '^[[:space:]]*cache:|MAVEN_CACHE_POLICY|actions/cache@' \
+    .gitlab-ci.yml .github/workflows/ci.yml; then
+    echo 'FAIL: la CI du Lab ne doit pas publier ou restaurer de cache distant.' >&2
     exit 1
 fi
 excluded_path_count=$(awk '
@@ -224,8 +220,13 @@ if [ "$excluded_path_count" -ne 1 ] \
     echo 'FAIL: l’exception GitLab des canaris doit rester limitée au blob synthétique audité.' >&2
     exit 1
 fi
-if ! grep -Fq 'AST_ENABLE_MR_PIPELINES: "true"' .gitlab-ci.yml; then
-    echo 'FAIL: les scanners GitLab stables doivent s’exécuter dans les pipelines MR.' >&2
+if ! grep -Fq 'Jobs/Secret-Detection.gitlab-ci.yml' .gitlab-ci.yml ||
+   ! grep -Fq 'SECRET_DETECTION_HISTORIC_SCAN: "false"' .gitlab-ci.yml; then
+    echo 'FAIL: Secret Detection reste actif sans rescanner tout l’historique à chaque pipeline.' >&2
+    exit 1
+fi
+if grep -Eq 'Jobs/SAST|^quality:observe:|^security:dependencies:' .gitlab-ci.yml; then
+    echo 'FAIL: les observations coûteuses héritées ne doivent plus être automatiques.' >&2
     exit 1
 fi
 if ! grep -Fq \
@@ -238,37 +239,23 @@ if grep -Fq 'target/*.jar' .gitlab-ci.yml; then
     echo 'FAIL: un JAR exécutable ne doit pas être conservé depuis les tests GitLab de branches ou MR.' >&2
     exit 1
 fi
-if ! grep -Fq 'sh ci/check-durable-snapshot-source.sh "$BRANCH_NAME"' \
+if grep -Eq 'package-local-only\.sh|target/distribution|durable-snapshot|DURABLE_SNAPSHOT_SOURCE' \
     .github/workflows/ci.yml ||
-   ! grep -Fq "steps.durable-snapshot.outputs.eligible == 'true'" \
-    .github/workflows/ci.yml; then
-    echo 'FAIL: GitHub doit borner le snapshot durable au train feature exact.' >&2
+   grep -Eq '^package:snapshot-local-only:|DURABLE_SNAPSHOT_SOURCE:' .gitlab-ci.yml; then
+    echo 'FAIL: aucun bundle intermédiaire ne doit être produit ou archivé automatiquement.' >&2
     exit 1
 fi
-if ! grep -Fq 'check-branch-name.sh "$BRANCH_NAME" github-branch' \
+if ! grep -Fq 'check-branch-version.sh "$BRANCH_NAME" "$project_version"' \
     .github/workflows/ci.yml ||
-   ! grep -Fq "github.event_name != 'pull_request' && github.ref_type == 'branch'" \
+   ! grep -Fq "github.event_name == 'workflow_dispatch'" \
     .github/workflows/ci.yml; then
     echo 'FAIL: tout pipeline de branche GitHub doit refuser les releases et noms hors convention.' >&2
     exit 1
 fi
-if ! grep -Fq 'SOURCE_REF_CREATED: ${{ github.event.created }}' \
-    .github/workflows/ci.yml ||
-   ! grep -Fq 'SOURCE_REF_CREATED' ci/package-local-only.sh ||
+if ! grep -Fq 'SOURCE_REF_CREATED' ci/package-local-only.sh ||
    ! grep -Fq 'CI_COMMIT_BEFORE_SHA' ci/package-local-only.sh ||
    ! grep -Fq 'source.train.seed=$train_seed' ci/package-local-only.sh; then
     echo 'FAIL: l’amorçage d’un train doit rester borné à sa création exacte depuis main.' >&2
-    exit 1
-fi
-if grep -Fq "github.ref == 'refs/heads/main'" .github/workflows/ci.yml; then
-    echo 'FAIL: main ne doit plus publier de snapshot durable.' >&2
-    exit 1
-fi
-if ! grep -Fq "github.event_name == 'pull_request' && github.head_ref" \
-    .github/workflows/ci.yml ||
-   ! grep -Fq "github.ref_type == 'branch' && github.ref_name" \
-    .github/workflows/ci.yml; then
-    echo 'FAIL: SOURCE_BRANCH_NAME doit rester vide sur les événements tag GitHub.' >&2
     exit 1
 fi
 if ! grep -Fq '"$SOURCE_BRANCH" "$TARGET_BRANCH" "$BASE_SHA" "$HEAD_SHA" "$project_version"' \
@@ -276,20 +263,32 @@ if ! grep -Fq '"$SOURCE_BRANCH" "$TARGET_BRANCH" "$BASE_SHA" "$HEAD_SHA" "$proje
     echo 'FAIL: le garde PR GitHub doit recevoir base, tête et version Maven exactes.' >&2
     exit 1
 fi
-if grep -Fq "!startsWith(github.ref, 'refs/tags/')" .github/workflows/ci.yml; then
-    echo 'FAIL: GitHub doit valider le bundle local d’un tag sans le téléverser.' >&2
+github_triggers=$(awk '
+    /^"on":$/ { capture = 1; next }
+    capture && /^[^[:space:]#]/ { exit }
+    capture && $0 !~ /^[[:space:]]*(#|$)/ { print }
+' .github/workflows/ci.yml)
+if ! printf '%s\n' "$github_triggers" | grep -Eq '^  pull_request:' ||
+   ! printf '%s\n' "$github_triggers" | grep -Eq '^  workflow_dispatch:' ||
+   printf '%s\n' "$github_triggers" | grep -E '^  [[:alnum:]_]+:' | \
+       grep -Ev '^  (pull_request|workflow_dispatch):' >/dev/null; then
+    echo 'FAIL: GitHub doit qualifier les PR et les demandes manuelles seulement.' >&2
     exit 1
 fi
-if ! grep -Fq '$CI_PIPELINE_SOURCE == "push" && $CI_COMMIT_BRANCH =~ /^feature\/V' \
-    .gitlab-ci.yml ||
-   ! grep -Fq 'DURABLE_SNAPSHOT_SOURCE: "true"' .gitlab-ci.yml; then
-    echo 'FAIL: GitLab doit conserver un snapshot uniquement depuis un train feature exact.' >&2
+if grep -Eq 'continue-on-error:[[:space:]]*true' .github/workflows/ci.yml ||
+   ! grep -Fq 'VerifyTestReports.java' .github/workflows/ci.yml; then
+    echo 'FAIL: les tests et leurs preuves GitHub doivent rester bloquants.' >&2
     exit 1
 fi
 if ! grep -Fq 'sh ci/check-gitlab-pipeline-ref.sh' .gitlab-ci.yml ||
    ! grep -Fq 'sh "$script_dir/check-branch-name.sh" "$branch_name" gitlab-branch' \
        ci/check-gitlab-pipeline-ref.sh; then
     echo 'FAIL: tout pipeline de branche GitLab doit refuser les branches WO, bootstrap et historiques.' >&2
+    exit 1
+fi
+if ! grep -Fq 'sh ci/check-branch-version.sh "$CI_COMMIT_BRANCH" "$project_version" gitlab-branch' \
+    .gitlab-ci.yml; then
+    echo 'FAIL: un lancement de branche GitLab doit valider la version Maven de son train.' >&2
     exit 1
 fi
 if ! grep -Fq '$CI_COMMIT_REF_PROTECTED == "true" && $CI_COMMIT_TAG =~' \
@@ -325,11 +324,7 @@ cat >"$guard_fixture/workflow.expected" <<'YAML'
 workflow:
   rules:
     - if: '$CI_PIPELINE_SOURCE == "merge_request_event"'
-    - if: '$CI_PIPELINE_SOURCE == "push" && $CI_COMMIT_BRANCH && $CI_OPEN_MERGE_REQUESTS'
-      when: never
-    - if: '$CI_COMMIT_BRANCH == $CI_DEFAULT_BRANCH'
-    - if: '$CI_COMMIT_BRANCH'
-    - if: '$CI_COMMIT_TAG'
+    - if: '$CI_PIPELINE_SOURCE == "push" && $CI_COMMIT_TAG'
     - if: '$CI_PIPELINE_SOURCE == "web"'
     - when: never
 YAML
@@ -339,23 +334,54 @@ awk '
     capture && $0 !~ /^[[:space:]]*$/ { print }
 ' .gitlab-ci.yml >"$guard_fixture/workflow.actual"
 if ! cmp -s "$guard_fixture/workflow.expected" "$guard_fixture/workflow.actual"; then
-    echo 'FAIL: la matrice workflow GitLab ne respecte plus le contrat branche/MR/tag/web.' >&2
+    echo 'FAIL: GitLab doit limiter les pipelines aux MR, tags poussés et demandes Web.' >&2
     cat "$guard_fixture/workflow.actual" >&2
     exit 1
 fi
+cat >"$guard_fixture/maven-rules.expected" <<'YAML'
+  rules:
+    - if: '$CI_PIPELINE_SOURCE == "merge_request_event"'
+    - if: '$CI_PIPELINE_SOURCE == "push" && $CI_COMMIT_TAG'
+    - if: '$CI_PIPELINE_SOURCE == "web"'
+    - when: never
+YAML
+awk '
+    /^\.maven-java25:$/ { in_job = 1 }
+    in_job && /^  rules:$/ { capture = 1 }
+    capture && /^  before_script:$/ { exit }
+    capture && $0 !~ /^[[:space:]]*$/ { print }
+' .gitlab-ci.yml >"$guard_fixture/maven-rules.actual"
+if ! cmp -s "$guard_fixture/maven-rules.expected" "$guard_fixture/maven-rules.actual"; then
+    echo 'FAIL: les jobs Maven doivent inclure explicitement les MR GitLab.' >&2
+    exit 1
+fi
+for mandatory_job in validate:local-only test:linux; do
+    job_definition=$(awk -v job_name="$mandatory_job:" '
+        $0 == job_name { capture = 1; next }
+        capture && /^[^[:space:]#]/ { exit }
+        capture { print }
+    ' .gitlab-ci.yml)
+    if ! printf '%s\n' "$job_definition" | grep -Fxq '  extends: .maven-java25' ||
+       printf '%s\n' "$job_definition" | grep -Eq '^  (rules|only|except|when):'; then
+        echo "FAIL: $mandatory_job doit hériter des règles obligatoires MR/tag/Web." >&2
+        exit 1
+    fi
+done
 cat >"$guard_fixture/secret-detection.expected" <<'YAML'
 secret_detection:
   allow_failure: false
   variables:
     GIT_DEPTH: "0"
+  script:
+    - /analyzer run
+    - test -s gl-secret-detection-report.json
+  artifacts:
+    expire_in: 3 days
   rules:
-    - if: '$SECRET_DETECTION_DISABLED == "true" || $SECRET_DETECTION_DISABLED == "1"'
-      when: never
-    - if: '$CI_COMMIT_TAG'
-    - if: '$AST_ENABLE_MR_PIPELINES == "true" && $CI_PIPELINE_SOURCE == "merge_request_event"'
-    - if: '$AST_ENABLE_MR_PIPELINES == "true" && $CI_OPEN_MERGE_REQUESTS'
-      when: never
-    - if: '$CI_COMMIT_BRANCH'
+    - if: '$CI_PIPELINE_SOURCE == "merge_request_event"'
+    - if: '$CI_PIPELINE_SOURCE == "push" && $CI_COMMIT_TAG'
+    - if: '$CI_PIPELINE_SOURCE == "web"'
+    - when: never
 YAML
 awk '
     /^secret_detection:$/ { capture = 1 }
@@ -364,8 +390,39 @@ awk '
 ' .gitlab-ci.yml >"$guard_fixture/secret-detection.actual"
 if ! cmp -s "$guard_fixture/secret-detection.expected" \
     "$guard_fixture/secret-detection.actual"; then
-    echo 'FAIL: Secret Detection doit couvrir MR, branches et tags sans doublon.' >&2
+    echo 'FAIL: Secret Detection doit bloquer chaque pipeline autorisé.' >&2
     cat "$guard_fixture/secret-detection.actual" >&2
+    exit 1
+fi
+gitlab_tests=$(awk '
+    /^test:linux:$/ { capture = 1; next }
+    capture && /^[^[:space:]#]/ { exit }
+    capture { print }
+' .gitlab-ci.yml)
+if ! printf '%s\n' "$gitlab_tests" | grep -Fq -- '-Pintegration-tests clean verify' ||
+   ! printf '%s\n' "$gitlab_tests" | grep -Fq 'java ci/VerifyTestReports.java integration' ||
+   printf '%s\n' "$gitlab_tests" | grep -Eq 'allow_failure:[[:space:]]*true|when:[[:space:]]*(manual|never)|\|\|'; then
+    echo 'FAIL: les tests PostgreSQL et leurs preuves doivent rester obligatoires sur GitLab.' >&2
+    exit 1
+fi
+gitlab_documentation=$(awk '
+    /^documentation:javadoc:$/ { capture = 1; next }
+    capture && /^[^[:space:]#]/ { exit }
+    capture { print }
+' .gitlab-ci.yml)
+if ! printf '%s\n' "$gitlab_documentation" | grep -Fq '  when: manual' ||
+   ! printf '%s\n' "$gitlab_documentation" | grep -Fq '  allow_failure: true' ||
+   ! printf '%s\n' "$gitlab_documentation" | grep -Fq '    expire_in: 1 day' ||
+   ! printf '%s\n' "$gitlab_documentation" | grep -Fq -- '-DskipTests' ||
+   ! printf '%s\n' "$gitlab_documentation" | grep -Fq 'maven-javadoc-plugin:3.12.0:javadoc' ||
+   printf '%s\n' "$gitlab_documentation" | grep -Eq '^  rules:|jacoco|maven-pmd-plugin|dependency-check|[[:space:]](test|verify)[[:space:]]*$'; then
+    echo 'FAIL: seule la Javadoc manuelle sans tests peut être facultative.' >&2
+    exit 1
+fi
+allow_failure_count=$(awk '/^[[:space:]]*allow_failure:[[:space:]]*true[[:space:]]*$/ { count++ }
+    END { print count + 0 }' .gitlab-ci.yml)
+if [ "$allow_failure_count" -ne 1 ]; then
+    echo 'FAIL: aucun test, garde ou rapport de validation ne peut autoriser l’échec.' >&2
     exit 1
 fi
 sh ci/test-check-no-secrets-signals.sh

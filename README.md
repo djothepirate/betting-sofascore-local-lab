@@ -205,22 +205,28 @@ train feature exact ou sa release exacte. Les branches WO, le bootstrap et les r
 historiques sont refusés ; les MR et tags suivent leurs contrôles dédiés et un contexte sans source
 ou référence déterminée échoue fermé.
 
-Seul un push du train feature exact conserve un snapshot exécutable. Les bundles des PR, des
-branches WO, de `main` et des releases restent éphémères. « Exécutable » signifie toujours local :
-`production.approved=false`, `vps.deployable=false`, aucun déploiement ou accès fournisseur n'est
-autorisé par ce workflow.
-La même version Maven snapshot peut être reconstruite sans limite de nombre : chaque nouvelle
-exécution conserve son IID de pipeline et le SHA dans le nom du bundle. Le rejeu d'un même build
-reste reproductible et ne réactive pas l'exception d'amorçage (`source.train.seed=false`).
-Cette possibilité de rebuild ne change pas la rétention : 14 jours sur GitHub et 30 jours sur
-GitLab pour les snapshots ; la conservation des releases taguées reste distincte.
+Le [WO-061](docs/work_orders/completed/WO-SS-20260915-061-ci-local-quotas.md) retire la fabrication
+et l'archivage automatiques des bundles intermédiaires, y compris depuis les trains feature.
+GitHub qualifie les PR et les demandes manuelles avec ses deux jobs bloquants Windows et
+Linux/PostgreSQL ; les pushes ne doublonnent plus les suites. GitLab qualifie les MR de
+promotion, les tags et les demandes manuelles. Les distributions finales taguées conservent
+leur parcours distinct, leurs preuves et les marqueurs `production.approved=false` et
+`vps.deployable=false`.
+
+Le développement et l'utilisation restent locaux sous Windows. GitHub Desktop sert aux
+opérations Git du checkout et Eclipse au développement. Les tests obligatoires et leurs
+rapports de preuve restent bloquants ; seuls les exports réellement documentaires facultatifs,
+comme Javadoc à la demande, peuvent produire un avertissement. Les XML sont contrôlés et
+conservés trois jours ; un rapport exigé par un WO reste obligatoire. Les observations qualité
+héritées et leurs scans répétitifs ne sont plus exécutés automatiquement. Le
+[guide CI et quotas](docs/runbooks/CI-LOCAL-QUOTAS.md) détaille ces distinctions, la rétention
+et les réglages distants à vérifier.
 Les lanceurs J3/J4/J5 résolvent le worker exact depuis `project.build.finalName` du profil Maven,
 avec refus si le JAR manque, même lorsqu'un ancien worker subsiste ; leur invocation demeure
 manuelle et soumise aux autorisations fournisseur existantes.
 
-Le job d'observation Dependency-Check 13 lit le flux JSON 2.0 public NVD sans clé API, avec une
-base propre au job et sans cache GitLab partagé. Les erreurs restent visibles ; le seuil CVSS 11
-et `allow_failure=true` demeurent une mesure d'observation, pas une validation de sécurité bloquante.
+Le script Dependency-Check reste disponible pour une analyse explicitement demandée ; sa
+configuration d'observation historique ne constitue pas une validation de sécurité bloquante.
 
 ## État consolidé J9 — 5 septembre 2026
 
