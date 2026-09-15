@@ -1,0 +1,98 @@
+{
+  "schema": "wo062-skill-run-artifacts-v1",
+  "skill": "ss-java-module",
+  "run_id": "run-03",
+  "files": [
+    {
+      "path": "authorization.json",
+      "bytes": 1572,
+      "sha256": "d6507ab7bf482b84d8a942652015bc7567ad23439bbd060a34ce2bc8b6009aa8"
+    },
+    {
+      "path": "cases/JM-N01/catalogue.txt",
+      "bytes": 8580,
+      "sha256": "3ef915d3955a2b85af8903e1364eb353685294e3a66fdb9973f31bb56bbc35bd"
+    },
+    {
+      "path": "cases/JM-N01/freeze.json",
+      "bytes": 1440,
+      "sha256": "0025eac8cf6db3615b5abdedecea6681d642449d06f3bad556f77c6836d476f2"
+    },
+    {
+      "path": "cases/JM-N01/host-runtime.json",
+      "bytes": 371,
+      "sha256": "e2fcdd81230930cfcb64ce7e3c9329fd286247c9aa472d8a4dd06dac74582b28"
+    },
+    {
+      "path": "cases/JM-N01/input.json",
+      "bytes": 1211,
+      "sha256": "772ccc19a09cac5b2e712a5c6edeea96c02138dca0fadd9e3743233a589b5733"
+    },
+    {
+      "path": "cases/JM-N01/native-events.json",
+      "bytes": 680074,
+      "sha256": "f70d7b6e89bc4bb30497eaf824b841b2112ccce9c63b00cc8ee659cbb316272d"
+    },
+    {
+      "path": "cases/JM-N01/prompt.txt",
+      "bytes": 1021,
+      "sha256": "f4ced228cb89c9cbec8498cfc126e2dde2648a2177fc533819370f945158fc60"
+    },
+    {
+      "path": "cases/JM-N01/request.txt",
+      "bytes": 4873,
+      "sha256": "88764e319124b951f7b9b7a580cc145789e4b9883e7bde86e17038af2f79868e"
+    },
+    {
+      "path": "cases/JM-N01/response.md",
+      "bytes": 38278,
+      "sha256": "0a343748b9b74f51739363af7b79e458e24fdacf0cce89d694e5d1747f5b04c5"
+    },
+    {
+      "path": "cases/JM-N01/stderr.log",
+      "bytes": 1247,
+      "sha256": "f6103d31ac0013cf6ef30d15cb12390fc9381fb8ba17144585173b7dcff9bfb4"
+    },
+    {
+      "path": "cases/JM-N01/trace.json",
+      "bytes": 10889,
+      "sha256": "085bc0cf1ec7968f67324b50c8d3a2cf0e4e95f01e50b5d503be67e91e033648"
+    },
+    {
+      "path": "current-results.json",
+      "bytes": 3926,
+      "sha256": "d07fbe2efe9319962deec851c0a3e207cf6d44390e7ccd0c88771f4c6c7599c7"
+    },
+    {
+      "path": "preflight.json",
+      "bytes": 10016,
+      "sha256": "fad4863cfaa4b87de80324828e008b15b8e0c0001c09920df3c1b6caee4f3311"
+    },
+    {
+      "path": "previous-qualification.json",
+      "bytes": 3643,
+      "sha256": "ee5065f201f6fcab4694444bae4268226a6038222b1bee8ea7ecf5ba68fcad9e"
+    },
+    {
+      "path": "publication-provenance.json",
+      "bytes": 1109,
+      "sha256": "acac9eed7372218ccb2f3910ef366b372ebb217e5f559390fb5d45e28115eec1"
+    },
+    {
+      "path": "results.json",
+      "bytes": 728,
+      "sha256": "9b2721a875bba4ed58ac3dca35f194a60b8fd385d574d686f77acad61eca8f1a"
+    },
+    {
+      "path": "review-JM-N01.json",
+      "bytes": 12158,
+      "sha256": "84ff207079a028d239400037c80cc0535f068da5cbdeda1ebf63e9fc786ee07d"
+    },
+    {
+      "path": "review-JM-N01.md",
+      "bytes": 9926,
+      "sha256": "407a93398dfc6320862884da8435f8c1984fa390bebce0c704f21f7e75a4d69c"
+    }
+  ],
+  "hash_contract": "Exact published bytes; manifest excludes itself. Raw internal reasoning is excluded."
+}

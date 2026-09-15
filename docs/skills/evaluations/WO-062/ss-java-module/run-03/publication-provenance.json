@@ -1,0 +1,18 @@
+{
+  "schema": "wo062-targeted-publication-v1",
+  "publisher_source_head": "380d9ed5e548fb2fbc398aaeccfca516395c6e82",
+  "candidate_body_commit": "2d62f12c2d2ad4571c630aea0f98128927aa24ff",
+  "candidate_package_commit": "2d62f12c2d2ad4571c630aea0f98128927aa24ff",
+  "case_id": "JM-N01",
+  "evaluation_source_head": "4a83e121d8c28833b7617313ab277bc4341f078e",
+  "fresh_sessions": 1,
+  "source_preflight_sha256": "fad4863cfaa4b87de80324828e008b15b8e0c0001c09920df3c1b6caee4f3311",
+  "preparation_commit": "380d9ed5e548fb2fbc398aaeccfca516395c6e82",
+  "preparation_commit_timing": "Original candidate and case sources were already versioned; the new operational addendum and timing/preparation bytes were frozen and hashed before launch, then committed at380d9ed while evaluations were running.",
+  "publisher_sha256": "6001f61cc3341ad95708e4958a61a7bf608d9b96f1c92cbde47e61fc97f316c3",
+  "prior_publisher_sha256": "e1596d4c0731d1e71a521deb173d532aa6f44c14c9da25164e1e2013a871f5cd",
+  "review_after_freeze": true,
+  "previous_runs_unchanged": true,
+  "human_validation": false,
+  "personal_installation": false
+}

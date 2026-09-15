@@ -4,7 +4,7 @@
   "candidate_version": "0.1.0-candidate.1",
   "status": "INCOMPLETE_QUALIFICATION",
   "source_commit": "6648dd423e556b5248b8793a539ae85a7680f9bc",
-  "source_head": "4a83e121d8c28833b7617313ab277bc4341f078e",
+  "source_head": "2d62f12c2d2ad4571c630aea0f98128927aa24ff",
   "preparation_manifest_sha256": "d62271db051e64edc261f4812f4969511993e314fb07cb8f6d3115ae446e29f7",
   "candidate_files": [
     {
@@ -18,20 +18,20 @@
       "sha256": "3038015980952bc18b21f45f0d4af514b35a8841394e4b80824986b7e30ccd9f"
     }
   ],
-  "publisher_source_head": "380d9ed5e548fb2fbc398aaeccfca516395c6e82",
+  "publisher_source_head": "3f758491c5a4bdf3c07daacc7fedec7a8458d2ec",
   "candidate_body_commit": "9e7b777e3be75f582f2198dfa8cca386b43426c2",
   "candidate_package_commit": "9e7b777e3be75f582f2198dfa8cca386b43426c2",
   "distinct_cases": 8,
-  "executions": 11,
-  "total_executions": 11,
+  "executions": 10,
+  "total_executions": 10,
   "pass": 6,
   "fail": 0,
   "blocked": 2,
   "human_validation": false,
   "personal_installation": false,
-  "results": "run-03/current-results.json",
-  "run_results": "run-03/results.json",
-  "artifact_manifest_sha256": "1e60038ed8168bb83bbd7e2e1730bb4fcaa793f93ba7f071007e8842a2fa6b42",
+  "results": "run-02/current-results.json",
+  "run_results": "run-02/results.json",
+  "artifact_manifest_sha256": "cace19f5de60f4fd7f7e69518cf939d27ecdbca5c4ea78588b7c4ce725135e9f",
   "historical_runs": [
     {
       "run_id": "run-01",
@@ -58,29 +58,18 @@
       "candidate_body_commit": "9e7b777e3be75f582f2198dfa8cca386b43426c2",
       "candidate_package_commit": "9e7b777e3be75f582f2198dfa8cca386b43426c2",
       "source_commit": "6648dd423e556b5248b8793a539ae85a7680f9bc"
-    },
-    {
-      "run_id": "run-02",
-      "candidate_version": "0.1.0-candidate.1",
-      "candidate_sha256": "b89925d5395238010bb0afe9c1e1a22b0aa5ec4e7d1fb9946c671d241e7976c6",
-      "executions": 2,
-      "pass": 0,
-      "fail": 0,
-      "blocked": 2,
-      "results": "run-02/results.json",
-      "artifact_manifest_sha256": "cace19f5de60f4fd7f7e69518cf939d27ecdbca5c4ea78588b7c4ce725135e9f"
     }
   ],
   "execution_totals": {
     "pass": 6,
     "fail": 0,
-    "blocked": 5
+    "blocked": 4
   },
   "current_cases": [
     {
       "case_id": "WR-H01",
       "verdict": "BLOCKED",
-      "source_run": "run-03"
+      "source_run": "run-02"
     },
     {
       "case_id": "WR-N01",

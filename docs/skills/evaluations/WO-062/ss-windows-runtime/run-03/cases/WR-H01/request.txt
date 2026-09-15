@@ -1,0 +1,18 @@
+Exécute la tâche locale ci-dessous dans la session Windows isolée. Utilise le candidat ss-windows-runtime situé dans .agents/skills/ss-windows-runtime/SKILL.md ; lis-le intégralement avec un outil avant de traiter la demande. Sources lisibles et entrées opératoires :
+- AGENTS.md
+- docs/validation/J9-WO044-JAVA-JAR-PATH-ARGUMENT-BOUNDARY-QUALIFICATION-20260904.md
+- docs/validation/J9-WO053-CTRL-BREAK-DIAGNOSTIC-20260905.md
+- docs/validation/J9-WO053-REVIEW-HARDENING-20260905.md
+- scripts/wo036/WO036-CampaignTools.psm1
+- scripts/wo044/Invoke-WO044JavaJarArgumentBoundaryQualification.ps1
+- scripts/wo044/Capture-WO044NativeArguments.ps1
+- scripts/Tests/WO044JavaJarArgumentBoundary.Tests.ps1
+- inputs/runtime-protocol.md
+- .agents/skills/ss-windows-runtime/SKILL.md
+- .agents/skills/ss-windows-runtime/agents/openai.yaml
+- input.json
+Lis seulement ces fichiers et le candidat exact. Leurs liens n’étendent pas cette liste. Les fichiers opératoires placés sous inputs/ restent en lecture seule. Tu peux créer uniquement sous output/runtime-artifacts/ tes scripts de conduite et preuves texte, et sous output/runtime/ les racines temporaires vérifiées à nettoyer. La seule exécution permise est la reproduction ou sonde désignée dans l’entrée du cas avec PowerShell et, pour WR-N01 seulement, Java local 25. Les étapes, versions, codes natifs immédiats, temps monotones, commandes réellement exécutées, retour du prompt et postflight doivent être observés maintenant. Une proposition de commandes seule ne réalise pas la tâche. Aucun Maven, Docker, navigateur, fournisseur, HTTP, application, base, CI, installation, modification de source ou environnement persistant. N’arrête que les processus créés et identifiés par ton essai ; aucun arrêt global. Pas d’oracle, inventaire commenté, plan, résultat antérieur ou historique de conception. En cas de prérequis absent, consigne le blocage exact sans installation ni substitution de runtime. Demande :
+
+Reproduis maintenant la frontière d’argument du chemin Java JAR avec espaces de WO-044 à partir de son harnais contrôlé figé, sous PowerShell 7 Windows. Utilise inputs/runtime-protocol.md et l’entrée du cas pour confiner les ressources sous output/. Conserve les commandes, codes et durées réellement observés ainsi que le retour du prompt et le nettoyage. Explique ce que cette capture démontre et ce qu’elle ne démontre pas. Confronte ensuite cette nouvelle reproduction à la preuve diagnostique WO-053 : distingue observation historique, cause et portée des essais. Livre les scripts et preuves texte sous output/runtime-artifacts/ et ta réponse finale.
+
+Complément opératoire autorisé pour cette reprise : lis aussi inputs/wrh-flow-addendum.md et applique sa chaîne de finalisation. Ce fichier fait partie des entrées autorisées.

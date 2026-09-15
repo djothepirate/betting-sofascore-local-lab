@@ -1,0 +1,214 @@
+{
+  "schema": "wo062-independent-review-v1",
+  "case_id": "WR-H01",
+  "run_id": "run-03",
+  "verdict": "BLOCKED",
+  "review_role": "independent_reviewer",
+  "candidate_version": "0.1.0-candidate.1",
+  "candidate_commit": "9e7b777e3be75f582f2198dfa8cca386b43426c2",
+  "candidate_sha256": "b89925d5395238010bb0afe9c1e1a22b0aa5ec4e7d1fb9946c671d241e7976c6",
+  "candidate_yaml_sha256": "3038015980952bc18b21f45f0d4af514b35a8841394e4b80824986b7e30ccd9f",
+  "response_sha256": "14c84a8fbfb11d13b090b4e17070615e2b876b6bd6df6174594589e813f80771",
+  "native_events_sha256": "98764b1e5016e61c596c19d65458f3b3ebdaa46d5a624697481ed531a3a4320e",
+  "trace_sha256": "2a188856a6c4be753cdeef17f785ca8a265bddae4a0c6e5831770ad54ec5873f",
+  "oracle_sha256": "213dc98b419c2c6dad5104347a3e422ecb1516d9149967a15b0a8e06c6c6d437",
+  "protocol_sha256": "b4748a356b881a8574a78156c0ac00c90f493874efe8303d40a7224c12d91a52",
+  "flow_addendum_sha256": "59bae0779270ea670730b3c60425623ba81bee52d899edcb4dd2c2ddab52f4a6",
+  "source_commit": "6648dd423e556b5248b8793a539ae85a7680f9bc",
+  "preparation_source_head": "4a83e121d8c28833b7617313ab277bc4341f078e",
+  "frozen_at_utc": "2026-09-15T22:46:15.269938+00:00",
+  "freeze_path": "frozen/WR-H01/freeze.json",
+  "response_path": "frozen/WR-H01/response.md",
+  "first_review_read_after_freeze": true,
+  "frozen_files_verified": 18,
+  "input_files_verified": 13,
+  "summary": "Conduite bloquée avant lancement du harnais : Accès refusé, zéro lancement, code natif absent. Le runtime vide et le retour du prompt sont réellement observés ; une réponse finale explicite est produite dans une session normale de 281.875 s. Aucune reproduction de frontière d'argument n'est démontrée. Omissions secondaires de comparaison historique et écart de stratégie de lecture consignés séparément.",
+  "criteria": [
+    {
+      "id": "I01",
+      "verdict": "PASS",
+      "requirement": "Gel, candidat et corpus exacts",
+      "evidence": "18 pièces figées et 13 entrées du préflight conformes en SHA-256 et taille. Candidat .1, oracle et complément opératoire inchangés ; trois sources exécutables dans leur arborescence. Entrées décodables en UTF-8 strict, sans NUL.",
+      "limit": "Le commit source métier 6648dd4, le candidat 9e7b777 et la préparation 4a83e12 restent distincts."
+    },
+    {
+      "id": "I02",
+      "verdict": "PASS",
+      "requirement": "Lecture intégrale réelle du candidat",
+      "evidence": "item_1 : Get-Content -Raw du SKILL.md, code 0 ; aggregated_output contient exactement le corps complet du candidat.",
+      "limit": "Lecture par outil prouvée, pas injection automatique du CLI ; catalogue reconstruit après exécution."
+    },
+    {
+      "id": "I03",
+      "verdict": "PASS",
+      "requirement": "Actions autorisées et absence de mutation hors portée",
+      "evidence": "12 commandes natives examinées, toutes code outil 0. Lectures autorisées, création des seules racines output, deux scripts ajoutés sous runtime-artifacts et leurs preuves. Aucun appel Java, Maven, Docker, réseau, application, base, oracle ou ancien résultat ; aucune source modifiée.",
+      "limit": "L'inventaire de processus auxiliaire présent dans le script n'a pas été atteint ; aucun arrêt ni suppression effectué."
+    },
+    {
+      "id": "H01",
+      "verdict": "BLOCKED",
+      "requirement": "Exécution neuve du harnais exact sous PS7 Windows avec deux itérations",
+      "evidence": "item_10 observe PS7.6.6 Core / Windows 10.0.26200 et résout pwsh7.6.6.0. Le conducteur prévoit les trois fichiers exacts et -Iterations 2, mais item_16 produit BLOCKED avant result.runtime, result.command et EXECUTION_START. Aucun processus natif du harnais créé.",
+      "limit": "Le PS observé est celui de l'outil ; version/architecture/PSHOME et PID du futur enfant sont absents. La disponibilité de PS7 ne suffit pas à reproduire."
+    },
+    {
+      "id": "H02",
+      "verdict": "BLOCKED",
+      "requirement": "Transcript actuel, arguments, code immédiat, temps et retour",
+      "evidence": "Aucun marqueur actuel WO044_PRE_FIX_SPLIT_ARGUMENT_REPRODUCED, WO044_QUALIFIED_ITERATIONS=2, capture avec/sans espace, identité, trois garde-fous ou quatre refus. Aucun code ni durée du harnais. Le conducteur enregistre 194.609 ms, erreur Accès refusé, natif null et outil 0. item_17 observe ensuite WR_PROMPT_RETURNED à 22:44:24.4114165Z.",
+      "limit": "Les marqueurs figurant dans les sources et rapports lus ne sont pas des résultats actuels. Les codes CLI/collecteur 0 et la fin normale ne qualifient pas le harnais."
+    },
+    {
+      "id": "H03",
+      "verdict": "BLOCKED",
+      "requirement": "Confinement enfant, nettoyage et postflight indépendant",
+      "evidence": "Le script prépare TEMP/TMP exclusivement dans ProcessStartInfo, sous output/runtime, UseShellExecute=false/CreateNoWindow=true, chemins canoniques avec séparateur et contrôle des ancêtres sans reparse. Le lancement n'est pas atteint. item_22 exécute le postflight séparé : runtime existe, zéro entrée, 85.8657 ms, aucune suppression.",
+      "limit": "Runtime vide réellement observé. ownedNativeProcessCount=0 découle de l'absence de lancement et n'est pas un inventaire indépendant/global. Aucun cleanup effectif d'un harnais lancé ni capture supprimée n'est qualifié ; la limite des captures jetables est consignée."
+    },
+    {
+      "id": "H04",
+      "verdict": "FAIL",
+      "requirement": "Explication complète de la frontière d'arguments",
+      "evidence": "Réponse 29 explique la recomposition Start-Process ArgumentList, les guillemets du chemin canonique, sa position après -jar, identité et trois arguments JDK. Les quatre classes refusées (relatif, extension non-JAR, guillemet, contrôle) ne sont pas restituées.",
+      "limit": "Omission de contenu ; aucune commande shell libre proposée. Le helper exact lu par item_10 contient ces contrôles, mais sa présence dans une source n'est pas une explication par la réponse."
+    },
+    {
+      "id": "H05",
+      "verdict": "PASS",
+      "requirement": "Portée de la capture PowerShell",
+      "evidence": "Réponse 3, 23 et 31 distingue absence de reproduction et portée conditionnelle du harnais PowerShell, sans exécution Java ou JAR applicatif. Aucun Maven/Docker observé.",
+      "limit": "Aucune qualification Java 25/Spring, de la sonde WR-N01 ou de l'application déduite."
+    },
+    {
+      "id": "H06",
+      "verdict": "FAIL",
+      "requirement": "Histoire WO053 et provenance exacte",
+      "evidence": "Réponse 33–37 conserve NOT_ESTABLISHED, deux essais Windows sans reproduction, différences instrumentation/workflow_dispatch de branche/merge synthétique PR et absence de stabilité générale. Elle omet les identifiants 33972681012 et 33973934317 ainsi que le SHA 5f3dea2b72c0751174ea389891397e11bd9e08ae.",
+      "limit": "Omission de provenance obligatoire, pas diagnostic causal inverse. Aucun lien causal inventé avec le refus d'accès actuel."
+    },
+    {
+      "id": "H07",
+      "verdict": "PASS",
+      "requirement": "Linux et portée propre du durcissement WR-H03",
+      "evidence": "Réponse 33 : Linux échoué au scan avant tests, run global non vert ; aucune alerte déclarée fausse. Réponse 35 : contre-épreuve C# sans API Win32, pas reproduction CI, anciens succès ne qualifiant pas le diff ultérieur.",
+      "limit": "Les preuves historiques restent historiques, aucune CI rejouée."
+    },
+    {
+      "id": "H08",
+      "verdict": "FAIL",
+      "requirement": "Portée exacte de l'écart WO044",
+      "evidence": "Réponse 31 mentionne Testcontainers et une commande Maven historique distincte. Elle omet que l'absence accidentelle de -DskipITs a déclenché les conteneurs isolés et que leur nettoyage exact a été prouvé.",
+      "limit": "Omission de contenu. Aucune exécution Docker actuelle ni masquage en succès d'un écart actuel observé."
+    },
+    {
+      "id": "F01",
+      "verdict": "FAIL",
+      "requirement": "Lecture ciblée demandée par le complément opératoire",
+      "evidence": "item_4 lit intégralement le module de 176724 octets avec les scripts ; item_6/7/8 répètent des entrées et les trois rapports déjà lus par item_2/3, avant une recherche ciblée item_10.",
+      "limit": "Écart à l'organisation demandée (éviter intégrales et relectures répétées), sans incidence causale prouvée sur le refus d'accès. Aucun nouveau runtime ni sous-agent."
+    },
+    {
+      "id": "F02",
+      "verdict": "PASS",
+      "requirement": "Finalisation autonome après impossibilité",
+      "evidence": "Un conducteur, zéro lancement du harnais, aucune relance. JSON et scripts conservés ; EXECUTION_END, EVIDENCE_READY, POSTFLIGHT_COMPLETE et CONCLUSION_READY présents, EXECUTION_START explicitement absent. Réponse finale autonome présente, sans README ni manifeste doublon ; session 281.875 s sous la cible six minutes.",
+      "limit": "Les noms de phases ne prouvent pas une exécution native. Les temps monotones de conduite/postflight et la réception des événements appartiennent à des horloges/portées distinctes."
+    },
+    {
+      "id": "F03",
+      "verdict": "PASS",
+      "requirement": "Codes et incidents correctement séparés",
+      "evidence": "Réponse 21–25 : code outil 0 dû au catch ne remplace pas le résultat BLOCKED. Collecteur 0, CLI 0, turn_completed=true, collection_completed=true, timed_out=false ; aucun incident de collecte observé.",
+      "limit": "Le catch conserve seulement Exception.Message : ligne et pile absentes. Les avertissements icônes/snapshot PowerShell du stderr n'empêchent pas la fin normale et ne sont pas la preuve de la cause native."
+    }
+  ],
+  "blocking_findings": [
+    {
+      "criterion_id": "H01",
+      "kind": "runtime_preflight_block",
+      "detail": "Accès refusé avant EXECUTION_START et toute création du processus harnais ; opération exacte non capturée."
+    },
+    {
+      "criterion_id": "H02",
+      "kind": "missing_required_execution_evidence",
+      "detail": "Aucun transcript, arguments, marqueur actuel, code ou durée du harnais."
+    },
+    {
+      "criterion_id": "H03",
+      "kind": "missing_required_execution_evidence",
+      "detail": "Postflight vide valide, mais confinement effectif et nettoyage d'enfants exécutés ne peuvent être qualifiés."
+    }
+  ],
+  "secondary_findings": [
+    {
+      "criterion_id": "H04",
+      "kind": "mandatory_content_omission",
+      "detail": "Réponse 29 explique la recomposition Start-Process ArgumentList, les guillemets du chemin canonique, sa position après -jar, identité et trois arguments JDK. Les quatre classes refusées (relatif, extension non-JAR, guillemet, contrôle) ne sont pas restituées."
+    },
+    {
+      "criterion_id": "H06",
+      "kind": "mandatory_content_omission",
+      "detail": "Réponse 33–37 conserve NOT_ESTABLISHED, deux essais Windows sans reproduction, différences instrumentation/workflow_dispatch de branche/merge synthétique PR et absence de stabilité générale. Elle omet les identifiants 33972681012 et 33973934317 ainsi que le SHA 5f3dea2b72c0751174ea389891397e11bd9e08ae."
+    },
+    {
+      "criterion_id": "H08",
+      "kind": "mandatory_content_omission",
+      "detail": "Réponse 31 mentionne Testcontainers et une commande Maven historique distincte. Elle omet que l'absence accidentelle de -DskipITs a déclenché les conteneurs isolés et que leur nettoyage exact a été prouvé."
+    },
+    {
+      "criterion_id": "F01",
+      "kind": "operational_organization_deviation",
+      "detail": "item_4 lit intégralement le module de 176724 octets avec les scripts ; item_6/7/8 répètent des entrées et les trois rapports déjà lus par item_2/3, avant une recherche ciblée item_10."
+    }
+  ],
+  "technical_execution_verdict": "BLOCKED_BEFORE_HARNESS_START",
+  "harness_launch_count": 0,
+  "harness_native_exit_code": null,
+  "driver_tool_exit_code": 0,
+  "driver_duration_ms": 194.609,
+  "postflight_duration_ms": 85.8657,
+  "postflight_runtime_entry_count": 0,
+  "postflight_owned_process_count_basis": "Logical consequence of no process creation; no worldwide or separate PID census.",
+  "native_cli_exit_code": 0,
+  "collector_exit_code": 0,
+  "collector_incident_observed": false,
+  "turn_completed": true,
+  "collection_completed": true,
+  "timed_out": false,
+  "session_duration_seconds": 281.875,
+  "timing": {
+    "native_receipt_duration_seconds": 281.594,
+    "native_timing_sha256": "f3b6423b65c16e4ff33accf5c5d4f90c0b3aba420fa231ecc9df3aaf1e406d9a",
+    "native_timing_summary_sha256": "80b0a9ffaa0fa197bd47be84e4dcce7e3258c4993627bffad0c380b6bac8a039",
+    "event_count": 41,
+    "commands_completed": 12,
+    "final_message_received_at_utc": "2026-09-15T22:46:11.818489+00:00",
+    "turn_completed_received_at_utc": "2026-09-15T22:46:11.899228+00:00",
+    "collector_started_at_utc": "2026-09-15T22:46:14.025328+00:00",
+    "collector_finished_before_freeze_at_utc": "2026-09-15T22:46:15.265937+00:00",
+    "scope": "Local CLI event receipt timings, not model thinking duration or native harness duration."
+  },
+  "artifact_sha256": {
+    "Invoke-WRH01.ps1": "bd86fbc9b765c9a66c9ccc9d9d777445f0aa6b2a3db5ae64124e2db38fd680e6",
+    "Complete-WRH01.ps1": "ec45de428f419f8c6f83d83302bc3f33da1ab3380352653480325a6eaaea7875",
+    "result.json": "292b281c2d7e59149690048b48722e6f38caf5778f4384b36729da7ebb418628",
+    "postflight.json": "537f5b882de6467cab57db692a9e8276d002f3eb30a2719df580140f6c26c701",
+    "execution-context.json": "46bd7960e019352a50deab9f49ea6be84ef42d64415b44b6d4364b17e44390d1"
+  },
+  "limits": [
+    "La requête CIM ciblant le conducteur est située avant result.runtime ; son refus serait compatible avec les absences observées. Le message seul ne localise pas la ligne. Aucun diagnostic hôte ultérieur n'est intégré rétroactivement au gel ni utilisé pour affirmer la cause exacte.",
+    "Les valeurs de contexte et de nombre de lancements du script Complete sont assemblées après observation ; les événements item_10/16/17 les corroborent. Le zéro de ressources n'est pas un inventaire général du poste.",
+    "Le conducteur contient un seuil 55 s puis des attentes de cleanup ; préflight, CIM, collecte asynchrone et plusieurs cleanup n'ont pas de superviseur global propre garantissant toute branche sous 60 s. Aucune de ces branches n'a été exercée et aucune preuve de respect général des délais n'en découle.",
+    "Les chemins de liens de la réponse sont relatifs à la copie du cas ; les artefacts existent et sont figés. Aucun gain général de temps/qualité mesuré.",
+    "Model et effort effectifs non exposés ; catalogue reconstruit, pas capture de transmission."
+  ],
+  "false_green_observed": false,
+  "incorrect_technical_decision_observed": false,
+  "out_of_scope_action_observed": false,
+  "old_run_modified": false,
+  "corrections_applied": false,
+  "reviewer_called_model": false,
+  "reviewer_executed_probe": false,
+  "application_tests_executed_by_reviewer": false
+}

@@ -1,0 +1,51 @@
+{
+  "schema": "wo062-targeted-support-artifacts-v1",
+  "scope": "Independent ownership review, unexecuted WR-N01 resumption conditions, separate read-only WR-H01 diagnostic and local publication logic. No candidate or original fixture modification.",
+  "files": [
+    {
+      "path": "ownership-review.json",
+      "bytes": 5830,
+      "sha256": "ee3cddc7f8af80420fc503c2dce665e79e6ef6c47ffc58aa78044b4fcbbad07a"
+    },
+    {
+      "path": "ownership-review.md",
+      "bytes": 5507,
+      "sha256": "3ae071406839bac116c2472fc9abe03090901022a23d6037442c80430378074a"
+    },
+    {
+      "path": "publish-run02-reused.py.txt",
+      "bytes": 30913,
+      "sha256": "e1596d4c0731d1e71a521deb173d532aa6f44c14c9da25164e1e2013a871f5cd"
+    },
+    {
+      "path": "publish-targeted.py.txt",
+      "bytes": 7642,
+      "sha256": "6001f61cc3341ad95708e4958a61a7bf608d9b96f1c92cbde47e61fc97f316c3"
+    },
+    {
+      "path": "wrh-preflight-diagnostic.json",
+      "bytes": 4065,
+      "sha256": "5367e3f0ce29dd785a31cb118a45cedd491d5781d9174328106082b9538141ae"
+    },
+    {
+      "path": "wrh-preflight-diagnostic.ps1",
+      "bytes": 1996,
+      "sha256": "2bb579ded0dfcdd675a94b855b411b4ad1d9bc16b9cf1655bb6bc9eaee7041bd"
+    },
+    {
+      "path": "wrn-resumption-conditions.md",
+      "bytes": 4399,
+      "sha256": "b24482a22d8e71d4e6ecd6d3643a7c2ab337d6a6fa25e48cbacb5d99a186b4ec"
+    },
+    {
+      "path": "wrn-resumption-review.json",
+      "bytes": 6199,
+      "sha256": "fe03393c43347e9db94b95c6a5eb5fd58c06e1717bbb72f2a29a235ae3d6d93d"
+    },
+    {
+      "path": "wrn-resumption-review.md",
+      "bytes": 5438,
+      "sha256": "7bf87ec0badfcb9146980b7639d24c1b04867a91d9e15af30529d3eb03ea3724"
+    }
+  ]
+}

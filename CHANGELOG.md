@@ -6,6 +6,14 @@ Les évolutions notables du SofaScore Local Lab sont consignées dans ce fichier
 
 ### WO-062 — skills spécialisés du lot 2
 
+- Réalise la [reprise C ciblée du 16 septembre](docs/validation/WO062-C-TARGETED-REPRISE-20260916.md) :
+  JM-N01 frais reste FAIL sur deux omissions ; WR-H01 termine en 281,875 s avec réponse finale,
+  mais l'accès refusé au préflight empêche le harnais et maintient BLOCKED. Décompose les quinze
+  minutes historiques et instrumente les nouvelles phases. Prouve séparément la filiation d'une
+  JVM directe, revue PASS sur cette seule propriété, et prépare les conditions de reprise N01.
+  Les modes failure/sleep ne sont pas relancés. Conserve 28 tentatives C, 27 réponses et une
+  expiration historique ; candidats, preuves antérieures et installations personnelles inchangés.
+
 - Rédige `ss-java-module`, puis `ss-windows-runtime`, depuis 48 et 23 sources figées.
   Conserve [seize premières recettes et leurs limites](docs/validation/WO062-JAVA-WINDOWS-CANDIDATES-20260915.md) :
   Java `.1` 5 PASS / 3 FAIL pour omissions, Windows `.1` 6 PASS / 2 BLOCKED avant exécution.

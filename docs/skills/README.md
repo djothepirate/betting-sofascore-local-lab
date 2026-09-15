@@ -56,11 +56,13 @@ Le suffixe `candidate.1` conserve l’identité des fichiers évalués et accept
 Les candidats [ss-java-module](local-lab/ss-java-module/SKILL.md) `.2` et
 [ss-windows-runtime](local-lab/ss-windows-runtime/SKILL.md) `.1` sont rédigés.
 La première recette conserve 5 PASS / 3 FAIL Java et 6 PASS / 2 BLOCKED Windows.
-Les dix tentatives supplémentaires sont conservées : Java `.2` obtient 7 PASS / 1 FAIL
-(JM-N01 incomplet) ; Windows garde 6 PASS / 2 BLOCKED. WR-H01 a produit une reproduction
-PowerShell 7 réussie mais sa session a expiré sans réponse finale ; WR-N01 est interrompu
-sur l'identité du lanceur Java avant le scénario d'expiration, avec un résidu signalé.
-Voir le [rapport C et les limites](../validation/WO062-JAVA-WINDOWS-CANDIDATES-20260915.md).
+Après les dix tentatives supplémentaires puis deux sessions ciblées, Java `.2` conserve
+7 PASS / 1 FAIL (deux omissions JM-N01) ; Windows garde 6 PASS / 2 BLOCKED. WR-H01
+termine cette fois en moins de cinq minutes, mais bloque au préflight avant le harnais.
+Une preuve séparée établit la filiation et la propriété d'une JVM directe ; WR-N01
+complet n'est pas relancé, ses conditions de reprise sont préparées et le résidu conservé.
+Voir la [reprise ciblée et ses limites](../validation/WO062-C-TARGETED-REPRISE-20260916.md)
+et le [rapport C précédent](../validation/WO062-JAVA-WINDOWS-CANDIDATES-20260915.md).
 La qualification reste ouverte ; validation humaine C, installation et consolidation des dix restent à réaliser.
 
 ## Installation personnelle depuis ce dépôt

@@ -1,0 +1,263 @@
+{
+  "schema": "wo062-targeted-delivery-checks-v1",
+  "checked_at_utc": "2026-09-15T23:02:02.148436+00:00",
+  "base": "4a83e121d8c28833b7617313ab277bc4341f078e",
+  "integrity_status": "PASS",
+  "links_status": "PASS",
+  "secret_scan_status": "PASS_HIGH_CONFIDENCE_DIFF",
+  "new_model_sessions": [
+    {
+      "skill": "ss-java-module",
+      "case_id": "JM-N01",
+      "duration_seconds": 604.047,
+      "cli_exit_code": 0,
+      "collector_exit_code": 0,
+      "turn_completed": true,
+      "verdict": "FAIL",
+      "trace": "docs/skills/evaluations/WO-062/ss-java-module/run-03/cases/JM-N01/trace.json",
+      "commands_completed": 30
+    },
+    {
+      "skill": "ss-windows-runtime",
+      "case_id": "WR-H01",
+      "duration_seconds": 281.875,
+      "cli_exit_code": 0,
+      "collector_exit_code": 0,
+      "turn_completed": true,
+      "verdict": "BLOCKED",
+      "trace": "docs/skills/evaluations/WO-062/ss-windows-runtime/run-03/cases/WR-H01/trace.json",
+      "commands_completed": 12
+    }
+  ],
+  "historical": {
+    "attempts": 28,
+    "final_responses": 27,
+    "timed_out_sessions": 1,
+    "pass": 18,
+    "fail": 5,
+    "blocked": 5
+  },
+  "current_distinct_cases": {
+    "cases": 16,
+    "pass": 13,
+    "fail": 1,
+    "blocked": 2
+  },
+  "WR_N01_full_repeated": false,
+  "ownership_scope": "OWNERSHIP_ONLY",
+  "resumption_conditions_scope": "STATIC_CONDITIONS_ONLY",
+  "old_residue": {
+    "present": true,
+    "bytes": 4892,
+    "contents_read": false,
+    "ownership_not_reattributed": true,
+    "deleted": false
+  },
+  "previous_frozen_cases_candidates_oracles_unchanged": true,
+  "support_and_preparation_manifest_files_checked": 21,
+  "general_delivery": {
+    "checked_at_utc": "2026-09-15T23:00:16.388213+00:00",
+    "base": "6648dd423e556b5248b8793a539ae85a7680f9bc",
+    "checks": [
+      {
+        "skill": "ss-java-module",
+        "sources": 48,
+        "frozen_preparation_files": 5,
+        "runs": {
+          "run-01": {
+            "case_count": 8,
+            "pass": 5,
+            "fail": 3,
+            "blocked": 0
+          },
+          "run-02": {
+            "case_count": 8,
+            "pass": 7,
+            "fail": 1,
+            "blocked": 0
+          },
+          "run-03": {
+            "case_count": 1,
+            "pass": 0,
+            "fail": 1,
+            "blocked": 0
+          }
+        },
+        "integrity": "PASS",
+        "candidate_utf8_lf": "PASS",
+        "human_validation": false,
+        "personal_installation": false
+      },
+      {
+        "skill": "ss-windows-runtime",
+        "sources": 23,
+        "frozen_preparation_files": 7,
+        "runs": {
+          "run-01": {
+            "case_count": 8,
+            "pass": 6,
+            "fail": 0,
+            "blocked": 2
+          },
+          "run-02": {
+            "case_count": 2,
+            "pass": 0,
+            "fail": 0,
+            "blocked": 2
+          },
+          "run-03": {
+            "case_count": 1,
+            "pass": 0,
+            "fail": 0,
+            "blocked": 1
+          }
+        },
+        "integrity": "PASS",
+        "candidate_utf8_lf": "PASS",
+        "human_validation": false,
+        "personal_installation": false
+      }
+    ],
+    "protected_app_and_prior_skills_unchanged": true,
+    "existing_personal_files_unchanged_including_mtimes": 16,
+    "personal_C_skills_absent": true
+  },
+  "timing_tests": {
+    "schema": "wo062-c3-timing-tests-v1",
+    "tests": [
+      {
+        "case": "complete",
+        "status": "PASS"
+      },
+      {
+        "case": "native_failure",
+        "status": "PASS"
+      },
+      {
+        "case": "timeout",
+        "status": "PASS"
+      },
+      {
+        "case": "malformed",
+        "status": "PASS"
+      },
+      {
+        "case": "WR-N01_unapproved_repeat_refused",
+        "status": "PASS"
+      }
+    ],
+    "passed": 5,
+    "model_calls": 0,
+    "external_processes": "Four local synthetic Python children only, no probes/application",
+    "runner_sha256": "0e65c943e75279f4fafcc27feae614bf08bebde301747add2e54352436baed5b",
+    "test_sha256": "32216bb00059cbf20384f7b898f2247df1fb66f48515dd88d56aff56dfabc45a",
+    "fixture_root": "C:\\Dev\\BettingProject\\codex\\betting-sofascore-local-lab\\.tmp\\wo062-skills-lot2\\.tmp\\c3-timing-tests\\dbbb14bb-8020-4285-8d0b-5ffce232521f"
+  },
+  "maven": {
+    "executed_again": false,
+    "reused_end_utc": "2026-09-15T15:58:40Z",
+    "declared": 2440,
+    "executed": 2435,
+    "skipped": 5,
+    "failures": 0,
+    "errors": 0,
+    "scope": "Application code unchanged; prior WO proof reused, not a fresh run"
+  },
+  "local_verification_commands": [
+    "python -X utf8 .tmp/publish_c_targeted.py (validation then --publish)",
+    "python -X utf8 .tmp/check_c_delivery.py",
+    "python -X utf8 .tmp/check_targeted_delivery.py",
+    "python -X utf8 .tmp/check_c_links.py",
+    "python -X utf8 .tmp/check_c_secrets.py",
+    "git diff --cached --check"
+  ],
+  "human_validation": false,
+  "personal_installation": false,
+  "git_commit_verification": "Performed separately after commit; this JSON does not claim a self-referential commit hash.",
+  "finalized_at_utc": "2026-09-15T23:03:13.671467+00:00",
+  "links": {
+    "local_links_checked": 403,
+    "broken_links": 0,
+    "utf8": true
+  },
+  "secret_scan": {
+    "checked_at_utc": "2026-09-15T23:02:38.302194+00:00",
+    "status": "PASS_HIGH_CONFIDENCE_DIFF",
+    "scope": "Current complete bytes of changed/added files since 6648dd423e556b5248b8793a539ae85a7680f9bc",
+    "method": "Nine current ci/check-no-secrets.sh regex families, evaluated locally with Python re; POSIX space translated to \\s; case insensitive. Not a CI invocation nor full-history scan. No matched value printed.",
+    "file_count": 511,
+    "findings": []
+  },
+  "diff_whitespace": "git diff --cached --check succeeded before final check record update; checked again before commit",
+  "modified_files_in_delivery": [
+    ".gitattributes",
+    "CHANGELOG.md",
+    "README.md",
+    "docs/skills/README.md",
+    "docs/skills/evaluations/WO-062/c-targeted-results/artifact-manifest.json",
+    "docs/skills/evaluations/WO-062/c-targeted-results/ownership-review.json",
+    "docs/skills/evaluations/WO-062/c-targeted-results/ownership-review.md",
+    "docs/skills/evaluations/WO-062/c-targeted-results/publish-run02-reused.py.txt",
+    "docs/skills/evaluations/WO-062/c-targeted-results/publish-targeted.py.txt",
+    "docs/skills/evaluations/WO-062/c-targeted-results/wrh-preflight-diagnostic.json",
+    "docs/skills/evaluations/WO-062/c-targeted-results/wrh-preflight-diagnostic.ps1",
+    "docs/skills/evaluations/WO-062/c-targeted-results/wrn-resumption-conditions.md",
+    "docs/skills/evaluations/WO-062/c-targeted-results/wrn-resumption-review.json",
+    "docs/skills/evaluations/WO-062/c-targeted-results/wrn-resumption-review.md",
+    "docs/skills/evaluations/WO-062/ss-java-module/qualification.json",
+    "docs/skills/evaluations/WO-062/ss-java-module/run-03/artifact-manifest.json",
+    "docs/skills/evaluations/WO-062/ss-java-module/run-03/authorization.json",
+    "docs/skills/evaluations/WO-062/ss-java-module/run-03/cases/JM-N01/catalogue.txt",
+    "docs/skills/evaluations/WO-062/ss-java-module/run-03/cases/JM-N01/freeze.json",
+    "docs/skills/evaluations/WO-062/ss-java-module/run-03/cases/JM-N01/host-runtime.json",
+    "docs/skills/evaluations/WO-062/ss-java-module/run-03/cases/JM-N01/input.json",
+    "docs/skills/evaluations/WO-062/ss-java-module/run-03/cases/JM-N01/native-events.json",
+    "docs/skills/evaluations/WO-062/ss-java-module/run-03/cases/JM-N01/prompt.txt",
+    "docs/skills/evaluations/WO-062/ss-java-module/run-03/cases/JM-N01/request.txt",
+    "docs/skills/evaluations/WO-062/ss-java-module/run-03/cases/JM-N01/response.md",
+    "docs/skills/evaluations/WO-062/ss-java-module/run-03/cases/JM-N01/stderr.log",
+    "docs/skills/evaluations/WO-062/ss-java-module/run-03/cases/JM-N01/trace.json",
+    "docs/skills/evaluations/WO-062/ss-java-module/run-03/current-results.json",
+    "docs/skills/evaluations/WO-062/ss-java-module/run-03/preflight.json",
+    "docs/skills/evaluations/WO-062/ss-java-module/run-03/previous-qualification.json",
+    "docs/skills/evaluations/WO-062/ss-java-module/run-03/publication-provenance.json",
+    "docs/skills/evaluations/WO-062/ss-java-module/run-03/results.json",
+    "docs/skills/evaluations/WO-062/ss-java-module/run-03/review-JM-N01.json",
+    "docs/skills/evaluations/WO-062/ss-java-module/run-03/review-JM-N01.md",
+    "docs/skills/evaluations/WO-062/ss-windows-runtime/qualification.json",
+    "docs/skills/evaluations/WO-062/ss-windows-runtime/run-03/artifact-manifest.json",
+    "docs/skills/evaluations/WO-062/ss-windows-runtime/run-03/authorization.json",
+    "docs/skills/evaluations/WO-062/ss-windows-runtime/run-03/cases/WR-H01/catalogue.txt",
+    "docs/skills/evaluations/WO-062/ss-windows-runtime/run-03/cases/WR-H01/freeze.json",
+    "docs/skills/evaluations/WO-062/ss-windows-runtime/run-03/cases/WR-H01/host-runtime.json",
+    "docs/skills/evaluations/WO-062/ss-windows-runtime/run-03/cases/WR-H01/input.json",
+    "docs/skills/evaluations/WO-062/ss-windows-runtime/run-03/cases/WR-H01/native-events.json",
+    "docs/skills/evaluations/WO-062/ss-windows-runtime/run-03/cases/WR-H01/native-timing-summary.json",
+    "docs/skills/evaluations/WO-062/ss-windows-runtime/run-03/cases/WR-H01/native-timing.jsonl",
+    "docs/skills/evaluations/WO-062/ss-windows-runtime/run-03/cases/WR-H01/prompt.txt",
+    "docs/skills/evaluations/WO-062/ss-windows-runtime/run-03/cases/WR-H01/request.txt",
+    "docs/skills/evaluations/WO-062/ss-windows-runtime/run-03/cases/WR-H01/response.md",
+    "docs/skills/evaluations/WO-062/ss-windows-runtime/run-03/cases/WR-H01/runtime-artifacts/Complete-WRH01.ps1",
+    "docs/skills/evaluations/WO-062/ss-windows-runtime/run-03/cases/WR-H01/runtime-artifacts/Invoke-WRH01.ps1",
+    "docs/skills/evaluations/WO-062/ss-windows-runtime/run-03/cases/WR-H01/runtime-artifacts/execution-context.json",
+    "docs/skills/evaluations/WO-062/ss-windows-runtime/run-03/cases/WR-H01/runtime-artifacts/postflight.json",
+    "docs/skills/evaluations/WO-062/ss-windows-runtime/run-03/cases/WR-H01/runtime-artifacts/prompt-return.txt",
+    "docs/skills/evaluations/WO-062/ss-windows-runtime/run-03/cases/WR-H01/runtime-artifacts/result.json",
+    "docs/skills/evaluations/WO-062/ss-windows-runtime/run-03/cases/WR-H01/runtime-artifacts/stages.txt",
+    "docs/skills/evaluations/WO-062/ss-windows-runtime/run-03/cases/WR-H01/stderr.log",
+    "docs/skills/evaluations/WO-062/ss-windows-runtime/run-03/cases/WR-H01/trace.json",
+    "docs/skills/evaluations/WO-062/ss-windows-runtime/run-03/current-results.json",
+    "docs/skills/evaluations/WO-062/ss-windows-runtime/run-03/preflight.json",
+    "docs/skills/evaluations/WO-062/ss-windows-runtime/run-03/previous-qualification.json",
+    "docs/skills/evaluations/WO-062/ss-windows-runtime/run-03/publication-provenance.json",
+    "docs/skills/evaluations/WO-062/ss-windows-runtime/run-03/results.json",
+    "docs/skills/evaluations/WO-062/ss-windows-runtime/run-03/review-WR-H01.json",
+    "docs/skills/evaluations/WO-062/ss-windows-runtime/run-03/review-WR-H01.md",
+    "docs/validation/WO062-C-TARGETED-CHECKS-20260916.json",
+    "docs/validation/WO062-C-TARGETED-REPRISE-20260916.md",
+    "docs/work_orders/active/WO-SS-20260915-062-skills-lot2.md"
+  ],
+  "ownership_verification_command": "Windows PowerShell 5.1 -NoProfile -NonInteractive -ExecutionPolicy Bypass -File docs/skills/evaluations/WO-062/c-targeted-reprise/Probe-JavaOwnership.ps1 -OutputRoot <worktree>/.tmp/wrn-ownership-preflight-01",
+  "ownership_verification_command_note": "Command shape recorded from the executed versioned script and proof; not an independent outer launch transcript.",
+  "readonly_diagnostic_command": ".tmp/diagnose_wrh_preflight.ps1 (PowerShell7 parent task sandbox); 3 observations PASS, self CIM parent BLOCKED"
+}

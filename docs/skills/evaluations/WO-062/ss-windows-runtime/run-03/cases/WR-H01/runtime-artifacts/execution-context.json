@@ -1,0 +1,30 @@
+{
+  "driverToolEvent": "2c1d94",
+  "driverToolExitCode": 0,
+  "driverToolWallSeconds": 0.4056694,
+  "driverCommand": "& '.\\output\\runtime-artifacts\\Invoke-WRH01.ps1'",
+  "driverOutput": "WRH01_PRIMARY=BLOCKED; NATIVE_EXIT=; ELAPSED_MS=194,609",
+  "promptToolEvent": "cb2997",
+  "promptToolExitCode": 0,
+  "promptUtc": "2026-09-15T22:44:24.4114165Z",
+  "promptMarker": "WR_PROMPT_RETURNED",
+  "runtimeObservationToolEvent": "9107a2",
+  "observedPSVersion": "7.6.6",
+  "observedPSEdition": "Core",
+  "observedWindows": "Microsoft Windows 10.0.26200",
+  "resolvedPwsh": "C:\\Program Files\\PowerShell\\7\\pwsh.exe",
+  "resolvedFileVersion": "7.6.6.0",
+  "requestedHarnessLaunchCount": 0,
+  "nativeExitCode": null,
+  "limitation": "Access denied during driver preflight. Error invocation, stack and failing line were not persisted. Runtime details assembled after the failing preflight operation were not saved. This does not establish that PowerShell 7 is unavailable or that the frozen harness is faulty.",
+  "missingEvidence": [
+    "EXECUTION_START marker (native launch not reached)",
+    "native stdout/stderr",
+    "native process identity",
+    "native duration and exit code",
+    "current argument captures",
+    "effective child PSVersionTable/PSHOME/architecture",
+    "per-child codes and timing"
+  ],
+  "retry": "None; finalization follows wrh-flow-addendum.md"
+}

@@ -1,0 +1,51 @@
+{
+  "frozen_at_utc": "2026-09-15T22:44:15.745797+00:00",
+  "before_independent_review": true,
+  "files": [
+    {
+      "path": "catalogue.txt",
+      "bytes": 8580,
+      "sha256": "3ef915d3955a2b85af8903e1364eb353685294e3a66fdb9973f31bb56bbc35bd"
+    },
+    {
+      "path": "host-runtime.json",
+      "bytes": 371,
+      "sha256": "e2fcdd81230930cfcb64ce7e3c9329fd286247c9aa472d8a4dd06dac74582b28"
+    },
+    {
+      "path": "input.json",
+      "bytes": 1211,
+      "sha256": "772ccc19a09cac5b2e712a5c6edeea96c02138dca0fadd9e3743233a589b5733"
+    },
+    {
+      "path": "native-events.json",
+      "bytes": 680074,
+      "sha256": "f70d7b6e89bc4bb30497eaf824b841b2112ccce9c63b00cc8ee659cbb316272d"
+    },
+    {
+      "path": "prompt.txt",
+      "bytes": 1021,
+      "sha256": "f4ced228cb89c9cbec8498cfc126e2dde2648a2177fc533819370f945158fc60"
+    },
+    {
+      "path": "request.txt",
+      "bytes": 4873,
+      "sha256": "88764e319124b951f7b9b7a580cc145789e4b9883e7bde86e17038af2f79868e"
+    },
+    {
+      "path": "response.md",
+      "bytes": 38278,
+      "sha256": "0a343748b9b74f51739363af7b79e458e24fdacf0cce89d694e5d1747f5b04c5"
+    },
+    {
+      "path": "stderr.log",
+      "bytes": 1247,
+      "sha256": "f6103d31ac0013cf6ef30d15cb12390fc9381fb8ba17144585173b7dcff9bfb4"
+    },
+    {
+      "path": "trace.json",
+      "bytes": 10889,
+      "sha256": "085bc0cf1ec7968f67324b50c8d3a2cf0e4e95f01e50b5d503be67e91e033648"
+    }
+  ]
+}

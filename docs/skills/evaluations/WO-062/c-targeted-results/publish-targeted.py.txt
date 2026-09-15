@@ -1,0 +1,81 @@
+"""Publish the two targeted run-03 attempts; no execution or verdict generation."""
+import copy, hashlib, importlib.util, inspect, json, pathlib, subprocess, sys
+from datetime import datetime, timezone
+ROOT=pathlib.Path(__file__).resolve().parent.parent
+spec=importlib.util.spec_from_file_location('previous_publisher', ROOT/'.tmp/publish_c_run02.py')
+m=importlib.util.module_from_spec(spec);sys.modules[spec.name]=m;spec.loader.exec_module(m)
+# Keep the existing byte/trace/final/review validation; parameterize only the run identity.
+source=inspect.getsource(m.verify_case)
+assert source.count("('run_id', 'run-02')")==1
+exec(source.replace("('run_id', 'run-02')", "('run_id', pre['run_id'])"),m.__dict__)
+READER=m.Reader(); PLANS=[]
+EVAL=ROOT/'docs/skills/evaluations/WO-062'
+auth=READER.json(EVAL/'c-targeted-reprise/authorization.json')
+assert auth['WR_N01']['immediate_repeat_authorized'] is False
+assert [(x['skill'],x['case_id'],x['fresh_model_sessions']) for x in auth['authorized_immediately']]==[('ss-java-module','JM-N01',1),('ss-windows-runtime','WR-H01',1)]
+stamp=datetime.now(timezone.utc).isoformat()
+for skill,cid in [('ss-java-module','JM-N01'),('ss-windows-runtime','WR-H01')]:
+    runtime=ROOT/'.tmp/wo062-evaluations'/skill/'run-03'
+    prep=EVAL/skill;dest=prep/'run-03';assert not dest.exists(),dest
+    assert {p.name for p in (runtime/'frozen').iterdir()}=={cid}
+    assert not list(runtime.parent.glob('run-0[4-9]')),'Unexpected further preparation'
+    pre=READER.json(runtime/'preflight.json')
+    assert pre['skill']==skill and pre['run_id']=='run-03' and pre['case_count']==1
+    assert [x['case_id'] for x in pre['cases']]==[cid]
+    c=m.CONTRACTS[skill]
+    assert pre['candidate_sha256']==c['sha256'] and pre['candidate_version']==c['version']
+    assert pre['preparation_manifest_sha256']==m.digest(READER.blob(prep/'manifest.json'))
+    pc=pre['cases'][0]
+    assert not pc['oracle_supplied'] and not pc['design_history_supplied'] and not pc['candidate_body_manually_pasted']
+    for f in pc['input_files']:READER.checked(runtime/cid,f)
+    assert m.digest(READER.blob(runtime/cid/'request.txt'))==pc['request_sha256']
+    assert m.digest(READER.blob(runtime/cid/'case-prompt.txt'))==pc['prompt_sha256']
+    q=READER.json(prep/'qualification.json')
+    assert q['results']=='run-02/current-results.json'
+    assert not q['human_validation'] and not q['personal_installation']
+    for f in q['candidate_files']:READER.checked(ROOT/'docs/skills/local-lab'/skill,f)
+    prior_manifest,prior_files=m.verify_manifest(READER,prep/'run-02','artifact-manifest.json')
+    assert m.digest(prior_files['artifact-manifest.json'])==q['artifact_manifest_sha256']
+    m.verify_manifest(READER,prep/'run-01','artifact-manifest.json')
+    frozen,review=m.verify_case(READER,runtime,pre,cid)
+    trace=json.loads(frozen['trace.json'])
+    assert trace['turn_completed'] and not trace['timed_out'] and trace['collector_exit_code']==0 and trace['exit_code']==0
+    files={'cases/'+cid+'/'+name:data for name,data in frozen.items()}
+    files['preflight.json']=READER.blob(runtime/'preflight.json')
+    files['authorization.json']=READER.blob(EVAL/'c-targeted-reprise/authorization.json')
+    for ext in ('md','json'):files['review-'+cid+'.'+ext]=READER.blob(runtime/('review-'+cid+'.'+ext))
+    files['previous-qualification.json']=READER.blob(prep/'qualification.json')
+    row={'case_id':cid,'verdict':review['verdict'],'source_run':'run-03','review':'review-'+cid+'.json','response':'cases/'+cid+'/response.md','response_sha256':review['response_sha256']}
+    results={'schema':'wo062-frozen-skill-results-v1','skill':skill,'run_id':'run-03','candidate_version':c['version'],'candidate_sha256':c['sha256'],'source_head':pre['source_head'],'reviewed_at_utc':stamp,'case_count':1,'prepared_case_count':1,'cases':[row],**m.counts([row])}
+    current=copy.deepcopy(json.loads(prior_files['current-results.json']))
+    for i,old in enumerate(current['cases']):
+        if old['case_id']==cid:current['cases'][i]=copy.deepcopy(row)
+        else:
+            for key in ('review','response'):
+                if old.get(key):old[key]='../'+old['source_run']+'/'+old[key].split('../'+old['source_run']+'/',1)[-1]
+    assert len({x['case_id'] for x in current['cases']})==8
+    counts=m.counts(current['cases'])
+    history=copy.deepcopy(q['historical_runs'])
+    prevresult=json.loads(prior_files['results.json'])
+    history.append({'run_id':'run-02','candidate_version':prevresult['candidate_version'],'candidate_sha256':prevresult['candidate_sha256'],'executions':prevresult['case_count'],**m.counts(prevresult['cases']),'results':'run-02/results.json','artifact_manifest_sha256':q['artifact_manifest_sha256']})
+    current.update({'executions':q['executions']+1,'total_executions_all_versions':q['total_executions']+1,**counts,'historical_runs':history})
+    files['results.json']=m.encode(results);files['current-results.json']=m.encode(current)
+    provenance=m.git_provenance(ROOT,ROOT/'docs/skills/local-lab'/skill,pre['source_head'])
+    files['publication-provenance.json']=m.encode({'schema':'wo062-targeted-publication-v1',**provenance,'case_id':cid,'evaluation_source_head':pre['source_head'],'fresh_sessions':1,'source_preflight_sha256':m.digest(files['preflight.json']),'preparation_commit':'380d9ed5e548fb2fbc398aaeccfca516395c6e82','preparation_commit_timing':'Original candidate and case sources were already versioned; the new operational addendum and timing/preparation bytes were frozen and hashed before launch, then committed at380d9ed while evaluations were running.','publisher_sha256':m.digest(pathlib.Path(__file__).read_bytes()),'prior_publisher_sha256':m.digest(READER.blob(ROOT/'.tmp/publish_c_run02.py')),'review_after_freeze':True,'previous_runs_unchanged':True,'human_validation':False,'personal_installation':False})
+    manifest={'schema':'wo062-skill-run-artifacts-v1','skill':skill,'run_id':'run-03','files':[{'path':k,'bytes':len(v),'sha256':m.digest(v)} for k,v in sorted(files.items())],'hash_contract':'Exact published bytes; manifest excludes itself. Raw internal reasoning is excluded.'}
+    files['artifact-manifest.json']=m.encode(manifest)
+    q.update({**provenance,'source_head':pre['source_head'],'executions':q['executions']+1,'total_executions':q['total_executions']+1,**counts,'historical_runs':history,'results':'run-03/current-results.json','run_results':'run-03/results.json','artifact_manifest_sha256':m.digest(files['artifact-manifest.json']),'current_cases':[{k:x[k] for k in ('case_id','verdict','source_run')} for x in current['cases']]})
+    q['execution_totals'][review['verdict'].lower()]+=1
+    q['status']='QUALIFIED_ON_FROZEN_CASES_PENDING_OWNER_VALIDATION' if counts['pass']==8 else 'INCOMPLETE_QUALIFICATION'
+    PLANS.append((dest,files,prep/'qualification.json',q))
+
+# All evidence is validated before any destination is written. Recheck bytes for drift.
+for name,sha in READER.fingerprints.items():assert m.digest(pathlib.Path(name).read_bytes())==sha,name
+if '--publish' in sys.argv:
+    for dest,files,qp,q in PLANS:
+        assert not dest.exists();dest.mkdir()
+        for name,data in files.items():
+            p=m.relative(dest,name);p.parent.mkdir(parents=True,exist_ok=True);p.write_bytes(data)
+        m.verify_manifest(m.Reader(),dest,'artifact-manifest.json')
+        qp.write_bytes(m.encode(q))
+print(json.dumps({'validation':'PASS','published':'--publish' in sys.argv,'new_sessions':2,'WR_N01_full_repeated':False,'cases':[{'skill':q['skill'],**{k:q[k] for k in ('pass','fail','blocked','executions','total_executions')}} for _,_,_,q in PLANS]}))

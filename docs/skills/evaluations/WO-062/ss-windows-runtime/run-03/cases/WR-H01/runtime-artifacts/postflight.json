@@ -1,0 +1,13 @@
+{
+  "utc": "2026-09-15T22:45:28.0904921Z",
+  "runtimeRoot": "C:\\Dev\\BettingProject\\codex\\betting-sofascore-local-lab\\.tmp\\wo062-skills-lot2\\.tmp\\wo062-evaluations\\ss-windows-runtime\\run-03\\WR-H01\\output\\runtime",
+  "runtimeRootExists": true,
+  "immediateEntryCount": 0,
+  "entries": [],
+  "cleanupDeletionPerformed": false,
+  "ownedNativeProcessCount": 0,
+  "processEvidence": "Driver result: native process creation was not reached; no child PID/handle recorded. No third-party process queried or stopped by postflight.",
+  "temporaryRootCreated": false,
+  "conclusion": "RUNTIME_EMPTY_NO_OWNED_TEMPORARY_RESOURCE",
+  "elapsedMs": 85.8657
+}

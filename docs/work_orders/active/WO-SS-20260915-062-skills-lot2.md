@@ -1,6 +1,6 @@
 # WO-SS-20260915-062 — Développement des skills spécialisés du lot 2
 
-- **Statut :** `OWNER_ACCEPTED — A_INSTALLED — B_INSTALLED — C_QUALIFICATION_INCOMPLETE` ; PB, FQ et CS validés et installés personnellement. Java et Windows rédigés ; dix reprises autorisées conservées, qualification C encore ouverte, validation humaine C, consolidation D et livraison Git encore distinctes.
+- **Statut :** `OWNER_ACCEPTED — A_INSTALLED — B_INSTALLED — C_QUALIFICATION_INCOMPLETE` ; PB, FQ et CS validés et installés personnellement. Java et Windows rédigés ; reprise ciblée C conservée, 28 tentatives au total, qualification encore ouverte. Validation humaine C, consolidation D et livraison Git restent distinctes.
 - **Date :** 2026-09-15.
 - **Autorité :** demande propriétaire de préparer un WO avec `ss-work-order`, à partir de la conversation « Skills du lot 2 », dans l'ordre précisé ci-dessous.
 - **Acceptation :** le 15 septembre 2026, le propriétaire confirme « J’accepte le WO-062 » et autorise l'inventaire des sources et la préparation des cas d'évaluation de `ss-provider-benchmark`.
@@ -138,7 +138,7 @@ distinct ; elle n'élargit pas implicitement ce lot de skills.
 - Le propriétaire autorise ensuite **dix sessions supplémentaires** : huit Java `.2`, puis
   les deux sondes Windows `.1`, avec mêmes sources, critères et bornes. Dix tentatives
   conservées le 15–16 septembre : neuf sessions terminées et une expirée.
-- Java `.2` : **7 PASS / 1 FAIL**, JM-N01 restant incomplet sur UTC, perte du contexte
+- À la fin de run-02, Java `.2` : **7 PASS / 1 FAIL**, JM-N01 restant incomplet sur UTC, perte du contexte
   live et périmètre exact du garde textuel. Windows `.1` : **6 PASS / 2 BLOCKED** courants.
   WR-H01 produit un harnais réussi en 2,73 s et un nettoyage établi, mais sa session
   expire à 900 s sans réponse finale. WR-N01 observe le code 23 du relais Java, puis
@@ -147,6 +147,17 @@ distinct ; elle n'élargit pas implicitement ce lot de skills.
 - [Rapport C, preuves et limites](../../validation/WO062-JAVA-WINDOWS-CANDIDATES-20260915.md).
   Les seize fichiers personnels précédents, les preuves A/B, l'installateur et le code
   applicatif restent intacts. Validation humaine et installation personnelle C non réalisées.
+- Le propriétaire demande une reprise très ciblée : JM-N01 frais, diagnostic du temps WR-H01
+  et fin complète, amélioration de propriété avant répétition WR-N01. Deux nouvelles sessions
+  sont figées puis revues : JM-N01 **FAIL** sur perte du contexte live et garde Playwright exact,
+  avec distinction date/instant désormais présente ; WR-H01 **BLOCKED** avant le harnais sur
+  accès refusé, bien que sa réponse finale soit rendue en 281,875 s. Le diagnostic local
+  reproduit séparément un refus CIM, sans prouver rétroactivement la ligne de cette session.
+- La sonde préalable Java directe relie handle, PID, parent, image et UUID en moins d'une seconde ;
+  revue **PASS sur la propriété seulement**. WR-N01 complet n'est pas relancé ; ses conditions
+  de reprise sont préparées, le résidu antérieur conservé. Total C : 28 tentatives, 27 réponses
+  finales et une expiration historique ; bilan courant inchangé, 13 PASS / 1 FAIL / 2 BLOCKED.
+  Voir le [rapport de reprise ciblée](../../validation/WO062-C-TARGETED-REPRISE-20260916.md).
 
 ### Ordre restant et consolidation
 
@@ -382,8 +393,9 @@ Le WO reste dans `active` pendant la réalisation et la revue. La PR cible exclu
 la fusion. La clôture effective suit cette fusion. Publication, fusion, promotion, tag et
 installation personnelle ne sont pas déduits de la seule préparation du WO.
 
-**Suite en cours :** requalification de `ss-java-module` `.2`, puis reprise des deux sondes
-de `ss-windows-runtime` `.1` ; validation humaine et installation C ensuite, puis consolidation D.
+**Suite en cours :** résoudre les deux omissions JM-N01, obtenir une reproduction WR-H01
+complète dans une session terminée, puis préparer la conduite WR-N01 à partir de la propriété
+désormais prouvée. Validation humaine et installation C ensuite, puis consolidation D.
 Les trois skills A/B ont terminé préparation, rédaction, qualification, validation propriétaire
 et installation personnelle. Leurs preuves et limites restent conservées. Le WO reste actif ;
 la livraison Git et sa clôture suivent le workflow de revue et de fusion décrit ci-dessus.
