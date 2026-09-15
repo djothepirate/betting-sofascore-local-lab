@@ -6,6 +6,13 @@ Les évolutions notables du SofaScore Local Lab sont consignées dans ce fichier
 
 ### WO-062 — skills spécialisés du lot 2
 
+- Réalise `ss-football-quality` puis `ss-ci-security`, version `0.1.0-candidate.1` :
+  [25 sources figées et huit cas PASS par skill](docs/validation/WO062-FOOTBALL-QUALITY-CI-SECURITY-CANDIDATES-20260915.md),
+  nouvelles analyses football/CI, lectures de sélection instrumentées et revues indépendantes.
+  Corrige et trace l’encodage UTF-8 des métadonnées football ; le corps évalué est inchangé.
+  Validation humaine et installation personnelle de ces deux candidats restent à réaliser.
+  PB, le lot 1, leurs preuves et l’installateur restent inchangés.
+
 - Consigne la validation propriétaire de `ss-provider-benchmark 0.1.0-candidate.1` et réalise son
   [installation personnelle vérifiée](docs/validation/WO062-PROVIDER-BENCHMARK-INSTALLATION-20260915.md).
   Ajoute le paquet explicite `ProviderBenchmark`, son manifeste de deux fichiers approuvés

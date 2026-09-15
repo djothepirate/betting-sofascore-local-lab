@@ -1,0 +1,111 @@
+{
+  "case_id": "CS-C02",
+  "skill": "ss-ci-security",
+  "run_id": "run-01",
+  "started_at_utc": "2026-09-15T19:58:37.064417+00:00",
+  "ended_at_utc": "2026-09-15T20:04:19.089327+00:00",
+  "duration_seconds": 342.016,
+  "mode": "native_codex_exec_ephemeral_read_only",
+  "cli_version": "codex-cli 0.154.0-alpha.6.2",
+  "model": null,
+  "reasoning_effort": null,
+  "model_note": "Configured defaults; exact model/effort not exposed, no override.",
+  "launch_arguments": [
+    "exec",
+    "--ephemeral",
+    "--sandbox",
+    "read-only",
+    "--cd",
+    "C:\\Dev\\BettingProject\\codex\\betting-sofascore-local-lab\\.tmp\\wo062-skills-lot2\\.tmp\\wo062-evaluations\\ss-ci-security\\run-01\\CS-C02",
+    "--json",
+    "--output-last-message",
+    "C:\\Dev\\BettingProject\\codex\\betting-sofascore-local-lab\\.tmp\\wo062-skills-lot2\\.tmp\\wo062-evaluations\\ss-ci-security\\run-01\\CS-C02\\output\\response.md",
+    "-"
+  ],
+  "exit_code": 0,
+  "turn_completed": true,
+  "candidate_sha256": "ca0bba1cf60c0c9965f21b3201e39c3e5dcba3bd73888c2a2ee5d148dbb8c0c5",
+  "source_head": "658309c0e8d9d18e7d96396d8768ac90d8d16cca",
+  "input_files": [
+    {
+      "path": "ADR-SS-004-integration-continue-et-distribution-locale-uniquement.md",
+      "sha256": "eccf356b0677c86e7c48b6db0fb14f4661a8b9868d181f7bd433d66952396b7f",
+      "bytes": 13465
+    },
+    {
+      "path": ".gitlab-ci.yml",
+      "sha256": "65e5bf49bed8604a4845e5042ee1578927c569dad2c2e5b7e07ee552ef4142c1",
+      "bytes": 8362
+    },
+    {
+      "path": "ci/check-gitlab-merge-request.sh",
+      "sha256": "ee4e9726bca89cf7e40715712fdddcbc7d97a26330bb98a93f27709cb66a1e1a",
+      "bytes": 5914
+    },
+    {
+      "path": "ci/check-gitlab-pipeline-ref.sh",
+      "sha256": "446ed4d6080e26f532b48cbceeae71acaaa50c43fd9638ccc58561ad5e994109",
+      "bytes": 1720
+    },
+    {
+      "path": "ci/package-local-only.sh",
+      "sha256": "62feb20b260bde46f3c9c6192d41ff1fc8878b412186c9df975379ab53127815",
+      "bytes": 20724
+    },
+    {
+      "path": "ci/check-no-secrets.sh",
+      "sha256": "e678431871b0aa3ca266802e0dbc859276985bc01fab81dc5df39912e21822ca",
+      "bytes": 5940
+    },
+    {
+      "path": "ci/run-dependency-check.sh",
+      "sha256": "27e3ddad6ff4626a4e540fdf7dd3a482aa0886b6408ab55368bbed777469b55f",
+      "bytes": 871
+    },
+    {
+      "path": "ci/test-dependency-check.sh",
+      "sha256": "e214d82a875f4146711fe49adeff2c89792871b40e788923c6d8f649e83c5888",
+      "bytes": 3165
+    },
+    {
+      "path": "ci/test-release-reproducibility.sh",
+      "sha256": "d9b7232e77157d134ce00ac71272dc450132b0c5518d535d4b996155d080e5a1",
+      "bytes": 29766
+    },
+    {
+      "path": ".agents/skills/ss-ci-security/SKILL.md",
+      "sha256": "ca0bba1cf60c0c9965f21b3201e39c3e5dcba3bd73888c2a2ee5d148dbb8c0c5",
+      "bytes": 7522
+    },
+    {
+      "path": ".agents/skills/ss-ci-security/agents/openai.yaml",
+      "sha256": "621ecacc03c3acf895d2bd5c87ed94461512e23a6e16cc321ae1818f0962d959",
+      "bytes": 293
+    },
+    {
+      "path": "input.json",
+      "sha256": "655b8b0b1b999dd01eda1f30162fa1010f585c0ab92c3157128e559b2e80e6ba",
+      "bytes": 5869
+    }
+  ],
+  "prompt_sha256": "6e4256dfce39a3a6537c5743b63098b733516523f98f2946650f3f60f1f1c433",
+  "request_sha256": "77b7034e5bf603ea03f0080dc229eee44f9d044eb01339092cc869c4f8a06d3b",
+  "oracle_supplied": false,
+  "design_history_supplied": false,
+  "raw_events_sha256": "cc4c4e5e3e13d72a5c769fd57809e6edc6dd768db3eaafa996334370be2ba25e",
+  "native_events_sha256": "bde4b08e0dcda257b1db667469bff4528be45722538d03d1f8dc494cb5ec5cc9",
+  "commands_completed": 13,
+  "response_sha256": "985d27e0bc4f8010bffd78c4c7ef78831583cf518b6c8ff093851d3f2d3daa8d",
+  "catalogue_sha256": "4c8a11192b5a6cbda9f19d8978c86220236df2f1b974887fc136a7e26a72f33a",
+  "catalogue_note": "Local reconstruction after execution, not a capture of the transmitted request.",
+  "published_events_note": "Internal reasoning omitted; actual command outputs retained.",
+  "usage": {
+    "input_tokens": 298050,
+    "cached_input_tokens": 248192,
+    "cache_write_input_tokens": 0,
+    "output_tokens": 10252,
+    "reasoning_output_tokens": 2151
+  },
+  "selection_instrumented": false,
+  "qualification_limit": "Tool-mediated selection/load with declared envelope; no automatic CLI injection claim."
+}

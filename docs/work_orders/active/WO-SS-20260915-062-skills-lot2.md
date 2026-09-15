@@ -1,6 +1,6 @@
 # WO-SS-20260915-062 — Développement des skills spécialisés du lot 2
 
-- **Statut :** `OWNER_ACCEPTED — A_VALIDATED_PERSONALLY_INSTALLED` ; `ss-provider-benchmark` version `0.1.0-candidate.1` qualifié sur les douze cas, validé par le propriétaire et installé personnellement. Les quatre autres skills et la consolidation restent à réaliser.
+- **Statut :** `OWNER_ACCEPTED — A_INSTALLED — B_QUALIFIED_PENDING_OWNER_VALIDATION` ; PB validé et installé personnellement ; FQ et CS `0.1.0-candidate.1` rédigés et qualifiés séparément sur huit cas chacun. Leur validation humaine et installation, les deux skills C et la consolidation restent à réaliser.
 - **Date :** 2026-09-15.
 - **Autorité :** demande propriétaire de préparer un WO avec `ss-work-order`, à partir de la conversation « Skills du lot 2 », dans l'ordre précisé ci-dessous.
 - **Acceptation :** le 15 septembre 2026, le propriétaire confirme « J’accepte le WO-062 » et autorise l'inventaire des sources et la préparation des cas d'évaluation de `ss-provider-benchmark`.
@@ -104,6 +104,14 @@ distinct ; elle n'élargit pas implicitement ce lot de skills.
 - Dix fichiers personnels du lot 1 conservés, contenu et dates de modification identiques.
 - 18 cas d'installation isolée réussis (7 lot 1, 11 nouveau paquet) et revue indépendante favorable.
 - [Preuve A3](../../validation/WO062-PROVIDER-BENCHMARK-INSTALLATION-20260915.md). Les quatre autres skills, la consolidation des dix et la clôture du WO restent à réaliser.
+
+### Réalisation B — football puis CI/sécurité
+
+- Le propriétaire demande « réaliser les skills ss-football-quality et ss-ci-security », puis autorise explicitement les seize essais éphémères et leurs entrées internes ; cette décision ne vaut pas validation humaine du contenu.
+- Préparation figée : 25 sources et huit cas par skill, commit `15158a5`, avant rédaction.
+- Deux candidats `0.1.0-candidate.1` : huit PASS chacun après revue indépendante, dont historique, nouvelle analyse, deux contre-épreuves et quatre sélections instrumentées.
+- Correction d'encodage des seules métadonnées football tracée ; corps métier inchangé. H01/N01 conservent leurs entrées initiales, les six suivants et le paquet utilisent UTF-8.
+- [Rapport B et limites](../../validation/WO062-FOOTBALL-QUALITY-CI-SECURITY-CANDIDATES-20260915.md) ; nouvelles réponses et revues conservées. Aucune installation personnelle FQ/CS, aucun changement de PB/lot 1/installer, aucune publication Git.
 
 ### Suite du développement
 
@@ -335,7 +343,7 @@ Le WO reste dans `active` pendant la réalisation et la revue. La PR cible exclu
 la fusion. La clôture effective suit cette fusion. Publication, fusion, promotion, tag et
 installation personnelle ne sont pas déduits de la seule préparation du WO.
 
-**Suite prévue :** préparer `ss-football-quality`, puis `ss-ci-security`, dans l'ordre accepté.
+**Suite prévue :** validation humaine du contenu et des limites des candidats FQ/CS avant leur installation personnelle ; les étapes C puis D restent à réaliser dans l’ordre accepté.
 L'incrément `ss-provider-benchmark` a terminé préparation, rédaction, qualification, validation
 propriétaire et installation personnelle. Ses preuves et limites restent conservées ; cet
 incrément ne clôture pas le WO et ne réalise pas sa publication Git.

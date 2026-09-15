@@ -1,0 +1,1 @@
+Utilise $ss-ci-security pour relire les preuves CI d’une PR du SofaScore Local Lab et expliquer le verdict de qualification.

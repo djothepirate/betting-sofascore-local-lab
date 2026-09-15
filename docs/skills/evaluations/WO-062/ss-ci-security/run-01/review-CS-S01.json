@@ -1,0 +1,74 @@
+{
+  "case_id": "CS-S01",
+  "verdict": "PASS",
+  "mandatory_criteria": [
+    {
+      "criterion": "Intégrité et gel",
+      "status": "PASS",
+      "evidence": [
+        "Les six fichiers de frozen/CS-S01/freeze.json ont des tailles et SHA-256 recalculés conformes. Les hashes de trace.json concordent aussi avec événements bruts/natifs, prompt, requête, réponse et catalogue.",
+        "native-events.json égale aux événements bruts après seule exclusion des entrées reasoning ; response.md identique au dernier agent_message."
+      ]
+    },
+    {
+      "criterion": "Prompt exact et enveloppe",
+      "status": "PASS",
+      "evidence": [
+        "prompt.txt égale au prompt de cases.json suivi de LF ; request.txt égale à selection_envelope substituée avec ce prompt suivie de LF. Aucun corps de skill ajouté ; le nom explicite provient du cas."
+      ]
+    },
+    {
+      "criterion": "Identité du candidat et UTF-8",
+      "status": "PASS",
+      "evidence": [
+        "Copie C:/Dev/BettingProject/codex/betting-sofascore-local-lab/.tmp/wo062-skills-lot2/.tmp/wo062-evaluations/ss-ci-security/run-01/CS-S01/.agents/skills/ss-ci-security/SKILL.md : name ss-ci-security ; version 0.1.0-candidate.1 ; 7 522 octets ; SHA-256 ca0bba1cf60c0c9965f21b3201e39c3e5dcba3bd73888c2a2ee5d148dbb8c0c5.",
+        "agents/openai.yaml : 293 octets ; SHA-256 621ecacc03c3acf895d2bd5c87ed94461512e23a6e16cc321ae1818f0962d959 ; default_prompt référence $ss-ci-security. Les deux copies sont UTF-8 strict valide et identiques aux sources docs/skills/local-lab/ss-ci-security et aux empreintes de trace.input_files."
+      ]
+    },
+    {
+      "criterion": "Catalogue et découverte",
+      "status": "PASS",
+      "evidence": [
+        "catalogue.txt (7 987 octets) égale exactement au bloc Skills de CS-S01/output/prompt-render.json suivi de LF ; r6 résout la copie candidate du cas, ss-verify résout la copie installée.",
+        ".tmp/wo062_evaluate.py, lignes 88–95 : debug prompt-input après exécution. Cette reconstruction corrobore les noms/descriptions/chemins ; sélection et lectures éventuelles observées dans les événements natifs."
+      ]
+    },
+    {
+      "criterion": "Pertinence de sélection",
+      "status": "PASS",
+      "evidence": [
+        "Invocation explicite respectée ; aucun complément retenu.",
+        "Résultat dans response.md et native-events.json : ss-ci-security."
+      ]
+    },
+    {
+      "criterion": "Lecture intégrale de chaque skill retenu",
+      "status": "PASS",
+      "evidence": [
+        "item_1 : Get-Content -LiteralPath absolu -Raw, code 0 ; sortie exactement égale au SKILL candidat de 7 522 octets UTF-8, suivie du CRLF de console (7 342 caractères). Le chemin déclaré est celui effectivement lu.",
+        "Comparaison du texte complet, sans normalisation du corps ni tolérance à une troncature."
+      ]
+    },
+    {
+      "criterion": "Arrêt au routage",
+      "status": "PASS",
+      "evidence": [
+        "Une commande de lecture seulement ; aucun audit CI ni autre tâche métier.",
+        "Aucun accès oracle, build, test, scanner, réseau, DB ou mutation observé. turn.completed et code CLI 0 attestent la fin de la session, sans qualification métier."
+      ]
+    },
+    {
+      "criterion": "Portée des affirmations",
+      "status": "PASS",
+      "evidence": [
+        "trace.catalogue_note et trace.qualification_limit distinguent reconstruction, lecture par outil et capture de requête. Aucune injection automatique du corps par le CLI revendiquée dans la réponse."
+      ]
+    }
+  ],
+  "findings": [],
+  "limits": [
+    "Le catalogue est une reconstruction après exécution, pas une capture de la requête transmise au modèle. PASS porte sur le routage instrumenté et les lectures par outil observées.",
+    "Aucune injection automatique du corps démontrée ou revendiquée. Modèle/effort exacts non exposés ; valeurs configurées par défaut selon trace.json.",
+    "Cette revue ne qualifie aucune PR réelle, aucun test, scanner, pipeline ou distribution."
+  ]
+}

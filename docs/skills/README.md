@@ -10,12 +10,12 @@ Les cinq skills du lot 1 ont été validés par le propriétaire le 5 septembre 
 | [ss-data-contract-replay](local-lab/ss-data-contract-replay/SKILL.md) | Préserver provenance, snapshots, complétude, contrats et validation humaine. |
 | [ss-review-closeout](local-lab/ss-review-closeout/SKILL.md) | Relier revue, qualification, décisions, clôture et état Git courant. |
 
-## Lot 2 — premier skill validé et installé
+## Lot 2 — PB installé, FQ et CS qualifiés en attente de validation
 
 Le [WO-062](../work_orders/active/WO-SS-20260915-062-skills-lot2.md), préparé le 15 septembre 2026,
 adapte au Local Lab les rôles de la conversation « Skills du lot 2 » dans l'ordre demandé :
 
-| Étape | Skill prévu | Rôle |
+| Étape | Skill | Rôle |
 |---|---|---|
 | A | `ss-provider-benchmark` | Protocole reproductible, populations et dénominateurs, coût et limites des mesures. |
 | B | `ss-football-quality` | Cohérence sémantique des données football, anomalies et corrections tardives. |
@@ -45,7 +45,13 @@ et la CI suit notamment l'allègement adopté dans WO-061. Le WO distingue les
 L'installateur livre **les cinq skills du lot 1 par défaut**. L'option explicite
 `-Package ProviderBenchmark` installe uniquement le premier skill du lot 2, à partir de son
 [manifeste approuvé](evaluations/WO-062/ss-provider-benchmark/installation-manifest.json).
-Les quatre autres skills du lot 2 et la consolidation des dix restent à réaliser.
+Les candidats [ss-football-quality](local-lab/ss-football-quality/SKILL.md) et
+[ss-ci-security](local-lab/ss-ci-security/SKILL.md), version `0.1.0-candidate.1`, sont
+désormais qualifiés sur huit cas chacun, avec revue indépendante et [limites documentées](../validation/WO062-FOOTBALL-QUALITY-CI-SECURITY-CANDIDATES-20260915.md).
+Leurs sources et critères ont été figés avant rédaction ; les nouvelles analyses football
+et CI sont produites. Leur validation humaine et leur installation personnelle restent à
+réaliser. L’installateur courant conserve les seuls paquets approuvés `Lot1` et `ProviderBenchmark`.
+Les deux skills C et la consolidation des dix restent à réaliser.
 
 ## Installation personnelle depuis ce dépôt
 
@@ -93,7 +99,7 @@ Chaque dossier contient un `SKILL.md` et `agents/openai.yaml`. La sélection imp
 
 ## Provenance et qualification
 
-Les dix fichiers sont les adaptations version 0.1 évaluées sous SKL-002, sans modification de leur contenu. Le [manifeste historique](evaluations/SKL-002/installation-manifest.json) fixe leurs empreintes. Les [deux essais analytiques et leur revue](evaluations/SKL-002/review.md) et la [découverte Codex](evaluations/SKL-002/discovery.json) conservent leurs octets d'origine. Les chemins personnels et états Git qu'ils contiennent sont des observations historiques du 5 septembre 2026 ; les liens du présent guide sont les références portables du paquet livré.
+Les dix fichiers du lot 1 sont les adaptations version 0.1 évaluées sous SKL-002, sans modification de leur contenu. Le [manifeste historique](evaluations/SKL-002/installation-manifest.json) fixe leurs empreintes. Les [deux essais analytiques et leur revue](evaluations/SKL-002/review.md) et la [découverte Codex](evaluations/SKL-002/discovery.json) conservent leurs octets d'origine. Les chemins personnels et états Git qu'ils contiennent sont des observations historiques du 5 septembre 2026 ; les liens du présent guide sont les références portables du paquet livré.
 
 Les adaptations proviennent des cinq skills `bp-*` validés sous SKL-001, dans l'ordre du tableau : work-order, verify, postgres-change, data-contract-replay, review-closeout. Elles appliquent les conventions du Lab : WO `active`/`completed`, ADR-SS, profil Maven `integration-tests`, lanceurs PowerShell, ledgers et états des campagnes. Aucun composant applicatif commun n'est créé entre les dépôts.
 

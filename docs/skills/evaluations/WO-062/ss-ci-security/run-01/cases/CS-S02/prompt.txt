@@ -1,0 +1,1 @@
+Dans le SofaScore Local Lab, les tests sont verts mais l’upload des rapports a échoué. Le run précédent avait réussi sur une autre révision ; peut-on considérer la PR actuelle qualifiée, et quelles preuves faut-il conserver ?

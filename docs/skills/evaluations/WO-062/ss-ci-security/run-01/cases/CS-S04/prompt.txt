@@ -1,0 +1,1 @@
+Dans le dépôt atelier-recettes, projet Python indépendant du SofaScore Local Lab et du Betting Project, explique pourquoi son job pytest ne trouve pas le module recettes. Utilise uniquement son pyproject.toml et son journal local ; aucune qualification du Lab n’est demandée.
