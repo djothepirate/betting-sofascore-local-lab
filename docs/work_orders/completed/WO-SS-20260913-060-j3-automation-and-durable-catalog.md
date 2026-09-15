@@ -1,6 +1,6 @@
 # WO-SS-20260913-060 — Automatisation J3 et dernier catalogue durable par date
 
-- **Statut :** `IN_PROGRESS` — réalisation validée par l’opérateur et publiée dans la PR #36 ; correctif P2 qualifié localement, clôture effective après fusion de la PR.
+- **Statut :** `COMPLETED_OWNER_AUTHORIZED_PREMERGE` — réalisation et correctif P2 validés, quatre checks verts sur `f3c784e`, clôture et fusion de la PR #36 autorisées le 15 septembre 2026. Le classement documentaire précède la fusion ; la clôture effective est liée à l’état fusionné de cette PR vers `feature/V0.1.0-RC01`.
 - **Date de cadrage :** 2026-09-13.
 - **Jalon :** J3, avec coordination des campagnes live J4/J5 et impacts de persistance/audit J6/J8.
 - **Branche :** `feature/V0.1.0-RC01-CODEX-WO-SS-20260913-060`.
@@ -10,7 +10,7 @@
 - **Worktree :** `.tmp/wo060-j3-automation-design` sous la racine de travail Codex du Lab.
 - **Version Maven de base :** `0.1.0-rc.1-SNAPSHOT` ; Java 25 LTS, Spring Boot 4.1.0, Flyway V54.
 - **Décision de réalisation :** [ADR-SS-007 v0.3](../../../ADR-SS-007-j3-automation-durable-catalog-and-live-pause.md), `ACCEPTED_FOR_IMPLEMENTATION` ; réalisation initialement adoptée en v0.2, complément du clic tournoi en v0.3.
-- **Autorité actuelle :** instruction propriétaire du 15 septembre 2026 : validation des tests, push et PR vers `feature/V0.1.0-RC01`, puis résolution du commentaire P2 de cette PR. Cette autorisation complète celle de réalisation après cadrage au commit `9e0d1cb` ; elle ne vaut pas autorisation de fusion.
+- **Autorité actuelle :** instruction propriétaire du 15 septembre 2026 : « tous les checks sont verts et aucun nouveau commentaire n’est apparu après résolution de la précédente. Tu peux donc préparer la clôture de WO-060 et de la PR avec fusion vers feature/V0.1.0-RC01 ». Elle autorise la préparation documentaire, son push et la fusion de la PR #36 dans ce train.
 - **Statuts conservés :** `EXPERIMENTAL`, `LOCAL_ONLY`, `NOT_PRODUCTION_APPROVED`, `NO_CRITICAL_DEPENDENCY`.
 
 ## 1. Fiche de reprise
@@ -253,7 +253,7 @@ observée ; elle ne prouve pas un nettoyage et n'autorise aucune reprise. L'ordr
 et aucune campagne live n'est recréée.
 
 Les profils et lanceurs opérateur ne sont pas modifiés. Le lecteur V11 affiche dix valeurs
-selon le guide J3. La revue précède la fusion ; le WO reste actif jusqu'à la fusion de sa PR vers le train.
+selon le guide J3. La revue précède la fusion ; la clôture effective du WO exige la fusion de sa PR vers le train.
 
 ## 9. Complément propriétaire du 14 septembre : menu J3 → J5
 
@@ -350,5 +350,31 @@ succès précédent. Les deux cas d’expiration échouent sur le code initial a
 d’une erreur technique. Le build complet du 15 septembre à 07:51:59 UTC est réussi :
 2 440 Surefire (5 exclusions), 286 Failsafe (0 exclusion), zéro échec/erreur.
 Voir [le rapport de correction P2](../../validation/WO060-P2-ADMISSION-DEADLINE-20260915.md)
-pour les commandes et la provenance du correctif. La CI du nouveau commit reste à établir
-après push ; les checks verts du candidat initial ne lui sont pas attribués.
+pour les commandes et la provenance du correctif. Au moment de ce rapport, la CI du nouveau
+commit restait à établir après push ; son résultat est consigné dans la section suivante.
+
+## 13. Clôture propriétaire et fusion autorisées — 15 septembre 2026
+
+Le propriétaire confirme les checks verts et l’absence de nouveau commentaire après résolution
+du P2, puis autorise la clôture et la fusion de la PR #36 vers `feature/V0.1.0-RC01`.
+La vérification distante retrouve un seul fil de revue, résolu, aucun conflit et quatre checks
+réussis sur `f3c784e7b429b8e22d09f47b669d0a5a50abcaa8`, dernier changement fonctionnel.
+La base du train reste `d4c3d8ceeb6c46442f0792d436a3df7e2630f599` avant fusion.
+
+R0–R5 et les compléments d’interface sont livrés. La recette opérateur, la régression P2,
+le build local complet (2 440 Surefire, 5 exclusions ; 286 Failsafe, 0 exclusion ; aucun
+échec/erreur) et la CI Windows/Linux satisfont la définition de fini. L’échec Windows J6
+initial et sa relance réussie sur le même code restent traçables ; sa cause interne exacte
+n’est pas établie. Voir le [dossier de clôture](../../validation/WO060-CLOSEOUT-20260915.md).
+
+Ce commit ne modifie que la documentation et les liens vers le WO déplacé dans `completed`.
+Les manifestes et empreintes historiques restent figés. La CI de la tête documentaire est
+contrôlée avant la fusion ; les checks de `f3c784e` ne sont pas présentés comme ceux d’un
+autre commit. Le commit de fusion et son horodatage sont portés par la
+[PR #36](https://github.com/djothepirate/betting-sofascore-local-lab/pull/36), référence canonique
+de la clôture effective.
+
+La version Maven reste `0.1.0-rc.1-SNAPSHOT`. La clôture n’ajoute aucun lancement de collecte,
+aucune migration de la base opérateur ni promotion vers `main`, GitLab ou un tag.
+Les statuts `EXPERIMENTAL`, `LOCAL_ONLY`, `NOT_PRODUCTION_APPROVED` et
+`NO_CRITICAL_DEPENDENCY` sont conservés.

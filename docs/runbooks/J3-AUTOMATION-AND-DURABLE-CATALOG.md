@@ -2,7 +2,7 @@
 
 Statuts : `EXPERIMENTAL`, `LOCAL_ONLY`, `NOT_PRODUCTION_APPROVED`, `NO_CRITICAL_DEPENDENCY`.
 
-Cette procédure correspond à [WO-060](../work_orders/active/WO-SS-20260913-060-j3-automation-and-durable-catalog.md)
+Cette procédure correspond à [WO-060](../work_orders/completed/WO-SS-20260913-060-j3-automation-and-durable-catalog.md)
 et à [ADR-SS-007 v0.3](../../ADR-SS-007-j3-automation-durable-catalog-and-live-pause.md).
 L'application reste accessible uniquement sur `http://127.0.0.1:8087` ou `http://localhost:8087`.
 

@@ -1,10 +1,10 @@
 # ADR-SS-007 — Automatisation J3, catalogue durable par date et pause live
 
 - **Version :** 0.3 — complément propriétaire du 15 septembre 2026 pour le clic direct tournoi.
-- **Statut :** `ACCEPTED_FOR_IMPLEMENTATION` — instruction propriétaire « Commencer l’implémentation du WO-060 » le 13 septembre 2026 ; réalisation qualifiée localement, recette opérateur déclarée concluante le 15 septembre. La publication de la branche et la création de sa PR sont autorisées ; la fusion reste distincte (voir le WO, section 11).
+- **Statut :** `ACCEPTED_FOR_IMPLEMENTATION` — instruction propriétaire « Commencer l’implémentation du WO-060 » le 13 septembre 2026 ; réalisation qualifiée localement, recette opérateur déclarée concluante le 15 septembre. Après correction du P2 et quatre checks verts, le propriétaire autorise la clôture et la fusion de la PR #36 vers `feature/V0.1.0-RC01` (voir le WO, section 13). Cette mise à jour de suivi ne modifie aucune décision technique de la v0.3.
 - **Date :** 2026-09-13.
 - **Décideur :** propriétaire du Betting Project.
-- **Work Order :** [WO-SS-20260913-060](docs/work_orders/active/WO-SS-20260913-060-j3-automation-and-durable-catalog.md).
+- **Work Order :** [WO-SS-20260913-060](docs/work_orders/completed/WO-SS-20260913-060-j3-automation-and-durable-catalog.md).
 - **Base inspectée :** `d4c3d8ceeb6c46442f0792d436a3df7e2630f599`, train `feature/V0.1.0-RC01` vérifié sur GitHub.
 - **Portée actuelle :** réalisation du WO-060 autorisée, avec tests hors fournisseur. Le cadrage v0.1 est conservé au commit `9e0d1cb` ; l’instruction de réalisation adopte son périmètre et ses règles techniques. Aucun essai fournisseur ni changement de base opérateur n’est engagé par l’agent.
 - **Statuts conservés :** `EXPERIMENTAL`, `LOCAL_ONLY`, `NOT_PRODUCTION_APPROVED`, `NO_CRITICAL_DEPENDENCY`.
@@ -409,7 +409,7 @@ de pause et les slots manqués ; aucune cadence ni acceptation fournisseur n’e
 
 ## 8. Adoption, qualification et historique
 
-Le [WO-060](docs/work_orders/active/WO-SS-20260913-060-j3-automation-and-durable-catalog.md)
+Le [WO-060](docs/work_orders/completed/WO-SS-20260913-060-j3-automation-and-durable-catalog.md)
 porte les étapes, composants touchés et critères observables. L’acceptation de cette proposition,
 l’autorisation de réalisation, la qualification hors fournisseur, la revue humaine, la fusion
 et un éventuel essai opérateur réel sont des événements distincts.

@@ -5,7 +5,7 @@ Statuts : `EXPERIMENTAL`, `LOCAL_ONLY`, `NOT_PRODUCTION_APPROVED`, `NO_CRITICAL_
 
 ## Constat et cause
 
-Ce correctif prolonge le [WO-060](../work_orders/active/WO-SS-20260913-060-j3-automation-and-durable-catalog.md)
+Ce correctif prolonge le [WO-060](../work_orders/completed/WO-SS-20260913-060-j3-automation-and-durable-catalog.md)
 sur la base locale `2073eabd653293c1cb3ab4fea8ac7c93e52eb98e`. Il conserve la
 [qualification initiale](WO060-J3-IMPLEMENTATION-20260914.md) et ses preuves historiques.
 

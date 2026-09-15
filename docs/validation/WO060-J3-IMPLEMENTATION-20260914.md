@@ -6,7 +6,7 @@ Statuts du Lab : `EXPERIMENTAL`, `LOCAL_ONLY`, `NOT_PRODUCTION_APPROVED`, `NO_CR
 ## 1. Périmètre et provenance
 
 - Instruction propriétaire : « Commencer l’implémentation du WO-060 », après le cadrage documentaire.
-- [Work Order](../work_orders/active/WO-SS-20260913-060-j3-automation-and-durable-catalog.md) et
+- [Work Order](../work_orders/completed/WO-SS-20260913-060-j3-automation-and-durable-catalog.md) et
   [ADR-SS-007 v0.2](../../ADR-SS-007-j3-automation-durable-catalog-and-live-pause.md).
 - Branche : `feature/V0.1.0-RC01-CODEX-WO-SS-20260913-060`.
 - Train cible : `feature/V0.1.0-RC01`. Base : `d4c3d8ceeb6c46442f0792d436a3df7e2630f599`.

@@ -4,7 +4,7 @@
 
 Le propriétaire a demandé les améliorations J3 puis choisi explicitement **« Work Order et
 décisions d’architecture »**. La session prépare donc le
-[WO-060](../work_orders/active/WO-SS-20260913-060-j3-automation-and-durable-catalog.md),
+[WO-060](../work_orders/completed/WO-SS-20260913-060-j3-automation-and-durable-catalog.md),
 `SCOPED — READY_FOR_OWNER_REVIEW`, et
 [ADR-SS-007 v0.1](../../ADR-SS-007-j3-automation-durable-catalog-and-live-pause.md), `PROPOSED`.
 L’activation initiale et l’exécution des horaires explicites après un succès sont des choix
