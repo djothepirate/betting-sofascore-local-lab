@@ -1,0 +1,31 @@
+{
+  "schema": "wo062-c4-timing-tests-v1",
+  "tests": [
+    {
+      "case": "complete",
+      "status": "PASS"
+    },
+    {
+      "case": "native_failure",
+      "status": "PASS"
+    },
+    {
+      "case": "timeout",
+      "status": "PASS"
+    },
+    {
+      "case": "malformed",
+      "status": "PASS"
+    },
+    {
+      "case": "Previous_run_not_authorized_by_C4",
+      "status": "PASS"
+    }
+  ],
+  "passed": 5,
+  "model_calls": 0,
+  "external_processes": "Four local synthetic Python children only, no probes/application",
+  "runner_sha256": "47e6c97f6306424c4ef26e6a567cf60c93fb37ebb4eaf14641e55eee2249d444",
+  "test_sha256": "7979ccfb553f1599f748beb7aec2bf7d9c538571349d3b71af12e9b8d7d4143d",
+  "fixture_root": "C:\\Dev\\BettingProject\\codex\\betting-sofascore-local-lab\\.tmp\\wo062-skills-lot2\\.tmp\\c4-timing-tests\\e8b8a578-4da4-4da0-9c92-b7d1d1ed60da"
+}

@@ -1,0 +1,18 @@
+import pathlib,json,subprocess,hashlib
+from datetime import datetime,timezone
+r=pathlib.Path(__file__).resolve().parent.parent
+cli='C:/Users/geoff/AppData/Local/OpenAI/Codex/bin/12219cbfbcbddde7/codex.exe'
+records=[]
+for cid in ['WR-H01','WR-N01']:
+ d=r/'.tmp/wo062-evaluations/ss-windows-runtime/run-04'/cid
+ p=d/'.agents/skills/ss-windows-runtime/SKILL.md';before=hashlib.sha256(p.read_bytes()).hexdigest()
+ command="$ErrorActionPreference='Stop'; $s=[IO.File]::ReadAllText('.agents/skills/ss-windows-runtime/SKILL.md',[Text.Encoding]::UTF8); if($s.Length -lt 100){throw 'Read failed'}; $p=[IO.Path]::GetFullPath('output/launcher-preflight.txt'); if(Test-Path -LiteralPath $p){throw 'Preexisting target'}; [IO.File]::WriteAllText($p,'PREFLIGHT',[Text.UTF8Encoding]::new($false)); if([IO.File]::ReadAllText($p) -cne 'PREFLIGHT'){throw 'Bytes differ'}; Remove-Item -LiteralPath $p; if(Test-Path -LiteralPath $p){throw 'Residue'}; Write-Output 'C_PREPARED_SANDBOX_READ_WRITE_CLEANUP=PASS'"
+ args=[cli,'sandbox','--permission-profile',':workspace','-C',str(d),'powershell.exe','-NoProfile','-NonInteractive','-Command',command]
+ started=datetime.now(timezone.utc)
+ p1=subprocess.run(args,cwd=d,capture_output=True,timeout=45)
+ rec={'case_id':cid,'started_at_utc':started.isoformat(),'ended_at_utc':datetime.now(timezone.utc).isoformat(),'command':args,'exit_code':p1.returncode,'stdout':p1.stdout.decode('utf-8',errors='replace'),'stderr':p1.stderr.decode('utf-8',errors='replace'),'candidate_unchanged':before==hashlib.sha256(p.read_bytes()).hexdigest(),'residue_exists':(d/'output/launcher-preflight.txt').exists()}
+ records.append(rec)
+out={'schema':'wo062-prepared-runtime-preflight-v1','purpose':'Non-model check of prepared run-04 case access; not WR-H01/N01 execution or skill qualification. Built-in :workspace policy, sandbox retained.','created_and_launched_by':subprocess.check_output(['whoami'],text=True).strip(),'model_invoked':False,'runtime_probe_executed':False,'configuration_changed':False,'cases':records}
+(r/'.tmp/c4-prepared-access.json').write_text(json.dumps(out,ensure_ascii=False,indent=2)+'\n',encoding='utf-8',newline='\n')
+print(json.dumps({'cases':[{k:x[k] for k in ['case_id','exit_code','stdout','candidate_unchanged','residue_exists']} for x in records]}))
+raise SystemExit(any(x['exit_code']!=0 or not x['candidate_unchanged'] or x['residue_exists'] for x in records))
