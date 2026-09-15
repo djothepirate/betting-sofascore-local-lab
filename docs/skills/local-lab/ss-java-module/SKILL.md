@@ -2,7 +2,7 @@
 name: ss-java-module
 description: "Concevoir ou relire une évolution Java du SofaScore Local Lab : responsabilités, ports, adaptateurs, dépendances et activation Spring/Maven. Ne pas utiliser pour un simple build ni une architecture limitée à un autre dépôt."
 metadata:
-  version: "0.1.0-candidate.2"
+  version: "0.1.0-candidate.3"
 ---
 
 # Placer une évolution dans l'architecture Java du Lab
@@ -85,8 +85,11 @@ document n'élargissent pas une liste de fichiers autorisés.
 - Dans une pause live autorisée, suivre le transfert du droit d'émettre, la création
   du contexte J3 temporaire et son nettoyage, puis la restitution au contexte live
   conservé. Un même worker peut porter des contextes distincts ; un tick ne recrée
-  pas le contexte live. Une perte de contexte ou un nettoyage non établi ne justifie
-  ni reprise automatique ni lancement d'un navigateur de remplacement.
+  pas le contexte live. Dans la restitution, distinguer ce retour nominal du cas de
+  panne : la perte du navigateur ou du contexte live termine la session, sans reprise
+  automatique ni recréation de contexte. Nommer cette transition terminale ; décrire
+  seulement le contexte conservé ou les gardes de retour ne couvre pas sa perte.
+  Un nettoyage non établi n'autorise pas un navigateur de remplacement.
 - Relire les ADR du transport pour toute modification de cette frontière. Un défaut
   local ou une ancienne qualification n'autorise pas un nouvel endpoint, fallback,
   état de session conservé, réseau fournisseur ou activation dans les tests standards.
@@ -94,8 +97,11 @@ document n'élargissent pas une liste de fichiers autorisés.
 ## Relier les contrôles à ce qu'ils couvrent
 
 - Rechercher les contrôles présents : `scripts/Verify-Local.ps1`, tests de propriétés,
-  policy, contexte Spring, persistance et worker. Le garde textuel du lanceur n'est
-  pas une analyse exhaustive des dépendances. Ne pas annoncer ArchUnit ou une règle
+  policy, contexte Spring, persistance et worker. Pour le garde du lanceur, vérifier
+  et restituer la cible textuelle et l'arborescence inspectée : dans ce dépôt,
+  `com.microsoft.playwright` est interdit dans `src/main`, alors que les interfaces
+  internes nommées Playwright ne désignent pas cette bibliothèque. Cette recherche
+  textuelle n'est pas une analyse exhaustive des dépendances. Ne pas annoncer ArchUnit ou une règle
   architecturale exécutée sans dépendance, test et preuve correspondants.
 - Pour chaque test utile, relever fichier, méthode, source Maven, motif d'inclusion,
   profil, exécution Surefire/Failsafe et commande effective. Une IT présente peut

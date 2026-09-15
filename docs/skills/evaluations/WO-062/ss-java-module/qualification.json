@@ -1,16 +1,15 @@
 {
   "schema": "wo062-current-skill-qualification-v1",
   "skill": "ss-java-module",
-  "candidate_version": "0.1.0-candidate.2",
-  "status": "INCOMPLETE_QUALIFICATION",
+  "candidate_version": "0.1.0-candidate.3",
+  "status": "CORRECTED_PENDING_EVALUATION",
   "source_commit": "6648dd423e556b5248b8793a539ae85a7680f9bc",
-  "source_head": "4a83e121d8c28833b7617313ab277bc4341f078e",
   "preparation_manifest_sha256": "a0907baba5a15606b6a735873a3e8ab9cc4043dfe8d852f3b843e1ec61b68290",
   "candidate_files": [
     {
       "path": "SKILL.md",
-      "bytes": 9859,
-      "sha256": "255655544771ae6cf2a71b967aba8efeb7e53e64acc41ca31dc784e16a719118"
+      "bytes": 10384,
+      "sha256": "15237ab0f6773c87187481622ba4947ebc00f8c7e9a50dd1589911ede17ec332"
     },
     {
       "path": "agents/openai.yaml",
@@ -18,105 +17,21 @@
       "sha256": "ccc4fc2a4707838dd6defdd73ef6f6c7ee0d69e6df86e41689a46884691573ae"
     }
   ],
-  "publisher_source_head": "380d9ed5e548fb2fbc398aaeccfca516395c6e82",
-  "candidate_body_commit": "2d62f12c2d2ad4571c630aea0f98128927aa24ff",
-  "candidate_package_commit": "2d62f12c2d2ad4571c630aea0f98128927aa24ff",
   "distinct_cases": 8,
-  "executions": 9,
+  "executions": 0,
   "total_executions": 17,
-  "pass": 7,
-  "fail": 1,
+  "pass": 0,
+  "fail": 0,
   "blocked": 0,
+  "not_run": 8,
+  "previous_qualification": "revision-03/previous-qualification.json",
+  "historical_runs_preserved": [
+    "run-01",
+    "run-02",
+    "run-03"
+  ],
   "human_validation": false,
   "personal_installation": false,
-  "results": "run-03/current-results.json",
-  "run_results": "run-03/results.json",
-  "artifact_manifest_sha256": "02ce714e1c0141334c09f022b6f3cfd80b7bf16112d19e4615003b1248cdaf82",
-  "historical_runs": [
-    {
-      "run_id": "run-01",
-      "candidate_version": "0.1.0-candidate.1",
-      "candidate_sha256": "d20c8b838a9c4b9713e27c576e22272427d3f64fef50a670f5a09364cf849eb4",
-      "executions": 8,
-      "pass": 5,
-      "fail": 3,
-      "blocked": 0,
-      "results": "run-01/results.json",
-      "artifact_manifest_sha256": "6b6b057a742ebd8f3b064adf4be7b57ac02ff9309ad76cf7b3599b7e72e56649",
-      "candidate_files": [
-        {
-          "path": "agents/openai.yaml",
-          "bytes": 309,
-          "sha256": "ccc4fc2a4707838dd6defdd73ef6f6c7ee0d69e6df86e41689a46884691573ae"
-        },
-        {
-          "path": "SKILL.md",
-          "bytes": 8306,
-          "sha256": "d20c8b838a9c4b9713e27c576e22272427d3f64fef50a670f5a09364cf849eb4"
-        }
-      ],
-      "candidate_body_commit": "d89f9f2f3da136faf00976266202a4ff9b8c8c1f"
-    },
-    {
-      "run_id": "run-02",
-      "candidate_version": "0.1.0-candidate.2",
-      "candidate_sha256": "255655544771ae6cf2a71b967aba8efeb7e53e64acc41ca31dc784e16a719118",
-      "executions": 8,
-      "pass": 7,
-      "fail": 1,
-      "blocked": 0,
-      "results": "run-02/results.json",
-      "artifact_manifest_sha256": "2f7122962f8051445dce31a3019dcb381aa88c6fc9823790596199b117a45e37"
-    }
-  ],
-  "execution_totals": {
-    "pass": 12,
-    "fail": 5,
-    "blocked": 0
-  },
-  "current_cases": [
-    {
-      "case_id": "JM-H01",
-      "verdict": "PASS",
-      "source_run": "run-02"
-    },
-    {
-      "case_id": "JM-N01",
-      "verdict": "FAIL",
-      "source_run": "run-03"
-    },
-    {
-      "case_id": "JM-C01",
-      "verdict": "PASS",
-      "source_run": "run-02"
-    },
-    {
-      "case_id": "JM-C02",
-      "verdict": "PASS",
-      "source_run": "run-02"
-    },
-    {
-      "case_id": "JM-S01",
-      "verdict": "PASS",
-      "source_run": "run-02"
-    },
-    {
-      "case_id": "JM-S02",
-      "verdict": "PASS",
-      "source_run": "run-02"
-    },
-    {
-      "case_id": "JM-S03",
-      "verdict": "PASS",
-      "source_run": "run-02"
-    },
-    {
-      "case_id": "JM-S04",
-      "verdict": "PASS",
-      "source_run": "run-02"
-    }
-  ],
-  "static_review": "run-02/review-static.json",
   "limits": [
     "Qualification limited to the frozen cases; no general productivity gain measured.",
     "Model and reasoning effort use configured defaults; exact values unavailable. No model override is made by this publisher.",
