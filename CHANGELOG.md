@@ -6,6 +6,10 @@ Les évolutions notables du SofaScore Local Lab sont consignées dans ce fichier
 
 ### WO-060 — automatisation J3, résultats durables et pause live
 
+- Corrige le P2 de la PR #36 : un ordre J3 déjà pris en charge dont la fenêtre de réservation
+  réseau expire est enregistré `CANCELLED / ADMISSION_DEADLINE_EXPIRED`, au lieu de
+  `INTERRUPTED / EXECUTION_INTERRUPTED`. Aucun fournisseur n’est ouvert dans ce cas et le
+  dernier succès est conservé. Les erreurs techniques gardent leur traitement d’interruption.
 - Consigne la validation opérateur du 15 septembre 2026 et l’autorisation de pousser le WO
   et de créer sa PR vers `feature/V0.1.0-RC01`. La recette fournie confirme notamment une
   collecte LaLiga en un clic, un seul appel et trois rencontres validées. Le WO reste actif

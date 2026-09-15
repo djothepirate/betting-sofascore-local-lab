@@ -1,15 +1,16 @@
 # WO-SS-20260913-060 — Automatisation J3 et dernier catalogue durable par date
 
-- **Statut :** `IN_PROGRESS` — réalisation qualifiée localement et validée par l’opérateur le 15 septembre 2026 ; push et création de PR autorisés, clôture effective après fusion de la PR.
+- **Statut :** `IN_PROGRESS` — réalisation validée par l’opérateur et publiée dans la PR #36 ; correctif P2 qualifié localement, clôture effective après fusion de la PR.
 - **Date de cadrage :** 2026-09-13.
 - **Jalon :** J3, avec coordination des campagnes live J4/J5 et impacts de persistance/audit J6/J8.
 - **Branche :** `feature/V0.1.0-RC01-CODEX-WO-SS-20260913-060`.
 - **Train / cible de PR :** `feature/V0.1.0-RC01` exclusivement.
+- **PR :** [#36 — Automatisation J3, catalogue durable et collecte directe des tournois](https://github.com/djothepirate/betting-sofascore-local-lab/pull/36).
 - **Base exacte :** `d4c3d8ceeb6c46442f0792d436a3df7e2630f599`, vérifiée sur GitHub le 13 septembre et confirmée inchangée le 15 septembre avant publication.
 - **Worktree :** `.tmp/wo060-j3-automation-design` sous la racine de travail Codex du Lab.
 - **Version Maven de base :** `0.1.0-rc.1-SNAPSHOT` ; Java 25 LTS, Spring Boot 4.1.0, Flyway V54.
 - **Décision de réalisation :** [ADR-SS-007 v0.3](../../../ADR-SS-007-j3-automation-durable-catalog-and-live-pause.md), `ACCEPTED_FOR_IMPLEMENTATION` ; réalisation initialement adoptée en v0.2, complément du clic tournoi en v0.3.
-- **Autorité actuelle :** instruction propriétaire du 15 septembre 2026 : tous les tests sont concluants, les travaux du WO-060 peuvent être poussés et une PR vers `feature/V0.1.0-RC01` créée. Cette autorisation complète celle de réalisation après cadrage au commit `9e0d1cb` ; elle ne vaut pas autorisation de fusion.
+- **Autorité actuelle :** instruction propriétaire du 15 septembre 2026 : validation des tests, push et PR vers `feature/V0.1.0-RC01`, puis résolution du commentaire P2 de cette PR. Cette autorisation complète celle de réalisation après cadrage au commit `9e0d1cb` ; elle ne vaut pas autorisation de fusion.
 - **Statuts conservés :** `EXPERIMENTAL`, `LOCAL_ONLY`, `NOT_PRODUCTION_APPROVED`, `NO_CRITICAL_DEPENDENCY`.
 
 ## 1. Fiche de reprise
@@ -327,3 +328,27 @@ d’interface. Les checks GitHub doivent être évalués sur la tête distante d
 locaux et l’acceptation opérateur ne préjugent pas de leur résultat. Le WO reste dans `active`
 jusqu’à la fusion dans son train ; aucune fusion, promotion, publication de version ou
 activation fournisseur supplémentaire n’est engagée par cette autorisation.
+
+## 12. Correction du P2 de la PR #36 — 15 septembre 2026
+
+Les quatre checks GitHub du candidat `0f9040f` ont réussi. Le propriétaire demande ensuite
+de résoudre [le P2 sur le motif d’expiration](https://github.com/djothepirate/betting-sofascore-local-lab/pull/36#discussion_r4012991874).
+Ce complément fonctionnel est postérieur à la recette opérateur de la section 11 et fait
+l’objet de sa propre qualification.
+
+Un ordre déjà pris en charge arrivant avec moins de 130 secondes restantes, ou attendant
+une autre opération fournisseur jusqu’à cette limite, perdait son motif d’expiration dans
+une exception générique. Le runtime le publie désormais `CANCELLED` avec
+`ADMISSION_DEADLINE_EXPIRED` avant toute collection ou ressource fournisseur. Les autres
+erreurs conservent leur terminal d’interruption ; aucune migration ni règle d’admission
+supplémentaire n’est introduite.
+
+La régression PostgreSQL passe par la file et le consommateur réels, relit l’ordre durable,
+contrôle son libellé opérateur, l’absence de collection/fournisseur et la conservation du
+succès précédent. Les deux cas d’expiration échouent sur le code initial avec
+`expected: CANCELLED but was: INTERRUPTED`. Un troisième scénario préserve le traitement
+d’une erreur technique. Le build complet du 15 septembre à 07:51:59 UTC est réussi :
+2 440 Surefire (5 exclusions), 286 Failsafe (0 exclusion), zéro échec/erreur.
+Voir [le rapport de correction P2](../../validation/WO060-P2-ADMISSION-DEADLINE-20260915.md)
+pour les commandes et la provenance du correctif. La CI du nouveau commit reste à établir
+après push ; les checks verts du candidat initial ne lui sont pas attribués.

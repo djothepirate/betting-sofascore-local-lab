@@ -228,6 +228,10 @@ public class J3RuntimeService {
                     engine.execute(order,access.providerOrigin(),null,standalone,cancelled);
                 }
             }
+        } catch(AdmissionDeadlineExpired expired) {
+            // No collection or provider resource exists yet: only the claimed order ends.
+            if(!orders.find(order.id()).orElseThrow().terminal())
+                orders.finish(order.id(),order.owner(),OrderState.CANCELLED,expired.getMessage(),Instant.now());
         } catch(InterruptedException interrupted) {
             Thread.currentThread().interrupt();runtimeReason="J3_INTERRUPTED";
             if(!orders.find(order.id()).orElseThrow().terminal())
@@ -245,10 +249,16 @@ public class J3RuntimeService {
     }
 
     private record Resource(Standalone standalone,CompletableFuture<J3CollectionExecutor.Result> live) { }
+    private static final class AdmissionDeadlineExpired extends RuntimeException {
+        AdmissionDeadlineExpired() {super("ADMISSION_DEADLINE_EXPIRED");}
+    }
     private Resource reserveNetwork(Order order,java.net.URI origin,Supplier<String> cancelled) throws InterruptedException {
         for(;;) {
-            if(cancelled.get()!=null || !Instant.now().plusSeconds(130).isBefore(order.deadline()))
-                throw new PlaywrightDispatchCancelledException();
+            String admissionStop=cancelled.get();
+            if("ADMISSION_DEADLINE_EXPIRED".equals(admissionStop)
+                    || admissionStop==null && !Instant.now().plusSeconds(130).isBefore(order.deadline()))
+                throw new AdmissionDeadlineExpired();
+            if(admissionStop!=null) throw new PlaywrightDispatchCancelledException();
             try {
                 var handoff=live.submitJ3(order,(scope,liveCancellation)->engine.execute(order,origin,null,scope,
                         ()->{String stopped=cancelled.get();return stopped!=null?stopped:liveCancellation.get();}));

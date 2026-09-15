@@ -125,6 +125,7 @@ au Lab et ne démarre ni base ni fournisseur. Elle ne fait pas partie des tests 
 | Modifier / annuler | Révision traçable ; une occurrence déjà admise ne change pas de cible |
 | Lab arrêté, en veille ou indisponible à l'échéance | Occurrence manquée ; aucun rattrapage ni démarrage externe |
 | File ou autre collecte occupée | Ordre sérialisé, soumis à sa borne de 20 minutes depuis admission ; aucun départ en parallèle |
+| Fenêtre de réservation réseau expirée après prise en charge | État **Annulée**, motif `ADMISSION_DEADLINE_EXPIRED`, sans ouverture fournisseur. La réservation exige plus de 130 secondes restantes pour les opérations bornées ; le dernier succès est conservé |
 
 Les fichiers importés en attente restent en mémoire jusqu'à leur exécution (huit lots au maximum).
 Un redémarrage interrompt un ordre admis dont le propriétaire a disparu ; il ne rejoue pas un import

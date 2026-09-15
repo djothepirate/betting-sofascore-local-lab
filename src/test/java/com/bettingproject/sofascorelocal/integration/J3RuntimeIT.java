@@ -1,6 +1,7 @@
 package com.bettingproject.sofascorelocal.integration;
 
 import com.bettingproject.sofascorelocal.adapter.persistence.*;
+import com.bettingproject.sofascorelocal.adapter.web.J3Presentation;
 import com.bettingproject.sofascorelocal.adapter.sofascore.SofascoreEndpointCatalog;
 import com.bettingproject.sofascorelocal.application.live.LiveCampaignService;
 import com.bettingproject.sofascorelocal.application.network.*;
@@ -11,6 +12,8 @@ import com.bettingproject.sofascorelocal.domain.scheduledevents.J3AutomationData
 import com.bettingproject.sofascorelocal.domain.scheduledevents.J3CollectionData.Trigger;
 import com.bettingproject.sofascorelocal.port.*;
 import org.junit.jupiter.api.Test;
+import org.junit.jupiter.params.ParameterizedTest;
+import org.junit.jupiter.params.provider.ValueSource;
 import org.springframework.jdbc.core.namedparam.NamedParameterJdbcTemplate;
 import org.springframework.jdbc.support.JdbcTransactionManager;
 import org.springframework.mock.env.MockEnvironment;
@@ -96,6 +99,63 @@ class J3RuntimeIT {
             assertThat(h.orders.recent(100)).isEmpty();
             assertThat(f.jdbc.queryForObject("select owner_id from j3_automation_settings",UUID.class)).isNull();
             verifyNoInteractions(h.factory,h.coordinator);
+        }
+    }
+
+    @ParameterizedTest
+    @ValueSource(longs={129,135})
+    void admissionDeadlineCancelsClaimedOrderWithoutOpeningProvider(long remainingSeconds) throws Exception {
+        var f=fixture(POSTGRES,"57");
+        try(Harness h=new Harness(f)) {
+            h.runtime.configure(1,false,Mode.STARTUP_OR_DAY_CHANGE,null);
+            h.runtime.start();
+            UUID imported=UUID.randomUUID();
+            h.runtime.manual(imported,DATE,List.of(payload(7)));
+            await(()->h.orders.find(imported).orElseThrow().terminal());
+            var previous=f.store.latest(DATE).orElseThrow();
+            when(h.coordinator.tryAcquireJ3Campaign(any()))
+                    .thenThrow(mock(ManualProviderRequestCoordinator.CoordinationException.class));
+
+            Owner owner=f.jdbc.queryForObject("select owner_id,owner_pid,owner_started_at from j3_automation_settings",
+                    (rs,n)->new Owner(rs.getObject(1,UUID.class),rs.getLong(2),rs.getTimestamp(3).toInstant()));
+            UUID id=UUID.randomUUID();
+            // Admit in the past without changing the immutable SQL deadline. The normal
+            // runtime consumer claims this queued order on its next tick.
+            h.orders.manual(id,DATE,Trigger.MANUAL_PROVIDER,null,owner,
+                    Instant.now().minus(com.bettingproject.sofascorelocal.domain.scheduledevents.J3AutomationData.ORDER_DEADLINE)
+                            .plusSeconds(remainingSeconds));
+            await(()->h.orders.find(id).orElseThrow().terminal());
+
+            var reloaded=new JdbcJ3AutomationStore(new NamedParameterJdbcTemplate(f.ds),f.store).find(id).orElseThrow();
+            assertThat(reloaded.state()).isEqualTo(OrderState.CANCELLED);
+            assertThat(reloaded.reason()).isEqualTo("ADMISSION_DEADLINE_EXPIRED");
+            assertThat(reloaded.finishedAt()).isNotNull();
+            assertThat(J3Presentation.state(reloaded.state())).isEqualTo("Annulée");
+            assertThat(J3Presentation.reason(reloaded.reason())).contains("échéance").doesNotContain("interrompue");
+            assertThat(f.store.find(id)).isEmpty();
+            assertThat(f.store.latest(DATE)).contains(previous);
+            assertThat(h.calls).hasValue(0);
+            verifyNoInteractions(h.factory);
+            if(remainingSeconds>130) verify(h.coordinator,atLeast(2)).tryAcquireJ3Campaign(id);
+            else verify(h.coordinator,never()).tryAcquireJ3Campaign(id);
+        }
+    }
+
+    @Test void unexpectedAdmissionFailureRemainsAnInterruption() throws Exception {
+        var f=fixture(POSTGRES,"57");
+        try(Harness h=new Harness(f)) {
+            h.runtime.configure(1,false,Mode.STARTUP_OR_DAY_CHANGE,null);
+            when(h.coordinator.tryAcquireJ3Campaign(any()))
+                    .thenThrow(new IllegalStateException("SYNTHETIC_ADMISSION_FAILURE"));
+            h.runtime.start();
+            UUID id=UUID.randomUUID();
+            h.runtime.manual(id,DATE,null);
+            await(()->h.orders.find(id).orElseThrow().terminal());
+            var failed=h.orders.find(id).orElseThrow();
+            assertThat(failed.state()).isEqualTo(OrderState.INTERRUPTED);
+            assertThat(failed.reason()).isEqualTo("EXECUTION_INTERRUPTED");
+            verify(h.coordinator).tryAcquireJ3Campaign(id);
+            verifyNoInteractions(h.factory);
         }
     }
 
