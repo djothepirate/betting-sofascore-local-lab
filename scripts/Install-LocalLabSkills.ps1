@@ -2,7 +2,7 @@
 param(
     [string]$Destination = (Join-Path $env:USERPROFILE '.agents/skills'),
     [switch]$VerifyOnly,
-    [ValidateSet('Lot1', 'ProviderBenchmark')]
+    [ValidateSet('Lot1', 'ProviderBenchmark', 'FootballQualityCiSecurity')]
     [string]$Package = 'Lot1'
 )
 
@@ -18,12 +18,16 @@ if ($Package -eq 'ProviderBenchmark') {
     $manifestPath = Join-Path $repositoryRoot 'docs/skills/evaluations/WO-062/ss-provider-benchmark/installation-manifest.json'
     $skillNames = @('ss-provider-benchmark')
 }
+elseif ($Package -eq 'FootballQualityCiSecurity') {
+    $manifestPath = Join-Path $repositoryRoot 'docs/skills/evaluations/WO-062/football-quality-ci-security/installation-manifest.json'
+    $skillNames = @('ss-football-quality', 'ss-ci-security')
+}
 $manifest = Get-Content -LiteralPath $manifestPath -Raw -Encoding UTF8 | ConvertFrom-Json
-if ($Package -eq 'ProviderBenchmark' -and
+if ($Package -ne 'Lot1' -and
     ($manifest.owner_validated -isnot [bool] -or -not $manifest.owner_validated -or
      $manifest.personal_installation_authorized -isnot [bool] -or -not $manifest.personal_installation_authorized -or
      $manifest.candidate_version -cne '0.1.0-candidate.1')) {
-    throw 'Provider benchmark package lacks approval for the exact candidate version.'
+    throw 'Selected package lacks approval for the exact candidate version.'
 }
 $expectedPaths = @($skillNames | ForEach-Object {
     "docs/skills/local-lab/$_/SKILL.md"

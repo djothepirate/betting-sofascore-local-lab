@@ -10,7 +10,7 @@ Les cinq skills du lot 1 ont été validés par le propriétaire le 5 septembre 
 | [ss-data-contract-replay](local-lab/ss-data-contract-replay/SKILL.md) | Préserver provenance, snapshots, complétude, contrats et validation humaine. |
 | [ss-review-closeout](local-lab/ss-review-closeout/SKILL.md) | Relier revue, qualification, décisions, clôture et état Git courant. |
 
-## Lot 2 — PB installé, FQ et CS qualifiés en attente de validation
+## Lot 2 — PB, FQ et CS validés et installés personnellement
 
 Le [WO-062](../work_orders/active/WO-SS-20260915-062-skills-lot2.md), préparé le 15 septembre 2026,
 adapte au Local Lab les rôles de la conversation « Skills du lot 2 » dans l'ordre demandé :
@@ -49,8 +49,10 @@ Les candidats [ss-football-quality](local-lab/ss-football-quality/SKILL.md) et
 [ss-ci-security](local-lab/ss-ci-security/SKILL.md), version `0.1.0-candidate.1`, sont
 désormais qualifiés sur huit cas chacun, avec revue indépendante et [limites documentées](../validation/WO062-FOOTBALL-QUALITY-CI-SECURITY-CANDIDATES-20260915.md).
 Leurs sources et critères ont été figés avant rédaction ; les nouvelles analyses football
-et CI sont produites. Leur validation humaine et leur installation personnelle restent à
-réaliser. L’installateur courant conserve les seuls paquets approuvés `Lot1` et `ProviderBenchmark`.
+et CI sont produites. Le propriétaire a accepté leur contenu, leur périmètre et leurs limites ;
+les quatre fichiers exacts sont désormais [validés humainement et installés personnellement](../validation/WO062-FOOTBALL-QUALITY-CI-SECURITY-INSTALLATION-20260915.md).
+Le paquet explicite `FootballQualityCiSecurity` suit son [manifeste approuvé](evaluations/WO-062/football-quality-ci-security/installation-manifest.json).
+Le suffixe `candidate.1` conserve l’identité des fichiers évalués et acceptés.
 Les deux skills C et la consolidation des dix restent à réaliser.
 
 ## Installation personnelle depuis ce dépôt
@@ -69,18 +71,26 @@ powershell.exe -NoProfile -ExecutionPolicy Bypass -File scripts/Install-LocalLab
 powershell.exe -NoProfile -ExecutionPolicy Bypass -File scripts/Install-LocalLabSkills.ps1 -Package ProviderBenchmark -VerifyOnly
 ```
 
+Pour installer ou vérifier ensemble les deux versions humaines validées FQ et CS :
+
+```powershell
+powershell.exe -NoProfile -ExecutionPolicy Bypass -File scripts/Install-LocalLabSkills.ps1 -Package FootballQualityCiSecurity
+powershell.exe -NoProfile -ExecutionPolicy Bypass -File scripts/Install-LocalLabSkills.ps1 -Package FootballQualityCiSecurity -VerifyOnly
+```
+
 La destination par défaut est `%USERPROFILE%/.agents/skills`, portée utilisateur documentée par [Codex](https://learn.chatgpt.com/docs/build-skills). Les skills du paquet sélectionné sont alors disponibles dans les worktrees actuels et futurs sur ce compte. Les descriptions ciblent le SofaScore Local Lab et les références sont résolues depuis la racine Git du worktree concerné. Actualiser la tâche ou redémarrer Codex si son catalogue est ancien.
 
 Le paquet reste dans `docs/skills/local-lab` : ne pas en créer une seconde copie homonyme dans `.agents/skills` du dépôt lorsque l'installation utilisateur existe. Codex peut découvrir plusieurs skills de même nom sans les fusionner. Les skills `bp-*` demeurent propres au Betting Project.
 
 L'installateur contrôle les sources du paquet sélectionné (dix pour `Lot1`, deux pour
-`ProviderBenchmark`) par taille et SHA-256 avant toute copie, puis tous les fichiers de destination existants. Il ne remplace aucun fichier différent et refuse les fichiers supplémentaires dans un dossier `ss-*`, afin de préserver une variante locale. La casse des chemins relatifs approuvés est exacte : un fichier `skill.md` ne remplace pas `SKILL.md`. Une casse différente du préfixe absolu de destination reste acceptée lorsque Windows résout le même dossier. Réconcilier ou sauvegarder cette variante explicitement avant de réinstaller ; aucun mode d'écrasement forcé n'est fourni. Une installation identique ne réécrit pas les fichiers. `-VerifyOnly` vérifie aussi la présence complète sans créer de répertoire. Les chemins liés sont refusés. Une erreur d'entrée/sortie peut laisser une installation partielle ; les fichiers déjà copiés sont contrôlés lors d'une nouvelle exécution.
+`ProviderBenchmark`, quatre pour `FootballQualityCiSecurity`) par taille et SHA-256 avant toute copie, puis tous les fichiers de destination existants. Il ne remplace aucun fichier différent et refuse les fichiers supplémentaires dans un dossier `ss-*`, afin de préserver une variante locale. La casse des chemins relatifs approuvés est exacte : un fichier `skill.md` ne remplace pas `SKILL.md`. Une casse différente du préfixe absolu de destination reste acceptée lorsque Windows résout le même dossier. Réconcilier ou sauvegarder cette variante explicitement avant de réinstaller ; aucun mode d'écrasement forcé n'est fourni. Une installation identique ne réécrit pas les fichiers. `-VerifyOnly` vérifie aussi la présence complète sans créer de répertoire. Les chemins liés sont refusés. Une erreur d'entrée/sortie peut laisser une installation partielle ; les fichiers déjà copiés sont contrôlés lors d'une nouvelle exécution.
 
 `-Destination '<dossier de skills>'` permet une installation isolée. Pour qualifier l'installateur sans toucher au compte utilisateur :
 
 ```powershell
 powershell.exe -NoProfile -ExecutionPolicy Bypass -File scripts/Test-LocalLabSkillsInstallation.ps1
 powershell.exe -NoProfile -ExecutionPolicy Bypass -File scripts/Test-LocalLabSkillsInstallation.ps1 -Package ProviderBenchmark
+powershell.exe -NoProfile -ExecutionPolicy Bypass -File scripts/Test-LocalLabSkillsInstallation.ps1 -Package FootballQualityCiSecurity
 ```
 
 Ce contrôle crée un dossier temporaire neuf avec les seuls fichiers synthétiques et copies du paquet ; il le conserve pour inspection. Il ne lance ni application, ni Maven, ni Docker.
@@ -89,6 +99,8 @@ Ce contrôle crée un dossier temporaire neuf avec les seuls fichiers synthétiq
 
 ```text
 Utilise $ss-provider-benchmark pour préparer une scorecard prematch/live à partir des rapports versionnés du Lab.
+Utilise $ss-football-quality pour examiner cette incohérence de score et de statut dans les preuves J6.
+Utilise $ss-ci-security pour vérifier les contrôles et rapports CI applicables au SHA de cette PR.
 Utilise $ss-work-order pour reprendre le WO concerné et établir son état actuel.
 Utilise $ss-verify pour diagnostiquer cet échec CI et réaliser le correctif.
 Utilise $ss-postgres-change et $ss-data-contract-replay pour préparer cette évolution du ledger et de son contrat.

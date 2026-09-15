@@ -1,5 +1,9 @@
 # WO-062 — Candidats football quality et CI security
 
+**Rapport historique de recette.** La décision humaine et l’installation personnelles intervenues
+ensuite sont consignées dans le [rapport d’installation B](WO062-FOOTBALL-QUALITY-CI-SECURITY-INSTALLATION-20260915.md).
+Les états d’attente ci-dessous décrivent la fin de la recette, avant cette décision.
+
 - **Date :** 15 septembre 2026.
 - **Résultat :** deux candidats `0.1.0-candidate.1`, chacun qualifié sur huit cas figés ; **16 PASS** après revue indépendante.
 - **Statut :** `QUALIFIED_ON_FROZEN_CASES_PENDING_OWNER_VALIDATION`.

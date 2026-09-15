@@ -2,7 +2,7 @@
   "schema": "wo062-current-skill-qualification-v1",
   "skill": "ss-football-quality",
   "candidate_version": "0.1.0-candidate.1",
-  "status": "QUALIFIED_OWNER_VALIDATED_PERSONALLY_INSTALLED",
+  "status": "QUALIFIED_OWNER_VALIDATED_PENDING_PERSONAL_INSTALLATION",
   "source_commit": "57c0614627e628077b0a7775eb66a7c490b422e0",
   "preparation_manifest_sha256": "ab5cf47000fe47b9fc76541ecf9e29a9a429e17d9947c86004078ae850f49adc",
   "candidate_files": [
@@ -23,7 +23,7 @@
   "fail": 0,
   "blocked": 0,
   "human_validation": true,
-  "personal_installation": true,
+  "personal_installation": false,
   "results": "run-01/results.json",
   "artifact_manifest_sha256": "ddf6ddf37273a2c7772562eaf2a4f72a42eb6db84c0455c30d03642112804ebd",
   "limits": [
@@ -52,7 +52,5 @@
   },
   "candidate_body_commit": "bfbe3fb6e787756544508e1a3e5a92674a678bd7",
   "candidate_package_commit": "11394e327448827c13ad3006d3afc2d9199c1e15",
-  "owner_decision": "human-validation.json",
-  "installation_result": "../football-quality-ci-security/installation/result.json",
-  "installation_verified_at_utc": "2026-09-15T20:33:00.029744+00:00"
+  "owner_decision": "human-validation.json"
 }

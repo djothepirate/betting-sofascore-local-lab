@@ -1,7 +1,7 @@
 [CmdletBinding()]
 param(
     [string]$TestRoot = (Join-Path ([System.IO.Path]::GetTempPath()) ('lab-skills-test-' + [guid]::NewGuid().ToString('N'))),
-    [ValidateSet('Lot1', 'ProviderBenchmark')]
+    [ValidateSet('Lot1', 'ProviderBenchmark', 'FootballQualityCiSecurity')]
     [string]$Package = 'Lot1'
 )
 
@@ -18,6 +18,12 @@ if ($Package -eq 'ProviderBenchmark') {
     $firstSkill = $lastSkill = 'ss-provider-benchmark'
     $fileCount = 2
     $manifestRelative = 'docs/skills/evaluations/WO-062/ss-provider-benchmark/installation-manifest.json'
+}
+elseif ($Package -eq 'FootballQualityCiSecurity') {
+    $firstSkill = 'ss-football-quality'
+    $lastSkill = 'ss-ci-security'
+    $fileCount = 4
+    $manifestRelative = 'docs/skills/evaluations/WO-062/football-quality-ci-security/installation-manifest.json'
 }
 
 if (Test-Path -LiteralPath $TestRoot) {
@@ -115,27 +121,37 @@ Assert-Refused { & (Join-Path $badRepository 'scripts/Install-LocalLabSkills.ps1
 Assert-True (-not (Test-Path -LiteralPath $badDestination)) 'Bad source validation created a destination.'
 Write-Output 'PASS source hash mismatch refused before any copy'
 $caseCount = 7
-if ($Package -eq 'ProviderBenchmark') {
+if ($Package -ne 'Lot1') {
     $coexist = Join-Path $TestRoot 'lot1 already installed'
     & $installer -Destination $coexist | Out-Null
+    $priorCount = 10
+    if ($Package -eq 'FootballQualityCiSecurity') {
+        & $installer -Package ProviderBenchmark -Destination $coexist | Out-Null
+        $priorCount += 2
+    }
     $before = Get-FileState $coexist
-    $result = & $installer -Package ProviderBenchmark -Destination $coexist
-    Assert-True ($result -like '*FILES=2; COPIED=2;*') 'Adding provider benchmark did not copy exactly two files.'
-    $afterLot1 = @(Get-FileState $coexist | Where-Object { $_ -notlike '*ss-provider-benchmark*' })
-    Assert-True (@(Compare-Object $before $afterLot1).Count -eq 0) 'Adding provider benchmark changed lot 1.'
-    Assert-True (@(Get-ChildItem -LiteralPath $coexist -Recurse -File).Count -eq 12) 'Coexistence should contain twelve files.'
+    $result = & $installer -Package $Package -Destination $coexist
+    Assert-True ($result -like "*FILES=$fileCount; COPIED=$fileCount;*") 'Adding the package did not copy exactly its approved files.'
+    $afterPrior = @(Get-FileState $coexist | Where-Object {
+        $_ -notlike "*$firstSkill*" -and $_ -notlike "*$lastSkill*"
+    })
+    Assert-True (@(Compare-Object $before $afterPrior).Count -eq 0) 'Adding the package changed previously installed files.'
+    Assert-True (@(Get-ChildItem -LiteralPath $coexist -Recurse -File).Count -eq ($priorCount + $fileCount)) 'Unexpected coexistence file count.'
     & $installer -Destination $coexist -VerifyOnly | Out-Null
-    & $installer -Package ProviderBenchmark -Destination $coexist -VerifyOnly | Out-Null
-    Write-Output 'PASS coexistence with lot 1 without rewriting its files'
+    if ($Package -eq 'FootballQualityCiSecurity') {
+        & $installer -Package ProviderBenchmark -Destination $coexist -VerifyOnly | Out-Null
+    }
+    & $installer -Package $Package -Destination $coexist -VerifyOnly | Out-Null
+    Write-Output 'PASS coexistence without rewriting previously installed files'
 
     $partial = Join-Path $TestRoot 'partial installation'
-    $partialFile = Join-Path $partial 'ss-provider-benchmark/SKILL.md'
+    $partialFile = Join-Path $partial "$firstSkill/SKILL.md"
     New-Item -ItemType Directory -Path (Split-Path -Parent $partialFile) -Force | Out-Null
-    Copy-Item -LiteralPath (Join-Path $repositoryRoot 'docs/skills/local-lab/ss-provider-benchmark/SKILL.md') -Destination $partialFile
+    Copy-Item -LiteralPath (Join-Path $repositoryRoot "docs/skills/local-lab/$firstSkill/SKILL.md") -Destination $partialFile
     $before = Get-FileState $partial
-    $result = & $installer -Package ProviderBenchmark -Destination $partial
-    Assert-True ($result -like '*FILES=2; COPIED=1;*') 'Resuming should copy only the missing approved file.'
-    $afterExisting = @(Get-FileState $partial | Where-Object { $_ -like '*SKILL.md|*' })
+    $result = & $installer -Package $Package -Destination $partial
+    Assert-True ($result -like "*FILES=$fileCount; COPIED=$($fileCount - 1);*") 'Resuming should copy only missing approved files.'
+    $afterExisting = @(Get-FileState $partial | Where-Object { $_ -like "*$firstSkill*SKILL.md|*" })
     Assert-True (@(Compare-Object $before $afterExisting).Count -eq 0) 'Resuming changed the existing approved file.'
     Write-Output 'PASS resuming a partial installation without rewriting the existing file'
 
@@ -143,16 +159,31 @@ if ($Package -eq 'ProviderBenchmark') {
     $badManifest = Get-Content -LiteralPath $badManifestPath -Raw -Encoding UTF8 | ConvertFrom-Json
     $badManifest.owner_validated = $false
     [System.IO.File]::WriteAllText($badManifestPath, ($badManifest | ConvertTo-Json -Depth 10), $utf8)
-    Assert-Refused { & (Join-Path $badRepository 'scripts/Install-LocalLabSkills.ps1') -Package ProviderBenchmark -Destination $badDestination } '*lacks approval*'
+    Assert-Refused { & (Join-Path $badRepository 'scripts/Install-LocalLabSkills.ps1') -Package $Package -Destination $badDestination } '*lacks approval*'
     Assert-True (-not (Test-Path -LiteralPath $badDestination)) 'Missing approval created a destination.'
     Write-Output 'PASS unapproved package refused before any copy'
 
     $badManifest.owner_validated = $true
-    $badManifest.files[1].path = 'docs/skills/local-lab/ss-football-quality/agents/openai.yaml'
+    $badManifest.files[$fileCount - 1].path = 'docs/skills/local-lab/ss-java-module/agents/openai.yaml'
     [System.IO.File]::WriteAllText($badManifestPath, ($badManifest | ConvertTo-Json -Depth 10), $utf8)
-    Assert-Refused { & (Join-Path $badRepository 'scripts/Install-LocalLabSkills.ps1') -Package ProviderBenchmark -Destination $badDestination } '*exactly the approved skill paths*'
+    Assert-Refused { & (Join-Path $badRepository 'scripts/Install-LocalLabSkills.ps1') -Package $Package -Destination $badDestination } '*exactly the approved skill paths*'
     Assert-True (-not (Test-Path -LiteralPath $badDestination)) 'An out-of-scope manifest created a destination.'
     Write-Output 'PASS manifest path outside the selected package refused'
     $caseCount += 4
+    if ($Package -eq 'FootballQualityCiSecurity') {
+        foreach ($variant in @('personal-approval-missing', 'approval-not-boolean', 'different-version')) {
+            $badManifest = Get-Content -LiteralPath (Join-Path $repositoryRoot $manifestRelative) -Raw -Encoding UTF8 | ConvertFrom-Json
+            switch ($variant) {
+                'personal-approval-missing' { $badManifest.personal_installation_authorized = $false }
+                'approval-not-boolean' { $badManifest.owner_validated = 'true' }
+                'different-version' { $badManifest.candidate_version = '0.1.0-candidate.2' }
+            }
+            [System.IO.File]::WriteAllText($badManifestPath, ($badManifest | ConvertTo-Json -Depth 10), $utf8)
+            Assert-Refused { & (Join-Path $badRepository 'scripts/Install-LocalLabSkills.ps1') -Package $Package -Destination $badDestination } '*lacks approval*'
+            Assert-True (-not (Test-Path -LiteralPath $badDestination)) 'An invalid approval created a destination.'
+            Write-Output "PASS $variant refused before any copy"
+            $caseCount++
+        }
+    }
 }
 Write-Output "LOCAL_LAB_SKILLS_INSTALLER_TESTS=PASS; PACKAGE=$Package; CASES=$caseCount; USER_INSTALLATION_TOUCHED=NO"

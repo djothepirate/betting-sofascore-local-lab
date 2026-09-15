@@ -1,12 +1,13 @@
 # WO-SS-20260915-062 — Développement des skills spécialisés du lot 2
 
-- **Statut :** `OWNER_ACCEPTED — A_INSTALLED — B_QUALIFIED_PENDING_OWNER_VALIDATION` ; PB validé et installé personnellement ; FQ et CS `0.1.0-candidate.1` rédigés et qualifiés séparément sur huit cas chacun. Leur validation humaine et installation, les deux skills C et la consolidation restent à réaliser.
+- **Statut :** `OWNER_ACCEPTED — A_INSTALLED — B_INSTALLED` ; PB, FQ et CS `0.1.0-candidate.1` validés par le propriétaire et installés personnellement. Les deux skills C, la consolidation D et la livraison Git restent à réaliser.
 - **Date :** 2026-09-15.
 - **Autorité :** demande propriétaire de préparer un WO avec `ss-work-order`, à partir de la conversation « Skills du lot 2 », dans l'ordre précisé ci-dessous.
 - **Acceptation :** le 15 septembre 2026, le propriétaire confirme « J’accepte le WO-062 » et autorise l'inventaire des sources et la préparation des cas d'évaluation de `ss-provider-benchmark`.
 - **Autorisation A2 :** le propriétaire demande ensuite de rédiger ce candidat depuis A1 et de l'évaluer sans oracle dans le contexte évalué ; il autorise explicitement les quatre sessions éphémères de sélection et la transmission de leur contexte local.
 - **Complément PB-S01 :** le propriétaire demande de terminer la qualification ouverte ; run-02 apporte la lecture intégrale du candidat exact par outil et une revue PASS. Le premier run reste historique et inchangé.
 - **Validation et installation A3 :** le propriétaire accepte explicitement le contenu, le périmètre et les limites de `0.1.0-candidate.1`, puis autorise son installation personnelle ; [décision exacte et empreintes](../../skills/evaluations/WO-062/ss-provider-benchmark/human-validation.json).
+- **Validation et installation B :** le propriétaire accepte le contenu, le périmètre et les limites des deux candidats ; [décisions et installation vérifiée](../../validation/WO062-FOOTBALL-QUALITY-CI-SECURITY-INSTALLATION-20260915.md).
 - **Branche :** `feature/V0.1.0-RC01-CODEX-WO-SS-20260915-062`.
 - **Cible de PR :** `feature/V0.1.0-RC01`.
 - **Base canonique vérifiée sur GitHub :** `74d3f38afd64ce587353fbd645cad7a388e9756c` ; train local et distant identiques lors du cadrage, après fusion de la PR #37 / WO-061.
@@ -111,7 +112,16 @@ distinct ; elle n'élargit pas implicitement ce lot de skills.
 - Préparation figée : 25 sources et huit cas par skill, commit `15158a5`, avant rédaction.
 - Deux candidats `0.1.0-candidate.1` : huit PASS chacun après revue indépendante, dont historique, nouvelle analyse, deux contre-épreuves et quatre sélections instrumentées.
 - Correction d'encodage des seules métadonnées football tracée ; corps métier inchangé. H01/N01 conservent leurs entrées initiales, les six suivants et le paquet utilisent UTF-8.
-- [Rapport B et limites](../../validation/WO062-FOOTBALL-QUALITY-CI-SECURITY-CANDIDATES-20260915.md) ; nouvelles réponses et revues conservées. Aucune installation personnelle FQ/CS, aucun changement de PB/lot 1/installer, aucune publication Git.
+- [Rapport B et limites](../../validation/WO062-FOOTBALL-QUALITY-CI-SECURITY-CANDIDATES-20260915.md) ; nouvelles réponses et revues conservées. À la fin de cette recette, FQ/CS attendaient leur validation humaine et leur installation personnelle ; PB, le lot 1 et l’installateur étaient inchangés.
+
+### Validation propriétaire et installation B du 15 septembre 2026
+
+- Contenu, périmètre et limites des deux versions `0.1.0-candidate.1` acceptés ; quatre fichiers qualifiés conservés à l’identique.
+- [Manifeste ciblé](../../skills/evaluations/WO-062/football-quality-ci-security/installation-manifest.json) : paquet explicite `FootballQualityCiSecurity`, quatre fichiers ; défaut `Lot1` et paquet `ProviderBenchmark` conservés.
+- 32 cas d’installation isolée réussis : 7 lot 1, 11 PB et 14 FQ/CS ; revue indépendante favorable.
+- Installation personnelle : quatre fichiers copiés, vérification et seconde installation sans réécriture ; douze fichiers préexistants conservés avec leurs dates de modification.
+- Huit skills personnels découverts par le CLI local, une entrée par nom ; cette découverte ne constitue pas une nouvelle recette comportementale commune.
+- [Rapport d’installation et limites](../../validation/WO062-FOOTBALL-QUALITY-CI-SECURITY-INSTALLATION-20260915.md) : incident initial avant copie, correction du seul environnement enfant, commandes et preuves exactes.
 
 ### Suite du développement
 
@@ -306,7 +316,10 @@ approuvés du lot 1 et SKL-002 sans réécriture.
 L'installateur livré au lot 1 impose cinq noms et dix chemins. A3 ajoute un paquet ciblé
 `ProviderBenchmark`, avec son manifeste approuvé de deux fichiers et une option explicite ;
 le défaut `Lot1` et SKL-002 sont conservés. Cette livraison progressive suit la validation
-individuelle du premier skill. La consolidation D doit encore couvrir les dix
+individuelle du premier skill. Après validation humaine de FQ/CS, B ajoute le paquet explicite
+`FootballQualityCiSecurity` et son manifeste approuvé de quatre fichiers. Les 32 cas isolés
+couvrent les trois paquets, dont la coexistence des huit skills personnels.
+La consolidation D doit encore couvrir les dix
 skills avec un manifeste courant distinct et un préflight complet avant copie, conserver
 `-VerifyOnly`, l'idempotence, la casse exacte des chemins relatifs, le refus des variantes locales,
 fichiers supplémentaires et liens, ainsi que la relance sûre après interruption d'entrée/sortie.
@@ -320,7 +333,8 @@ Réutiliser la portée personnelle documentée du lot 1, sans copie homonyme dé
 dépôt. Les essais d'installation utilisent des destinations isolées. L'installation personnelle
 définitive vient après validation du contenu et autorisation correspondante. A3 applique
 cette décision au seul `ss-provider-benchmark` dans `%USERPROFILE%/.agents/skills` ; la simple
-préparation historique du WO n'avait modifié aucun skill personnel.
+préparation historique du WO n’avait modifié aucun skill personnel. La décision B autorise
+ensuite FQ et CS ; leur installation personnelle est désormais réalisée et vérifiée.
 
 ## 8. Qualification, revue, clôture et livraison Git
 
@@ -343,7 +357,7 @@ Le WO reste dans `active` pendant la réalisation et la revue. La PR cible exclu
 la fusion. La clôture effective suit cette fusion. Publication, fusion, promotion, tag et
 installation personnelle ne sont pas déduits de la seule préparation du WO.
 
-**Suite prévue :** validation humaine du contenu et des limites des candidats FQ/CS avant leur installation personnelle ; les étapes C puis D restent à réaliser dans l’ordre accepté.
-L'incrément `ss-provider-benchmark` a terminé préparation, rédaction, qualification, validation
-propriétaire et installation personnelle. Ses preuves et limites restent conservées ; cet
-incrément ne clôture pas le WO et ne réalise pas sa publication Git.
+**Suite prévue :** `ss-java-module`, puis `ss-windows-runtime` (C), puis consolidation D, dans l’ordre accepté.
+Les trois skills A/B ont terminé préparation, rédaction, qualification, validation propriétaire
+et installation personnelle. Leurs preuves et limites restent conservées. Le WO reste actif ;
+la livraison Git et sa clôture suivent le workflow de revue et de fusion décrit ci-dessus.

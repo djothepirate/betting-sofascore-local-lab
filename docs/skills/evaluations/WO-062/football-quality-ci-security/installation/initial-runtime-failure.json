@@ -1,0 +1,20 @@
+{
+  "status": "FAILED_BEFORE_COPY",
+  "targets_absent_confirmed": true,
+  "diagnostic": [
+    {
+      "mode": "inherited",
+      "exit_code": 1,
+      "stdout": "5.1.26100.9444\r\nC:\\Users\\geoff\\OneDrive\\Documents\\PowerShell\\Modules;C:\\Program Files\\PowerShell\\Modules;c:\\program files\\powershell\\7\\Modules;C:\\Users\\geoff\\OneDrive\\Documents\\WindowsPowerShell\\Modules;C:\\Program Files\\WindowsPowerShell\\Modules;C:\\Windows\\system32\\WindowsPowerShell\\v1.0\\Modules\r\n",
+      "stderr": "Get-Command : Le terme «Get-FileHash» n'est pas reconnu comme nom d'applet de commande, fonction, fichier de script ou \r\nprogramme exécutable. Vérifiez l'orthographe du nom, ou si un chemin d'accès existe, vérifiez que le chemin d'accès \r\nest correct et réessayez.\r\nAu caractère Ligne:1 : 58\r\n+ ... $env:PSModulePath; Get-Command Get-FileHash -ErrorAction Stop | Selec ...\r\n+                        ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~\r\n    + CategoryInfo          : ObjectNotFound: (Get-FileHash:String) [Get-Command], CommandNotFoundException\r\n    + FullyQualifiedErrorId : CommandNotFoundException,Microsoft.PowerShell.Commands.GetCommandCommand\r\n \r\n"
+    },
+    {
+      "mode": "native-defaults",
+      "exit_code": 0,
+      "stdout": "5.1.26100.9444\r\nC:\\Users\\geoff\\OneDrive\\Documents\\WindowsPowerShell\\Modules;C:\\Program Files\\WindowsPowerShell\\Modules;C:\\Windows\\system32\\WindowsPowerShell\\v1.0\\Modules\r\n\r\nName         Source                      \r\n----         ------                      \r\nGet-FileHash Microsoft.PowerShell.Utility\r\n\r\n\r\n",
+      "stderr": ""
+    }
+  ],
+  "resolution": "Omit inherited PSModulePath only for the powershell.exe child started by Python. No installer/skill changes and no persistent environment mutation.",
+  "initial_discovery": "No new skills found, as installation had not occurred; not counted as successful discovery."
+}

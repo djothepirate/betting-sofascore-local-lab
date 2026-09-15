@@ -1,0 +1,81 @@
+{
+  "checked_at_utc": "2026-09-15T20:31:37.056813+00:00",
+  "cli_version": "codex-cli 0.154.0-alpha.6.2",
+  "method": "Local debug prompt-input reconstruction, no model invocation",
+  "cwd": "C:\\Dev\\BettingProject\\codex\\betting-sofascore-local-lab\\.tmp\\wo062-skills-lot2",
+  "command": [
+    "codex",
+    "debug",
+    "prompt-input"
+  ],
+  "exit_code": 0,
+  "entries": [
+    {
+      "skill": "ss-work-order",
+      "scope": "USER",
+      "matching_entries": 1,
+      "path": "C:\\Users\\geoff\\.agents\\skills\\ss-work-order\\SKILL.md",
+      "sha256": "07f92e9d7e35fae64b814b2d92d62538d15e298b544242d6a772400de6712700",
+      "entry": "- ss-work-order: Reprendre, cadrer ou découper un Work Order du SofaScore Local Lab en reliant le bon worktree, les décisions et les preuves. À utiliser pour un lot du laboratoire ou une reprise interrompue. (file: r0/ss-work-order/SKILL.md)"
+    },
+    {
+      "skill": "ss-verify",
+      "scope": "USER",
+      "matching_entries": 1,
+      "path": "C:\\Users\\geoff\\.agents\\skills\\ss-verify\\SKILL.md",
+      "sha256": "9eccf7b71f664a7d74c543b53b09fb7e58b5b2d96efe304925884c80e353b4ca",
+      "entry": "- ss-verify: Valider un changement ou diagnostiquer un build Windows/Linux du SofaScore Local Lab : commandes Maven effectives, scripts PowerShell, PostgreSQL et faux verts. (file: r0/ss-verify/SKILL.md)"
+    },
+    {
+      "skill": "ss-postgres-change",
+      "scope": "USER",
+      "matching_entries": 1,
+      "path": "C:\\Users\\geoff\\.agents\\skills\\ss-postgres-change\\SKILL.md",
+      "sha256": "8a89922f8cc1dd5144e054f0586d6d24f92d2a1c82264d37e00642d8376d9e2c",
+      "entry": "- ss-postgres-change: Concevoir ou relire une migration PostgreSQL du SofaScore Local Lab : provenance, transactions, concurrence, ledger, upgrade prérempli, sauvegarde et reprise selon le périmètre. (file: r0/ss-postgres-change/SKILL.md)"
+    },
+    {
+      "skill": "ss-data-contract-replay",
+      "scope": "USER",
+      "matching_entries": 1,
+      "path": "C:\\Users\\geoff\\.agents\\skills\\ss-data-contract-replay\\SKILL.md",
+      "sha256": "ecaffcae31979a735d2ce240b9583da0d75fa296152fc4a5fca1c211affa7ef1",
+      "entry": "- ss-data-contract-replay: Créer ou relire un contrat, parseur, import/export et replay hors réseau du SofaScore Local Lab, avec snapshots, complétude, provenance et validation humaine explicites. (file: r0/ss-data-contract-replay/SKILL.md)"
+    },
+    {
+      "skill": "ss-review-closeout",
+      "scope": "USER",
+      "matching_entries": 1,
+      "path": "C:\\Users\\geoff\\.agents\\skills\\ss-review-closeout\\SKILL.md",
+      "sha256": "781f44022cda70ce605ab8fedb6022f272e1514b588f41e3fa0d8f50223a1f32",
+      "entry": "- ss-review-closeout: Préparer une revue ou clôturer un Work Order et une PR du SofaScore Local Lab en reliant décisions, diff, qualification, manifestes et état Git courant. (file: r0/ss-review-closeout/SKILL.md)"
+    },
+    {
+      "skill": "ss-provider-benchmark",
+      "scope": "USER",
+      "matching_entries": 1,
+      "path": "C:\\Users\\geoff\\.agents\\skills\\ss-provider-benchmark\\SKILL.md",
+      "sha256": "4bcecee4dbe75ec74530a7bda63acc8cbc84cc15dcd7c07e2ab9e6f80cc7be94",
+      "entry": "- ss-provider-benchmark: Cadrer ou relire un benchmark fournisseur du SofaScore Local Lab : populations, couverture, complétude, fraîcheur, latence et coût en appels, notamment prematch/live. Ne pas utiliser pour un simple build ni pour une comparaison limitée au Betting Project. (file: r0/ss-provider-benchmark/SKILL.md)"
+    },
+    {
+      "skill": "ss-football-quality",
+      "scope": "USER",
+      "matching_entries": 1,
+      "path": "C:\\Users\\geoff\\.agents\\skills\\ss-football-quality\\SKILL.md",
+      "sha256": "8489375d22eff31a3248f78a5d3791b549a2f103d061cc6c46647a757d3eec58",
+      "entry": "- ss-football-quality: Examiner la cohérence des données football du SofaScore Local Lab : identité, HOME/AWAY, horaires, scores, incidents, compositions, complétude et historique J6. Ne pas utiliser pour un simple build ni une analyse limitée à un autre projet. (file: r0/ss-football-quality/SKILL.md)"
+    },
+    {
+      "skill": "ss-ci-security",
+      "scope": "USER",
+      "matching_entries": 1,
+      "path": "C:\\Users\\geoff\\.agents\\skills\\ss-ci-security\\SKILL.md",
+      "sha256": "ca0bba1cf60c0c9965f21b3201e39c3e5dcba3bd73888c2a2ee5d148dbb8c0c5",
+      "entry": "- ss-ci-security: Examiner un échec ou une qualification CI du SofaScore Local Lab : SHA testé, contrôles obligatoires, rapports, sécurité, quotas et provenance des distributions locales. Ne pas utiliser pour un simple build Windows ni pour un autre dépôt. (file: r0/ss-ci-security/SKILL.md)"
+    }
+  ],
+  "matching_personal_skills": 8,
+  "model_invoked": false,
+  "limit": "Catalogue discovery and exact paths/hashes only; no new selection or automatic injection evaluation."
+}

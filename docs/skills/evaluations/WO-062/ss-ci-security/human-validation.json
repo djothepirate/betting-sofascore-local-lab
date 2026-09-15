@@ -1,0 +1,35 @@
+{
+  "schema_version": 1,
+  "work_order": "WO-062",
+  "recorded_at_utc": "2026-09-15T20:25:11.903609+00:00",
+  "authority": "Explicit owner message in current Codex task",
+  "decision": "CONTENT_SCOPE_AND_DOCUMENTED_LIMITS_ACCEPTED",
+  "owner_statement": "J'ai pris connaissance du contenu, du périmètre et des limites documentées de ces deux candidats et j'accepte qu'ils deviennent les versions humaines validées pouvant être installées dans mon environnement personnel.",
+  "skill": "ss-ci-security",
+  "candidate_version": "0.1.0-candidate.1",
+  "candidate_body_commit": "658309c0e8d9d18e7d96396d8768ac90d8d16cca",
+  "candidate_package_commit": "658309c0e8d9d18e7d96396d8768ac90d8d16cca",
+  "qualification_commit": "285f4384a4c2fbd4276089fc216c7c74d2cb7495",
+  "files": [
+    {
+      "path": "docs/skills/local-lab/ss-ci-security/SKILL.md",
+      "bytes": 7522,
+      "sha256": "ca0bba1cf60c0c9965f21b3201e39c3e5dcba3bd73888c2a2ee5d148dbb8c0c5"
+    },
+    {
+      "path": "docs/skills/local-lab/ss-ci-security/agents/openai.yaml",
+      "bytes": 293,
+      "sha256": "621ecacc03c3acf895d2bd5c87ed94461512e23a6e16cc321ae1818f0962d959"
+    }
+  ],
+  "human_validation": true,
+  "personal_installation_authorized": true,
+  "scope": "Exact qualified files and version; personal installation authorized by current owner acceptance. No Java/Windows approval or version change.",
+  "limits_preserved": [
+    "Qualification limited to the frozen cases; no productivity gain measured.",
+    "Model and reasoning effort use configured defaults, exact values unavailable in observed CLI events.",
+    "Selection and complete tool-mediated loading are instrumented; no automatic body injection claim.",
+    "Each selection catalogue includes the candidate plus existing personal skills, not both uninstalled B candidates together.",
+    "No actual provider collection, CI pipeline, scanner or application test is claimed by these documentary evaluations."
+  ]
+}
