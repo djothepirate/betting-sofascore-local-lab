@@ -6,6 +6,14 @@ Les évolutions notables du SofaScore Local Lab sont consignées dans ce fichier
 
 ### WO-062 — skills spécialisés du lot 2
 
+- Prépare `ss-java-module 0.1.0-candidate.5` sans recette : correction minimale de
+  la restitution J3 pour interdire explicitement tout transfert de cookie, état de
+  stockage ou donnée de session du contexte live conservé vers le contexte J3 temporaire,
+  ainsi que toute continuité de session artificielle. Conserve candidate.4, ses octets,
+  ses C6/C7 et son résultat historique 7 PASS / 1 FAIL ; aucune fixture, oracle, code
+  applicatif, validation humaine ou installation personnelle n'est modifié. Le nouveau
+  candidat reste non qualifié et exige une future autorisation pour toute recette.
+
 - Réalise la [requalification C4](docs/validation/WO062-C4-REQUALIFICATION-20260916.md) :
   candidat Java `.3` corrigé et versionné avant huit nouveaux essais ; les deux omissions
   ciblées sont résolues, mais JM-N01 reste FAIL sur la restitution du profil live bloqué.

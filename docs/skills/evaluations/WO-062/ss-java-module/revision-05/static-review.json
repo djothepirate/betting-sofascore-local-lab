@@ -1,0 +1,56 @@
+{
+  "schema": "wo062-java-candidate5-static-review-v1",
+  "reviewed_at_utc": "2026-09-16T09:54:47.9077693Z",
+  "review_method": "Separate deterministic static review pass after the candidate edit; it rereads hashes, the candidate diff and preserved evidence without launching a model or qualification case.",
+  "review_independence": "The pass is separate from the edit operation and deterministic. It is not a human review or an additional model session.",
+  "verdict": "PASS_STATIC_ONLY",
+  "candidate": {
+    "version": "0.1.0-candidate.5",
+    "skill_sha256": "d7171f978c2b13c852c2ce5e170d68c1bfc5087552661cfdc6271077a0fe6637",
+    "skill_bytes": 11263,
+    "metadata_sha256": "ccc4fc2a4707838dd6defdd73ef6f6c7ee0d69e6df86e41689a46884691573ae"
+  },
+  "reviewed_sources": [
+    "docs/skills/local-lab/ss-java-module/SKILL.md",
+    "revision-05/candidate.4-SKILL.md",
+    "revision-05/candidate.4-openai.yaml",
+    "revision-05/candidate.4-to-candidate.5.diff",
+    "revision-05/previous-qualification.json",
+    "../qualification.json",
+    "../run-07/review-JM-N01.md"
+  ],
+  "scope": {
+    "candidate_diff_hunks": 2,
+    "candidate_metadata_change": "0.1.0-candidate.4 to 0.1.0-candidate.5",
+    "behavioral_rule_change": "Only the live/J3 pause rule now explicitly prohibits any transfer of cookies, storage state or other session data from retained live context to temporary J3 context, artificial continuity, and omission from the final response when applicable.",
+    "application_code_changed": false,
+    "fixtures_changed": false,
+    "oracles_or_evaluation_criteria_changed": false,
+    "historical_c6_c7_runs_changed": false
+  },
+  "findings": [
+    "The active candidate explicitly names temporary J3 context, retained live context, cookies, storageState, other session data, live-to-J3 direction, artificial session continuity and mandatory explicit restitution.",
+    "The three candidate.4 JM-N01 corrections remain present: terminal loss without recovery/recreation, exact com.microsoft.playwright guard in src/main, and sofascore-live-test remains blocked.",
+    "agents/openai.yaml has the archived candidate.4 SHA-256; no metadata behavior changed.",
+    "Archived candidate.4 bytes match f1f6533f678c5cdb4ae6a5bc9c996c062af419005e4f4cd6104a51c91e442d97 and its preserved qualification reports 7 PASS / 1 FAIL.",
+    "Current qualification marks all eight candidate.5 cases NOT_RUN and forbids formal transfer of candidate.4 PASS verdicts.",
+    "Manual static front-matter and integrity checks passed, including git diff --check."
+  ],
+  "static_tooling": {
+    "manual_front_matter_and_integrity": "PASS",
+    "git_diff_check": "PASS",
+    "quick_validate_py": "NOT_AVAILABLE",
+    "quick_validate_reason": "The configured bundled Python lacks the PyYAML module required by skill-creator/scripts/quick_validate.py. No package was installed and the manual static checks above were retained as a documented substitute."
+  },
+  "risks": [
+    "The added requirement is in the J3/live pause instruction and is therefore narrowly scoped, but actual model restitution remains unproven until fresh qualification.",
+    "The static review cannot prove that candidate.5 preserves the seven previously passing behaviors."
+  ],
+  "qualification": {
+    "status": "PREPARED_NOT_QUALIFIED",
+    "candidate5_cases_executed": 0,
+    "human_validation": false,
+    "personal_installation": false,
+    "future_requirement": "The candidate-SHA-specific protocol requires eight fresh cases: JM-H01, JM-N01, JM-C01, JM-C02, JM-S01, JM-S02, JM-S03 and JM-S04. JM-N01 alone is only a narrow observation and cannot transfer candidate.4 results."
+  }
+}

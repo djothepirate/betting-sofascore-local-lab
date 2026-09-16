@@ -1,0 +1,51 @@
+{
+  "schema": "wo062-candidate-revision-v1",
+  "prepared_at_utc": "2026-09-16T09:44:18.0055206Z",
+  "base_commit": "d5fb8733d3e7326be71c2f4f6c9e0ea4b2e22441",
+  "previous_candidate": "0.1.0-candidate.4",
+  "previous_candidate_sha256": "f1f6533f678c5cdb4ae6a5bc9c996c062af419005e4f4cd6104a51c91e442d97",
+  "previous_candidate_artifacts": [
+    {
+      "path": "candidate.4-SKILL.md",
+      "bytes": 10901,
+      "sha256": "f1f6533f678c5cdb4ae6a5bc9c996c062af419005e4f4cd6104a51c91e442d97"
+    },
+    {
+      "path": "candidate.4-openai.yaml",
+      "bytes": 309,
+      "sha256": "ccc4fc2a4707838dd6defdd73ef6f6c7ee0d69e6df86e41689a46884691573ae"
+    },
+    {
+      "path": "previous-qualification.json",
+      "bytes": 5019,
+      "sha256": "6dbd4b852d4c897727c34b92569c553c98488bb230df6c6f06a2414755bdfef8"
+    }
+  ],
+  "candidate_version": "0.1.0-candidate.5",
+  "candidate_sha256": "d7171f978c2b13c852c2ce5e170d68c1bfc5087552661cfdc6271077a0fe6637",
+  "candidate_bytes": 11263,
+  "candidate_diff_artifact": {
+    "path": "candidate.4-to-candidate.5.diff",
+    "bytes": 1035,
+    "sha256": "b8d7134bed4158b67b904ab0556e0a529847365694d27e1f93e86c996a6ef069"
+  },
+  "changes": [
+    "Dans la seule règle de pause live/J3, exiger explicitement que le contexte J3 temporaire reste isolé du contexte live conservé : aucun cookie, état de stockage ou autre donnée de session ne passe du live vers J3 et ne sert à créer artificiellement une continuité de session.",
+    "Exiger que cette interdiction soit restituée explicitement dans la réponse lorsqu'une revue examine cette pause."
+  ],
+  "previous_corrections_preserved": [
+    "La perte du navigateur ou du contexte live termine la session sans reprise ni recréation automatique.",
+    "Le garde textuel cible précisément com.microsoft.playwright dans src/main.",
+    "Le profil Maven sofascore-live-test reste volontairement bloqué par le garde POM lorsqu'il est examiné."
+  ],
+  "description_yaml_changed": false,
+  "cases_inputs_oracle_changed": false,
+  "application_code_changed": false,
+  "previous_runs_changed": false,
+  "planned_cases": 8,
+  "qualification_plan": "qualification-plan.md",
+  "static_review": "static-review.json",
+  "behavioral_qualification": "NOT_RUN",
+  "human_validation": false,
+  "personal_installation": false
+}

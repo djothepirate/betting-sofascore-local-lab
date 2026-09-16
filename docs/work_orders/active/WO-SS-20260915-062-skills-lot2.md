@@ -1,6 +1,6 @@
 # WO-SS-20260915-062 — Développement des skills spécialisés du lot 2
 
-- **Statut :** `OWNER_ACCEPTED — A_INSTALLED — B_INSTALLED — C_QUALIFICATION_INCOMPLETE` ; PB, FQ et CS validés et installés personnellement. Java `.4` est revu dans C6/C7 (sept PASS, un FAIL), et les deux cas Windows `.1` restent non consommés après préflight hôte formel réussi. Validation humaine C, consolidation D et livraison Git restent distinctes.
+- **Statut :** `OWNER_ACCEPTED — A_INSTALLED — B_INSTALLED — C_QUALIFICATION_INCOMPLETE` ; PB, FQ et CS validés et installés personnellement. Java `.4` est conservé avec ses C6/C7 (sept PASS, un FAIL) ; Java `.5` est préparé sans recette. Les deux cas Windows `.1` restent non consommés après préflight hôte formel réussi. Validation humaine C, consolidation D et livraison Git restent distinctes.
 - **Date :** 2026-09-15.
 - **Autorité :** demande propriétaire de préparer un WO avec `ss-work-order`, à partir de la conversation « Skills du lot 2 », dans l'ordre précisé ci-dessous.
 - **Acceptation :** le 15 septembre 2026, le propriétaire confirme « J’accepte le WO-062 » et autorise l'inventaire des sources et la préparation des cas d'évaluation de `ss-provider-benchmark`.
@@ -268,6 +268,33 @@ distinct ; elle n'élargit pas implicitement ce lot de skills.
   reste à automatic_retry=false, avec un seul thread et aucune nouvelle invocation
   codex exec ; cette limite de service est conservée dans la revue plutôt que présentée
   comme une exécution sans reprise interne.
+
+### Correction minimale candidate.5 — préparation sans recette
+
+- Le propriétaire demande une correction strictement limitée au dernier FAIL C7 de
+  `JM-N01`. Le candidat Java `.5` ajoute dans la seule règle de pause live/J3
+  l'interdiction explicite de transférer ou réutiliser cookie, état de stockage ou
+  autre donnée de session du contexte live conservé vers le contexte J3 temporaire,
+  et exige que cette interdiction soit restituée dans la réponse lorsqu'elle s'applique.
+- Les trois corrections `.4` sont conservées : perte terminale sans reprise/recréation,
+  garde exact `com.microsoft.playwright` sous `src/main`, et profil
+  `sofascore-live-test` volontairement bloqué. `agents/openai.yaml`, les fixtures,
+  oracles, critères, contextes, réponses, revues et résultats C6/C7 ne sont pas modifiés.
+- [L'archive candidate.4, le diff exact et la révision .5](../../skills/evaluations/WO-062/ss-java-module/revision-05/revision.json)
+  distinguent les octets historiques `7 PASS / 1 FAIL` du nouveau SHA préparé. La
+  [qualification courante](../../skills/evaluations/WO-062/ss-java-module/qualification.json)
+  passe à `PREPARED_NOT_QUALIFIED` : aucun cas Java `.5` n'est lancé, aucune validation
+  humaine ni installation personnelle n'est produite.
+- La [préparation de qualification](../../skills/evaluations/WO-062/ss-java-module/revision-05/qualification-plan.md)
+  fixe la conséquence du protocole C6/C7 : une future recette `JM-N01` seule peut
+  observer le correctif, mais ne transfère pas les sept PASS `.4` et ne qualifie pas
+  `.5`. Une qualification complète exigera huit cas frais sous le SHA `.5` et une
+  autorisation propriétaire distincte.
+
+- La [revue statique séparée](../../skills/evaluations/WO-062/ss-java-module/revision-05/static-review.md)
+  est `PASS_STATIC_ONLY` : elle confirme le périmètre limité, les trois corrections
+  conservées et l'absence de recette `.5`. Elle ne remplace ni une session de
+  qualification, ni une revue humaine.
 
 ### Déblocage Windows — staging hôte sans modèle
 
@@ -537,9 +564,9 @@ Le WO reste dans `active` pendant la réalisation et la revue. La PR cible exclu
 la fusion. La clôture effective suit cette fusion. Publication, fusion, promotion, tag et
 installation personnelle ne sont pas déduits de la seule préparation du WO.
 
-**Suite en cours :** C7 est achevé : sept sessions Java .4 fraîches, six PASS et un FAIL sémantique JM-N01 sont gelés et revus.
-Le candidat ss-java-module .4 reste incomplet car JM-N01 omet la règle explicite d'absence de transfert de cookie, état ou donnée de session entre contexte live conservé et contexte J3 temporaire.
-Le blocage volontaire de sofascore-live-test est désormais restitué correctement. JM-C02 conserve deux reprises internes de sampling dans une seule session, sans relance du conducteur.
+**Suite en cours :** C7 reste achevé et historique : sept sessions Java .4 fraîches, six PASS et un FAIL sémantique JM-N01 sont gelés et revus, avec JM-H01 C6 PASS.
+Le candidat ss-java-module .5 est préparé sur le seul écart C7 : il doit désormais restituer explicitement l'absence de transfert de cookie, état de stockage ou donnée de session du contexte live conservé vers le contexte J3 temporaire, sans continuité artificielle. Aucun cas .5 n'est lancé.
+Les corrections .4 sur le blocage de sofascore-live-test, la perte terminale du contexte live et le garde textuel précis sont conservées. JM-C02 conserve deux reprises internes de sampling dans une seule session, sans relance du conducteur.
 Le préflight Windows hôte sans modèle est désormais démontré dans un contexte physique formel byte-à-byte conforme, détenu par l'hôte et conservant le run logique C5 `run-05`; il isole l'échec C5 aux ACL/propriétaires de ses contextes gelés. WR-H01 et WR-N01 restent non lancés et non consommés : le préflight ne vaut ni recette ni réponse de modèle.
 Validation humaine et installation C restent postérieures à une qualification complète ; suivront ensuite la consolidation D, la livraison Git et la clôture selon le workflow ci-dessus.
 Les trois skills A/B ont terminé préparation, rédaction, qualification, validation propriétaire

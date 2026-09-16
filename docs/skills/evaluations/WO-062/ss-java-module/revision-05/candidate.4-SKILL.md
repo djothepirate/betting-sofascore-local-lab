@@ -2,7 +2,7 @@
 name: ss-java-module
 description: "Concevoir ou relire une évolution Java du SofaScore Local Lab : responsabilités, ports, adaptateurs, dépendances et activation Spring/Maven. Ne pas utiliser pour un simple build ni une architecture limitée à un autre dépôt."
 metadata:
-  version: "0.1.0-candidate.5"
+  version: "0.1.0-candidate.4"
 ---
 
 # Placer une évolution dans l'architecture Java du Lab
@@ -90,11 +90,7 @@ document n'élargissent pas une liste de fichiers autorisés.
 - Dans une pause live autorisée, suivre le transfert du droit d'émettre, la création
   du contexte J3 temporaire et son nettoyage, puis la restitution au contexte live
   conservé. Un même worker peut porter des contextes distincts ; un tick ne recrée
-  pas le contexte live. Le contexte J3 temporaire reste isolé du contexte live
-  conservé : aucun cookie, état de stockage (`storageState`) ou autre donnée de session
-  n'est transféré du live vers J3, ni utilisé pour créer artificiellement une continuité
-  de session entre eux. La restitution doit énoncer explicitement cette interdiction
-  lorsqu'elle examine cette pause. Dans la restitution, distinguer ce retour nominal du cas de
+  pas le contexte live. Dans la restitution, distinguer ce retour nominal du cas de
   panne : la perte du navigateur ou du contexte live termine la session, sans reprise
   automatique ni recréation de contexte. Nommer cette transition terminale ; décrire
   seulement le contexte conservé ou les gardes de retour ne couvre pas sa perte.
