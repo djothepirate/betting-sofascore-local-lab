@@ -1,0 +1,82 @@
+"""Verify the single owner-authorized C6 JM-H01 context before model launch."""
+from __future__ import annotations
+
+import hashlib
+import json
+import pathlib
+
+
+ROOT = pathlib.Path(__file__).resolve().parent.parent
+RUN = ROOT / ".tmp" / "wo062-evaluations" / "ss-java-module" / "run-06"
+C5 = ROOT / ".tmp" / "wo062-evaluations" / "ss-java-module" / "run-05"
+AUTH = ROOT / "docs" / "skills" / "evaluations" / "WO-062" / "c-requalification-06" / "authorization.json"
+EXPECTED_CANDIDATE = "f1f6533f678c5cdb4ae6a5bc9c996c062af419005e4f4cd6104a51c91e442d97"
+
+
+def sha(path: pathlib.Path) -> str:
+    return hashlib.sha256(path.read_bytes()).hexdigest()
+
+
+def read(path: pathlib.Path) -> dict:
+    return json.loads(path.read_text(encoding="utf-8"))
+
+
+preflight = read(RUN / "preflight.json")
+authorization = read(AUTH)
+c5_preflight = read(C5 / "preflight.json")
+assert authorization["run_id"] == "run-06"
+assert authorization["authorized_session_count"] == 1
+assert authorization["max_model_sessions"] == 1
+assert authorization["case_id"] == "JM-H01"
+assert authorization["cases"] == ["JM-H01"]
+assert authorization["candidate_sha256"] == EXPECTED_CANDIDATE
+assert authorization["oracle_supplied_to_evaluated_session"] is False
+assert authorization["prior_answers_supplied_to_evaluated_session"] is False
+assert preflight["run_id"] == "run-06"
+assert preflight["skill"] == "ss-java-module"
+assert preflight["candidate_sha256"] == EXPECTED_CANDIDATE
+assert preflight["case_count"] == 1
+assert len(preflight["cases"]) == 1
+case = preflight["cases"][0]
+assert case["case_id"] == "JM-H01"
+assert case["execution_mode"] == "read_only"
+assert case["oracle_supplied"] is False
+assert case["design_history_supplied"] is False
+assert case["candidate_body_manually_pasted"] is False
+assert preflight["authorization"]["sha256"] == sha(AUTH)
+assert preflight["freshness_contract"]["prior_c5_response_or_events_supplied"] is False
+assert preflight["freshness_contract"]["previous_case_context_copied"] is False
+assert not (RUN / "JM-H01" / "output" / "events.jsonl").exists()
+assert not (RUN / "JM-H01" / "output" / "response.md").exists()
+assert not (RUN / "frozen" / "JM-H01").exists()
+assert sha(RUN / "JM-H01" / ".agents" / "skills" / "ss-java-module" / "SKILL.md") == EXPECTED_CANDIDATE
+for item in case["input_files"]:
+    path = RUN / "JM-H01" / item["path"]
+    assert path.is_file(), item["path"]
+    assert path.stat().st_size == item["bytes"], item["path"]
+    assert sha(path) == item["sha256"], item["path"]
+for forbidden in ("oracle", "review", "result", "run-05", "c-requalification-05"):
+    assert all(forbidden not in item["path"].lower() for item in case["input_files"]), forbidden
+c5_case = next(item for item in c5_preflight["cases"] if item["case_id"] == "JM-H01")
+assert case["input_files"] == c5_case["input_files"]
+assert case["prompt_sha256"] == c5_case["prompt_sha256"]
+assert case["request_sha256"] == c5_case["request_sha256"]
+assert sha(RUN / "JM-H01" / "request.txt") == case["request_sha256"]
+assert sha(RUN / "JM-H01" / "case-prompt.txt") == case["prompt_sha256"]
+print(
+    json.dumps(
+        {
+            "schema": "wo062-c6-context-integrity-v1",
+            "status": "PASS",
+            "run_id": "run-06",
+            "case_id": "JM-H01",
+            "candidate_sha256": EXPECTED_CANDIDATE,
+            "input_file_count": len(case["input_files"]),
+            "matches_c5_frozen_input_envelope": True,
+            "oracle_or_prior_answer_in_context": False,
+            "output_present_before_launch": False,
+        },
+        ensure_ascii=False,
+        indent=2,
+    )
+)

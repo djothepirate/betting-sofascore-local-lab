@@ -62,14 +62,6 @@
     "fail": 6,
     "blocked": 1
   },
-  "pending_authorized_rerun": {
-    "run_id": "run-06",
-    "case_id": "JM-H01",
-    "authorization": "../c-requalification-06/authorization.json",
-    "authorized_session_count": 1,
-    "automatic_retry": false,
-    "state": "PREPARED_NOT_LAUNCHED"
-  },
   "previous_qualification": "revision-04/previous-qualification.json",
   "historical_runs_preserved": [
     "run-01",

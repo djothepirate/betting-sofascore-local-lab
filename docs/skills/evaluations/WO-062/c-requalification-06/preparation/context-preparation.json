@@ -1,0 +1,43 @@
+{
+  "schema": "wo062-c6-context-preparation-v1",
+  "prepared_at_utc": "2026-09-16T07:00:49.487954+00:00",
+  "run_id": "run-06",
+  "skill": "ss-java-module",
+  "prepared_case_count": 1,
+  "authorized_case_ids": [
+    "JM-H01"
+  ],
+  "authorization": {
+    "path": "../authorization.json",
+    "sha256": "762317c8b744b827ef78b8dbd197b161b030630fa5b832b9d490e6d25e41b7e1"
+  },
+  "candidate": {
+    "version": "0.1.0-candidate.4",
+    "sha256": "f1f6533f678c5cdb4ae6a5bc9c996c062af419005e4f4cd6104a51c91e442d97"
+  },
+  "source_head": "91fccf1f29e2c27f95ddfb65c4a5019ff2c4c65f",
+  "content_baseline_source_head": "d0021090d9cf718d5b338bbf8d06109586e4518a",
+  "content_baseline_preflight_sha256": "a975e1b4cfa71ea0a6ae0f1c5ad275baf40d259401ed8cd236204d496e452fa4",
+  "preflight_sha256": "ce4805b1090b504d3f444e82c28c7bf8cc585e099507c2602315ccf0695dfd74",
+  "evaluator": {
+    "path": ".tmp/wo062_evaluate_c6.py",
+    "sha256": "a54eef3f91fcfbe66160e53512a439d2ce06e2c258d318f686473cd0b8c714c3"
+  },
+  "context_checker": {
+    "path": ".tmp/check_c6_jmh01_context.py",
+    "sha256": "353ec8b0ac32a5fd72523cbc65640de8786a11c8e62ea3030e6466189ff94cc4"
+  },
+  "case": {
+    "case_id": "JM-H01",
+    "execution_mode": "read_only",
+    "input_file_count": 14,
+    "prompt_sha256": "3eab6b461bd8b2964ba5aebb98baaeaa34ba408d7e7f1f47081e6b73395739d9",
+    "request_sha256": "7e5ce27f03c8c8a8207eaf56775a70d5298131d46fe0a6a14b240ca5f330752b",
+    "oracle_supplied": false,
+    "prior_answers_supplied": false,
+    "candidate_body_manually_pasted": false
+  },
+  "model_invoked": false,
+  "output_present_before_launch": false,
+  "C5_run_unchanged": true
+}

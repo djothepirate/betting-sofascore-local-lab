@@ -217,6 +217,19 @@ distinct ; elle n'élargit pas implicitement ce lot de skills.
   test Maven, collecte, publication, push, PR, fusion ou clôture du WO n'est déduite de
   cette préparation et de ces blocages d'infrastructure.
 
+### Reprise C6 autorisée — `JM-H01` unique
+
+- Le propriétaire autorise explicitement un nouveau run et une seule session fraîche pour
+  `JM-H01`. [L'autorisation C6](../../skills/evaluations/WO-062/c-requalification-06/authorization.json)
+  limite cette reprise au candidat Java `.4`, au service configuré, à `run-06`, au sandbox
+  `read-only` et à un seul worker ; elle ne couvre aucun autre cas Java ou Windows et ne
+  permet aucune relance automatique.
+- Le contexte C6 est reconstruit depuis les sources canoniques dans une racine neuve, sans
+  artefact C5, réponse, oracle, plan, revue, résultat ou matériel Windows. Ses quatorze
+  entrées, son prompt et sa demande sont égaux par empreinte au contrat C5 initial, sans
+  que les preuves C5 ne soient exposées au modèle. La préparation et les contrôles statiques
+  sont versionnés avant la session ; l'exécution et sa revue restent à produire.
+
 ### Ordre restant et consolidation
 
 | Étape | Skill | Résultat attendu avant passage à la suite |
@@ -452,9 +465,8 @@ la fusion. La clôture effective suit cette fusion. Publication, fusion, promoti
 installation personnelle ne sont pas déduits de la seule préparation du WO.
 
 **Suite en cours :** les corrections C5 sont gelées et leurs prérequis locaux sont documentés.
-Il faut rétablir le transport du modèle pour Java puis obtenir une décision propriétaire pour
-une nouvelle recette exacte de `JM-H01`, puisque la première a commencé sans atteindre une
-commande modèle et qu'aucune relance automatique n'est permise. Pour Windows, réparer le
+Le propriétaire autorise désormais une recette C6 unique de `JM-H01`, préparée sans réponse
+antérieure ni oracle ; son résultat et sa revue restent à produire. Pour Windows, réparer le
 sandbox `elevated` puis réussir le préflight hôte sans modèle permet de lancer `WR-H01` et
 `WR-N01` avec leur recette C5 inchangée. Validation humaine et installation C restent
 postérieures à une qualification complète, puis viendront la consolidation D, la livraison

@@ -1,0 +1,48 @@
+{
+  "schema": "wo062-c6-single-java-rerun-authorization-v1",
+  "decision_date": "2026-09-16",
+  "basis": "The owner explicitly authorizes creation of a new run and one fresh replay of JM-H01 after the C5 model-transport incident.",
+  "authorized_session_count": 1,
+  "max_model_sessions": 1,
+  "run_id": "run-06",
+  "skill": "ss-java-module",
+  "case_id": "JM-H01",
+  "cases": [
+    "JM-H01"
+  ],
+  "candidate_version": "0.1.0-candidate.4",
+  "candidate_sha256": "f1f6533f678c5cdb4ae6a5bc9c996c062af419005e4f4cd6104a51c91e442d97",
+  "configured_service_scope": "The same configured Codex model service, local candidate, local skill catalogue and versioned JM-H01 sources remain in scope. The new host-parent launch preserves codex exec --ephemeral --sandbox read-only.",
+  "freshness": {
+    "new_runtime_directory": true,
+    "new_ephemeral_session": true,
+    "c5_response_or_events_supplied": false,
+    "oracle_supplied": false,
+    "prior_answers_supplied": false,
+    "candidate_bytes_must_match": true,
+    "source_inputs_must_match_frozen_case_manifest": true
+  },
+  "model_context_exclusions": [
+    "C5 run-05 execution artifacts, events, stderr, trace, timings, freeze, review, results, response or catalogue",
+    "Any older run response, review, result, trace, central qualification or previous authorization",
+    "Any oracle, evaluation plan, source inventory, manifest, revision note, prior answer or historical verdict",
+    "All Windows C5 material"
+  ],
+  "execution": {
+    "sandbox": "read-only",
+    "parent": "host non imbriqué",
+    "network_or_runtime_actions_by_model": false,
+    "automatic_retry": false,
+    "outer_watchdog_seconds": 900
+  },
+  "oracle_supplied_to_evaluated_session": false,
+  "prior_answers_supplied_to_evaluated_session": false,
+  "does_not_authorize": [
+    "A second C6 attempt",
+    "The seven remaining Java C5 cases",
+    "Any Windows C5 model session",
+    "A sandbox configuration change or bypass",
+    "Human validation or personal installation",
+    "Application changes, builds, tests, provider collection, push, PR, merge or Work Order closure"
+  ]
+}

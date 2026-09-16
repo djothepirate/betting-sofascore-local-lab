@@ -1,0 +1,11 @@
+{
+  "schema": "wo062-c6-context-integrity-v1",
+  "status": "PASS",
+  "run_id": "run-06",
+  "case_id": "JM-H01",
+  "candidate_sha256": "f1f6533f678c5cdb4ae6a5bc9c996c062af419005e4f4cd6104a51c91e442d97",
+  "input_file_count": 14,
+  "matches_c5_frozen_input_envelope": true,
+  "oracle_or_prior_answer_in_context": false,
+  "output_present_before_launch": false
+}
