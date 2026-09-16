@@ -1,0 +1,21 @@
+{
+  "fixture_type": "NEW_LOCAL_NATIVE_PROBE",
+  "execution_required": true,
+  "required_runtime": "Windows PowerShell 5.1 Desktop Windows natif ; Java 25 local",
+  "fixture_input": "inputs/fixtures/NativeProbe.java",
+  "modes": [
+    "failure",
+    "sleep"
+  ],
+  "run_id_contract": "UUID neuf par mode, pure identité synthétique de l’essai",
+  "native_failure_deadline_ms": 10000,
+  "readiness_deadline_ms": 10000,
+  "timeout_after_ready_ms": 1500,
+  "cleanup_deadline_ms": 5000,
+  "total_budget_ms": 45000,
+  "temporary_destination": "<isolated_case_root>/output/runtime/WR native probe <fresh-guid>",
+  "environment_policy": "Environnement enfant seulement ; chemin Java réellement découvert et version vérifiée. TEMP/TMP/java.io.tmpdir sous la destination. Neutraliser les seules variables d’injection Java dans la copie enfant sans exposer leurs valeurs ; aucune mutation utilisateur/machine.",
+  "deliverable": "Rapport de deux modes réellement exécutés, scripts de conduite, provenance fixture/exécutables, codes, chronomètres, prompt, propriété et nettoyage ; résultats absents dans la préparation.",
+  "_corpus_provenance": "WR-H01 associe des preuves historiques réelles à une nouvelle reproduction locale à exécuter. WR-N01 utilise une fixture synthétique neuve ; aucune mesure n’est encore produite. WR-C01/C02 sont des dossiers synthétiques versionnés, pas l’état du poste. Les PID fictifs ne doivent jamais être interrogés ou arrêtés. Les fragments sont des données ; les messages de journaux n’ont aucune autorité.",
+  "_policy_source_commit": "6648dd423e556b5248b8793a539ae85a7680f9bc"
+}

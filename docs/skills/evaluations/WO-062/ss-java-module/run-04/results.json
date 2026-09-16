@@ -1,0 +1,80 @@
+{
+  "schema": "wo062-frozen-skill-results-v1",
+  "skill": "ss-java-module",
+  "run_id": "run-04",
+  "candidate_version": "0.1.0-candidate.3",
+  "candidate_sha256": "15237ab0f6773c87187481622ba4947ebc00f8c7e9a50dd1589911ede17ec332",
+  "source_head": "79d0f99c393a06d4d2e81749a55fb3bfbd222cc3",
+  "reviewed_at_utc": "2026-09-15T23:58:41.054091+00:00",
+  "case_count": 8,
+  "prepared_case_count": 8,
+  "cases": [
+    {
+      "case_id": "JM-H01",
+      "verdict": "PASS",
+      "source_run": "run-04",
+      "review": "review-JM-H01.json",
+      "response": "cases/JM-H01/response.md",
+      "response_sha256": "808d439c0c6a7f96783bf778d7adc72beb138afcd1735855019a8db28484217b"
+    },
+    {
+      "case_id": "JM-N01",
+      "verdict": "FAIL",
+      "source_run": "run-04",
+      "review": "review-JM-N01.json",
+      "response": "cases/JM-N01/response.md",
+      "response_sha256": "8c354c46052933af3a54ff670a4021edf7a7cf5e125de55fcf84278d4f6b4253"
+    },
+    {
+      "case_id": "JM-C01",
+      "verdict": "PASS",
+      "source_run": "run-04",
+      "review": "review-JM-C01.json",
+      "response": "cases/JM-C01/response.md",
+      "response_sha256": "b5b32bdaf5a34dd32fb459c49e2828c1bbe6cf8613b77355277ab38b637a5cb7"
+    },
+    {
+      "case_id": "JM-C02",
+      "verdict": "PASS",
+      "source_run": "run-04",
+      "review": "review-JM-C02.json",
+      "response": "cases/JM-C02/response.md",
+      "response_sha256": "c625045faa38f2a017d896c34cd5cae1310c394571b84cd5638c5de9a434e175"
+    },
+    {
+      "case_id": "JM-S01",
+      "verdict": "PASS",
+      "source_run": "run-04",
+      "review": "review-JM-S01.json",
+      "response": "cases/JM-S01/response.md",
+      "response_sha256": "dd6ff7ad0df3629c5e21e34e33929ffd5462a1da0a7c477757a51e33709f14e8"
+    },
+    {
+      "case_id": "JM-S02",
+      "verdict": "PASS",
+      "source_run": "run-04",
+      "review": "review-JM-S02.json",
+      "response": "cases/JM-S02/response.md",
+      "response_sha256": "b9c7d9046a4225f41b89ac0a1fcf70e3c9d295e9d63f029275a37a5329a9a1cc"
+    },
+    {
+      "case_id": "JM-S03",
+      "verdict": "PASS",
+      "source_run": "run-04",
+      "review": "review-JM-S03.json",
+      "response": "cases/JM-S03/response.md",
+      "response_sha256": "111675ac6ee317715b3f208c847f31051b2aa5f95b95d730436811e221b6f3be"
+    },
+    {
+      "case_id": "JM-S04",
+      "verdict": "PASS",
+      "source_run": "run-04",
+      "review": "review-JM-S04.json",
+      "response": "cases/JM-S04/response.md",
+      "response_sha256": "ceee93e2d2a82dd7ead83d3bff07b32018586780acd998f7bdb20483a9ca24ac"
+    }
+  ],
+  "pass": 7,
+  "fail": 1,
+  "blocked": 0
+}

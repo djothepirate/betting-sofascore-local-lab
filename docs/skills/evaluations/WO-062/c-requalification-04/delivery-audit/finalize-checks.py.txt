@@ -1,0 +1,13 @@
+import json,pathlib,subprocess
+from datetime import datetime,timezone
+r=pathlib.Path(__file__).resolve().parent.parent
+read=lambda p:json.loads(p.read_text(encoding='utf-8-sig'))
+p=r/'docs/validation/WO062-C4-CHECKS-20260916.json'
+j=read(p);s=read(r/'.tmp/c-secret-check.json')
+assert s['status']=='PASS_HIGH_CONFIDENCE_DIFF' and not s['findings']
+links=json.loads(subprocess.check_output(['C:/Users/geoff/.cache/codex-runtimes/codex-primary-runtime/dependencies/python/python.exe','-X','utf8',str(r/'.tmp/check_c_links.py')],cwd=r,text=True))
+assert links['broken_links']==0
+subprocess.run(['git','diff','--cached','--check'],cwd=r,check=True)
+j.update({'finalized_at_utc':datetime.now(timezone.utc).isoformat(),'links_status':'PASS','links':links,'secret_scan_status':s['status'],'secret_scan':{k:s[k] for k in ['checked_at_utc','status','scope','method','file_count','findings']},'diff_whitespace':'git diff --cached --check passed; repeated before commit','files_changed_since_C3':subprocess.check_output(['git','diff','--name-only',j['base'],'--'],cwd=r,text=True).splitlines(),'local_verification_commands':['quick_validate.py docs/skills/local-lab/ss-java-module (existing temporary YAML dependency)', 'python -X utf8 .tmp/test_c4_timing.py','python -X utf8 .tmp/check_c4_prepared_runtime.py','python -X utf8 .tmp/test_c4_publication.py','python -X utf8 .tmp/publish_c4.py','python -X utf8 .tmp/publish_c4.py --publish','python -X utf8 .tmp/check_c_delivery.py','python -X utf8 .tmp/check_c4_delivery.py','python -X utf8 .tmp/check_c_links.py','python -X utf8 .tmp/check_c_secrets.py','git diff --cached --check'],'final_checks_note':'Secret scan covers complete changed/added file bytes. This summary is updated after that scan; its later Git bytes are checked separately. No claim of a self-hash or post-commit CI run.'})
+p.write_text(json.dumps(j,ensure_ascii=False,indent=2)+'\n',encoding='utf-8',newline='\n')
+print(json.dumps({'links':links,'secrets':s['status'],'files_since_C3':len(j['files_changed_since_C3'])}))

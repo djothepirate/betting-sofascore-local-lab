@@ -1,0 +1,51 @@
+{
+  "schema": "wo062-c4-delivery-audit-v1",
+  "frozen_at_utc": "2026-09-16T00:05:38.790315+00:00",
+  "files": [
+    {
+      "path": "README.md",
+      "bytes": 734,
+      "sha256": "2ed58284276713188fe25c27c8d7abac5029241f5c03eeb7f9679d33624f7862"
+    },
+    {
+      "path": "c4-check.py.txt",
+      "bytes": 4662,
+      "sha256": "c6dec2c904958ea7c2720d31eae563f2ad799fbba2dea76615ccf903f7b04965"
+    },
+    {
+      "path": "committed-bytes-check.py.txt",
+      "bytes": 1400,
+      "sha256": "f4e83d7fe78f34c7705d097eebe0291291d58d7758f3bfd270dd3e03ec13c2f2"
+    },
+    {
+      "path": "finalize-checks.py.txt",
+      "bytes": 2029,
+      "sha256": "bba709d40da676a109f8def6918d54b0c23a9cf14b1a8329dd16f2f5f80d1d25"
+    },
+    {
+      "path": "general-check.py.txt",
+      "bytes": 3752,
+      "sha256": "c2eaf5f0335d97a7dcbf426fc7179dea17f908e1a0a2b553d4b7d89c49b68a2d"
+    },
+    {
+      "path": "links-check.py.txt",
+      "bytes": 948,
+      "sha256": "4b6d095d5cbc2d3c4ad034809ebc8acff9ff48bd751befe2d8637349fc1b4b31"
+    },
+    {
+      "path": "review.json",
+      "bytes": 9428,
+      "sha256": "1d769950e11f3416d12a7a4dea20b4dab050d77aedc57fcf0026634a359bbbb9"
+    },
+    {
+      "path": "review.md",
+      "bytes": 2348,
+      "sha256": "b40261e6a97dbc982a9ad83610e795adc82c29803398b6599e3f73768a72e402"
+    },
+    {
+      "path": "secrets-check.py.txt",
+      "bytes": 1725,
+      "sha256": "df3448afb1eb9d859d01cd959831138c67dfeea7a04879853fdd379deba773d9"
+    }
+  ]
+}

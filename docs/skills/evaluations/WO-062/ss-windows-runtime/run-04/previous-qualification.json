@@ -1,0 +1,130 @@
+{
+  "schema": "wo062-current-skill-qualification-v1",
+  "skill": "ss-windows-runtime",
+  "candidate_version": "0.1.0-candidate.1",
+  "status": "INCOMPLETE_QUALIFICATION",
+  "source_commit": "6648dd423e556b5248b8793a539ae85a7680f9bc",
+  "source_head": "4a83e121d8c28833b7617313ab277bc4341f078e",
+  "preparation_manifest_sha256": "d62271db051e64edc261f4812f4969511993e314fb07cb8f6d3115ae446e29f7",
+  "candidate_files": [
+    {
+      "path": "SKILL.md",
+      "bytes": 9217,
+      "sha256": "b89925d5395238010bb0afe9c1e1a22b0aa5ec4e7d1fb9946c671d241e7976c6"
+    },
+    {
+      "path": "agents/openai.yaml",
+      "bytes": 300,
+      "sha256": "3038015980952bc18b21f45f0d4af514b35a8841394e4b80824986b7e30ccd9f"
+    }
+  ],
+  "publisher_source_head": "380d9ed5e548fb2fbc398aaeccfca516395c6e82",
+  "candidate_body_commit": "9e7b777e3be75f582f2198dfa8cca386b43426c2",
+  "candidate_package_commit": "9e7b777e3be75f582f2198dfa8cca386b43426c2",
+  "distinct_cases": 8,
+  "executions": 11,
+  "total_executions": 11,
+  "pass": 6,
+  "fail": 0,
+  "blocked": 2,
+  "human_validation": false,
+  "personal_installation": false,
+  "results": "run-03/current-results.json",
+  "run_results": "run-03/results.json",
+  "artifact_manifest_sha256": "1e60038ed8168bb83bbd7e2e1730bb4fcaa793f93ba7f071007e8842a2fa6b42",
+  "historical_runs": [
+    {
+      "run_id": "run-01",
+      "candidate_version": "0.1.0-candidate.1",
+      "candidate_sha256": "b89925d5395238010bb0afe9c1e1a22b0aa5ec4e7d1fb9946c671d241e7976c6",
+      "executions": 8,
+      "pass": 6,
+      "fail": 0,
+      "blocked": 2,
+      "results": "run-01/results.json",
+      "artifact_manifest_sha256": "9203e756a55fbba088f4d33beb42b79894edb0a2f0aa654565b7da3e54ee6bd8",
+      "candidate_files": [
+        {
+          "path": "agents/openai.yaml",
+          "bytes": 300,
+          "sha256": "3038015980952bc18b21f45f0d4af514b35a8841394e4b80824986b7e30ccd9f"
+        },
+        {
+          "path": "SKILL.md",
+          "bytes": 9217,
+          "sha256": "b89925d5395238010bb0afe9c1e1a22b0aa5ec4e7d1fb9946c671d241e7976c6"
+        }
+      ],
+      "candidate_body_commit": "9e7b777e3be75f582f2198dfa8cca386b43426c2",
+      "candidate_package_commit": "9e7b777e3be75f582f2198dfa8cca386b43426c2",
+      "source_commit": "6648dd423e556b5248b8793a539ae85a7680f9bc"
+    },
+    {
+      "run_id": "run-02",
+      "candidate_version": "0.1.0-candidate.1",
+      "candidate_sha256": "b89925d5395238010bb0afe9c1e1a22b0aa5ec4e7d1fb9946c671d241e7976c6",
+      "executions": 2,
+      "pass": 0,
+      "fail": 0,
+      "blocked": 2,
+      "results": "run-02/results.json",
+      "artifact_manifest_sha256": "cace19f5de60f4fd7f7e69518cf939d27ecdbca5c4ea78588b7c4ce725135e9f"
+    }
+  ],
+  "execution_totals": {
+    "pass": 6,
+    "fail": 0,
+    "blocked": 5
+  },
+  "current_cases": [
+    {
+      "case_id": "WR-H01",
+      "verdict": "BLOCKED",
+      "source_run": "run-03"
+    },
+    {
+      "case_id": "WR-N01",
+      "verdict": "BLOCKED",
+      "source_run": "run-02"
+    },
+    {
+      "case_id": "WR-C01",
+      "verdict": "PASS",
+      "source_run": "run-01"
+    },
+    {
+      "case_id": "WR-C02",
+      "verdict": "PASS",
+      "source_run": "run-01"
+    },
+    {
+      "case_id": "WR-S01",
+      "verdict": "PASS",
+      "source_run": "run-01"
+    },
+    {
+      "case_id": "WR-S02",
+      "verdict": "PASS",
+      "source_run": "run-01"
+    },
+    {
+      "case_id": "WR-S03",
+      "verdict": "PASS",
+      "source_run": "run-01"
+    },
+    {
+      "case_id": "WR-S04",
+      "verdict": "PASS",
+      "source_run": "run-01"
+    }
+  ],
+  "static_review": "run-02/review-static.json",
+  "limits": [
+    "Qualification limited to the frozen cases; no general productivity gain measured.",
+    "Model and reasoning effort use configured defaults; exact values unavailable. No model override is made by this publisher.",
+    "Complete tool-mediated skill loading is reviewed separately; no automatic CLI body-injection claim.",
+    "Catalogue reconstruction occurs after execution and is not a capture of the transmitted model request.",
+    "These evaluations establish no application build, application test, database, provider collection, scanner or CI pipeline.",
+    "WR-H01 is a controlled PowerShell7 argument capture, not Java application startup. WR-N01 is only a synthetic Java source probe under Windows PowerShell5.1. The two run-01 BLOCKED outcomes remain historical evidence; they are not rewritten."
+  ]
+}

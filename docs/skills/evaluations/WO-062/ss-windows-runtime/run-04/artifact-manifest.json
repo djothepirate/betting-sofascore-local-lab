@@ -1,0 +1,298 @@
+{
+  "schema": "wo062-skill-run-artifacts-v1",
+  "skill": "ss-windows-runtime",
+  "run_id": "run-04",
+  "files": [
+    {
+      "path": "authorization.json",
+      "bytes": 1500,
+      "sha256": "c408f9279f1f0b705b13bf074b7f13db899769761b3a0c0d2e377ebd25fc6d7f"
+    },
+    {
+      "path": "cases/WR-H01/catalogue.txt",
+      "bytes": 8593,
+      "sha256": "d5543afca7606fdaf7461a598b9d2d609d80972097206670c689fc86345e0427"
+    },
+    {
+      "path": "cases/WR-H01/freeze.json",
+      "bytes": 3612,
+      "sha256": "f0ec32aaeeb2145f0ae3f19b5959e772f8cd66c8b4adf07a864b50e28e2e6dcd"
+    },
+    {
+      "path": "cases/WR-H01/host-runtime.json",
+      "bytes": 371,
+      "sha256": "0b749a8e3a252668b22fb1e1fce483a736304701fa28afbd0fb6e3ebd09c810c"
+    },
+    {
+      "path": "cases/WR-H01/input.json",
+      "bytes": 1475,
+      "sha256": "d49bea0e90ca263b75840a198dd7abbdf67e2dc45541d5474d9e26b833812a57"
+    },
+    {
+      "path": "cases/WR-H01/native-events.json",
+      "bytes": 343128,
+      "sha256": "4571c14527c03e0ed5bf1290429cb7f8457f9d28e14e8c5a58f57194a3b648a7"
+    },
+    {
+      "path": "cases/WR-H01/native-timing-summary.json",
+      "bytes": 432,
+      "sha256": "938d26f5b7b1a59ef9a31ac99b22cc6ed74a5b792a4305bc75bb022a5598ee53"
+    },
+    {
+      "path": "cases/WR-H01/native-timing.jsonl",
+      "bytes": 16913,
+      "sha256": "e5d349472323d9efefb0d4f82ad6533123f93594b8b54316c42678474532f447"
+    },
+    {
+      "path": "cases/WR-H01/prompt.txt",
+      "bytes": 677,
+      "sha256": "fa04ddaebf0c1b1a65645c05aabec1ad62e729aefc168d3862afd201ac88b2ab"
+    },
+    {
+      "path": "cases/WR-H01/request.txt",
+      "bytes": 2878,
+      "sha256": "5dbf0a9ae579add35c7430b9c86156fe4222154a91c0ad36986fd16600888287"
+    },
+    {
+      "path": "cases/WR-H01/response.md",
+      "bytes": 7323,
+      "sha256": "11e6ec4e1fac52be3b5b52c739489f3b79e6dda9ebdd29227e3e18edd437e905"
+    },
+    {
+      "path": "cases/WR-H01/runtime-artifacts/Invoke-WR-H01.ps1",
+      "bytes": 10144,
+      "sha256": "53cd3c93c75ff4b53fbf40ac3206acb53f0310c270ac9368939c5290fec4fc48"
+    },
+    {
+      "path": "cases/WR-H01/runtime-artifacts/Test-WR-H01Postflight.ps1",
+      "bytes": 2190,
+      "sha256": "8d9d77bc8da161ce10ccf3a9c0fd69dfe012d62390f93313807f5eea396c55e2"
+    },
+    {
+      "path": "cases/WR-H01/runtime-artifacts/commands.txt",
+      "bytes": 1847,
+      "sha256": "bde38c7eb7b7c2866b9e168305e5fc7283588da356a4be81bbe400645a2cdbd7"
+    },
+    {
+      "path": "cases/WR-H01/runtime-artifacts/conclusion.txt",
+      "bytes": 160,
+      "sha256": "ff3ce3e9e7daa43250ba0dbbc2d306eb3272aa07263b188b9f63683c669e0835"
+    },
+    {
+      "path": "cases/WR-H01/runtime-artifacts/diagnostic.md",
+      "bytes": 9493,
+      "sha256": "036dfe4e0e001a1d0e062f002d31729e890bf552430560d0765d400ee9c50581"
+    },
+    {
+      "path": "cases/WR-H01/runtime-artifacts/evidence-available.txt",
+      "bytes": 54,
+      "sha256": "e1e7ce73bf8424abcfdd5c922122c4158651eeac8ed77999dd922443efad4c5c"
+    },
+    {
+      "path": "cases/WR-H01/runtime-artifacts/execution.json",
+      "bytes": 7963,
+      "sha256": "7035a255839772c13cbc14f9afa4a81e16917c732ac1bfb72d4385f5731772e7"
+    },
+    {
+      "path": "cases/WR-H01/runtime-artifacts/harness.stderr.txt",
+      "bytes": 0,
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    {
+      "path": "cases/WR-H01/runtime-artifacts/harness.stdout.txt",
+      "bytes": 547,
+      "sha256": "2ea5456171ee72aba19170d19f6bd8fb94af6ec7579d49c057b6478804e97d9d"
+    },
+    {
+      "path": "cases/WR-H01/runtime-artifacts/postflight.json",
+      "bytes": 771,
+      "sha256": "55cc3a2907f8c9b79071da641bc9a77c7580db5664ab2304517a0b2234f2442b"
+    },
+    {
+      "path": "cases/WR-H01/runtime-artifacts/prompt-returned.txt",
+      "bytes": 51,
+      "sha256": "33cdd95864a15a9a21e164882ffa024b608def07249a9d6b974e745a3249acb4"
+    },
+    {
+      "path": "cases/WR-H01/stderr.log",
+      "bytes": 878,
+      "sha256": "a30acc7afd992d3c99cddb8e6ad75d25003c7a049675a6c5174a3a25d5aeecb4"
+    },
+    {
+      "path": "cases/WR-H01/trace.json",
+      "bytes": 7068,
+      "sha256": "edff8ac3cbd15689dbf6d50a764cd9c81fe3fc3b5eebbf978f4cead2ac04ad5a"
+    },
+    {
+      "path": "cases/WR-N01/catalogue.txt",
+      "bytes": 8593,
+      "sha256": "ff953a6a287ab7df7a9f33e45838fe49741f93b4899f1d2c7c9c5417ac45caab"
+    },
+    {
+      "path": "cases/WR-N01/freeze.json",
+      "bytes": 3615,
+      "sha256": "bdecda0f92f63d4c2de013923bc868da03b6a556a51439565b714a74c51c821b"
+    },
+    {
+      "path": "cases/WR-N01/host-runtime.json",
+      "bytes": 371,
+      "sha256": "0c8c5046c4784e5ea01c20cebdf03973b86b9db05c67b056262de831d8b4a831"
+    },
+    {
+      "path": "cases/WR-N01/input.json",
+      "bytes": 1643,
+      "sha256": "76687203add1b1059600052f0f8809cd915224628738a937733b7f69e18374b7"
+    },
+    {
+      "path": "cases/WR-N01/native-events.json",
+      "bytes": 187843,
+      "sha256": "fb3560c672b50ae1f9b13ce52d4dd20cce0e1cf99c3e41f2782b41fd32a536b2"
+    },
+    {
+      "path": "cases/WR-N01/native-timing-summary.json",
+      "bytes": 434,
+      "sha256": "4b887f4a6e03ab44da60d975778aa319feb23e1f6cad61e4133ff2101ef06e01"
+    },
+    {
+      "path": "cases/WR-N01/native-timing.jsonl",
+      "bytes": 11831,
+      "sha256": "eb57e592155d527ddad3def4e41f2bc37c9151194700fc3ad9769ef91b268ecc"
+    },
+    {
+      "path": "cases/WR-N01/prompt.txt",
+      "bytes": 651,
+      "sha256": "526d0d877ac644775f25742231f5f870bbe3bfacfb729e66a59a933082c10c5b"
+    },
+    {
+      "path": "cases/WR-N01/request.txt",
+      "bytes": 2626,
+      "sha256": "9a8ae7919086b621572be081ccad12740d586fb5dbf586fe86614300fdae30ec"
+    },
+    {
+      "path": "cases/WR-N01/response.md",
+      "bytes": 5128,
+      "sha256": "a48bbd66fa90d89bc70700109bb7153d04a33beef4c59de94e098b687cfc1225"
+    },
+    {
+      "path": "cases/WR-N01/runtime-artifacts/Invoke-Session.ps1",
+      "bytes": 2279,
+      "sha256": "84ac05b690e81bddc941e86f3c8bdaca0bd4feef52b8d9c043a875e3b9698266"
+    },
+    {
+      "path": "cases/WR-N01/runtime-artifacts/Invoke-WRN01.ps1",
+      "bytes": 16889,
+      "sha256": "f2ee80eee72346626aa6b20963e62235494ea02879dff64be89715ec7e527e3e"
+    },
+    {
+      "path": "cases/WR-N01/runtime-artifacts/conductor-stderr.txt",
+      "bytes": 0,
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    {
+      "path": "cases/WR-N01/runtime-artifacts/conductor-stdout.txt",
+      "bytes": 70,
+      "sha256": "45f0c5fec1e56a68d83f569d11b298fcd83566d7fd1edbe5c1ea842e30082771"
+    },
+    {
+      "path": "cases/WR-N01/runtime-artifacts/evidence-available.json",
+      "bytes": 162,
+      "sha256": "5573003d72b251307829e974522f803c98ddd8d17bcda681484c92b7210896cd"
+    },
+    {
+      "path": "cases/WR-N01/runtime-artifacts/launch.json",
+      "bytes": 738,
+      "sha256": "d1bc1a920dcc71cc6561c241d51f78a6b21cd64ce8ac11ad78d53a3d784e2207"
+    },
+    {
+      "path": "cases/WR-N01/runtime-artifacts/note-qualification.md",
+      "bytes": 4731,
+      "sha256": "3436f91f0b84eaef3ec70b5e24686b888eb327370ff5ce38236ce16e049ca86f"
+    },
+    {
+      "path": "cases/WR-N01/runtime-artifacts/observations.json",
+      "bytes": 3377,
+      "sha256": "677d5f3bc57b917f7c8e1802899901773e51e506505bd229094dacd6acf67890"
+    },
+    {
+      "path": "cases/WR-N01/runtime-artifacts/postflight.json",
+      "bytes": 555,
+      "sha256": "760b1e72c313db871aee60d75727c7540db57a8fa3b941b53389830da936f229"
+    },
+    {
+      "path": "cases/WR-N01/runtime-artifacts/prompt-return.json",
+      "bytes": 191,
+      "sha256": "f35f701d80b2bb174fccd8bbffe3146164f38032e01d9b6c8ed66af88d286113"
+    },
+    {
+      "path": "cases/WR-N01/runtime-artifacts/return.json",
+      "bytes": 180,
+      "sha256": "240e33d1fc52714e5a8f0c4d4def4ed29f71212d13a001e1d0003e2a365cab4b"
+    },
+    {
+      "path": "cases/WR-N01/stderr.log",
+      "bytes": 878,
+      "sha256": "a39574840cb617f217f789d1065f02907a01223b193a19b81f5e2631d27d38b0"
+    },
+    {
+      "path": "cases/WR-N01/trace.json",
+      "bytes": 6844,
+      "sha256": "95661ce1c1ab838e7f8f77cd5f334f2b16d55ea0e6653d942b91de67394495f7"
+    },
+    {
+      "path": "current-results.json",
+      "bytes": 3868,
+      "sha256": "1151e884b3fe220ce1cbd66b0e8b03e2fcae9f2850ec2a34895365a7ab584f89"
+    },
+    {
+      "path": "preflight.json",
+      "bytes": 6287,
+      "sha256": "d94cfbb974c41ced35b20e421636978d9789509384e9066f4b8a83dd426c267a"
+    },
+    {
+      "path": "previous-qualification.json",
+      "bytes": 4445,
+      "sha256": "7d4de547b84e0c92cc952064041d4b001b91ec4b8e1ca519cce17735ebbe40e6"
+    },
+    {
+      "path": "publication-provenance.json",
+      "bytes": 923,
+      "sha256": "a534be182c525c83e5997bf64bc415c8516a81011e0b9f28adf4978cb6322f70"
+    },
+    {
+      "path": "results.json",
+      "bytes": 1006,
+      "sha256": "07f5df779ee09e2f197aac9f86e487351d824bf5cad6c2c5c6f5269c063eb1a0"
+    },
+    {
+      "path": "review-WR-H01.json",
+      "bytes": 10521,
+      "sha256": "310e162527cecf791ba096597fe4365401c1d43152ada6a49bb10312ebe82269"
+    },
+    {
+      "path": "review-WR-H01.md",
+      "bytes": 8890,
+      "sha256": "ceda49f48077acdf24d599d900b404e980e32ef718c303f759c539b3ca62502a"
+    },
+    {
+      "path": "review-WR-N01.json",
+      "bytes": 11125,
+      "sha256": "0b62bd907fd73db33578a804c07bb452b49b62d1419e729ccd14026b7eecd955"
+    },
+    {
+      "path": "review-WR-N01.md",
+      "bytes": 9192,
+      "sha256": "4522f3f3a316968e9095c300ad9556f7e7e2170d35f068c86d068cc9c865b875"
+    },
+    {
+      "path": "review-static.json",
+      "bytes": 5235,
+      "sha256": "db6a7671717026a2524eefdfab5059e8e87f56ae2f10bbb076a091340e2a8687"
+    },
+    {
+      "path": "review-static.md",
+      "bytes": 2634,
+      "sha256": "5078b8d89054ac9391ef78496dd44f9ad7a9272109fadb353a147d650f5e9dd4"
+    }
+  ],
+  "hash_contract": "Exact bytes; manifest excludes itself, internal reasoning omitted from native events."
+}

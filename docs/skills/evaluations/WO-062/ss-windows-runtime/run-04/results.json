@@ -1,0 +1,32 @@
+{
+  "schema": "wo062-frozen-skill-results-v1",
+  "skill": "ss-windows-runtime",
+  "run_id": "run-04",
+  "candidate_version": "0.1.0-candidate.1",
+  "candidate_sha256": "b89925d5395238010bb0afe9c1e1a22b0aa5ec4e7d1fb9946c671d241e7976c6",
+  "source_head": "79d0f99c393a06d4d2e81749a55fb3bfbd222cc3",
+  "reviewed_at_utc": "2026-09-15T23:58:41.493827+00:00",
+  "case_count": 2,
+  "prepared_case_count": 2,
+  "cases": [
+    {
+      "case_id": "WR-H01",
+      "verdict": "FAIL",
+      "source_run": "run-04",
+      "review": "review-WR-H01.json",
+      "response": "cases/WR-H01/response.md",
+      "response_sha256": "11e6ec4e1fac52be3b5b52c739489f3b79e6dda9ebdd29227e3e18edd437e905"
+    },
+    {
+      "case_id": "WR-N01",
+      "verdict": "BLOCKED",
+      "source_run": "run-04",
+      "review": "review-WR-N01.json",
+      "response": "cases/WR-N01/response.md",
+      "response_sha256": "a48bbd66fa90d89bc70700109bb7153d04a33beef4c59de94e098b687cfc1225"
+    }
+  ],
+  "pass": 0,
+  "fail": 1,
+  "blocked": 1
+}

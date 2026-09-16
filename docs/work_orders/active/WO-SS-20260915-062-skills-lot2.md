@@ -1,6 +1,6 @@
 # WO-SS-20260915-062 — Développement des skills spécialisés du lot 2
 
-- **Statut :** `OWNER_ACCEPTED — A_INSTALLED — B_INSTALLED — C_QUALIFICATION_INCOMPLETE` ; PB, FQ et CS validés et installés personnellement. Java et Windows rédigés ; reprise ciblée C conservée, 28 tentatives au total, qualification encore ouverte. Validation humaine C, consolidation D et livraison Git restent distinctes.
+- **Statut :** `OWNER_ACCEPTED — A_INSTALLED — B_INSTALLED — C_QUALIFICATION_INCOMPLETE` ; PB, FQ et CS validés et installés personnellement. Java `.3` et Windows `.1` réévalués en C4, 38 tentatives C conservées, qualification encore ouverte. Validation humaine C, consolidation D et livraison Git restent distinctes.
 - **Date :** 2026-09-15.
 - **Autorité :** demande propriétaire de préparer un WO avec `ss-work-order`, à partir de la conversation « Skills du lot 2 », dans l'ordre précisé ci-dessous.
 - **Acceptation :** le 15 septembre 2026, le propriétaire confirme « J’accepte le WO-062 » et autorise l'inventaire des sources et la préparation des cas d'évaluation de `ss-provider-benchmark`.
@@ -158,6 +158,30 @@ distinct ; elle n'élargit pas implicitement ce lot de skills.
   de reprise sont préparées, le résidu antérieur conservé. Total C : 28 tentatives, 27 réponses
   finales et une expiration historique ; bilan courant inchangé, 13 PASS / 1 FAIL / 2 BLOCKED.
   Voir le [rapport de reprise ciblée](../../validation/WO062-C-TARGETED-REPRISE-20260916.md).
+
+### Requalification C4 du 16 septembre 2026
+
+- Demande propriétaire : correction ciblée du candidat Java avant recette, WR-H01 avec
+  lancement/résultats/postflight/conclusion/réponse finale dans une seule session, puis
+  WR-N01 failure et sleep avec propriété des processus réellement lancés.
+- Java `.3` est corrigé, revu et versionné avant les huit nouveaux essais ; aucun PASS
+  antérieur n'est transféré. Les deux omissions ciblées sont corrigées dans JM-N01,
+  qui reste FAIL sur une omission distincte : le maintien du profil `sofascore-live-test`
+  bloqué. La lecture du mécanisme POM est établie ; aucune activation n'est observée.
+- WR-H01 Windows `.1` accomplit la chaîne demandée : harnais en 2 686,1568 ms, code 0,
+  postflight indépendant et réponse finale, session de 428,250 s sans expiration.
+  Les huit critères substantiels et les omissions historiques sont PASS. Le complément
+  C4 de lecture ciblée est enfreint : FAIL de conformité distinct du succès natif.
+- WR-N01 `.1` termine normalement avec réponse finale après 531,828 s, mais son conducteur
+  échoue sur `Get-FileHash` avant toute JVM. Modes failure/sleep non exécutés, BLOCKED ;
+  le postflight constate l'absence de ressource créée. La preuve de propriété antérieure
+  ne remplace pas les identités et résultats manquants de cette tentative.
+- Dix nouvelles sessions sans oracle ni réponses précédentes ; sources et compléments
+  versionnés avant les essais concernés. Les 38 tentatives C conservent 37 réponses finales
+  et une expiration historique. Aucun ancien run, oracle, fixture, résidu ou fichier
+  personnel n'est réécrit. Aucun candidat C n'est humainement validé ou installé.
+- [Rapport C4 et contrôles](../../validation/WO062-C4-REQUALIFICATION-20260916.md).
+  La recette de dix tentatives est terminée ; la qualification des deux skills reste ouverte.
 
 ### Ordre restant et consolidation
 
@@ -393,9 +417,10 @@ Le WO reste dans `active` pendant la réalisation et la revue. La PR cible exclu
 la fusion. La clôture effective suit cette fusion. Publication, fusion, promotion, tag et
 installation personnelle ne sont pas déduits de la seule préparation du WO.
 
-**Suite en cours :** résoudre les deux omissions JM-N01, obtenir une reproduction WR-H01
-complète dans une session terminée, puis préparer la conduite WR-N01 à partir de la propriété
-désormais prouvée. Validation humaine et installation C ensuite, puis consolidation D.
+**Suite en cours :** traiter l'omission du profil live bloqué dans JM-N01 ; conserver le
+succès natif et historique WR-H01 avec son écart de lectures ; rendre le préflight WR-N01
+compatible et observable avant d'exécuter réellement failure et sleep avec leurs identités
+et leur nettoyage. Validation humaine et installation C ensuite, puis consolidation D.
 Les trois skills A/B ont terminé préparation, rédaction, qualification, validation propriétaire
 et installation personnelle. Leurs preuves et limites restent conservées. Le WO reste actif ;
 la livraison Git et sa clôture suivent le workflow de revue et de fusion décrit ci-dessus.

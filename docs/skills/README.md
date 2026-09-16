@@ -53,16 +53,20 @@ et CI sont produites. Le propriétaire a accepté leur contenu, leur périmètre
 les quatre fichiers exacts sont désormais [validés humainement et installés personnellement](../validation/WO062-FOOTBALL-QUALITY-CI-SECURITY-INSTALLATION-20260915.md).
 Le paquet explicite `FootballQualityCiSecurity` suit son [manifeste approuvé](evaluations/WO-062/football-quality-ci-security/installation-manifest.json).
 Le suffixe `candidate.1` conserve l’identité des fichiers évalués et acceptés.
-Les candidats [ss-java-module](local-lab/ss-java-module/SKILL.md) `.2` et
+Les candidats [ss-java-module](local-lab/ss-java-module/SKILL.md) `.3` et
 [ss-windows-runtime](local-lab/ss-windows-runtime/SKILL.md) `.1` sont rédigés.
-La première recette conserve 5 PASS / 3 FAIL Java et 6 PASS / 2 BLOCKED Windows.
-Après les dix tentatives supplémentaires puis deux sessions ciblées, Java `.2` conserve
-7 PASS / 1 FAIL (deux omissions JM-N01) ; Windows garde 6 PASS / 2 BLOCKED. WR-H01
-termine cette fois en moins de cinq minutes, mais bloque au préflight avant le harnais.
-Une preuve séparée établit la filiation et la propriété d'une JVM directe ; WR-N01
-complet n'est pas relancé, ses conditions de reprise sont préparées et le résidu conservé.
-Voir la [reprise ciblée et ses limites](../validation/WO062-C-TARGETED-REPRISE-20260916.md)
-et le [rapport C précédent](../validation/WO062-JAVA-WINDOWS-CANDIDATES-20260915.md).
+La [recette C4](../validation/WO062-C4-REQUALIFICATION-20260916.md) réexécute les huit cas
+Java sur les octets corrigés et les deux sondes Windows dans de nouvelles sessions.
+Les deux omissions ciblées Java sont corrigées ; JM-N01 omet toutefois le maintien du
+profil live bloqué. WR-H01 réunit exécution, postflight et réponse finale en 428,250 s :
+ses critères substantiels sont PASS, sa conformité au complément C4 FAIL pour les lectures.
+WR-N01 reste BLOCKED avant Java, sur `Get-FileHash` absent du conducteur ; failure et sleep
+ne sont pas exécutés. Voir les qualifications courantes
+[Java](evaluations/WO-062/ss-java-module/qualification.json) et
+[Windows](evaluations/WO-062/ss-windows-runtime/qualification.json).
+Les 38 tentatives et toutes les preuves antérieures sont conservées, dont la
+[reprise ciblée C3](../validation/WO062-C-TARGETED-REPRISE-20260916.md), la preuve séparée
+de propriété et le résidu Windows historique.
 La qualification reste ouverte ; validation humaine C, installation et consolidation des dix restent à réaliser.
 
 ## Installation personnelle depuis ce dépôt

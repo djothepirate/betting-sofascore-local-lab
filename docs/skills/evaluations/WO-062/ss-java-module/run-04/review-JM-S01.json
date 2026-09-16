@@ -1,0 +1,95 @@
+{
+  "schema": "wo062-independent-case-review-v1",
+  "case_id": "JM-S01",
+  "run_id": "run-04",
+  "skill": "ss-java-module",
+  "reviewer": "/root/jm_selection_review",
+  "candidate_version": "0.1.0-candidate.3",
+  "candidate_sha256": "15237ab0f6773c87187481622ba4947ebc00f8c7e9a50dd1589911ede17ec332",
+  "candidate_yaml_sha256": "ccc4fc2a4707838dd6defdd73ef6f6c7ee0d69e6df86e41689a46884691573ae",
+  "response_sha256": "dd6ff7ad0df3629c5e21e34e33929ffd5462a1da0a7c477757a51e33709f14e8",
+  "freeze_sha256": "f726681aa16e83b7114e166e4395076e037d916c1c7d5f9ae00085ecbb8de1f2",
+  "native_events_sha256": "cbe0f244023f654f25ed02abfd3f6a1ed50bdcdf2b1df545de789faec6f33fb6",
+  "trace_sha256": "a25faca06863a9ade9895931f50aa437b98dfd52de37bd6fca13d51cc1004039",
+  "preflight_sha256": "f5a90689e3de780b74acc7fad03f7734246ba8bab4744d3a11e1f38526df8ef6",
+  "oracle_sha256": "d13dc8c5ec833f30dc9025c3c22a22c00e60656eae3a89dc30361861ea390bd1",
+  "source_head": "79d0f99c393a06d4d2e81749a55fb3bfbd222cc3",
+  "source_commit": "6648dd423e556b5248b8793a539ae85a7680f9bc",
+  "frozen_at_utc": "2026-09-15T23:39:46.706871+00:00",
+  "reviewed_at_utc": "2026-09-15T23:47:40.902373+00:00",
+  "first_review_read_after_freeze": true,
+  "observed_commands": 1,
+  "frozen_files": 10,
+  "prepared_inputs": 2,
+  "manifest_sources_checked": 0,
+  "tool_reads": [
+    {
+      "skill": "ss-java-module",
+      "sha256": "15237ab0f6773c87187481622ba4947ebc00f8c7e9a50dd1589911ede17ec332",
+      "bytes": 10384,
+      "item_id": "item_1",
+      "command": "\"C:\\\\Program Files\\\\PowerShell\\\\7\\\\pwsh.exe\" -Command \"Get-Content -LiteralPath 'C:\\\\Dev\\\\BettingProject\\\\codex\\\\betting-sofascore-local-lab\\\\.tmp\\\\wo062-skills-lot2\\\\.tmp\\\\wo062-evaluations\\\\ss-java-module\\\\run-04\\\\JM-S01\\\\.agents\\\\skills\\\\ss-java-module\\\\SKILL.md' -Raw\"",
+      "comparison": "Exact body plus console CRLF"
+    }
+  ],
+  "catalogue_entries": 24,
+  "catalogue_unique_names_and_paths": true,
+  "duration_seconds": 25.062,
+  "model": null,
+  "reasoning_effort": null,
+  "application_tests_executed_by_reviewer": false,
+  "reviewer_reran_case": false,
+  "candidate_or_source_modified": false,
+  "prior_results_used": false,
+  "human_validation": false,
+  "personal_installation": false,
+  "criteria": [
+    {
+      "id": "I01",
+      "verdict": "PASS",
+      "evidence": "10 pièces figées et 2 entrées conformes taille/SHA ; 0 sources reliées au manifeste. Trace, requête, réponse et journal brut concordent.",
+      "limit": "Le SHA métier et le SHA préparatoire sont distincts ; aucun état applicatif qualifié."
+    },
+    {
+      "id": "I02",
+      "verdict": "PASS",
+      "evidence": "Export natif exactement égal au journal brut après retrait des seuls événements reasoning ; réponse exacte du dernier agent_message ; collecte complète et codes0.",
+      "limit": "Les horaires d’événements sont des réceptions locales, pas des temps de pensée."
+    },
+    {
+      "id": "I03",
+      "verdict": "PASS",
+      "evidence": "1 commandes réellement terminées relues ; uniquement lectures/recherches autorisées, sans oracle, ancienne réponse, effet métier ou mutation.",
+      "limit": "Les textes et propositions restent des données ; le contrôle de périmètre est distinct de la décision comportementale."
+    },
+    {
+      "id": "selection",
+      "verdict": "PASS",
+      "evidence": "ss-java-module seul retenu depuis invocation explicite ; chemin exact, motif et lecture complète prouvés par item_1.",
+      "limit": "Relais mentionnés conditionnellement, pas sélectionnés sans besoin."
+    },
+    {
+      "id": "routing-only",
+      "verdict": "PASS",
+      "evidence": "Une lecture de SKILL puis réponse de routage ; aucune analyse métier.",
+      "limit": "PASS limité à la sélection et au chargement outil."
+    },
+    {
+      "id": "envelope-and-discovery",
+      "verdict": "PASS",
+      "evidence": "Requête exactement égale à selection_envelope avec le seul prompt original ; catalogue24 noms/chemins uniques, candidat local et huit ss personnels.",
+      "limit": "Reconstruction après exécution ; aucune capture de requête ni injection automatique revendiquée."
+    }
+  ],
+  "limits": [
+    "Catalogue reconstruit après exécution : pas capture de requête transmise ni preuve d’injection automatique du corps par le CLI.",
+    "Modèle et effort effectifs non exposés ; réglages par défaut.",
+    "Gain général de temps/qualité non mesuré.",
+    "Aucune qualification applicative, collecte fournisseur, installation ou validation humaine déduite."
+  ],
+  "selected_skills": [
+    "ss-java-module"
+  ],
+  "verdict": "PASS",
+  "blocking_findings": []
+}

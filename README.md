@@ -155,12 +155,13 @@ Les candidats `ss-football-quality` et `ss-ci-security`, version `0.1.0-candidat
 sont à leur tour [qualifiés sur huit cas chacun](docs/validation/WO062-FOOTBALL-QUALITY-CI-SECURITY-CANDIDATES-20260915.md),
 avec sources figées et revue indépendante. Leur contenu, périmètre et limites ont ensuite été
 [validés par le propriétaire et leurs quatre fichiers installés personnellement](docs/validation/WO062-FOOTBALL-QUALITY-CI-SECURITY-INSTALLATION-20260915.md).
-Les candidats Java `.2` et Windows `.1` sont rédigés. Après la reprise ciblée du 16 septembre,
-Java conserve 7 PASS / 1 FAIL et Windows 6 PASS / 2 BLOCKED sur leurs huit cas courants.
-Le [rapport de reprise C](docs/validation/WO062-C-TARGETED-REPRISE-20260916.md) conserve deux
-nouvelles sessions terminées : JM-N01 reste incomplet sur deux exigences ; WR-H01 finit
-en moins de cinq minutes mais bloque avant le harnais. La propriété d'une JVM directe est
-prouvée séparément et revue avant toute répétition complète de WR-N01, qui reste non relancé.
+La [requalification C4 du 16 septembre](docs/validation/WO062-C4-REQUALIFICATION-20260916.md)
+corrige Java en `.3` et conserve dix nouvelles sessions terminées. Les deux omissions ciblées
+de JM-N01 sont corrigées ; une autre omission, le profil live bloqué, maintient ce cas FAIL.
+WR-H01 Windows `.1` exécute enfin la chaîne complète en 428,250 s : reproduction et critères
+historiques PASS, avec un FAIL distinct pour les lectures contraires au complément C4.
+WR-N01 bloque sur `Get-FileHash` avant Java : failure et sleep restent non exécutés.
+Les essais précédents, la preuve séparée de propriété et le résidu historique sont conservés.
 La qualification reste incomplète ; validation humaine, installation et consolidation restent à réaliser.
 
 **Skills du lot 1 validés — 5 septembre 2026 :** les cinq skills `ss-*` sont livrés avec

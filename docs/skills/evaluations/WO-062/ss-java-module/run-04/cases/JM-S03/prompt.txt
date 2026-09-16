@@ -1,0 +1,1 @@
+Dans le SofaScore Local Lab, relis seulement la migration PostgreSQL append-only fournie, son upgrade sur une base préremplie et son protocole de sauvegarde/reprise. Les fichiers Java, les profils et les frontières entre couches sont hors de cette demande.

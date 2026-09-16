@@ -6,6 +6,15 @@ Les évolutions notables du SofaScore Local Lab sont consignées dans ce fichier
 
 ### WO-062 — skills spécialisés du lot 2
 
+- Réalise la [requalification C4](docs/validation/WO062-C4-REQUALIFICATION-20260916.md) :
+  candidat Java `.3` corrigé et versionné avant huit nouveaux essais ; les deux omissions
+  ciblées sont résolues, mais JM-N01 reste FAIL sur la restitution du profil live bloqué.
+  WR-H01 Windows `.1` accomplit la chaîne complète en 428,250 s, avec reproduction et
+  critères historiques PASS ; conserve un FAIL de conformité au complément C4 pour lectures
+  intégrales et répétées. WR-N01 bloque au préflight sur `Get-FileHash`, avant les deux modes
+  Java. Dix réponses finales nouvelles, 38 tentatives C au total ; preuves antérieures et
+  installations personnelles conservées. Qualification C encore ouverte.
+
 - Réalise la [reprise C ciblée du 16 septembre](docs/validation/WO062-C-TARGETED-REPRISE-20260916.md) :
   JM-N01 frais reste FAIL sur deux omissions ; WR-H01 termine en 281,875 s avec réponse finale,
   mais l'accès refusé au préflight empêche le harnais et maintient BLOCKED. Décompose les quinze

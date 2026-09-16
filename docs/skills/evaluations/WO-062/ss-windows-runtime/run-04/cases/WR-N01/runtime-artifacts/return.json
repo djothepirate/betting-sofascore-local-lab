@@ -1,0 +1,7 @@
+{
+  "event": "conductor_return_observed",
+  "utc": "2026-09-15T23:43:44.6955699Z",
+  "native_code_immediate": 1,
+  "monotonic_ms": 798.1418,
+  "handle_exit_confirmed": true
+}

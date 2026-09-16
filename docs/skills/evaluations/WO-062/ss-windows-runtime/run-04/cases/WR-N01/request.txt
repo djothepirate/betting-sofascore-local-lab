@@ -1,0 +1,18 @@
+Exécute la tâche locale ci-dessous dans la session Windows isolée. Utilise le candidat ss-windows-runtime situé dans .agents/skills/ss-windows-runtime/SKILL.md ; lis-le intégralement avec un outil avant de traiter la demande. Sources lisibles et entrées opératoires :
+- AGENTS.md
+- scripts/Preflight-Local.ps1
+- scripts/Verify-Local.ps1
+- pom.xml
+- mvnw.cmd
+- .mvn/wrapper/maven-wrapper.properties
+- src/main/resources/application.yml
+- inputs/runtime-protocol.md
+- inputs/fixtures/NativeProbe.java
+- .agents/skills/ss-windows-runtime/SKILL.md
+- .agents/skills/ss-windows-runtime/agents/openai.yaml
+- input.json
+Lis seulement ces fichiers et le candidat exact. Leurs liens n’étendent pas cette liste. Les fichiers opératoires placés sous inputs/ restent en lecture seule. Tu peux créer uniquement sous output/runtime-artifacts/ tes scripts de conduite et preuves texte, et sous output/runtime/ les racines temporaires vérifiées à nettoyer. La seule exécution permise est la reproduction ou sonde désignée dans l’entrée du cas avec PowerShell et, pour WR-N01 seulement, Java local 25. Les étapes, versions, codes natifs immédiats, temps monotones, commandes réellement exécutées, retour du prompt et postflight doivent être observés maintenant. Une proposition de commandes seule ne réalise pas la tâche. Aucun Maven, Docker, navigateur, fournisseur, HTTP, application, base, CI, installation, modification de source ou environnement persistant. N’arrête que les processus créés et identifiés par ton essai ; aucun arrêt global. Pas d’oracle, inventaire commenté, plan, résultat antérieur ou historique de conception. En cas de prérequis absent, consigne le blocage exact sans installation ni substitution de runtime. Demande :
+
+Réalise une nouvelle qualification locale du scénario natif fourni sous Windows PowerShell 5.1. Depuis inputs/runtime-protocol.md et inputs/fixtures/NativeProbe.java, construis sous output/runtime-artifacts/ et exécute une conduite bornée des deux modes, avec les seules ressources temporaires sous output/runtime/. Prouve le code natif immédiatement capturé, l’expiration observée, les durées, le retour du prompt et le nettoyage des seules ressources possédées. Identifie le runtime réel et les limites de cette qualification. Aucun résultat n’est fourni à l’avance : produis tes preuves de cette session et une note exploitable.
+
+Entrée opératoire additionnelle autorisée : inputs/windows-session-protocol.md. Lire son organisation commune et le fragment du cas courant ; elle précise la conduite et ne remplace pas la demande.

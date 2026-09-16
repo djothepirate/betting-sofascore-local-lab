@@ -1,0 +1,82 @@
+{
+  "schema": "wo062-c4-publisher-final-review-v1",
+  "reviewer": "/root/jm_counter_review",
+  "reviewed_on": "2026-09-16",
+  "source_head": "cb67d18c66aaa3989bfc6121ed7b51945fd95f9f",
+  "verdict": "PASS",
+  "scope": "STATIC_CORRECTIVE_REVIEW_WITH_EXISTING_SYNTHETIC_TEST_EVIDENCE",
+  "publisher": {
+    "path": ".tmp/publish_c4.py",
+    "sha256": "702819539f583435082609adf703e87f38a18c40aa7dcd38640bc5e872a49985"
+  },
+  "reused_publisher": {
+    "path": ".tmp/publish_c_run02.py",
+    "sha256": "e1596d4c0731d1e71a521deb173d532aa6f44c14c9da25164e1e2013a871f5cd"
+  },
+  "test_script": {
+    "path": ".tmp/test_c4_publication.py",
+    "sha256": "658e5a0c2064d18891a32ad52b32d5827f003150cf334a782e6e7e8b9672d028"
+  },
+  "test_report": {
+    "path": ".tmp/c4-publication-tests.json",
+    "sha256": "336ba5c11cb967e10f0697637b9ef455d36398b838c6386bd299f060968419bd",
+    "passed": 4,
+    "publisher_hash_matches": true,
+    "test_hash_matches": true,
+    "fixtures_inspected": ".tmp/c4-publisher-tests/bafb913b-97fe-4fc4-af94-0796e85e4b10",
+    "reexecuted_by_reviewer": false
+  },
+  "previous_review": {
+    "path": ".tmp/c4-publisher-review.json",
+    "sha256": "e1a48fe1f5e7088e1b82417493a40b2a798c68674e1d49ac0ab41bd22e266f19",
+    "verdict": "FAIL",
+    "publisher_sha256": "4e31efd63d9f0164e425dc5983454c30e3bb47ad9457511bb30582f389e490a8"
+  },
+  "findings_resolution": [
+    {
+      "finding_id": "P2-review-freeze-run-binding",
+      "status": "RESOLVED",
+      "evidence": "publish_c4.py:76–78 conserve verify_case/verify_review et exige run_id=run-04, skill courant, candidate_version exacte et freeze_sha256 obligatoire égal au gel. Le helper impose déjà case_id, candidate_sha256 et hash de réponse.",
+      "limit": "Ce renforcement vise chaque nouvelle revue comportementale C4. Les anciennes revues C/S restent inchangées et sont liées à leur gel par l'inventaire historique vérifié, les résultats et les hashes de réponse/candidat."
+    },
+    {
+      "finding_id": "P2-windows-carry-and-count-contract",
+      "status": "RESOLVED",
+      "evidence": "publish_c4.py:85–100 impose exactement WR-C01/WR-C02/WR-S01..S04, source_run=run-01, PASS commun aux lignes d'agrégat/résultat/revue, hash de réponse, candidat identique et chemins résolus vers run-01. Les manifests historiques sont vérifiés et leurs hashes rapprochés lignes60–66. Ligne102 impose total25 Java/13 Windows et8 nouvelles exécutions Java.",
+      "limit": "Contrôles relus statiquement ; les quatre tests synthétiques fournis ne sont pas des tests négatifs des règles d'identité ou de reprise Windows."
+    },
+    {
+      "finding_id": "P2-partial-publication",
+      "status": "RESOLVED",
+      "evidence": "publish_validated:14–36 vérifie les entrées avant et après staging, écrit tous les fichiers dans un répertoire UUID, vérifie le manifest staged, prépare une qualification séparée, renomme le run complet puis os.replace la qualification. Une exception de replace ramène dest vers son stage et remonte l'échec.",
+      "limit": "Garantie par skill pour les erreurs interceptées ; ce n'est pas une transaction unique run+qualification ni une transaction entre les deux skills. Arrêt brutal du processus et échec du rollback ne sont pas couverts par les quatre tests."
+    }
+  ],
+  "new_blocking_findings": [],
+  "windows_carried_cases": [
+    "WR-C01",
+    "WR-C02",
+    "WR-S01",
+    "WR-S02",
+    "WR-S03",
+    "WR-S04"
+  ],
+  "required_totals": {
+    "java_all_versions": 25,
+    "java_current_version": 8,
+    "windows_all_versions": 13
+  },
+  "limitations": [
+    "Nouvelle revue comportementale C4 exige run/skill/version/freeze ; anciennes revues immuables liées par manifests/résultats/réponse/candidat.",
+    "Les quatre tests exercent la fonction de publication sur fixtures synthétiques ; pas de tests négatifs exécutés ici sur les règles d'identité/reprise historique.",
+    "Remplacement JSON atomique et rollback par skill pour erreurs interceptées ; pas de transaction unique run+JSON ou entre les skills.",
+    "Arrêt brutal du processus et échec du rollback non couverts par les quatre preuves.",
+    "Assertions Python supposées actives ; aucune exécution sous optimisation revendiquée.",
+    "Aucune publication réelle ni requalification des skills par cette revue."
+  ],
+  "publisher_imported_or_executed": false,
+  "tests_reexecuted": false,
+  "model_or_probe_launched": false,
+  "source_or_candidate_modified": false,
+  "tracked_files_modified": false
+}

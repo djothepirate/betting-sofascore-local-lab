@@ -1,0 +1,27 @@
+{
+  "schema": "wo062-c4-publication-validation-history-v1",
+  "events": [
+    {
+      "stage": "dry_run_1",
+      "result": "KeyError candidate_version in historical run-01 schema",
+      "published": false
+    },
+    {
+      "stage": "dry_run_2",
+      "result": "Required skill metadata absent from review-WR-H01; reviewer corrected metadata only",
+      "published": false
+    },
+    {
+      "stage": "dry_run_3",
+      "result": "PASS",
+      "published": false
+    },
+    {
+      "stage": "publication",
+      "result": "PASS",
+      "published": true
+    }
+  ],
+  "provenance": "Coordinator observed command outcomes; summaries, not raw native transcript.",
+  "tests": "Four atomicity cases rerun on corrected publisher; source retained in preceding publication-support."
+}

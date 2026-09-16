@@ -1,0 +1,117 @@
+"""Validate then publish C4, preserving every old run and exact candidate provenance."""
+import pathlib,json,hashlib,importlib.util,inspect,copy,sys,subprocess,os
+import uuid
+from datetime import datetime,timezone
+ROOT=pathlib.Path(__file__).resolve().parent.parent
+spec=importlib.util.spec_from_file_location('c4_base_publisher',ROOT/'.tmp/publish_c_run02.py')
+m=importlib.util.module_from_spec(spec);sys.modules[spec.name]=m;spec.loader.exec_module(m)
+s=inspect.getsource(m.verify_case);assert s.count("('run_id', 'run-02')")==1
+exec(s.replace("('run_id', 'run-02')","('run_id', pre['run_id'])"),m.__dict__)
+E=ROOT/'docs/skills/evaluations/WO-062';R=m.Reader();plans=[]
+
+def publish_validated(plans,reader,workspace,replace_fn=os.replace):
+ """Stage complete validated bytes before atomically replacing each qualification."""
+ def unchanged():
+  for name,sha in reader.fingerprints.items():assert m.digest(pathlib.Path(name).read_bytes())==sha,name
+ unchanged()
+ parent=m.relative(workspace,'.tmp/c4-publisher-staging');parent.mkdir(exist_ok=True)
+ stages=[]
+ for dest,files,qp,qnew in plans:
+  m.relative(workspace,dest.relative_to(workspace).as_posix());m.relative(workspace,qp.relative_to(workspace).as_posix())
+  assert not dest.exists()
+  stage=m.relative(workspace,(parent/str(uuid.uuid4())).relative_to(workspace).as_posix());stage.mkdir()
+  for name,b in files.items():
+   p=m.relative(stage,name);p.parent.mkdir(parents=True,exist_ok=True);p.write_bytes(b)
+  m.verify_manifest(m.Reader(),stage,'artifact-manifest.json')
+  qt=parent/(stage.name+'.qualification.json');qt.write_bytes(m.encode(qnew))
+  stages.append((stage,dest,qt,qp))
+ unchanged()
+ for stage,dest,qt,qp in stages:
+  assert not dest.exists()
+  # Both exact directory targets were resolved and checked inside the workspace.
+  stage.rename(dest)
+  try:replace_fn(qt,qp)
+  except BaseException:
+   dest.rename(stage)
+   raise
+
+auth=R.json(E/'c-requalification-04/authorization.json');assert auth['max_model_sessions']==10
+contracts={'ss-java-module':{'version':'0.1.0-candidate.3','sha':'15237ab0f6773c87187481622ba4947ebc00f8c7e9a50dd1589911ede17ec332','ids':auth['java']['cases']},'ss-windows-runtime':{'version':'0.1.0-candidate.1','sha':'b89925d5395238010bb0afe9c1e1a22b0aa5ec4e7d1fb9946c671d241e7976c6','ids':auth['windows']['cases']}}
+assert contracts['ss-java-module']['ids']==['JM-H01','JM-N01','JM-C01','JM-C02','JM-S01','JM-S02','JM-S03','JM-S04']
+assert contracts['ss-windows-runtime']['ids']==['WR-H01','WR-N01']
+selected=sys.argv[1] if len(sys.argv)>1 and sys.argv[1] in contracts else None
+for skill,c in contracts.items():
+ if selected and skill!=selected:continue
+ p=E/skill;runtime=ROOT/'.tmp/wo062-evaluations'/skill/'run-04';dest=p/'run-04';assert not dest.exists(),dest
+ pre=R.json(runtime/'preflight.json');assert pre['skill']==skill and pre['run_id']=='run-04' and pre['candidate_sha256']==c['sha'] and pre['candidate_version']==c['version']
+ assert [x['case_id'] for x in pre['cases']]==c['ids'] and pre['case_count']==len(c['ids'])
+ assert {d.name for d in (runtime/'frozen').iterdir()}==set(c['ids'])
+ assert not list(runtime.parent.glob('run-0[5-9]'))
+ assert m.digest(R.blob(runtime/'preflight.json'))==m.digest(R.blob(E/'c-requalification-04/preparation'/(skill+'-preflight.json')))
+ assert pre['preparation_manifest_sha256']==m.digest(R.blob(p/'manifest.json'))
+ q=R.json(p/'qualification.json');previous=R.json(p/'revision-03/previous-qualification.json') if skill=='ss-java-module' else copy.deepcopy(q)
+ assert q['candidate_version']==c['version'] and not q['human_validation'] and not q['personal_installation']
+ assert previous['results']=='run-03/current-results.json'
+ files={'preflight.json':R.blob(runtime/'preflight.json'),'authorization.json':R.blob(E/'c-requalification-04/authorization.json'),'previous-qualification.json':m.encode(previous)}
+ candidate=ROOT/'docs/skills/local-lab'/skill
+ for f in q['candidate_files']:R.checked(candidate,f)
+ assert m.digest(R.blob(candidate/'SKILL.md'))==c['sha']
+ historical=[];allold=[]
+ expected_manifests={h['run_id']:h['artifact_manifest_sha256'] for h in previous['historical_runs']}
+ expected_manifests['run-03']=previous['artifact_manifest_sha256']
+ for rid in ['run-01','run-02','run-03']:
+  _,old=m.verify_manifest(R,p/rid,'artifact-manifest.json');res=json.loads(old['results.json']);allold+=res['cases']
+  assert m.digest(old['artifact-manifest.json'])==expected_manifests[rid]
+  oldpre=json.loads(old['preflight.json'])
+  assert oldpre['candidate_sha256']==res['candidate_sha256']
+  if 'candidate_version' in res:assert res['candidate_version']==oldpre['candidate_version']
+  historical.append({'run_id':rid,'candidate_version':oldpre['candidate_version'],'candidate_sha256':res['candidate_sha256'],'executions':res['case_count'],**m.counts(res['cases']),'results':rid+'/results.json','artifact_manifest_sha256':m.digest(old['artifact-manifest.json'])})
+ assert sum(x['executions'] for x in historical)==previous['total_executions']
+ staticdir=E/'c-requalification-04/preparation' if skill=='ss-java-module' else p/'run-02'
+ staticname='java-static-review' if skill=='ss-java-module' else 'review-static'
+ static=R.json(staticdir/(staticname+'.json'));assert static['verdict']=='PASS' and static['candidate_sha256']==c['sha']
+ for ext in ['json','md']:files['review-static.'+ext]=R.blob(staticdir/(staticname+'.'+ext))
+ cases=[]
+ for cid in c['ids']:
+  pc=next(x for x in pre['cases'] if x['case_id']==cid)
+  assert not pc['oracle_supplied'] and not pc['design_history_supplied'] and not pc['candidate_body_manually_pasted']
+  for f in pc['input_files']:R.checked(runtime/cid,f)
+  frozen,review=m.verify_case(R,runtime,pre,cid)
+  assert review.get('run_id')=='run-04' and review.get('skill')==skill and review.get('candidate_version')==c['version']
+  assert review.get('freeze_sha256')==m.digest(frozen['freeze.json'])
+  files.update({'cases/'+cid+'/'+n:b for n,b in frozen.items()})
+  for ext in ['json','md']:files['review-'+cid+'.'+ext]=R.blob(runtime/('review-'+cid+'.'+ext))
+  cases.append({'case_id':cid,'verdict':review['verdict'],'source_run':'run-04','review':'review-'+cid+'.json','response':'cases/'+cid+'/response.md' if 'response.md' in frozen else None,'response_sha256':review['response_sha256']})
+ if skill=='ss-java-module':current=copy.deepcopy(cases)
+ else:
+  current=copy.deepcopy(R.json(p/'run-03/current-results.json')['cases'])
+  kept={'WR-C01','WR-C02','WR-S01','WR-S02','WR-S03','WR-S04'}
+  assert {x['case_id'] for x in current if x['case_id'] not in c['ids']}==kept
+  original={x['case_id']:x for x in R.json(p/'run-01/results.json')['cases']}
+  for i,x in enumerate(current):
+   if x['case_id'] in c['ids']:current[i]=copy.deepcopy(next(y for y in cases if y['case_id']==x['case_id']))
+   else:
+    old=original[x['case_id']]
+    assert x['source_run']=='run-01' and x['verdict']==old['verdict']=='PASS' and x['response_sha256']==old['response_sha256']
+    _,oldcase=m.verify_manifest(R,p/'run-01/cases'/x['case_id'],'freeze.json')
+    oldreview=m.verify_review(R,p/'run-01'/old['review'],x['case_id'],c['sha'],oldcase)
+    assert oldreview['verdict']=='PASS'
+    for key in ['review','response']:
+     assert (p/'run-03'/x[key]).resolve()==(p/'run-01'/old[key]).resolve()
+    for key in ['review','response']:
+     if x.get(key):x[key]='../'+x['source_run']+'/'+x[key].split('../'+x['source_run']+'/',1)[-1]
+ assert len(current)==8 and len({x['case_id'] for x in current})==8
+ cnt=m.counts(current);total=len(allold)+len(cases);executions=8 if skill=='ss-java-module' else total
+ assert total==(25 if skill=='ss-java-module' else 13) and executions==(8 if skill=='ss-java-module' else 13)
+ provenance=m.git_provenance(ROOT,candidate,pre['source_head'])
+ results={'schema':'wo062-frozen-skill-results-v1','skill':skill,'run_id':'run-04','candidate_version':c['version'],'candidate_sha256':c['sha'],'source_head':pre['source_head'],'reviewed_at_utc':datetime.now(timezone.utc).isoformat(),'case_count':len(cases),'prepared_case_count':len(cases),'cases':cases,**m.counts(cases)}
+ aggregate={'schema':'wo062-current-skill-results-v1','skill':skill,'candidate_version':c['version'],'candidate_sha256':c['sha'],'case_count':8,'executions':executions,'total_executions_all_versions':total,'cases':current,**cnt,'historical_runs':historical}
+ files['results.json']=m.encode(results);files['current-results.json']=m.encode(aggregate)
+ files['publication-provenance.json']=m.encode({'schema':'wo062-c4-publication-provenance-v1',**provenance,'source_head':pre['source_head'],'preparation_commit':'2691f32','windows_review_commit':'cb67d18','candidate_frozen_before_execution':True,'preflight_and_operational_inputs_committed_before_execution':True,'oracle_and_previous_answers_excluded':True,'publisher_sha256':m.digest(pathlib.Path(__file__).read_bytes()),'reused_publisher_sha256':m.digest(R.blob(ROOT/'.tmp/publish_c_run02.py')),'candidate_version':c['version'],'sessions':len(cases),'model':None,'reasoning_effort':None,'human_validation':False,'personal_installation':False})
+ files['artifact-manifest.json']=m.encode({'schema':'wo062-skill-run-artifacts-v1','skill':skill,'run_id':'run-04','files':[{'path':n,'bytes':len(b),'sha256':m.digest(b)} for n,b in sorted(files.items())],'hash_contract':'Exact bytes; manifest excludes itself, internal reasoning omitted from native events.'})
+ qnew={'schema':'wo062-current-skill-qualification-v1','skill':skill,'candidate_version':c['version'],'status':'QUALIFIED_ON_FROZEN_CASES_PENDING_OWNER_VALIDATION' if cnt['pass']==8 else 'INCOMPLETE_QUALIFICATION','source_commit':q['source_commit'],'source_head':pre['source_head'],'preparation_manifest_sha256':q['preparation_manifest_sha256'],'candidate_files':q['candidate_files'],**provenance,'distinct_cases':8,'executions':executions,'total_executions':total,**cnt,'human_validation':False,'personal_installation':False,'results':'run-04/current-results.json','run_results':'run-04/results.json','artifact_manifest_sha256':m.digest(files['artifact-manifest.json']),'historical_runs':historical,'execution_totals':m.counts(allold+cases),'current_cases':[{k:x[k] for k in ['case_id','verdict','source_run']} for x in current],'static_review':'run-04/review-static.json','limits':previous['limits']}
+ plans.append((dest,files,p/'qualification.json',qnew))
+for name,sha in R.fingerprints.items():assert m.digest(pathlib.Path(name).read_bytes())==sha,name
+if '--publish' in sys.argv:
+ publish_validated(plans,R,ROOT)
+print(json.dumps({'validation':'PASS','published':'--publish' in sys.argv,'cases':[{'skill':q['skill'],**{k:q[k] for k in ['candidate_version','pass','fail','blocked','executions','total_executions']}} for _,_,_,q in plans]}))

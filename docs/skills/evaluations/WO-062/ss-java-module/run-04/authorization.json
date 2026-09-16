@@ -1,0 +1,38 @@
+{
+  "schema": "wo062-c-requalification-04-authorization-v1",
+  "basis": "Current owner request: targeted Java candidate correction before a new recipe; WR-H01 actual harness/results/postflight/conclusion/final response in one new session including historical omissions; Windows .1 WR-N01 failure and sleep with ownership and deadlines.",
+  "decision_date": "2026-09-16",
+  "configured_service_scope": "Same configured service and internal candidate/catalogue/scoped versioned sources previously authorized; current request authorizes the new recipe and the two Windows executions.",
+  "java": {
+    "candidate_version": "0.1.0-candidate.3",
+    "run_id": "run-04",
+    "cases": [
+      "JM-H01",
+      "JM-N01",
+      "JM-C01",
+      "JM-C02",
+      "JM-S01",
+      "JM-S02",
+      "JM-S03",
+      "JM-S04"
+    ],
+    "reason": "The frozen qualification plan requires all eight cases for the exact revised candidate; no PASS from .2 transferred."
+  },
+  "windows": {
+    "candidate_version": "0.1.0-candidate.1",
+    "run_id": "run-04",
+    "cases": [
+      "WR-H01",
+      "WR-N01"
+    ],
+    "ownership_prerequisite": "../c-targeted-reprise/ownership-proof.json",
+    "ownership_review": "../c-targeted-results/ownership-review.json"
+  },
+  "max_model_sessions": 10,
+  "automatic_retry": false,
+  "oracle_supplied_to_evaluated_sessions": false,
+  "prior_answers_supplied_to_evaluated_sessions": false,
+  "human_validation": false,
+  "personal_installation": false,
+  "application_changes": false
+}

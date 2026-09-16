@@ -1,0 +1,16 @@
+{
+  "event": "independent_postflight",
+  "utc": "2026-09-15T23:44:15.8634373Z",
+  "root": "C:\\Dev\\BettingProject\\codex\\betting-sofascore-local-lab\\.tmp\\wo062-skills-lot2\\.tmp\\wo062-evaluations\\ss-windows-runtime\\run-04\\WR-N01\\output\\runtime\\WR native probe a27cb0e7-ef81-4d56-852e-9acf74ce7924",
+  "root_absent": true,
+  "processes": [
+    {
+      "pid": 12548,
+      "kind": "conductor",
+      "reason": "PID absent",
+      "owned_instance_present": false
+    }
+  ],
+  "prompt_tool_chunk": "140fe2",
+  "prompt_tool_code": 0
+}

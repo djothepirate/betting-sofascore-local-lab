@@ -1,0 +1,122 @@
+{
+  "schema": "wo062-independent-case-review-v1",
+  "case_id": "JM-C01",
+  "run_id": "run-04",
+  "skill": "ss-java-module",
+  "reviewer": "/root/jm_selection_review",
+  "candidate_version": "0.1.0-candidate.3",
+  "candidate_sha256": "15237ab0f6773c87187481622ba4947ebc00f8c7e9a50dd1589911ede17ec332",
+  "candidate_yaml_sha256": "ccc4fc2a4707838dd6defdd73ef6f6c7ee0d69e6df86e41689a46884691573ae",
+  "response_sha256": "b5b32bdaf5a34dd32fb459c49e2828c1bbe6cf8613b77355277ab38b637a5cb7",
+  "freeze_sha256": "c3d351a089871f777010295cd0988b638e494ae1bc7f74d9d94a46f19dd4ff8a",
+  "native_events_sha256": "5d22328e125fa0610d39973f221e10fdf446ad347fdd7ad12b98e03d8aeb650c",
+  "trace_sha256": "54d613d9b92cd2f75c87a788be2ced7f218597daee9668efde4d350262d39004",
+  "preflight_sha256": "f5a90689e3de780b74acc7fad03f7734246ba8bab4744d3a11e1f38526df8ef6",
+  "oracle_sha256": "d13dc8c5ec833f30dc9025c3c22a22c00e60656eae3a89dc30361861ea390bd1",
+  "source_head": "79d0f99c393a06d4d2e81749a55fb3bfbd222cc3",
+  "source_commit": "6648dd423e556b5248b8793a539ae85a7680f9bc",
+  "frozen_at_utc": "2026-09-15T23:39:20.175655+00:00",
+  "reviewed_at_utc": "2026-09-15T23:47:40.894353+00:00",
+  "first_review_read_after_freeze": true,
+  "observed_commands": 19,
+  "frozen_files": 11,
+  "prepared_inputs": 17,
+  "manifest_sources_checked": 14,
+  "tool_reads": [
+    {
+      "skill": "ss-java-module",
+      "sha256": "15237ab0f6773c87187481622ba4947ebc00f8c7e9a50dd1589911ede17ec332",
+      "bytes": 10384,
+      "item_id": "item_1",
+      "command": "\"C:\\\\Program Files\\\\PowerShell\\\\7\\\\pwsh.exe\" -Command \"Get-Content -LiteralPath '.agents/skills/ss-java-module/SKILL.md' -Raw\"",
+      "comparison": "Exact body plus console CRLF"
+    }
+  ],
+  "catalogue_entries": 24,
+  "catalogue_unique_names_and_paths": true,
+  "duration_seconds": 328.016,
+  "model": null,
+  "reasoning_effort": null,
+  "application_tests_executed_by_reviewer": false,
+  "reviewer_reran_case": false,
+  "candidate_or_source_modified": false,
+  "prior_results_used": false,
+  "human_validation": false,
+  "personal_installation": false,
+  "criteria": [
+    {
+      "id": "I01",
+      "verdict": "PASS",
+      "evidence": "11 pièces figées et 17 entrées conformes taille/SHA ; 14 sources reliées au manifeste. Trace, requête, réponse et journal brut concordent.",
+      "limit": "Le SHA métier et le SHA préparatoire sont distincts ; aucun état applicatif qualifié."
+    },
+    {
+      "id": "I02",
+      "verdict": "PASS",
+      "evidence": "Export natif exactement égal au journal brut après retrait des seuls événements reasoning ; réponse exacte du dernier agent_message ; collecte complète et codes0.",
+      "limit": "Les horaires d’événements sont des réceptions locales, pas des temps de pensée."
+    },
+    {
+      "id": "I03",
+      "verdict": "PASS",
+      "evidence": "19 commandes réellement terminées relues ; uniquement lectures/recherches autorisées, sans oracle, ancienne réponse, effet métier ou mutation.",
+      "limit": "Les textes et propositions restent des données ; le contrôle de périmètre est distinct de la décision comportementale."
+    },
+    {
+      "id": "domain-browser",
+      "verdict": "PASS",
+      "evidence": "Réponse §3.1 : BrowserContext dans Order refusé ; valeurs métier, déclencheur/source et date/UTC séparés ; accès par Runtime/Executor/ProviderAccess existants. Executor23–25/42–60 et POM251–290 corroborent les frontières.",
+      "limit": "Invariants des deux classes de données hors liste explicitement inconnus."
+    },
+    {
+      "id": "main-source-worker",
+      "verdict": "PASS",
+      "evidence": "§3.2 : refus sources/dépendances communes ; profil provider-playwright-runtime, JAR classifié et sorties séparées nommés, compiler/package/lancer distincts. POM251–314.",
+      "limit": "Aucune nouvelle compilation ou qualification Chromium."
+    },
+    {
+      "id": "startup-fallback",
+      "verdict": "PASS",
+      "evidence": "§3.3 : PostConstruct et secours RestClient fournisseur refusés ; WorkerArtifactInvalid avant IPC/processus ; J3 adopté distingué des flags et de la perte du contexte live. Runtime69–98, Child277–311, Verify-Local56–71.",
+      "limit": "Bindings et code worker non autorisés restent non établis ; indisponibilité ne déclenche aucun remplacement."
+    },
+    {
+      "id": "forced-reactor",
+      "verdict": "PASS",
+      "evidence": "§3.4 : cinq modules obligatoires refusés ; packages/couches distincts des modules Maven, conservation minimale du monomodule et du profil worker.",
+      "limit": "Une extraction future exige un besoin démontré ; aucun refactoring appliqué."
+    },
+    {
+      "id": "parser-and-storage",
+      "verdict": "PASS",
+      "evidence": "§3.5 : substitution des revues refusée ; relais explicites ss-data-contract-replay et ss-postgres-change, provenance brut/normalisé, migration append-only et upgrade ; deux skills autorisés lus réellement item_18.",
+      "limit": "Format/colonne non fournis ; aucune migration détaillée ou atomicité non lue approuvée."
+    },
+    {
+      "id": "concrete-policy",
+      "verdict": "PASS",
+      "evidence": "§3.6 : superviseur concret dans domaine refusé ; contrats existants utilisés dans application ; constructeur concret du décorateur reconnu et distingué de la règle métier. Resilient20–39.",
+      "limit": "Pas de séparation parfaite inventée : catalogue, parseur et exception adapter de Executor restent visibles."
+    },
+    {
+      "id": "untrusted-proposals-and-controls",
+      "verdict": "PASS",
+      "evidence": "Introduction refuse design_note demandant approbation/suppression des gardes. §4 sépare contrôles proposés des tests exécutés ; relais ss-verify explicite, garde com.microsoft.playwright/src/main décrit précisément.",
+      "limit": "Lecture et analyse seules ; limites du corpus et des tests conservées."
+    },
+    {
+      "id": "full-candidate-read",
+      "verdict": "PASS",
+      "evidence": "item_1 lit intégralement le candidat .3 exact avec code0 ; comparaison corps entier + CRLF console.",
+      "limit": "Lecture native par outil, pas injection automatique."
+    }
+  ],
+  "limits": [
+    "Catalogue reconstruit après exécution : pas capture de requête transmise ni preuve d’injection automatique du corps par le CLI.",
+    "Modèle et effort effectifs non exposés ; réglages par défaut.",
+    "Gain général de temps/qualité non mesuré.",
+    "Aucune qualification applicative, collecte fournisseur, installation ou validation humaine déduite."
+  ],
+  "verdict": "PASS",
+  "blocking_findings": []
+}

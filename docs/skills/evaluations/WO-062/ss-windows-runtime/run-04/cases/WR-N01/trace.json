@@ -1,0 +1,194 @@
+{
+  "case_id": "WR-N01",
+  "skill": "ss-windows-runtime",
+  "run_id": "run-04",
+  "started_at_utc": "2026-09-15T23:37:12.588371+00:00",
+  "ended_at_utc": "2026-09-15T23:46:04.420394+00:00",
+  "duration_seconds": 531.828,
+  "mode": "native_codex_exec_ephemeral_workspace-write",
+  "execution_mode": "bounded_local_runtime",
+  "cli_version": "codex-cli 0.154.0-alpha.6.2",
+  "model": null,
+  "reasoning_effort": null,
+  "model_note": "Configured defaults; exact model/effort not exposed, no override.",
+  "launch_arguments": [
+    "exec",
+    "--ephemeral",
+    "--sandbox",
+    "workspace-write",
+    "--cd",
+    "C:\\Dev\\BettingProject\\codex\\betting-sofascore-local-lab\\.tmp\\wo062-skills-lot2\\.tmp\\wo062-evaluations\\ss-windows-runtime\\run-04\\WR-N01",
+    "--json",
+    "--output-last-message",
+    "C:\\Dev\\BettingProject\\codex\\betting-sofascore-local-lab\\.tmp\\wo062-skills-lot2\\.tmp\\wo062-evaluations\\ss-windows-runtime\\run-04\\WR-N01\\output\\response.md",
+    "-"
+  ],
+  "exit_code": 0,
+  "turn_completed": true,
+  "candidate_sha256": "b89925d5395238010bb0afe9c1e1a22b0aa5ec4e7d1fb9946c671d241e7976c6",
+  "source_head": "79d0f99c393a06d4d2e81749a55fb3bfbd222cc3",
+  "input_files": [
+    {
+      "path": "AGENTS.md",
+      "sha256": "6509ac77cd4c87094a91da7e4c750b5991eeb4585a69a609def5289b91cf6ab5",
+      "bytes": 10320
+    },
+    {
+      "path": "scripts/Preflight-Local.ps1",
+      "sha256": "2c8480640262a3e7faa80d7ac194867666f520f0b9048730d493e3b80fa1e318",
+      "bytes": 1940
+    },
+    {
+      "path": "scripts/Verify-Local.ps1",
+      "sha256": "068bf5a3826fe77c9bb8fe5984b0cd80fef44d04aee17008b4d8e021369ba3ff",
+      "bytes": 6256
+    },
+    {
+      "path": "pom.xml",
+      "sha256": "e01e011e360fa847842d826a5bcf2960c34eae91da037e2a6f002e71a3513a46",
+      "bytes": 16856
+    },
+    {
+      "path": "mvnw.cmd",
+      "sha256": "d1c7f9e92c2ea256572d33996318bc550726ef2c987a88fb4d783e736ea068ce",
+      "bytes": 172
+    },
+    {
+      "path": ".mvn/wrapper/maven-wrapper.properties",
+      "sha256": "51b221ede4e074d19bb44d6d485bb7b298e77874572a09697aba0a9e234e0745",
+      "bytes": 259
+    },
+    {
+      "path": "src/main/resources/application.yml",
+      "sha256": "9036e582ba1fe78fb934669853a91b7277511d099558352c97f28792f1821e28",
+      "bytes": 12048
+    },
+    {
+      "path": "inputs/runtime-protocol.md",
+      "sha256": "b4748a356b881a8574a78156c0ac00c90f493874efe8303d40a7224c12d91a52",
+      "bytes": 10630
+    },
+    {
+      "path": "inputs/fixtures/NativeProbe.java",
+      "sha256": "4e29c5867eba0fb76518de2307391449c83450449bea0393179738505c69bc8b",
+      "bytes": 1009
+    },
+    {
+      "path": ".agents/skills/ss-windows-runtime/SKILL.md",
+      "sha256": "b89925d5395238010bb0afe9c1e1a22b0aa5ec4e7d1fb9946c671d241e7976c6",
+      "bytes": 9217
+    },
+    {
+      "path": ".agents/skills/ss-windows-runtime/agents/openai.yaml",
+      "sha256": "3038015980952bc18b21f45f0d4af514b35a8841394e4b80824986b7e30ccd9f",
+      "bytes": 300
+    },
+    {
+      "path": "input.json",
+      "sha256": "76687203add1b1059600052f0f8809cd915224628738a937733b7f69e18374b7",
+      "bytes": 1643
+    },
+    {
+      "path": "inputs/windows-session-protocol.md",
+      "bytes": 6479,
+      "sha256": "3658c70cd4a00d2902ecac2e99e79a2daa0fb500ac2f59d8d861b744b97a6c73"
+    }
+  ],
+  "prompt_sha256": "526d0d877ac644775f25742231f5f870bbe3bfacfb729e66a59a933082c10c5b",
+  "request_sha256": "9a8ae7919086b621572be081ccad12740d586fb5dbf586fe86614300fdae30ec",
+  "oracle_supplied": false,
+  "design_history_supplied": false,
+  "raw_events_sha256": "61c9bb12a8e7d800a1e1afd5b78187c75c9ff8d184a2ea410fafd3090047f801",
+  "native_events_sha256": "fb3560c672b50ae1f9b13ce52d4dd20cce0e1cf99c3e41f2782b41fd32a536b2",
+  "commands_completed": 10,
+  "response_sha256": "a48bbd66fa90d89bc70700109bb7153d04a33beef4c59de94e098b687cfc1225",
+  "catalogue_sha256": "ff953a6a287ab7df7a9f33e45838fe49741f93b4899f1d2c7c9c5417ac45caab",
+  "catalogue_note": "Local reconstruction after execution, not a capture of the transmitted request.",
+  "published_events_note": "Internal reasoning omitted; actual command outputs retained.",
+  "usage": {
+    "input_tokens": 516823,
+    "cached_input_tokens": 456320,
+    "cache_write_input_tokens": 0,
+    "output_tokens": 16478,
+    "reasoning_output_tokens": 1628
+  },
+  "selection_instrumented": false,
+  "qualification_limit": "Tool-mediated selection/load with declared envelope; no automatic CLI injection claim.",
+  "timed_out": false,
+  "automatic_retry": false,
+  "diagnostics": [],
+  "qualification_status": "NOT_REVIEWED",
+  "runtime_artifacts": [
+    {
+      "path": "conductor-stderr.txt",
+      "frozen": true,
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      "bytes": 0
+    },
+    {
+      "path": "conductor-stdout.txt",
+      "frozen": true,
+      "sha256": "45f0c5fec1e56a68d83f569d11b298fcd83566d7fd1edbe5c1ea842e30082771",
+      "bytes": 70
+    },
+    {
+      "path": "evidence-available.json",
+      "frozen": true,
+      "sha256": "5573003d72b251307829e974522f803c98ddd8d17bcda681484c92b7210896cd",
+      "bytes": 162
+    },
+    {
+      "path": "Invoke-Session.ps1",
+      "frozen": true,
+      "sha256": "84ac05b690e81bddc941e86f3c8bdaca0bd4feef52b8d9c043a875e3b9698266",
+      "bytes": 2279
+    },
+    {
+      "path": "Invoke-WRN01.ps1",
+      "frozen": true,
+      "sha256": "f2ee80eee72346626aa6b20963e62235494ea02879dff64be89715ec7e527e3e",
+      "bytes": 16889
+    },
+    {
+      "path": "launch.json",
+      "frozen": true,
+      "sha256": "d1bc1a920dcc71cc6561c241d51f78a6b21cd64ce8ac11ad78d53a3d784e2207",
+      "bytes": 738
+    },
+    {
+      "path": "note-qualification.md",
+      "frozen": true,
+      "sha256": "3436f91f0b84eaef3ec70b5e24686b888eb327370ff5ce38236ce16e049ca86f",
+      "bytes": 4731
+    },
+    {
+      "path": "observations.json",
+      "frozen": true,
+      "sha256": "677d5f3bc57b917f7c8e1802899901773e51e506505bd229094dacd6acf67890",
+      "bytes": 3377
+    },
+    {
+      "path": "postflight.json",
+      "frozen": true,
+      "sha256": "760b1e72c313db871aee60d75727c7540db57a8fa3b941b53389830da936f229",
+      "bytes": 555
+    },
+    {
+      "path": "prompt-return.json",
+      "frozen": true,
+      "sha256": "f35f701d80b2bb174fccd8bbffe3146164f38032e01d9b6c8ed66af88d286113",
+      "bytes": 191
+    },
+    {
+      "path": "return.json",
+      "frozen": true,
+      "sha256": "240e33d1fc52714e5a8f0c4d4def4ed29f71212d13a001e1d0003e2a365cab4b",
+      "bytes": 180
+    }
+  ],
+  "collection_completed": true,
+  "collector_exit_code": 0,
+  "collector_started_at_utc": "2026-09-15T23:46:04.420394+00:00",
+  "collector_finished_before_freeze_at_utc": "2026-09-15T23:46:05.748341+00:00",
+  "timing_instrumentation": "Per-event receipt UTC/monotonic time, no model reasoning text; separate collector timestamps"
+}

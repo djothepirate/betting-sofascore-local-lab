@@ -1,0 +1,20 @@
+{
+  "schema": "wo062-c4-publication-provenance-v1",
+  "publisher_source_head": "cb67d18c66aaa3989bfc6121ed7b51945fd95f9f",
+  "candidate_body_commit": "9e7b777e3be75f582f2198dfa8cca386b43426c2",
+  "candidate_package_commit": "9e7b777e3be75f582f2198dfa8cca386b43426c2",
+  "source_head": "79d0f99c393a06d4d2e81749a55fb3bfbd222cc3",
+  "preparation_commit": "2691f32",
+  "windows_review_commit": "cb67d18",
+  "candidate_frozen_before_execution": true,
+  "preflight_and_operational_inputs_committed_before_execution": true,
+  "oracle_and_previous_answers_excluded": true,
+  "publisher_sha256": "8ffbd5bbf50e17578ed193f2874e462c9fd04c92cfdf346c91051ad0e5dea8dc",
+  "reused_publisher_sha256": "e1596d4c0731d1e71a521deb173d532aa6f44c14c9da25164e1e2013a871f5cd",
+  "candidate_version": "0.1.0-candidate.1",
+  "sessions": 2,
+  "model": null,
+  "reasoning_effort": null,
+  "human_validation": false,
+  "personal_installation": false
+}
