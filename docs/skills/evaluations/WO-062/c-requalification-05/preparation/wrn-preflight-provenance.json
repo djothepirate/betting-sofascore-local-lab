@@ -1,0 +1,53 @@
+{
+  "schema": "wo062-c5-wrn-preflight-provenance-v1",
+  "executed_at_utc": "2026-09-16T00:34:29Z",
+  "source_commit": "966062d677c30e7ce67b61454bd54695497064f5",
+  "process_form": "powershell.exe -NoProfile -NonInteractive -ExecutionPolicy Bypass -File <output/runtime-artifacts/Invoke-WRN01.ps1> -PreflightOnly",
+  "scope": "Bounded no-Java verification of the exact C5 conductor template after copying it to the same output/runtime-artifacts layout it will use in the isolated case.",
+  "result": {
+    "exit_code": 0,
+    "main_result": "PREFLIGHT_VERIFIED_NO_JAVA",
+    "cleanup_result": "CONFIRMED",
+    "runtime_root_absent": true,
+    "java_discovery_or_launch": "NOT_PERFORMED"
+  },
+  "validated_order": [
+    "runtime_registered without fixture fingerprint",
+    "conductor_dependencies_checked in the launched Windows PowerShell 5.1 Desktop process",
+    "direct .NET SHA-256 self-test",
+    "fixture_fingerprint",
+    "preflight completion without Java discovery, temporary root or JVM"
+  ],
+  "files": [
+    {
+      "path": "../wrn-conductor-dependency-preflight.ps1",
+      "bytes": 5067,
+      "sha256": "2fc352093e470677f9c386bb11ea7700f687d3950eafafc596445fa123faf368"
+    },
+    {
+      "path": "../wrn-conductor-template.ps1",
+      "bytes": 29020,
+      "sha256": "b1f4cd49dc1ae97eb7218e75afc9d14dab007d9970131ca38e2bfddcfcc0615a"
+    },
+    {
+      "path": "wrn-dependency-preflight-observation.json",
+      "bytes": 4663,
+      "sha256": "6269118750e278c752fcaa0b5310241f1facb0d60a6e44fcaf210f96083dbf44"
+    },
+    {
+      "path": "wrn-template-preflight-observation.json",
+      "bytes": 10108,
+      "sha256": "0288f3a60f2f7e6017d6d244420a271d54e7578c1e9363fa1cc4d0c40b68345e"
+    },
+    {
+      "path": "wrn-template-preflight-evidence-available.json",
+      "bytes": 162,
+      "sha256": "ee84470f79a12ade14e2a3bacb0fc246574221119c06ff3f736f2a5cc0bcd4ff"
+    }
+  ],
+  "does_not_qualify": [
+    "The preflight does not launch Java, failure or sleep.",
+    "It does not substitute for the checks and evidence that the full C5 conductor repeats in its own process.",
+    "It does not validate the skill, human acceptance, personal installation or the application."
+  ]
+}

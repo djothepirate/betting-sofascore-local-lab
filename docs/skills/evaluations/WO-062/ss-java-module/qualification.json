@@ -4,7 +4,7 @@
   "candidate_version": "0.1.0-candidate.4",
   "status": "CORRECTED_PENDING_EVALUATION",
   "source_commit": "6648dd423e556b5248b8793a539ae85a7680f9bc",
-  "source_head": "e24d0b0da54096c3172d510788bcb8f4cb00e296",
+  "source_head": "966062d677c30e7ce67b61454bd54695497064f5",
   "preparation_manifest_sha256": "a0907baba5a15606b6a735873a3e8ab9cc4043dfe8d852f3b843e1ec61b68290",
   "candidate_files": [
     {
@@ -18,9 +18,9 @@
       "sha256": "ccc4fc2a4707838dd6defdd73ef6f6c7ee0d69e6df86e41689a46884691573ae"
     }
   ],
-  "candidate_body_commit": null,
-  "candidate_package_commit": null,
-  "candidate_commit_state": "Pending the first C5 correction commit; the revision records the immutable base and candidate bytes.",
+  "candidate_body_commit": "966062d677c30e7ce67b61454bd54695497064f5",
+  "candidate_package_commit": "966062d677c30e7ce67b61454bd54695497064f5",
+  "candidate_commit_state": "The first C5 correction commit carries the immutable candidate bytes recorded in revision-04.",
   "distinct_cases": 8,
   "executions": 0,
   "total_executions": 25,

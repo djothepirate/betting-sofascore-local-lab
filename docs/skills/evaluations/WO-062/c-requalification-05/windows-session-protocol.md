@@ -56,14 +56,17 @@ vaut jamais une nouvelle exécution de son contenu.
 
 ## WR-N01 — préflight du conducteur puis deux JVM détenues
 
-Avant le conducteur complet, exécuter `inputs/wrn-conductor-dependency-preflight.ps1`
-avec `powershell.exe -NoProfile -NonInteractive -ExecutionPolicy Bypass -File`. Le
-script produit une preuve locale sans lancer Java : il enregistre d'abord le runtime
-du processus puis teste les dépendances du conducteur, observe éventuellement
-`Get-FileHash` sans en dépendre et valide son repli .NET SHA-256. Si ce préflight
-échoue, le signaler jusqu'à la réponse finale sans relance automatique. Sa réussite
-ne remplace pas les preuves de la conduite complète : celle-ci répète les contrôles
-dans son propre processus avant toute JVM.
+Avant le conducteur complet, copier sans modification
+`inputs/c5/wrn-conductor-template.ps1` sous
+`output/runtime-artifacts/Invoke-WRN01.ps1`, puis exécuter cette copie avec
+`powershell.exe -NoProfile -NonInteractive -ExecutionPolicy Bypass -File ...
+-PreflightOnly`. Le préflight produit une preuve locale sans lancer Java : il
+enregistre d'abord le runtime du processus puis teste les dépendances du conducteur,
+observe éventuellement `Get-FileHash` sans en dépendre et valide son repli .NET
+SHA-256. Si ce préflight échoue, le signaler jusqu'à la réponse finale sans relance
+automatique. Sa réussite ne remplace pas les preuves de la conduite complète : une
+nouvelle invocation normale de cette même copie répète les contrôles dans son propre
+processus avant toute JVM.
 
 Dans le conducteur complet, écrire `runtime_registered` avant toute empreinte. Puis
 enregistrer les dépendances du processus concerné, y compris l'observation de

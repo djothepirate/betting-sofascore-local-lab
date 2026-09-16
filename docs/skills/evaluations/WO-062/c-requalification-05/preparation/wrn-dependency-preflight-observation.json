@@ -1,0 +1,75 @@
+{
+    "case":  "WR-N01",
+    "phase":  "C5_DEPENDENCY_PREFLIGHT_ONLY",
+    "java_started":  false,
+    "status":  "PASS",
+    "events":  [
+                   {
+                       "event":  "runtime_registered",
+                       "utc":  "2026-09-16T00:28:31.4521586Z",
+                       "monotonic_ms":  255.82410000000002,
+                       "data":  {
+                                    "ps_version_table":  {
+                                                             "PSVersion":  "5.1.26100.9444",
+                                                             "PSEdition":  "Desktop",
+                                                             "PSCompatibleVersions":  "1.0 2.0 3.0 4.0 5.0 5.1.26100.9444",
+                                                             "BuildVersion":  "10.0.26100.9444",
+                                                             "CLRVersion":  "4.0.30319.42000",
+                                                             "WSManStackVersion":  "3.0",
+                                                             "PSRemotingProtocolVersion":  "2.3",
+                                                             "SerializationVersion":  "1.1.0.1"
+                                                         },
+                                    "pshome":  "C:\\Windows\\System32\\WindowsPowerShell\\v1.0",
+                                    "executable":  "C:\\Windows\\System32\\WindowsPowerShell\\v1.0\\powershell.exe",
+                                    "conductor_pid":  39216,
+                                    "cwd":  "C:\\Dev\\BettingProject\\codex\\betting-sofascore-local-lab\\.tmp\\wo062-skills-lot2",
+                                    "windows":  "Microsoft Windows NT 10.0.26200.0",
+                                    "is_64bit_os":  true,
+                                    "is_64bit_process":  true,
+                                    "clr":  "4.0.30319.42000",
+                                    "output_encoding":  "us-ascii",
+                                    "console_encoding":  "utf-8",
+                                    "artifact_encoding":  "UTF-8 no BOM"
+                                }
+                   },
+                   {
+                       "event":  "dependencies_checked",
+                       "utc":  "2026-09-16T00:28:31.4829174Z",
+                       "monotonic_ms":  282.7387,
+                       "data":  {
+                                    "runtime_registered_before_dependency_check":  true,
+                                    "get_file_hash_available":  true,
+                                    "get_file_hash_source":  "Microsoft.PowerShell.Utility",
+                                    "dotnet_sha256_type":  "System.Security.Cryptography.SHA256",
+                                    "file_open_read_available":  true,
+                                    "process_start_info_available":  true,
+                                    "powershell_module_path_changed":  false,
+                                    "module_imported":  false,
+                                    "java_started":  false
+                                }
+                   },
+                   {
+                       "event":  "net_sha256_self_tested",
+                       "utc":  "2026-09-16T00:28:31.4939226Z",
+                       "monotonic_ms":  293.80080000000004,
+                       "data":  {
+                                    "passed":  true,
+                                    "sha256":  "ba7816bf8f01cfea414140de5dae2223b00361a396177a9cb410ff61f20015ad",
+                                    "vector":  "ascii:abc"
+                                }
+                   },
+                   {
+                       "event":  "fixture_hashed_after_runtime",
+                       "utc":  "2026-09-16T00:28:31.5054664Z",
+                       "monotonic_ms":  306.14050000000003,
+                       "data":  {
+                                    "path":  "C:\\Dev\\BettingProject\\codex\\betting-sofascore-local-lab\\.tmp\\wo062-skills-lot2\\docs\\skills\\evaluations\\WO-062\\ss-windows-runtime\\fixtures\\NativeProbe.java",
+                                    "sha256":  "4e29c5867eba0fb76518de2307391449c83450449bea0393179738505c69bc8b",
+                                    "bytes":  1009,
+                                    "algorithm":  ".NET SHA256"
+                                }
+                   }
+               ],
+    "fixture_sha256":  "4e29c5867eba0fb76518de2307391449c83450449bea0393179738505c69bc8b",
+    "elapsed_ms":  307.0639
+}
