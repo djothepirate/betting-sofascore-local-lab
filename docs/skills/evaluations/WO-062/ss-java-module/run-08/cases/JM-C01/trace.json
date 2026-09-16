@@ -1,0 +1,152 @@
+{
+  "case_id": "JM-C01",
+  "skill": "ss-java-module",
+  "run_id": "run-08",
+  "started_at_utc": "2026-09-16T12:44:38.340013+00:00",
+  "ended_at_utc": "2026-09-16T12:50:15.539094+00:00",
+  "duration_seconds": 337.204,
+  "mode": "native_codex_exec_ephemeral_read-only",
+  "execution_mode": "read_only",
+  "cli_version": "codex-cli 0.154.0-alpha.6.2",
+  "model": null,
+  "reasoning_effort": null,
+  "model_note": "Configured defaults; exact model/effort not exposed, no override.",
+  "launch_arguments": [
+    "exec",
+    "--ephemeral",
+    "--sandbox",
+    "read-only",
+    "--cd",
+    "C:\\Dev\\BettingProject\\codex\\betting-sofascore-local-lab\\.tmp\\wo062-skills-lot2\\.tmp\\wo062-evaluations\\ss-java-module\\run-08\\JM-C01",
+    "--json",
+    "--output-last-message",
+    "C:\\Dev\\BettingProject\\codex\\betting-sofascore-local-lab\\.tmp\\wo062-skills-lot2\\.tmp\\wo062-evaluations\\ss-java-module\\run-08\\JM-C01\\output\\response.md",
+    "-"
+  ],
+  "exit_code": 0,
+  "turn_completed": true,
+  "candidate_sha256": "d7171f978c2b13c852c2ce5e170d68c1bfc5087552661cfdc6271077a0fe6637",
+  "source_head": "dd9ec3c1b6b9f542495f6b0078b5fd7c3d695648",
+  "input_files": [
+    {
+      "path": "AGENTS.md",
+      "sha256": "6509ac77cd4c87094a91da7e4c750b5991eeb4585a69a609def5289b91cf6ab5",
+      "bytes": 10320
+    },
+    {
+      "path": "ADR-SS-007-j3-automation-durable-catalog-and-live-pause.md",
+      "sha256": "b819ba63c2fb5cbacf1afca115f6ab0597956b1ff8c9377f3e7beb14fba3eb07",
+      "bytes": 36758
+    },
+    {
+      "path": "docs/architecture/ARCHITECTURE.md",
+      "sha256": "518fc0ff0d0991c9e9765d01899526c536806e952ce5ea2a10cda2cf500ba8ce",
+      "bytes": 41164
+    },
+    {
+      "path": "scripts/Verify-Local.ps1",
+      "sha256": "068bf5a3826fe77c9bb8fe5984b0cd80fef44d04aee17008b4d8e021369ba3ff",
+      "bytes": 6256
+    },
+    {
+      "path": "pom.xml",
+      "sha256": "e01e011e360fa847842d826a5bcf2960c34eae91da037e2a6f002e71a3513a46",
+      "bytes": 16856
+    },
+    {
+      "path": "src/main/resources/application.yml",
+      "sha256": "9036e582ba1fe78fb934669853a91b7277511d099558352c97f28792f1821e28",
+      "bytes": 12048
+    },
+    {
+      "path": "src/main/java/com/bettingproject/sofascorelocal/application/network/J3RuntimeService.java",
+      "sha256": "6541e21a443baea843695e13219508f8c441f4470db2ea4569cd236675ed8b46",
+      "bytes": 21918
+    },
+    {
+      "path": "src/main/java/com/bettingproject/sofascorelocal/application/network/J3CollectionExecutor.java",
+      "sha256": "17c66c6a576f9427948103367f5b453d25c1f796558368f987646e381becf872",
+      "bytes": 12229
+    },
+    {
+      "path": "src/main/java/com/bettingproject/sofascorelocal/application/network/playwright/PlaywrightProviderCampaignFactory.java",
+      "sha256": "7edddaf1747cce3a53f8f77353e53506126cd51123ede089a5d4418ba6b081bf",
+      "bytes": 3540
+    },
+    {
+      "path": "src/main/java/com/bettingproject/sofascorelocal/application/network/playwright/PlaywrightProviderSupervisor.java",
+      "sha256": "d6508cae251175e0de0dddd266448c081441aaa19d6019e4c51fe3ba8ba1064e",
+      "bytes": 455
+    },
+    {
+      "path": "src/main/java/com/bettingproject/sofascorelocal/application/network/playwright/ResilientPlaywrightProviderCampaignFactory.java",
+      "sha256": "8836c0d3ba70c05415c629a72727dbc6b255920832a303fc0a52a78a26e3da91",
+      "bytes": 15275
+    },
+    {
+      "path": "src/main/java/com/bettingproject/sofascorelocal/application/network/playwright/ChildJvmPlaywrightProviderSupervisor.java",
+      "sha256": "1cc6dd4fb35c730972578cd49e62e12410eae74bbae143ca0e88f778abec0d5b",
+      "bytes": 98186
+    },
+    {
+      "path": "docs/skills/local-lab/ss-data-contract-replay/SKILL.md",
+      "sha256": "ecaffcae31979a735d2ce240b9583da0d75fa296152fc4a5fca1c211affa7ef1",
+      "bytes": 2558
+    },
+    {
+      "path": "docs/skills/local-lab/ss-postgres-change/SKILL.md",
+      "sha256": "8a89922f8cc1dd5144e054f0586d6d24f92d2a1c82264d37e00642d8376d9e2c",
+      "bytes": 2673
+    },
+    {
+      "path": ".agents/skills/ss-java-module/SKILL.md",
+      "sha256": "d7171f978c2b13c852c2ce5e170d68c1bfc5087552661cfdc6271077a0fe6637",
+      "bytes": 11263
+    },
+    {
+      "path": ".agents/skills/ss-java-module/agents/openai.yaml",
+      "sha256": "ccc4fc2a4707838dd6defdd73ef6f6c7ee0d69e6df86e41689a46884691573ae",
+      "bytes": 309
+    },
+    {
+      "path": "input.json",
+      "sha256": "38f00cf3836afdf6c7cfe4c382705c711c6fd86b096b594fbb8735841e8b3326",
+      "bytes": 1995
+    }
+  ],
+  "prompt_sha256": "434e6a8abd8c2678fbf92411b06af8b4a0d1e3194b4c34f660d55e46daca87ac",
+  "request_sha256": "77a742cb2b6330c9a541e513b01a4986e612a1d077c84f04dc685aed6daaa7f3",
+  "oracle_supplied": false,
+  "design_history_supplied": false,
+  "raw_events_sha256": "64fc7bb8e428343cae89ee06ed03ed762ae8f4ea716769beabfb0197c1a3c004",
+  "native_events_sha256": "d917800086a466a1f60fd8861e2fb6ffa85a0e356e0f160a8ab976fc735bd38e",
+  "commands_completed": 20,
+  "response_sha256": "886ea7ace97a6251818ae146a68cc944c4c7a3f19d8bba7e062a79897d4b7ddd",
+  "catalogue_sha256": "b44db2b868c72d9af4e542dab1f499c3f9f504a296d38f37d6167e5a0e6a921d",
+  "catalogue_note": "Local reconstruction after execution, not a capture of the transmitted request.",
+  "published_events_note": "Internal reasoning omitted; actual command outputs retained.",
+  "usage": {
+    "input_tokens": 656152,
+    "cached_input_tokens": 560384,
+    "cache_write_input_tokens": 0,
+    "output_tokens": 9684,
+    "reasoning_output_tokens": 2512
+  },
+  "selection_instrumented": false,
+  "qualification_limit": "Tool-mediated selection/load with declared envelope; no automatic CLI body-injection claim.",
+  "timed_out": false,
+  "automatic_retry": false,
+  "diagnostics": [],
+  "reading_audit": {
+    "path": "output/reading-audit.json",
+    "sha256": "6f48f3df25de1356317b86a48e42e0334b5391642bae0d9429596e868189280b",
+    "status": "NOT_APPLICABLE"
+  },
+  "qualification_status": "NOT_REVIEWED",
+  "runtime_artifacts": [],
+  "collection_completed": true,
+  "collector_exit_code": 0,
+  "collector_started_at_utc": "2026-09-16T12:50:15.539094+00:00",
+  "collector_finished_before_freeze_at_utc": "2026-09-16T12:50:16.533613+00:00",
+  "timing_instrumentation": "Per-event receipt UTC/monotonic time, no model reasoning text; separate collector timestamps"
+}

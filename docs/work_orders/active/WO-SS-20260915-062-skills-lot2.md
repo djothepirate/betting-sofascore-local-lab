@@ -608,7 +608,13 @@ la fusion. La clôture effective suit cette fusion. Publication, fusion, promoti
 installation personnelle ne sont pas déduits de la seule préparation du WO.
 
 **Suite en cours :** C7 reste achevé et historique : sept sessions Java .4 fraîches, six PASS et un FAIL sémantique JM-N01 sont gelés et revus, avec JM-H01 C6 PASS.
-Le candidat ss-java-module .5 obtient un PASS sur l'observation ciblée JM-N01 : l'interdiction de transfert live/J3 est explicitement restituée. Le SHA .5 est inchangé et les huit cas formels restent NOT_RUN ; une campagne fraîche, JM-N01 compris, exige une autorisation distincte et ne recyclera pas cette observation.
+Le candidat ss-java-module .5 a maintenant une campagne C8 formelle fraîche complète :
+`JM-H01`, `JM-N01`, `JM-C01`, `JM-C02`, `JM-S01`, `JM-S02`, `JM-S03` et `JM-S04` sont tous
+PASS. Les huit sessions ont été exécutées séquentiellement, avec preuves gelées, postflight
+d'intégrité PASS et revue sémantique postérieure. L'observation-08 reste conservée comme
+observation ciblée non recyclable. Le résultat exact est `8 PASS / 0 FAIL / 0 BLOCKED` pour
+le SHA .5 ; le candidat est formellement qualifié mais reste en attente de validation humaine
+propriétaire. Aucune installation personnelle ne découle de cette qualification.
 Les corrections .4 sur le blocage de sofascore-live-test, la perte terminale du contexte live et le garde textuel précis sont conservées. JM-C02 conserve deux reprises internes de sampling dans une seule session, sans relance du conducteur.
 Le préflight Windows hôte sans modèle est désormais démontré dans un contexte physique formel byte-à-byte conforme, détenu par l'hôte et conservant le run logique C5 `run-05`; il isole l'échec C5 aux ACL/propriétaires de ses contextes gelés. WR-H01 et WR-N01 restent non lancés et non consommés : le préflight ne vaut ni recette ni réponse de modèle.
 Validation humaine et installation C restent postérieures à une qualification complète ; suivront ensuite la consolidation D, la livraison Git et la clôture selon le workflow ci-dessus.

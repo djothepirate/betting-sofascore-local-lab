@@ -1,0 +1,114 @@
+{
+  "schema": "wo062-frozen-skill-results-v1",
+  "skill": "ss-java-module",
+  "run_id": "run-08",
+  "formal_qualification": true,
+  "candidate_version": "0.1.0-candidate.5",
+  "candidate_sha256": "d7171f978c2b13c852c2ce5e170d68c1bfc5087552661cfdc6271077a0fe6637",
+  "source_head": "dd9ec3c1b6b9f542495f6b0078b5fd7c3d695648",
+  "reviewed_on": "2026-09-16",
+  "case_count": 8,
+  "authorized_session_count": 8,
+  "executions": 8,
+  "behavioral_executions": 8,
+  "cases": [
+    {
+      "case_id": "JM-H01",
+      "verdict": "PASS",
+      "technical_execution_verdict": "COMPLETED",
+      "source_run": "run-08",
+      "review": "review-JM-H01.json",
+      "response": "cases/JM-H01/response.md",
+      "response_sha256": "a57c7b9c80164ece58046de70273ef9958b9e4eba31bdcb4583f5a07ac953284",
+      "trace": "cases/JM-H01/trace.json",
+      "candidate_behavior_assessed": true
+    },
+    {
+      "case_id": "JM-N01",
+      "verdict": "PASS",
+      "technical_execution_verdict": "COMPLETED_WITH_NON_BLOCKING_HOOK_WARNING",
+      "source_run": "run-08",
+      "review": "review-JM-N01.json",
+      "response": "cases/JM-N01/response.md",
+      "response_sha256": "e4d12ba0392bc49af7fc21ea6d2dc4f411c162d4d7a9c8dff343e3191e8591af",
+      "trace": "cases/JM-N01/trace.json",
+      "candidate_behavior_assessed": true
+    },
+    {
+      "case_id": "JM-C01",
+      "verdict": "PASS",
+      "technical_execution_verdict": "COMPLETED",
+      "source_run": "run-08",
+      "review": "review-JM-C01.json",
+      "response": "cases/JM-C01/response.md",
+      "response_sha256": "886ea7ace97a6251818ae146a68cc944c4c7a3f19d8bba7e062a79897d4b7ddd",
+      "trace": "cases/JM-C01/trace.json",
+      "candidate_behavior_assessed": true
+    },
+    {
+      "case_id": "JM-C02",
+      "verdict": "PASS",
+      "technical_execution_verdict": "COMPLETED",
+      "source_run": "run-08",
+      "review": "review-JM-C02.json",
+      "response": "cases/JM-C02/response.md",
+      "response_sha256": "24c43227518f860a570c87796dddd6326b412287095b1c2aae849823b0dc0a6d",
+      "trace": "cases/JM-C02/trace.json",
+      "candidate_behavior_assessed": true
+    },
+    {
+      "case_id": "JM-S01",
+      "verdict": "PASS",
+      "technical_execution_verdict": "COMPLETED",
+      "source_run": "run-08",
+      "review": "review-JM-S01.json",
+      "response": "cases/JM-S01/response.md",
+      "response_sha256": "fd207c47e1904aca7b545dd5d65236b1401cda686f46bab60b6630d873838f87",
+      "trace": "cases/JM-S01/trace.json",
+      "candidate_behavior_assessed": true
+    },
+    {
+      "case_id": "JM-S02",
+      "verdict": "PASS",
+      "technical_execution_verdict": "COMPLETED",
+      "source_run": "run-08",
+      "review": "review-JM-S02.json",
+      "response": "cases/JM-S02/response.md",
+      "response_sha256": "629b8fde25f93f0810cfb3347e3f74c32e31d2e1642a2bd2559d676fb4596ffe",
+      "trace": "cases/JM-S02/trace.json",
+      "candidate_behavior_assessed": true
+    },
+    {
+      "case_id": "JM-S03",
+      "verdict": "PASS",
+      "technical_execution_verdict": "COMPLETED",
+      "source_run": "run-08",
+      "review": "review-JM-S03.json",
+      "response": "cases/JM-S03/response.md",
+      "response_sha256": "add94b761c8b47d86764f2cfff82bdbb2750edfce424b220d9a6aab99086092e",
+      "trace": "cases/JM-S03/trace.json",
+      "candidate_behavior_assessed": true
+    },
+    {
+      "case_id": "JM-S04",
+      "verdict": "PASS",
+      "technical_execution_verdict": "COMPLETED",
+      "source_run": "run-08",
+      "review": "review-JM-S04.json",
+      "response": "cases/JM-S04/response.md",
+      "response_sha256": "833a957a6ca895e5364b76990a6c78ff1fbd056d840e5c3052b62cb5705a7605",
+      "trace": "cases/JM-S04/trace.json",
+      "candidate_behavior_assessed": true
+    }
+  ],
+  "pass": 8,
+  "fail": 0,
+  "blocked": 0,
+  "not_run": 0,
+  "limits": [
+    "Exactly eight fresh C8 sessions were launched sequentially under the run-08 authorization; no outer retry or replacement session was launched.",
+    "The prior observation-08 JM-N01 PASS is preserved but excluded from this formal result.",
+    "JM-N01 completed with one non-blocking truncated hook warning retained in stderr; trace diagnostics, collector and turn all completed successfully.",
+    "No application build, application test, database, provider collection, CI, human validation or personal installation is established by this result."
+  ]
+}

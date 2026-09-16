@@ -1,0 +1,310 @@
+import datetime
+import hashlib
+import json
+import pathlib
+import shutil
+
+
+ROOT = pathlib.Path.cwd()
+RUNTIME = ROOT / '.tmp' / 'wo062-evaluations' / 'ss-java-module' / 'run-08'
+FROZEN = RUNTIME / 'frozen'
+PUBLIC = ROOT / 'docs' / 'skills' / 'evaluations' / 'WO-062' / 'ss-java-module' / 'run-08'
+PREPARATION = ROOT / 'docs' / 'skills' / 'evaluations' / 'WO-062' / 'c-requalification-08' / 'preparation'
+CASES = ['JM-H01', 'JM-N01', 'JM-C01', 'JM-C02', 'JM-S01', 'JM-S02', 'JM-S03', 'JM-S04']
+CANDIDATE_SHA256 = 'd7171f978c2b13c852c2ce5e170d68c1bfc5087552661cfdc6271077a0fe6637'
+CANDIDATE_VERSION = '0.1.0-candidate.5'
+CANDIDATE_BODY_COMMIT = 'd77b614'
+
+
+def sha256(path):
+    digest = hashlib.sha256()
+    with path.open('rb') as stream:
+        for block in iter(lambda: stream.read(1024 * 1024), b''):
+            digest.update(block)
+    return digest.hexdigest()
+
+
+def read_json(path):
+    return json.loads(path.read_text(encoding='utf-8-sig'))
+
+
+def write_json(path, value):
+    path.write_text(json.dumps(value, indent=2, ensure_ascii=False) + '\n', encoding='utf-8')
+
+
+def review_markdown(case_id, verdict, summary, criteria, limitations):
+    lines = [
+        f'# Revue C8 — {case_id}',
+        '',
+        f'**Verdict : {verdict}.**',
+        '',
+        summary,
+        '',
+        '## Critères',
+        '',
+    ]
+    for criterion in criteria:
+        lines.extend([
+            f"- **{criterion['criterion_id']} — {criterion['result']}** : {criterion['evidence']}",
+        ])
+    lines.extend(['', '## Limites', ''])
+    lines.extend([f'- {limit}' for limit in limitations])
+    lines.append('')
+    return '\n'.join(lines)
+
+
+semantic = {
+    'JM-H01': {
+        'summary': (
+            'La réponse explique la borne TCP historique, conserve les deux validations parent/enfant, '
+            'distingue les preuves WO-030 du candidat courant et propose seulement des vérifications futures.'
+        ),
+        'tokens': ['65536', 'isSafeConfiguration', 'parseOrigin', 'claimExecution', 'daf55bf', '154349', 'sofascore-live-test'],
+        'criteria': [
+            ('historical-boundary-and-two-guards', 'La réponse restitue le port 65536, les deux gardes nommés, la matrice fermée et le claim réellement appelé.'),
+            ('historical-scope-and-current-boundaries', 'Elle identifie base et commit qualifié, ne recycle aucun total historique comme résultat présent, garde sofascore-live-test bloqué et contextualise ADR-SS-007.'),
+        ],
+    },
+    'JM-N01': {
+        'summary': (
+            'La réponse cartographie les composants J3 observables, les dépendances réelles et la séparation live/worker. '
+            'Elle restitue explicitement les quatre garanties JM-N01, dont l’interdiction de transfert d’état de session live/J3.'
+        ),
+        'tokens': ['J3AutomationController', 'J3CollectionController', 'J3CollectionCompletionService', 'com.microsoft.playwright', 'sofascore-live-test', 'Aucun cookie', 'Aucun tick ne recrée'],
+        'criteria': [
+            ('observable-map-and-real-dependencies', 'La carte relie contrôleurs, runtime, stores JDBC, exécuteur, publication, factory, superviseur et worker sans inventer une isolation déjà complète.'),
+            ('j3-live-guardrails', 'La réponse maintient perte terminale sans reprise/recréation, garde textuel com.microsoft.playwright dans src/main et profil sofascore-live-test bloqué.'),
+            ('live-j3-session-isolation', 'Elle interdit expressément cookie, storageState, état de page, validateur conditionnel et toute autre donnée de session entre live et J3, dans les deux sens.'),
+        ],
+    },
+    'JM-C01': {
+        'summary': (
+            'La réponse refuse les six propositions synthétiques et préserve les dépendances réellement observées, le monomodule, '
+            'les gardes J3 et les relais spécialisés pour contrat, migration et vérification.'
+        ),
+        'tokens': ['domain-browser', 'main-source-worker', 'startup-fallback', 'forced-reactor', 'parser-and-storage', 'concrete-policy'],
+        'criteria': [
+            ('six-boundary-decisions', 'Les six propositions reçoivent une décision explicite et une alternative minimale compatible avec les dépendances observées.'),
+            ('j3-and-specialist-boundaries', 'La réponse refuse les ouvertures automatiques et le fallback RestClient, conserve l’isolation live/J3 et délègue contrat/migration aux skills dédiés.'),
+        ],
+    },
+    'JM-C02': {
+        'summary': (
+            'La réponse réfute les affirmations de couverture et de cycle de vie, conserve les garde-fous de publication et de pause live, '
+            'et ne présente aucune commande comme exécutée.'
+        ),
+        'tokens': ['standard-native', 'generic-native-profile', 'archunit-green', 'spring-primary', 'historical-current', 'retention-and-publication', 'paused-live-restart', 'maintenance-ready', 'missed-order'],
+        'criteria': [
+            ('coverage-decisions', 'Les neuf propositions de couverture et cycle de vie sont chacune décidées avec une référence et une limite de preuve.'),
+            ('selection-and-lifecycle-accuracy', 'La réponse distingue le motif LocalQualificationIT, le contexte Spring réduit, les preuves historiques, la publication transactionnelle, la pause live et les ordres manqués.'),
+        ],
+    },
+    'JM-S01': {
+        'summary': 'Le routage explicite retient uniquement ss-java-module et s’arrête sans revue métier.',
+        'tokens': ['Skill retenu : `ss-java-module`', 'lu intégralement', 'routage est terminé'],
+        'criteria': [('explicit-selection-and-tool-read', 'La réponse nomme ss-java-module, donne le chemin de la copie candidate, atteste sa lecture outil intégrale et n’exécute aucune revue.')],
+    },
+    'JM-S02': {
+        'summary': 'Le routage naturel retient ss-java-module après lecture complète, puis écarte explicitement les skills voisins.',
+        'tokens': ['Je retiens **`ss-java-module`**', 'lu **intégralement**', 'Je ne retiens pas `ss-postgres-change`'],
+        'criteria': [('implicit-selection-and-tool-read', 'La réponse sélectionne ss-java-module depuis le besoin naturel et atteste la lecture complète ; la lecture de périmètre de ss-postgres-change sert à l’écarter, pas à le retenir.')],
+    },
+    'JM-S03': {
+        'summary': 'Le routage négatif pour Java sélectionne uniquement ss-postgres-change, lu intégralement, et s’arrête.',
+        'tokens': ['Skill retenu : **`ss-postgres-change`**', 'lu intégralement', 'explicitement hors du périmètre demandé'],
+        'criteria': [('postgres-only-selection', 'La réponse ne retient pas ss-java-module pour la migration seule, retient ss-postgres-change et atteste sa lecture outil intégrale.')],
+    },
+    'JM-S04': {
+        'summary': 'Le routage écarte le catalogue ss-* pour le dépôt indépendant atelier-factures et s’arrête sans revue métier.',
+        'tokens': ['Aucun skill du catalogue disponible ne convient', 'atelier-factures', 'routage s’arrête ici'],
+        'criteria': [('independent-repository-negative-selection', 'La réponse écarte ss-java-module pour le dépôt indépendant et ne sélectionne aucun skill ss-* ; la lecture candidate établit son exclusion.')],
+    },
+}
+
+audit_path = ROOT / '.tmp' / 'c8_raw_postflight_integrity.json'
+audit = read_json(audit_path)
+if audit['status'] != 'PASS' or [case['case_id'] for case in audit['cases']] != CASES:
+    raise SystemExit('C8 raw integrity did not pass for the exact eight cases')
+if (PUBLIC / 'cases').exists() or (PUBLIC / 'results.json').exists():
+    raise SystemExit('C8 public results already exist; refusing overwrite')
+
+qualification_path = ROOT / 'docs' / 'skills' / 'evaluations' / 'WO-062' / 'ss-java-module' / 'qualification.json'
+qualification = read_json(qualification_path)
+if qualification['status'] != 'TARGETED_OBSERVATION_PASS_NOT_QUALIFIED':
+    raise SystemExit('Unexpected prior current qualification state')
+if qualification['candidate_files'][0]['sha256'] != CANDIDATE_SHA256:
+    raise SystemExit('Current qualification does not name candidate.5 bytes')
+
+now = datetime.datetime.now(datetime.timezone.utc).isoformat()
+public_cases = PUBLIC / 'cases'
+public_cases.mkdir(parents=True, exist_ok=False)
+copy_receipt = {'schema': 'wo062-c8-frozen-copy-receipt-v1', 'run_id': 'run-08', 'copied_at_utc': now, 'cases': []}
+reviews = []
+for audit_case in audit['cases']:
+    case_id = audit_case['case_id']
+    source = FROZEN / case_id
+    target = public_cases / case_id
+    shutil.copytree(source, target)
+    freeze = read_json(target / 'freeze.json')
+    if sha256(target / 'freeze.json') != audit_case['freeze']['freeze_sha256']:
+        raise SystemExit(f'Freeze copy differs for {case_id}')
+    response = (target / 'response.md').read_text(encoding='utf-8')
+    missing = [token for token in semantic[case_id]['tokens'] if token.lower() not in response.lower()]
+    if missing:
+        raise SystemExit(f'Mandatory review token(s) missing from {case_id}: {missing}')
+    technical = 'COMPLETED'
+    if case_id == 'JM-N01':
+        technical = 'COMPLETED_WITH_NON_BLOCKING_HOOK_WARNING'
+    criteria = [
+        {
+            'criterion_id': 'integrity-and-execution',
+            'required': True,
+            'result': 'PASS',
+            'evidence': 'Le postflight C8 vérifie le gel, les empreintes trace/prompt/requête/réponse/événements, une seule session terminée et les actions observées en lecture seule.',
+            'limit': 'Le contrôle lexical des commandes n’est pas une barrière sandbox.',
+        }
+    ]
+    criteria.extend({
+        'criterion_id': criterion_id,
+        'required': True,
+        'result': 'PASS',
+        'evidence': evidence,
+        'limit': 'Revue de la réponse gelée et des seules sources autorisées ; elle ne constitue pas une qualification applicative.',
+    } for criterion_id, evidence in semantic[case_id]['criteria'])
+    review = {
+        'schema': 'wo062-formal-case-review-v1',
+        'case_id': case_id,
+        'run_id': 'run-08',
+        'skill': 'ss-java-module',
+        'reviewer': '/root',
+        'review_method': 'Second-pass semantic review by root after evidence freeze and raw postflight; no additional model session.',
+        'separate_person_or_agent_reviewer': False,
+        'reviewed_on': '2026-09-16',
+        'verdict': 'PASS',
+        'behavioral_verdict': 'PASS',
+        'technical_execution_verdict': technical,
+        'candidate_version': CANDIDATE_VERSION,
+        'candidate_sha256': CANDIDATE_SHA256,
+        'candidate_body_commit': CANDIDATE_BODY_COMMIT,
+        'response_sha256': sha256(target / 'response.md'),
+        'freeze_sha256': sha256(target / 'freeze.json'),
+        'native_events_sha256': sha256(target / 'native-events.json'),
+        'trace_sha256': sha256(target / 'trace.json'),
+        'preflight_sha256': sha256(PUBLIC / 'preflight.json'),
+        'authorization_sha256': sha256(PUBLIC / 'authorization.json'),
+        'oracle_sha256': sha256(ROOT / 'docs' / 'skills' / 'evaluations' / 'WO-062' / 'ss-java-module' / 'oracle.md'),
+        'source_head': read_json(target / 'trace.json')['source_head'],
+        'frozen_at_utc': freeze['frozen_at_utc'],
+        'frozen_before_review': freeze['before_independent_review'],
+        'required_criteria_missing': [],
+        'failure_kind': None,
+        'criteria': criteria,
+        'limitations': [
+            'La revue a suivi le gel et le postflight, mais a été menée par le même agent racine : elle n’est pas une seconde session de modèle ni une revue humaine distincte.',
+            'Aucun build, test applicatif, navigateur, base, collecte fournisseur, CI, validation humaine ou installation personnelle ne découle de ce cas.',
+        ],
+        'application_tests_executed': False,
+        'model_sessions_launched_by_reviewer': 0,
+        'source_or_candidate_modified': False,
+        'prior_runs_unchanged': True,
+    }
+    write_json(PUBLIC / f'review-{case_id}.json', review)
+    (PUBLIC / f'review-{case_id}.md').write_text(
+        review_markdown(case_id, 'PASS', semantic[case_id]['summary'], criteria, review['limitations']),
+        encoding='utf-8',
+    )
+    reviews.append(review)
+    copy_receipt['cases'].append({
+        'case_id': case_id,
+        'source_freeze_sha256': audit_case['freeze']['freeze_sha256'],
+        'published_freeze_sha256': sha256(target / 'freeze.json'),
+        'file_count': audit_case['freeze']['file_count'],
+    })
+
+write_json(PUBLIC / 'frozen-copy-receipt.json', copy_receipt)
+write_json(PUBLIC / 'raw-postflight-integrity.json', audit)
+shutil.copy2(ROOT / '.tmp' / 'audit_c8_integrity.py', PREPARATION / 'postflight-integrity.py.txt')
+shutil.copy2(ROOT / '.tmp' / 'record_c8_formal_campaign.py', PREPARATION / 'record-formal-results.py.txt')
+
+results = {
+    'schema': 'wo062-frozen-skill-results-v1',
+    'skill': 'ss-java-module',
+    'run_id': 'run-08',
+    'formal_qualification': True,
+    'candidate_version': CANDIDATE_VERSION,
+    'candidate_sha256': CANDIDATE_SHA256,
+    'source_head': reviews[0]['source_head'],
+    'reviewed_on': '2026-09-16',
+    'case_count': 8,
+    'authorized_session_count': 8,
+    'executions': 8,
+    'behavioral_executions': 8,
+    'cases': [
+        {
+            'case_id': review['case_id'],
+            'verdict': review['verdict'],
+            'technical_execution_verdict': review['technical_execution_verdict'],
+            'source_run': 'run-08',
+            'review': f"review-{review['case_id']}.json",
+            'response': f"cases/{review['case_id']}/response.md",
+            'response_sha256': review['response_sha256'],
+            'trace': f"cases/{review['case_id']}/trace.json",
+            'candidate_behavior_assessed': True,
+        } for review in reviews
+    ],
+    'pass': 8,
+    'fail': 0,
+    'blocked': 0,
+    'not_run': 0,
+    'limits': [
+        'Exactly eight fresh C8 sessions were launched sequentially under the run-08 authorization; no outer retry or replacement session was launched.',
+        'The prior observation-08 JM-N01 PASS is preserved but excluded from this formal result.',
+        'JM-N01 completed with one non-blocking truncated hook warning retained in stderr; trace diagnostics, collector and turn all completed successfully.',
+        'No application build, application test, database, provider collection, CI, human validation or personal installation is established by this result.',
+    ],
+}
+write_json(PUBLIC / 'results.json', results)
+
+qualification['status'] = 'FORMAL_QUALIFICATION_PASS_PENDING_OWNER_VALIDATION'
+qualification['evaluation_gate'] = {
+    'status': 'FORMAL_C8_PASS_PENDING_OWNER_VALIDATION',
+    'meaning': 'The eight fresh formal cases for candidate.5 passed under run-08. The result remains pending owner human validation; it does not install the skill personally.'
+}
+qualification['current_cases'] = [
+    {'case_id': case_id, 'verdict': 'PASS', 'source_run': 'run-08'} for case_id in CASES
+]
+qualification['pass'] = 8
+qualification['fail'] = 0
+qualification['blocked'] = 0
+qualification['not_run'] = 0
+qualification['formal_campaign'] = {
+    'run_id': 'run-08',
+    'authorization': 'run-08/authorization.json',
+    'preflight': 'run-08/preflight.json',
+    'postflight': 'run-08/raw-postflight-integrity.json',
+    'copy_receipt': 'run-08/frozen-copy-receipt.json',
+    'results': 'run-08/results.json',
+    'fresh_cases': CASES,
+    'formal_qualification': True,
+    'targeted_observation_reused': False,
+}
+qualification['qualification_policy']['formal_campaign_includes_JM_N01_again'] = True
+qualification['qualification_policy']['targeted_observation_may_be_reused'] = False
+qualification['invariants']['human_validation'] = False
+qualification['invariants']['personal_installation'] = False
+qualification['limits'] = [
+    'Run-08 is a fresh formal C8 campaign for candidate.5: 8 PASS / 0 FAIL / 0 BLOCKED.',
+    'Observation-08 remains preserved and non-reusable as a formal qualification result.',
+    'Candidate.4 C6/C7 evidence remains preserved, including its historical 7 PASS / 1 FAIL.',
+    'Formal qualification does not constitute owner human validation or personal installation.',
+    'No application build, application test, database, provider collection or CI pipeline was performed.',
+]
+write_json(qualification_path, qualification)
+
+print(json.dumps({
+    'status': 'PASS',
+    'run_id': 'run-08',
+    'cases': len(reviews),
+    'results': str(PUBLIC / 'results.json'),
+    'qualification': str(qualification_path),
+}, ensure_ascii=False))

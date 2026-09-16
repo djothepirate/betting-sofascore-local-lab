@@ -1,0 +1,197 @@
+import hashlib
+import json
+import pathlib
+import re
+
+
+ROOT = pathlib.Path.cwd()
+RUNTIME = ROOT / '.tmp' / 'wo062-evaluations' / 'ss-java-module' / 'run-08'
+CASES = ['JM-H01', 'JM-N01', 'JM-C01', 'JM-C02', 'JM-S01', 'JM-S02', 'JM-S03', 'JM-S04']
+CANDIDATE_SHA256 = 'd7171f978c2b13c852c2ce5e170d68c1bfc5087552661cfdc6271077a0fe6637'
+
+
+def sha256(path):
+    digest = hashlib.sha256()
+    with path.open('rb') as stream:
+        for block in iter(lambda: stream.read(1024 * 1024), b''):
+            digest.update(block)
+    return digest.hexdigest()
+
+
+def events_from(document):
+    return document.get('events', []) if isinstance(document, dict) else document
+
+
+report = {
+    'schema': 'wo062-c8-raw-postflight-integrity-v1',
+    'run_id': 'run-08',
+    'skill': 'ss-java-module',
+    'candidate_sha256_expected': CANDIDATE_SHA256,
+    'scope_note': (
+        'Completed command_execution events were inspected after the frozen run. '
+        'This lexical check is evidence of the observed action scope, not a sandbox boundary.'
+    ),
+    'cases': [],
+}
+
+for case_id in CASES:
+    runtime_case = RUNTIME / case_id
+    frozen_case = RUNTIME / 'frozen' / case_id
+    freeze_path = frozen_case / 'freeze.json'
+    freeze = json.loads(freeze_path.read_text(encoding='utf-8'))
+    trace = json.loads((frozen_case / 'trace.json').read_text(encoding='utf-8'))
+    events_path = frozen_case / 'native-events.json'
+    events = events_from(json.loads(events_path.read_text(encoding='utf-8')))
+    stderr_text = (frozen_case / 'stderr.log').read_text(encoding='utf-8')
+
+    declared = freeze['files']
+    declared_set = {entry['path'] for entry in declared}
+    actual_set = {path.relative_to(frozen_case).as_posix() for path in frozen_case.rglob('*') if path.is_file()}
+    mismatches = []
+    for entry in declared:
+        path = frozen_case / entry['path']
+        if not path.is_file():
+            mismatches.append({'path': entry['path'], 'reason': 'missing'})
+        elif path.stat().st_size != entry['bytes'] or sha256(path) != entry['sha256']:
+            mismatches.append({
+                'path': entry['path'],
+                'expected_bytes': entry['bytes'],
+                'actual_bytes': path.stat().st_size,
+                'expected_sha256': entry['sha256'],
+                'actual_sha256': sha256(path),
+            })
+    if actual_set != declared_set | {'freeze.json'}:
+        mismatches.append({
+            'reason': 'unexpected_frozen_file_set',
+            'expected': sorted(declared_set | {'freeze.json'}),
+            'actual': sorted(actual_set),
+        })
+
+    trace_hash_checks = {
+        'native_events': sha256(events_path) == trace['native_events_sha256'],
+        'prompt': sha256(frozen_case / 'prompt.txt') == trace['prompt_sha256'],
+        'request': sha256(frozen_case / 'request.txt') == trace['request_sha256'],
+        'response': sha256(frozen_case / 'response.md') == trace['response_sha256'],
+        'candidate': trace['candidate_sha256'] == CANDIDATE_SHA256,
+    }
+    input_mismatches = []
+    input_paths = []
+    for item in trace['input_files']:
+        relative = item['path']
+        input_paths.append(relative)
+        path = runtime_case / relative
+        if not path.is_file():
+            input_mismatches.append({'path': relative, 'reason': 'missing'})
+        elif path.stat().st_size != item['bytes'] or sha256(path) != item['sha256']:
+            input_mismatches.append({
+                'path': relative,
+                'expected_bytes': item['bytes'],
+                'actual_bytes': path.stat().st_size,
+                'expected_sha256': item['sha256'],
+                'actual_sha256': sha256(path),
+            })
+    excluded_inputs = [
+        path for path in input_paths
+        if re.search(r'(?i)(oracle|observation-08|run-0[1-7]|c-requalification-0[1-7]|windows|wr-h01|wr-n01)', path)
+    ]
+
+    event_types = {}
+    completed_commands = []
+    errors = []
+    for event in events:
+        event_type = event.get('type', '')
+        event_types[event_type] = event_types.get(event_type, 0) + 1
+        item = event.get('item') if isinstance(event, dict) else None
+        if event_type == 'item.completed' and isinstance(item, dict) and item.get('type') == 'command_execution':
+            completed_commands.append(item.get('command', ''))
+        if event_type == 'error':
+            errors.append(event.get('message', ''))
+    expected_counts = {'thread.started': 1, 'turn.started': 1, 'turn.completed': 1}
+    event_count_mismatches = {
+        event_type: {'expected': expected, 'actual': event_types.get(event_type, 0)}
+        for event_type, expected in expected_counts.items()
+        if event_types.get(event_type, 0) != expected
+    }
+    forbidden_patterns = {
+        'build_or_test_execution': r'(?i)(?:\\bmvnw?(?:\\.cmd)?\\b|\\bmaven\\b|\\bgradle\\b)',
+        'database_or_container': r'(?i)(?:\\bdocker\\b|\\bpostgres\\b|\\bpsql\\b)',
+        'network_or_browser_operation': r'(?i)(?:invoke-webrequest|\\bcurl\\b|\\bwebdriver\\b|\\bplaywright\\s+install\\b|\\bchrome(?:\\.exe)?\\b)',
+        'source_mutation': r'(?i)(?:set-content|add-content|out-file|new-item|copy-item|move-item|remove-item|git\\s+(?:add|commit|push|checkout|reset|clean))',
+    }
+    forbidden_matches = {
+        label: [command for command in completed_commands if re.search(pattern, command)]
+        for label, pattern in forbidden_patterns.items()
+    }
+    forbidden_matches = {label: matches for label, matches in forbidden_matches.items() if matches}
+    allowed_external_reads = []
+    unexpected_absolute_reads = []
+    for command in completed_commands:
+        normalised_command = command.replace('\\\\', '/').replace('\\', '/')
+        is_postgres_skill_read = 'c:/users/geoff/.agents/skills/ss-postgres-change/skill.md' in normalised_command.lower()
+        if is_postgres_skill_read and case_id in {'JM-S02', 'JM-S03'}:
+            allowed_external_reads.append({
+                'path': r'C:\\Users\\geoff\\.agents\\skills\\ss-postgres-change\\SKILL.md',
+                'reason': (
+                    'JM-S03 selected this routing target; JM-S02 read it only to establish '
+                    'that the Java-architecture request did not select a schema/migration skill.'
+                )
+            })
+        elif 'c:/users/geoff/.agents/skills' in normalised_command.lower():
+            unexpected_absolute_reads.append(command)
+
+    failed = any((
+        mismatches, input_mismatches, excluded_inputs, event_count_mismatches,
+        not all(trace_hash_checks.values()),
+        trace['exit_code'] != 0, trace['collector_exit_code'] != 0,
+        not trace['turn_completed'], trace['timed_out'], trace['automatic_retry'],
+        errors, forbidden_matches, unexpected_absolute_reads,
+        len(completed_commands) != trace['commands_completed'],
+    ))
+    report['cases'].append({
+        'case_id': case_id,
+        'status': 'FAIL' if failed else 'PASS',
+        'freeze': {
+            'frozen_at_utc': freeze['frozen_at_utc'],
+            'frozen_before_independent_review': freeze['before_independent_review'],
+            'file_count': len(declared),
+            'freeze_sha256': sha256(freeze_path),
+            'mismatches': mismatches,
+        },
+        'runtime_input_integrity': {
+            'file_count': len(trace['input_files']),
+            'mismatches': input_mismatches,
+            'excluded_input_paths': excluded_inputs,
+            'oracle_supplied': trace['oracle_supplied'],
+            'design_history_supplied': trace['design_history_supplied'],
+            'candidate_sha256': trace['candidate_sha256'],
+        },
+        'trace_hash_checks': trace_hash_checks,
+        'session': {
+            'execution_mode': trace['execution_mode'],
+            'exit_code': trace['exit_code'],
+            'collector_exit_code': trace['collector_exit_code'],
+            'turn_completed': trace['turn_completed'],
+            'timed_out': trace['timed_out'],
+            'duration_seconds': trace['duration_seconds'],
+            'commands_completed': trace['commands_completed'],
+            'event_types': event_types,
+            'event_count_mismatches': event_count_mismatches,
+            'command_count_match': len(completed_commands) == trace['commands_completed'],
+            'automatic_retry': trace['automatic_retry'],
+            'diagnostics': trace['diagnostics'],
+            'stream_errors_observed': errors,
+            'stderr_transport_reconnects': re.findall(r'responses_retry: stream disconnected - retrying sampling request \\(([^\\n]+)\\)', stderr_text),
+            'stderr_collaboration_routing_errors': re.findall(r'collab spawn failed: ([^\\r\\n]+)', stderr_text),
+            'stderr_hook_warnings': re.findall(r'hook_runtime: ([^\\r\\n]+)', stderr_text),
+        },
+        'command_path_audit': {
+            'completed_command_count': len(completed_commands),
+            'allowed_external_routing_reads': allowed_external_reads,
+            'unexpected_absolute_reads': unexpected_absolute_reads,
+            'forbidden_action_matches': forbidden_matches,
+            'limitation': 'Lexical inspection of completed commands is not a sandbox boundary.',
+        },
+    })
+
+report['status'] = 'PASS' if all(case['status'] == 'PASS' for case in report['cases']) else 'FAIL'
+print(json.dumps(report, indent=2, ensure_ascii=False))

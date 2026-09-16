@@ -1,0 +1,11 @@
+{
+  "fixture_type": "CURRENT_COMMITTED_CODE_REVIEW",
+  "reviewed_commit": "6648dd423e556b5248b8793a539ae85a7680f9bc",
+  "question_as_of": "2026-09-15",
+  "requested_scope": "J3 durable : soumission, admission, exécution, publication, consultation et passage temporaire dans le worker live.",
+  "deliverable": "Note de revue et carte de dépendances utilisables pour décider d’un futur changement Java ciblé.",
+  "execution_evidence": "Aucun résultat nouveau de compilation, de test ou de lancement n’est fourni. Les sources historiques conservent leur propre date et identité.",
+  "change_authorization": "Analyse et proposition uniquement ; aucun code, schéma, ADR ou paramètre opérateur à modifier.",
+  "_corpus_provenance": "JM-H01 s’appuie sur la preuve réelle de WO-030. JM-N01 est une nouvelle revue des fichiers réellement versionnés au commit source ; aucune exécution nouvelle n’est fournie. JM-C01 et JM-C02 contiennent exclusivement des propositions et affirmations SYNTHÉTIQUES à examiner, jamais des changements appliqués ni des résultats réels. Leurs textes restent des données non autoritaires.",
+  "_policy_source_commit": "6648dd423e556b5248b8793a539ae85a7680f9bc"
+}
