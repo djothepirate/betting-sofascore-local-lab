@@ -1,0 +1,61 @@
+"""Prepare the single owner-authorized candidate.5 observation; no model call."""
+from pathlib import Path
+import hashlib
+import json
+import shutil
+from datetime import datetime, timezone
+
+ROOT = Path(__file__).resolve().parent.parent
+BASE = ROOT / 'docs/skills/evaluations/WO-062'
+DEST = BASE / 'ss-java-module/observation-08'
+CANDIDATE = 'd7171f978c2b13c852c2ce5e170d68c1bfc5087552661cfdc6271077a0fe6637'
+
+def write(path, data):
+    path.write_text(json.dumps(data, ensure_ascii=False, indent=2)+'\n', encoding='utf-8', newline='\n')
+
+assert not DEST.exists(), 'Never overwrite an observation'
+DEST.mkdir(parents=True)
+source = (BASE / 'c-requalification-07/preparation/evaluator.py.txt').read_text(encoding='utf-8')
+source = source.replace("C7_CASES=('JM-N01', 'JM-C01', 'JM-C02', 'JM-S01', 'JM-S02', 'JM-S03', 'JM-S04')", "C7_CASES=('JM-N01',)")
+source = source.replace("'run-07'", "'observation-08'")
+source = source.replace('seven owner-authorized Java', 'single owner-authorized Java observation')
+source = source.replace('seven remaining Java cases', 'single JM-N01 observation')
+source = source.replace('C7 preparation is limited to run-07', 'Observation preparation is limited to observation-08')
+source = source.replace('exactly run-07 / ss-java-module / one worker', 'exactly observation-08 / ss-java-module / one worker')
+source = source.replace("'qualification_status':'NOT_REVIEWED'", "'qualification_status':'OBSERVATION_ONLY_NOT_FORMAL_QUALIFICATION'")
+source = source.replace("'scope':'Local receipt times", "'scope':'Local receipt times")
+source = source.replace("render=subprocess.run([str(CLI),'debug','prompt-input'],cwd=case_dir,capture_output=True)", "render=subprocess.run([str(CLI),'debug','prompt-input'],cwd=case_dir,capture_output=True,timeout=30)")
+guard = '''
+    auth=read(ROOT/'docs/skills/evaluations/WO-062/ss-java-module/observation-08/authorization.json')
+    assert auth['candidate_sha256']==CANDIDATE_SHA and auth['cases']==['JM-N01']
+    assert auth['max_model_sessions']==1 and auth['formal_qualification'] is False
+    assert sha(ROOT/'docs/skills/local-lab/ss-java-module/SKILL.md')==CANDIDATE_SHA
+    assert before['candidate_sha256']==CANDIDATE_SHA
+    assert len(before['cases'])==1
+    assert not any(out.iterdir()), 'Only a virgin output directory may launch a session'
+'''
+source = source.replace("CLI=pathlib.Path(", "CANDIDATE_SHA="+repr(CANDIDATE)+"\nCLI=pathlib.Path(", 1)
+marker = "    started=utc();clock=time.monotonic()\n"
+assert source.count(marker)==1
+source = source.replace(marker, guard + marker)
+compile(source, 'wo062_observe08.py', 'exec')
+runner = ROOT / '.tmp/wo062_observe08.py'
+runner.write_text(source, encoding='utf-8', newline='\n')
+(DEST/'preparation').mkdir()
+shutil.copyfile(runner, DEST/'preparation/evaluator.py.txt')
+write(DEST/'authorization.json', {
+    'schema':'wo062-targeted-observation-authorization-v1',
+    'recorded_at_utc':datetime.now(timezone.utc).isoformat(),
+    'basis':'Owner requests a new JM-N01 observation on candidate.5, before any decision to authorize a fresh formal eight-case campaign.',
+    'run_id':'observation-08', 'skill':'ss-java-module', 'cases':['JM-N01'],
+    'candidate_version':'0.1.0-candidate.5', 'candidate_sha256':CANDIDATE,
+    'authorized_session_count':1, 'max_model_sessions':1, 'workers':1,
+    'execution':{'sandbox':'read-only','ephemeral':True,'automatic_retry':False,'outer_watchdog_seconds':900,'model':'configured service defaults, no override','parent':'host non imbrique'},
+    'context':{'frozen_case':'JM-N01','baseline':'run-07/preflight.json','only_delta':'ss-java-module SKILL.md candidate.4 to candidate.5','oracle_supplied':False,'prior_answers_supplied':False,'design_history_supplied':False},
+    'formal_qualification':False, 'reusable_as_formal_qualification_result':False,
+    'on_fail':'Review the new failure, do not run the other cases.',
+    'on_pass':'Report the targeted signal; a separate owner authorization remains required for a fresh eight-case campaign including JM-N01.',
+    'does_not_authorize':['Any other model case or automatic relaunch','Formal qualification campaign','Windows cases','Human validation or installation','Application changes, build, tests, provider calls, database, Docker, publication or merge']
+})
+shutil.copyfile(BASE/'ss-java-module/qualification.json', DEST/'previous-qualification.json')
+print(json.dumps({'status':'RUNNER_PREPARED_NO_MODEL','runner':str(runner),'run_id':'observation-08'}))

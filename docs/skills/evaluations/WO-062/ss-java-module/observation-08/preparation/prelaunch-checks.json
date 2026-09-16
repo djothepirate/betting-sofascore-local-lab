@@ -1,0 +1,28 @@
+{
+  "schema": "wo062-observation08-prelaunch-v1",
+  "status": "PASS_PRELAUNCH",
+  "checked_at_utc": "2026-09-16T11:36:31.881927+00:00",
+  "candidate_sha256": "d7171f978c2b13c852c2ce5e170d68c1bfc5087552661cfdc6271077a0fe6637",
+  "cases": [
+    "JM-N01"
+  ],
+  "input_file_count": 39,
+  "baseline": "run-07/preflight.json",
+  "baseline_sha256": "ec60a8efa17c45f4d7ac9898d4eff9b6798b3d3a54048d60db95910b8fa346a1",
+  "only_input_delta": [
+    ".agents/skills/ss-java-module/SKILL.md"
+  ],
+  "prompt_identical_to_c7": true,
+  "request_identical_to_c7": true,
+  "exact_context_file_set": true,
+  "oracle_or_prior_answer_in_context": false,
+  "outputs_empty_before_launch": true,
+  "automatic_retry": false,
+  "workers": 1,
+  "formal_qualification": false,
+  "reusable_as_formal_qualification_result": false,
+  "authorization_sha256": "ff4efe981df0161a0efcc36bdbbdeb44aa22d84f1ac993864d339fcc7f91946f",
+  "runner_sha256": "50b0abba46453bb506f90ee5a9d0d55488564312eab571a4ea800fb8f8e7218b",
+  "preparation_head": "d77b614c9b7a6e7536ea3c92bb30bbf9b32a5823",
+  "model_invoked": false
+}

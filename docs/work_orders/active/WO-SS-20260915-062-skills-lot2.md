@@ -296,6 +296,21 @@ distinct ; elle n'élargit pas implicitement ce lot de skills.
   conservées et l'absence de recette `.5`. Elle ne remplace ni une session de
   qualification, ni une revue humaine.
 
+### Observation ciblée candidate.5 — JM-N01 seul
+
+- Le propriétaire autorise une nouvelle observation `JM-N01` sur `.5`, avant toute
+  décision sur une campagne formelle. [L'autorisation](../../skills/evaluations/WO-062/ss-java-module/observation-08/authorization.json)
+  borne une seule session fraîche éphémère, lecture seule, sans relance automatique,
+  avec 900 secondes de watchdog et le service de modèle configuré.
+- Le [préflight](../../skills/evaluations/WO-062/ss-java-module/observation-08/preparation/prelaunch-checks.json)
+  compare les 39 fichiers au contexte C7 : seul `SKILL.md` passe de `.4` à `.5` ; le
+  prompt, l'enveloppe, les sources et l'entrée du cas restent identiques. Aucun oracle,
+  réponse antérieure, résultat, inventaire ni historique de conception n'est fourni.
+- Cette observation ne constitue pas une campagne de qualification et son résultat
+  ne sera pas réutilisé comme résultat formel. En cas de FAIL, analyser avant toute
+  nouvelle exécution ; en cas de PASS, attendre une autorisation distincte pour les
+  huit cas frais, `JM-N01` compris. Aucun autre cas Java ou Windows n'est autorisé ici.
+
 ### Déblocage Windows — staging hôte sans modèle
 
 - Le nouveau préflight hôte C5 des contextes gelés échoue encore avant PowerShell avec

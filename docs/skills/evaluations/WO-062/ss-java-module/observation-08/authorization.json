@@ -1,0 +1,42 @@
+{
+  "schema": "wo062-targeted-observation-authorization-v1",
+  "recorded_at_utc": "2026-09-16T11:35:24.000630+00:00",
+  "basis": "Owner requests a new JM-N01 observation on candidate.5, before any decision to authorize a fresh formal eight-case campaign.",
+  "run_id": "observation-08",
+  "skill": "ss-java-module",
+  "cases": [
+    "JM-N01"
+  ],
+  "candidate_version": "0.1.0-candidate.5",
+  "candidate_sha256": "d7171f978c2b13c852c2ce5e170d68c1bfc5087552661cfdc6271077a0fe6637",
+  "authorized_session_count": 1,
+  "max_model_sessions": 1,
+  "workers": 1,
+  "execution": {
+    "sandbox": "read-only",
+    "ephemeral": true,
+    "automatic_retry": false,
+    "outer_watchdog_seconds": 900,
+    "model": "configured service defaults, no override",
+    "parent": "host non imbrique"
+  },
+  "context": {
+    "frozen_case": "JM-N01",
+    "baseline": "run-07/preflight.json",
+    "only_delta": "ss-java-module SKILL.md candidate.4 to candidate.5",
+    "oracle_supplied": false,
+    "prior_answers_supplied": false,
+    "design_history_supplied": false
+  },
+  "formal_qualification": false,
+  "reusable_as_formal_qualification_result": false,
+  "on_fail": "Review the new failure, do not run the other cases.",
+  "on_pass": "Report the targeted signal; a separate owner authorization remains required for a fresh eight-case campaign including JM-N01.",
+  "does_not_authorize": [
+    "Any other model case or automatic relaunch",
+    "Formal qualification campaign",
+    "Windows cases",
+    "Human validation or installation",
+    "Application changes, build, tests, provider calls, database, Docker, publication or merge"
+  ]
+}
