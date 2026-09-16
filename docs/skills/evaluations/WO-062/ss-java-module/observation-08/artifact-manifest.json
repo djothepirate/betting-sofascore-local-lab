@@ -1,0 +1,137 @@
+{
+  "schema": "wo062-observation-artifact-manifest-v1",
+  "purpose": "One targeted observation only; excluded from formal qualification.",
+  "run_id": "observation-08",
+  "files": [
+    {
+      "path": "authorization.json",
+      "bytes": 1623,
+      "sha256": "ff4efe981df0161a0efcc36bdbbdeb44aa22d84f1ac993864d339fcc7f91946f"
+    },
+    {
+      "path": "cases/JM-N01/catalogue.txt",
+      "bytes": 8588,
+      "sha256": "4afa340dfbd56ca5a55b2e60f0e504f2b53507625e4bdf5d360a92db597c87dc"
+    },
+    {
+      "path": "cases/JM-N01/freeze.json",
+      "bytes": 1907,
+      "sha256": "ec4228a7adfc3899b6d1c5a136bbf9f389d65aacbac58d0f23fa93e5842d0bd0"
+    },
+    {
+      "path": "cases/JM-N01/host-runtime.json",
+      "bytes": 371,
+      "sha256": "5a72a9b05d201d3a04bcfdc4a03f7f55c8a29e3a3acacbe38929fcba3046bc1a"
+    },
+    {
+      "path": "cases/JM-N01/input.json",
+      "bytes": 1211,
+      "sha256": "772ccc19a09cac5b2e712a5c6edeea96c02138dca0fadd9e3743233a589b5733"
+    },
+    {
+      "path": "cases/JM-N01/native-events.json",
+      "bytes": 860174,
+      "sha256": "c4d698d3da52d5dd78e458ba9b6a4320a622702b76325df8a0141200bfa2dc12"
+    },
+    {
+      "path": "cases/JM-N01/native-timing-summary.json",
+      "bytes": 434,
+      "sha256": "74e96e046286b63cde57dc04edec51eaf4b88028116dd21faf8701d6fb48d6c4"
+    },
+    {
+      "path": "cases/JM-N01/native-timing.jsonl",
+      "bytes": 34240,
+      "sha256": "ea6819d25257b6d3357b7a7223a09ed68314f51c992777d67dda63f3b4067552"
+    },
+    {
+      "path": "cases/JM-N01/prompt.txt",
+      "bytes": 1021,
+      "sha256": "f4ced228cb89c9cbec8498cfc126e2dde2648a2177fc533819370f945158fc60"
+    },
+    {
+      "path": "cases/JM-N01/reading-audit.json",
+      "bytes": 312,
+      "sha256": "a79e773f47d484e82109f86ce2e654fa2e7baabb4d67947a7e22c332e7a64a06"
+    },
+    {
+      "path": "cases/JM-N01/request.txt",
+      "bytes": 4873,
+      "sha256": "88764e319124b951f7b9b7a580cc145789e4b9883e7bde86e17038af2f79868e"
+    },
+    {
+      "path": "cases/JM-N01/response.md",
+      "bytes": 36542,
+      "sha256": "887f63a16d33031cb91692d0d786d94ff9a8de36b89daad612a22f452d9c07c3"
+    },
+    {
+      "path": "cases/JM-N01/stderr.log",
+      "bytes": 1533,
+      "sha256": "a5f644967ff8136ce3af1568915abc5998d6de635aa50705961476024dc2cd5d"
+    },
+    {
+      "path": "cases/JM-N01/trace.json",
+      "bytes": 11398,
+      "sha256": "32df95161fb1a8636ae6c7904e1fb683ef6739a997d073c753413d98fa0f0a27"
+    },
+    {
+      "path": "delivery-integrity.json",
+      "bytes": 577,
+      "sha256": "ee9f0645fb367bd074dc3024c4113b037f5be950c14f0746b4a0e2157018f3ba"
+    },
+    {
+      "path": "postflight-integrity.json",
+      "bytes": 22089,
+      "sha256": "cafc8d8b1dd035641302b8e022d850d44749aa24d5ae7879931554eb4716ff2e"
+    },
+    {
+      "path": "preflight.json",
+      "bytes": 10429,
+      "sha256": "466f89c2a5d5175ffc88c97e9d76e563aea230ab538fd0048a977f30228da635"
+    },
+    {
+      "path": "preparation/context-check.py.txt",
+      "bytes": 3851,
+      "sha256": "4594d62b71139a4a66768e84ebc00362904258b85a7ec2105199a930057c2292"
+    },
+    {
+      "path": "preparation/evaluator.py.txt",
+      "bytes": 24028,
+      "sha256": "50b0abba46453bb506f90ee5a9d0d55488564312eab571a4ea800fb8f8e7218b"
+    },
+    {
+      "path": "preparation/postflight.py.txt",
+      "bytes": 5583,
+      "sha256": "10becfae4e4f33782a39f5350ad16a553cb63450a6847194a9e9b4b71959aee4"
+    },
+    {
+      "path": "preparation/prelaunch-checks.json",
+      "bytes": 1076,
+      "sha256": "04bf038ae8b168b082067bc763969d85ff8ef0dfc55f372c52f6d6fc8ddf5277"
+    },
+    {
+      "path": "preparation/runner-preparation.py.txt",
+      "bytes": 4477,
+      "sha256": "749eb1ab0bf01bbd9a6c10fb2c9ef984e038e1ee85096644bbc4c7b861a4132a"
+    },
+    {
+      "path": "previous-qualification.json",
+      "bytes": 3584,
+      "sha256": "e46aa515d303d44f75b820d513db309915061b2e0a769bdbf5c8ac62e4549617"
+    },
+    {
+      "path": "results.json",
+      "bytes": 875,
+      "sha256": "bca4a7fa438e437f193c2f7e41b3c93e92c344a94031909ad831a6f508b28abb"
+    },
+    {
+      "path": "review-JM-N01.json",
+      "bytes": 8357,
+      "sha256": "7800c562736ab3547662ffb8953de265de1e24629b0b28d7bedb7925486b0e5f"
+    },
+    {
+      "path": "review-JM-N01.md",
+      "bytes": 3745,
+      "sha256": "237ed8623dada6540337f3b1d8b916f37c43d01b2de28c3683b1ab00ed2c4014"
+    }
+  ]
+}

@@ -1,6 +1,6 @@
 # WO-SS-20260915-062 — Développement des skills spécialisés du lot 2
 
-- **Statut :** `OWNER_ACCEPTED — A_INSTALLED — B_INSTALLED — C_QUALIFICATION_INCOMPLETE` ; PB, FQ et CS validés et installés personnellement. Java `.4` est conservé avec ses C6/C7 (sept PASS, un FAIL) ; Java `.5` est préparé sans recette. Les deux cas Windows `.1` restent non consommés après préflight hôte formel réussi. Validation humaine C, consolidation D et livraison Git restent distinctes.
+- **Statut :** `OWNER_ACCEPTED — A_INSTALLED — B_INSTALLED — C_QUALIFICATION_INCOMPLETE` ; PB, FQ et CS validés et installés personnellement. Java `.4` est conservé avec ses C6/C7 (sept PASS, un FAIL) ; Java `.5` obtient un PASS en observation ciblée JM-N01, sans qualification formelle. Les deux cas Windows `.1` restent non consommés après préflight hôte formel réussi. Validation humaine C, consolidation D et livraison Git restent distinctes.
 - **Date :** 2026-09-15.
 - **Autorité :** demande propriétaire de préparer un WO avec `ss-work-order`, à partir de la conversation « Skills du lot 2 », dans l'ordre précisé ci-dessous.
 - **Acceptation :** le 15 septembre 2026, le propriétaire confirme « J’accepte le WO-062 » et autorise l'inventaire des sources et la préparation des cas d'évaluation de `ss-provider-benchmark`.
@@ -310,6 +310,17 @@ distinct ; elle n'élargit pas implicitement ce lot de skills.
   ne sera pas réutilisé comme résultat formel. En cas de FAIL, analyser avant toute
   nouvelle exécution ; en cas de PASS, attendre une autorisation distincte pour les
   huit cas frais, `JM-N01` compris. Aucun autre cas Java ou Windows n'est autorisé ici.
+- La session se termine normalement en 617,250 s, avec 38 commandes de lecture,
+  réponse finale et gel avant revue. Le [verdict d'observation est PASS](../../skills/evaluations/WO-062/ss-java-module/observation-08/review-JM-N01.md) :
+  la réponse interdit explicitement le transfert de cookie, `storageState` ou autre
+  donnée de session entre live et J3 et conserve les trois corrections antérieures.
+  Les deux échecs de routage de délégation et l'erreur de syntaxe d'une lecture,
+  corrigée dans le même tour, restent documentés. Aucun retry du conducteur,
+  aucune reconnexion de transport ni autre session de cas n'a eu lieu.
+- [La qualification courante](../../skills/evaluations/WO-062/ss-java-module/qualification.json)
+  vaut `TARGETED_OBSERVATION_PASS_NOT_QUALIFIED`. Les huit cas formels restent
+  `NOT_RUN` ; l'observation ne sera pas réutilisée dans une campagne fraîche.
+  Le candidat, les sources, fixtures, critères et preuves C6/C7 sont inchangés.
 
 ### Déblocage Windows — staging hôte sans modèle
 
@@ -580,7 +591,7 @@ la fusion. La clôture effective suit cette fusion. Publication, fusion, promoti
 installation personnelle ne sont pas déduits de la seule préparation du WO.
 
 **Suite en cours :** C7 reste achevé et historique : sept sessions Java .4 fraîches, six PASS et un FAIL sémantique JM-N01 sont gelés et revus, avec JM-H01 C6 PASS.
-Le candidat ss-java-module .5 est préparé sur le seul écart C7 : il doit désormais restituer explicitement l'absence de transfert de cookie, état de stockage ou donnée de session du contexte live conservé vers le contexte J3 temporaire, sans continuité artificielle. Aucun cas .5 n'est lancé.
+Le candidat ss-java-module .5 obtient un PASS sur l'observation ciblée JM-N01 : l'interdiction de transfert live/J3 est explicitement restituée. Le SHA .5 est inchangé et les huit cas formels restent NOT_RUN ; une campagne fraîche, JM-N01 compris, exige une autorisation distincte et ne recyclera pas cette observation.
 Les corrections .4 sur le blocage de sofascore-live-test, la perte terminale du contexte live et le garde textuel précis sont conservées. JM-C02 conserve deux reprises internes de sampling dans une seule session, sans relance du conducteur.
 Le préflight Windows hôte sans modèle est désormais démontré dans un contexte physique formel byte-à-byte conforme, détenu par l'hôte et conservant le run logique C5 `run-05`; il isole l'échec C5 aux ACL/propriétaires de ses contextes gelés. WR-H01 et WR-N01 restent non lancés et non consommés : le préflight ne vaut ni recette ni réponse de modèle.
 Validation humaine et installation C restent postérieures à une qualification complète ; suivront ensuite la consolidation D, la livraison Git et la clôture selon le workflow ci-dessus.

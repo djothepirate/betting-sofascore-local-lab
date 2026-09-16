@@ -1,0 +1,83 @@
+"""Verify and publish already-frozen evidence. Never starts a model."""
+from pathlib import Path
+import hashlib
+import json
+import re
+import shutil
+import subprocess
+from collections import Counter
+from datetime import datetime, timezone
+
+ROOT=Path(__file__).resolve().parent.parent
+BASE=ROOT/'docs/skills/evaluations/WO-062/ss-java-module'
+PUBLIC=BASE/'observation-08'
+RUN=ROOT/'.tmp/wo062-evaluations/ss-java-module/observation-08'
+FROZEN=RUN/'frozen/JM-N01'
+CASE=RUN/'JM-N01'
+sha=lambda p:hashlib.sha256(p.read_bytes()).hexdigest()
+read=lambda p:json.loads(p.read_text(encoding='utf-8-sig'))
+def write(p,v):p.write_text(json.dumps(v,ensure_ascii=False,indent=2)+'\n',encoding='utf-8',newline='\n')
+
+assert FROZEN.is_dir()
+freeze=read(FROZEN/'freeze.json')
+trace=read(FROZEN/'trace.json')
+events=read(FROZEN/'native-events.json')
+assert {p.relative_to(FROZEN).as_posix() for p in FROZEN.rglob('*') if p.is_file()}=={e['path'] for e in freeze['files']}|{'freeze.json'}
+for e in freeze['files']:
+    p=FROZEN/e['path']
+    assert p.stat().st_size==e['bytes'] and sha(p)==e['sha256'], e['path']
+for e in trace['input_files']:
+    p=CASE/e['path']
+    assert p.stat().st_size==e['bytes'] and sha(p)==e['sha256'], e['path']
+assert sha(FROZEN/'native-events.json')==trace['native_events_sha256']
+assert sha(CASE/'output/events.jsonl')==trace['raw_events_sha256']
+for filename,key in [('prompt.txt','prompt_sha256'),('request.txt','request_sha256'),('response.md','response_sha256')]:
+    if (FROZEN/filename).exists():assert sha(FROZEN/filename)==trace[key]
+assert trace['candidate_sha256']=='d7171f978c2b13c852c2ce5e170d68c1bfc5087552661cfdc6271077a0fe6637'
+assert trace['candidate_sha256']==sha(ROOT/'docs/skills/local-lab/ss-java-module/SKILL.md')
+assert trace['oracle_supplied'] is False and trace['design_history_supplied'] is False
+assert trace['automatic_retry'] is False
+counts=Counter(e.get('type') for e in events)
+commands=[e['item'] for e in events if e.get('type')=='item.completed' and e.get('item',{}).get('type')=='command_execution']
+assert len(commands)==trace['commands_completed']
+raw_lines=(CASE/'output/events.jsonl').read_bytes().splitlines(keepends=True)
+timings=[json.loads(l) for l in (FROZEN/'native-timing.jsonl').read_text(encoding='utf-8').splitlines()]
+assert len(raw_lines)==len(timings)
+for raw,timing in zip(raw_lines,timings):assert hashlib.sha256(raw).hexdigest()==timing['raw_line_sha256']
+stderr=(FROZEN/'stderr.log').read_text(encoding='utf-8',errors='replace')
+transport_retries=re.findall(r'responses_retry: stream disconnected - retrying sampling request \(([^\n]+)\)',stderr)
+report={
+ 'schema':'wo062-targeted-observation-postflight-v1','checked_at_utc':datetime.now(timezone.utc).isoformat(),
+ 'run_id':'observation-08','case_id':'JM-N01','formal_qualification':False,
+ 'integrity_status':'PASS','freeze_sha256':sha(FROZEN/'freeze.json'),
+ 'frozen_at_utc':freeze['frozen_at_utc'],'frozen_before_review':freeze['before_independent_review'],
+ 'input_file_count':len(trace['input_files']),'input_hashes_unchanged':True,
+ 'candidate_sha256':trace['candidate_sha256'],'response_sha256':trace['response_sha256'],
+ 'oracle_sha256':sha(BASE/'oracle.md'),'preflight_sha256':sha(PUBLIC/'preflight.json'),
+ 'authorization_sha256':sha(PUBLIC/'authorization.json'),
+ 'execution_head':subprocess.check_output(['git','rev-parse','HEAD'],cwd=ROOT,text=True).strip(),
+ 'session':{'event_counts':dict(counts),'exit_code':trace['exit_code'],'collector_exit_code':trace['collector_exit_code'],'timed_out':trace['timed_out'],'duration_seconds':trace['duration_seconds'],'diagnostics':trace['diagnostics'],'automatic_retry':False,'internal_transport_retries':transport_retries,
+    'collaboration_routing_errors':re.findall(r'collab spawn failed: ([^\r\n]+)',stderr),
+    'stream_errors':[e.get('message') for e in events if e.get('type')=='error'],
+    'other_nonreasoning_item_types':sorted({e.get('item',{}).get('type','') for e in events if e.get('item',{}).get('type') not in ['reasoning','command_execution','agent_message',None]})},
+ 'timing_receipts_verified':True,
+ 'command_audit_status':'PENDING_REVIEW_OF_ACTUAL_COMMANDS',
+ 'commands':[{'index':i,'command':c['command'],'exit_code':c.get('exit_code'),'output_chars':len(c.get('aggregated_output',''))} for i,c in enumerate(commands,1)],
+ 'reasoning_text_published':False,
+ 'limitations':['The catalogue is reconstructed locally after execution, not a capture of the transmitted request.','Command scope requires semantic review of actual commands; no lexical pattern is treated as a sandbox boundary.']
+}
+# Scan output for high-signal credential patterns before committing evidence.
+patterns=[r'gh[pousr]_[A-Za-z0-9_]{20,}',r'sk-[A-Za-z0-9]{20,}',r'-----BEGIN [A-Z ]*PRIVATE KEY-----',r'AKIA[0-9A-Z]{16}',r'eyJ[A-Za-z0-9_-]{15,}\.[A-Za-z0-9_-]{15,}\.[A-Za-z0-9_-]{15,}']
+for path in FROZEN.rglob('*'):
+    if path.is_file():
+        text=path.read_text(encoding='utf-8',errors='replace')
+        assert not any(re.search(p,text) for p in patterns), 'Potential secret pattern in '+path.name
+target=PUBLIC/'cases/JM-N01'
+assert not target.exists(), 'Never overwrite published evidence'
+shutil.copytree(FROZEN,target)
+for p in FROZEN.rglob('*'):
+    if p.is_file():assert sha(p)==sha(target/p.relative_to(FROZEN))
+report['published_copy_matches_freeze']=True
+write(PUBLIC/'postflight-integrity.json',report)
+shutil.copyfile(Path(__file__),PUBLIC/'preparation/postflight.py.txt')
+print(json.dumps({'integrity':'PASS','session':report['session'],'commands':report['commands']},ensure_ascii=False,indent=2))

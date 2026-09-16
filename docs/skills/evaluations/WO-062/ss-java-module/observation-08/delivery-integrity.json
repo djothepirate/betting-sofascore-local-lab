@@ -1,0 +1,18 @@
+{
+  "schema": "wo062-observation-delivery-integrity-v1",
+  "checked_at_utc": "2026-09-16T11:54:10.298309+00:00",
+  "status": "PASS",
+  "run_id": "observation-08",
+  "candidate_unchanged": true,
+  "frozen_response_unchanged": true,
+  "fixture_oracle_criteria_and_application_changes": false,
+  "previous_run_changes": false,
+  "formal_cases_still_NOT_RUN": 8,
+  "model_sessions": 1,
+  "other_cases_executed": false,
+  "sensitive_pattern_scan": "PASS",
+  "json_and_utf8_checks": "PASS",
+  "git_diff_check": "PASS",
+  "human_validation": false,
+  "personal_installation": false
+}

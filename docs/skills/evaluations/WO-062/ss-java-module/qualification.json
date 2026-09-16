@@ -2,7 +2,7 @@
   "schema": "wo062-current-skill-qualification-v1",
   "skill": "ss-java-module",
   "candidate_version": "0.1.0-candidate.5",
-  "status": "PREPARED_NOT_QUALIFIED",
+  "status": "TARGETED_OBSERVATION_PASS_NOT_QUALIFIED",
   "base_commit": "d5fb8733d3e7326be71c2f4f6c9e0ea4b2e22441",
   "candidate_files": [
     {
@@ -17,8 +17,8 @@
     }
   ],
   "evaluation_gate": {
-    "status": "NOT_RUN_NEW_CANDIDATE",
-    "meaning": "Candidate.5 is a new SHA. No candidate.5 behavioral case, model session, selection session, application test or human validation has run."
+    "status": "TARGETED_OBSERVATION_PASS_FORMAL_CAMPAIGN_NOT_RUN",
+    "meaning": "One fresh JM-N01 observation passed. It is excluded from formal qualification; all eight formal cases remain NOT_RUN and require a new owner authorization."
   },
   "previous_candidate": {
     "version": "0.1.0-candidate.4",
@@ -98,7 +98,9 @@
   "qualification_policy": {
     "candidate_sha_specific": true,
     "formal_transfer_of_candidate4_passes": false,
-    "meaning": "The C6/C7 protocol treats the candidate SHA as part of the evaluated artifact. A future JM-N01-only run can be a narrow observation, but it cannot qualify candidate.5 or transfer candidate.4's seven PASS verdicts."
+    "meaning": "The C6/C7 protocol treats the candidate SHA as part of the evaluated artifact. A future JM-N01-only run can be a narrow observation, but it cannot qualify candidate.5 or transfer candidate.4's seven PASS verdicts.",
+    "fresh_formal_campaign_includes_JM_N01_again": true,
+    "targeted_observation_may_be_reused": false
   },
   "invariants": {
     "three_candidate4_JM_N01_corrections_preserved": true,
@@ -109,9 +111,22 @@
     "personal_installation": false
   },
   "limits": [
-    "Candidate.5 is prepared only; static correctness does not establish behavioral qualification.",
-    "No authorization to launch JM-N01 or any other candidate.5 case is created by this revision.",
-    "Candidate.4 C6/C7 evidence remains historical and preserved, including its 7 PASS / 1 FAIL result.",
-    "This revision establishes no application build, application test, database, provider collection, CI pipeline, human validation or personal installation."
+    "Candidate.5 has one passing targeted observation but no formal qualification result.",
+    "The single observation-08 authorization is consumed; no further model session is authorized by this record.",
+    "A new owner authorization is required for all eight fresh formal cases, including JM-N01 again.",
+    "Candidate.4 C6/C7 evidence remains preserved, including 7 PASS / 1 FAIL.",
+    "No application build, application test, database, provider collection, CI pipeline, human validation or personal installation was performed."
+  ],
+  "targeted_observations": [
+    {
+      "run_id": "observation-08",
+      "case_id": "JM-N01",
+      "verdict": "PASS",
+      "candidate_sha256": "d7171f978c2b13c852c2ce5e170d68c1bfc5087552661cfdc6271077a0fe6637",
+      "results": "observation-08/results.json",
+      "review": "observation-08/review-JM-N01.json",
+      "formal_qualification": false,
+      "reusable_as_formal_qualification_result": false
+    }
   ]
 }

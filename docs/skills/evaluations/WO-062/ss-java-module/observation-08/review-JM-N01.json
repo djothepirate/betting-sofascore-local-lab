@@ -1,0 +1,212 @@
+{
+  "schema": "wo062-independent-targeted-observation-review-v1",
+  "reviewed_at_utc": "2026-09-16T13:51:40.958235+02:00",
+  "reviewer": "/root",
+  "independence": "Reviewer is separate from the fresh evaluated session; oracle used only after frozen response. No additional model review session was launched.",
+  "case_id": "JM-N01",
+  "run_id": "observation-08",
+  "skill": "ss-java-module",
+  "candidate_version": "0.1.0-candidate.5",
+  "candidate_sha256": "d7171f978c2b13c852c2ce5e170d68c1bfc5087552661cfdc6271077a0fe6637",
+  "candidate_body_commit": "d77b614c9b7a6e7536ea3c92bb30bbf9b32a5823",
+  "execution_preparation_commit": "766d735f4e43f66c29268dbdc5b3a0f6b62f1d17",
+  "verdict": "PASS",
+  "verdict_scope": "TARGETED_OBSERVATION_ONLY",
+  "technical_execution_verdict": "COMPLETED_WITH_DOCUMENTED_NONBLOCKING_DIAGNOSTICS",
+  "formal_qualification": false,
+  "reusable_as_formal_qualification_result": false,
+  "response_sha256": "887f63a16d33031cb91692d0d786d94ff9a8de36b89daad612a22f452d9c07c3",
+  "freeze_sha256": "ec4228a7adfc3899b6d1c5a136bbf9f389d65aacbac58d0f23fa93e5842d0bd0",
+  "oracle_sha256": "d13dc8c5ec833f30dc9025c3c22a22c00e60656eae3a89dc30361861ea390bd1",
+  "postflight_sha256": "cafc8d8b1dd035641302b8e022d850d44749aa24d5ae7879931554eb4716ff2e",
+  "frozen_at_utc": "2026-09-16T13:47:47.004031+02:00",
+  "frozen_before_review": true,
+  "required_criteria_missing": [],
+  "criteria": [
+    {
+      "criterion_id": "integrity-and-freshness",
+      "required": true,
+      "result": "PASS",
+      "response_lines": [
+        5
+      ],
+      "evidence": "Exact candidate.5, 39 input files, unchanged prompt and envelope from C7; only candidate SKILL.md differs. Frozen hashes match the published evidence; no oracle or prior answer provided."
+    },
+    {
+      "criterion_id": "one-authorized-observation",
+      "required": true,
+      "result": "PASS",
+      "response_lines": [],
+      "evidence": "One ephemeral read-only session, one completed turn, exit and collector codes 0; 617.250 seconds, no expiration, no launcher retry or service reconnect."
+    },
+    {
+      "criterion_id": "scope-and-source-identity",
+      "required": true,
+      "result": "PASS",
+      "response_lines": [
+        5,
+        7
+      ],
+      "evidence": "The review names source commit 6648dd4 from input.json, distinguishes that declaration from an unperformed Git verification, preserves Lab statuses and declares no application execution."
+    },
+    {
+      "criterion_id": "architecture-map-and-dependencies",
+      "required": true,
+      "result": "PASS",
+      "response_lines": [
+        13,
+        14,
+        15,
+        16,
+        17,
+        18,
+        19,
+        20,
+        21,
+        22,
+        23,
+        24,
+        25,
+        26,
+        27,
+        28,
+        29,
+        31,
+        58,
+        60,
+        62,
+        64,
+        66
+      ],
+      "evidence": "The dependency table identifies Web controllers, domain data, runtime, executor ProviderAccess, completion, stores and JDBC adapters, live handoff, factory/decorator/supervisor, IPC and child worker. Concrete parser/catalog/adapter-exception dependencies remain visible."
+    },
+    {
+      "criterion_id": "domain-distinctions",
+      "required": true,
+      "result": "PASS",
+      "response_lines": [
+        33,
+        35,
+        36,
+        37,
+        38,
+        39,
+        40
+      ],
+      "evidence": "Order trigger, per-page source, target date, UTC instants and durable successful catalogue versus unavailable historic content are distinguished."
+    },
+    {
+      "criterion_id": "activation-and-lifecycle",
+      "required": true,
+      "result": "PASS",
+      "response_lines": [
+        44,
+        46,
+        48,
+        76,
+        78,
+        79,
+        80,
+        81,
+        82,
+        83
+      ],
+      "evidence": "The answer distinguishes Spring local, J3 runtime-enabled, supplier flags, Maven profiles, Web/servlet/loopback checks, leadership/reconciliation and serial consumer."
+    },
+    {
+      "criterion_id": "transactions-and-publication",
+      "required": true,
+      "result": "PASS",
+      "response_lines": [
+        50,
+        52,
+        54,
+        56
+      ],
+      "evidence": "Network execution is outside long SQL transactions; cleanup precedes terminal publication, J8/order/catalogue transaction and previous success are distinguished. The J8 failure observation is limited to the supplied implementation/test and missing proof of later reconciliation."
+    },
+    {
+      "criterion_id": "live-context-no-session-state-transfer",
+      "required": true,
+      "result": "PASS",
+      "response_lines": [
+        68,
+        70
+      ],
+      "evidence": "The answer explicitly prohibits cookies, storageState, page state and any session data transfer live-to-J3 and in reverse. It names a fresh nonpersistent temporary context without imported state. This covers the semantic no-continuity requirement without requiring the exact word artificiellement."
+    },
+    {
+      "criterion_id": "live-context-loss-is-terminal",
+      "required": true,
+      "result": "PASS",
+      "response_lines": [
+        72
+      ],
+      "evidence": "Browser/live-context loss produces STOPPED/STOPPED_ERROR and a terminal session, with supervised cleanup, no automatic recreation and no replacement authorized by a tick."
+    },
+    {
+      "criterion_id": "blocked-live-profile",
+      "required": true,
+      "result": "PASS",
+      "response_lines": [
+        83
+      ],
+      "evidence": "The profile sofascore-live-test explicitly remains blocked by alwaysFail; it neither activates collection nor replaces the J7 profile."
+    },
+    {
+      "criterion_id": "precise-playwright-textual-guard",
+      "required": true,
+      "result": "PASS",
+      "response_lines": [
+        91
+      ],
+      "evidence": "Verify-Local is explicitly a textual guard for com.microsoft.playwright in src/main, distinct from internal Playwright-named interfaces and not a global dependency or ArchUnit proof."
+    },
+    {
+      "criterion_id": "test-selection-and-proof-limits",
+      "required": true,
+      "result": "PASS",
+      "response_lines": [
+        87,
+        89,
+        92,
+        93,
+        94,
+        95,
+        96,
+        97,
+        98,
+        100,
+        102,
+        105,
+        108,
+        110,
+        112
+      ],
+      "evidence": "The matrix names the four J3 integration tests, their PostgreSQL/doubles/threads limits, pure worker protocol tests and the native loopback IT. It identifies the LocalQualificationIT include mismatch and the explicit Failsafe goals. The supervisor-only Spring test does not prove the full Primary graph. Historical totals do not qualify current bytes."
+    },
+    {
+      "criterion_id": "minimal-proposals-and-handoffs",
+      "required": true,
+      "result": "PASS",
+      "response_lines": [
+        114,
+        116,
+        118,
+        120,
+        122,
+        124,
+        126
+      ],
+      "evidence": "The review proposes bounded follow-up without editing code, avoids a Maven refactor, preserves concrete dependencies and names ss-verify, ss-postgres-change and ss-data-contract-replay for their respective scopes."
+    }
+  ],
+  "limits": [
+    "A single observation is evidence for this response, not reproducibility or full candidate qualification.",
+    "The seven candidate.4 PASS results remain historical and do not transfer to candidate.5.",
+    "Two failed collaboration routing calls and one corrected local read ParserError remain in the evidence; no successful delegation, new launcher session or transport reconnect is observed.",
+    "The response discusses additional J8 and coverage follow-up as bounded proposals; no application defect correction or test execution was authorized here.",
+    "No exact wording artificiellement is required by the frozen semantic oracle. Isolation, fresh context without imported state and explicit no-transfer prohibition are all present."
+  ],
+  "next_step": "Only after a separate owner authorization: eight fresh formal cases, including a new JM-N01. Do not reuse observation-08."
+}

@@ -6,6 +6,13 @@ Les évolutions notables du SofaScore Local Lab sont consignées dans ce fichier
 
 ### WO-062 — skills spécialisés du lot 2
 
+- Réalise une seule [observation JM-N01 sur candidate.5](docs/skills/evaluations/WO-062/ss-java-module/observation-08/review-JM-N01.md) :
+  PASS après réponse fraîche et revue des preuves gelées ; l'isolation live/J3 et
+  les trois corrections précédentes sont restituées. Session terminée en 617,250 s,
+  avec diagnostics non bloquants conservés. Aucun autre cas lancé, aucun changement
+  du candidat ou des entrées ; huit cas formels encore NOT_RUN, observation exclue
+  de toute réutilisation dans une future campagne fraîche.
+
 - Prépare `ss-java-module 0.1.0-candidate.5` sans recette : correction minimale de
   la restitution J3 pour interdire explicitement tout transfert de cookie, état de
   stockage ou donnée de session du contexte live conservé vers le contexte J3 temporaire,
