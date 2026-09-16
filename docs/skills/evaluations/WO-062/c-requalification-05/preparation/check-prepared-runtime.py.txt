@@ -1,0 +1,58 @@
+"""Verify C5 prepared Windows sandboxes without invoking a model, harness, Java or application."""
+import hashlib
+import json
+import pathlib
+import subprocess
+from datetime import datetime, timezone
+
+ROOT = pathlib.Path(__file__).resolve().parent.parent
+CLI = 'C:/Users/geoff/AppData/Local/OpenAI/Codex/bin/12219cbfbcbddde7/codex.exe'
+run = ROOT / '.tmp' / 'wo062-evaluations' / 'ss-windows-runtime' / 'run-05'
+preflight = json.loads((run / 'preflight.json').read_text(encoding='utf-8'))
+assert preflight['run_id'] == 'run-05' and [c['case_id'] for c in preflight['cases']] == ['WR-H01', 'WR-N01']
+records = []
+for case in preflight['cases']:
+    case_id = case['case_id']
+    directory = run / case_id
+    candidate = directory / '.agents/skills/ss-windows-runtime/SKILL.md'
+    before = hashlib.sha256(candidate.read_bytes()).hexdigest()
+    probe = (
+        "$ErrorActionPreference='Stop'; "
+        "$s=[IO.File]::ReadAllText('.agents/skills/ss-windows-runtime/SKILL.md',[Text.Encoding]::UTF8); "
+        "if($s.Length -lt 100){throw 'Candidate read failed'}; "
+        "$p=[IO.Path]::GetFullPath('output/c5-launcher-preflight.txt'); "
+        "if(Test-Path -LiteralPath $p){throw 'Preexisting temporary target'}; "
+        "[IO.File]::WriteAllText($p,'C5_PREFLIGHT',[Text.UTF8Encoding]::new($false)); "
+        "if([IO.File]::ReadAllText($p) -cne 'C5_PREFLIGHT'){throw 'Temporary bytes differ'}; "
+        "Remove-Item -LiteralPath $p; "
+        "if(Test-Path -LiteralPath $p){throw 'Temporary residue'}; "
+        "Write-Output 'C5_PREPARED_SANDBOX_READ_WRITE_CLEANUP=PASS'"
+    )
+    args = [CLI, 'sandbox', '--permission-profile', ':workspace', '-C', str(directory), 'powershell.exe', '-NoProfile', '-NonInteractive', '-Command', probe]
+    started = datetime.now(timezone.utc)
+    completed = subprocess.run(args, cwd=directory, capture_output=True, timeout=45)
+    records.append({
+        'case_id': case_id,
+        'started_at_utc': started.isoformat(),
+        'ended_at_utc': datetime.now(timezone.utc).isoformat(),
+        'command': args,
+        'exit_code': completed.returncode,
+        'stdout': completed.stdout.decode('utf-8', errors='replace'),
+        'stderr': completed.stderr.decode('utf-8', errors='replace'),
+        'candidate_unchanged': before == hashlib.sha256(candidate.read_bytes()).hexdigest(),
+        'temporary_residue_exists': (directory / 'output/c5-launcher-preflight.txt').exists(),
+    })
+
+result = {
+    'schema': 'wo062-c5-prepared-runtime-preflight-v1',
+    'purpose': 'Non-model access check of prepared C5 contexts. It is not WR-H01/WR-N01 execution, a Java launch or a skill qualification.',
+    'created_and_launched_by': subprocess.check_output(['whoami'], text=True).strip(),
+    'model_invoked': False,
+    'runtime_probe_executed': False,
+    'java_started': False,
+    'configuration_changed': False,
+    'cases': records,
+}
+(ROOT / '.tmp/c5-prepared-access.json').write_text(json.dumps(result, ensure_ascii=False, indent=2) + '\n', encoding='utf-8', newline='\n')
+print(json.dumps({'cases': [{k: case[k] for k in ['case_id', 'exit_code', 'candidate_unchanged', 'temporary_residue_exists']} for case in records]}))
+raise SystemExit(any(case['exit_code'] != 0 or not case['candidate_unchanged'] or case['temporary_residue_exists'] for case in records))

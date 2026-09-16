@@ -1,0 +1,52 @@
+"""Verify frozen C5 context bytes and access roles before any evaluation session."""
+import hashlib
+import json
+import pathlib
+
+ROOT = pathlib.Path(__file__).resolve().parent.parent
+runtime_root = ROOT / '.tmp' / 'wo062-evaluations'
+expectations = {
+    'ss-java-module': ['JM-H01', 'JM-N01', 'JM-C01', 'JM-C02', 'JM-S01', 'JM-S02', 'JM-S03', 'JM-S04'],
+    'ss-windows-runtime': ['WR-H01', 'WR-N01'],
+}
+sha = lambda path: hashlib.sha256(path.read_bytes()).hexdigest()
+outcomes = []
+for skill, identifiers in expectations.items():
+    run = runtime_root / skill / 'run-05'
+    preflight = json.loads((run / 'preflight.json').read_text(encoding='utf-8'))
+    assert preflight['run_id'] == 'run-05'
+    assert [case['case_id'] for case in preflight['cases']] == identifiers
+    assert preflight['case_count'] == len(identifiers)
+    for case in preflight['cases']:
+        directory = run / case['case_id']
+        assert sha(directory / 'request.txt') == case['request_sha256']
+        assert sha(directory / 'case-prompt.txt') == case['prompt_sha256']
+        assert not any(part.lower() in ('oracle', 'results', 'review') for part in (pathlib.Path(item['path']).parts[0].lower() for item in case['input_files']))
+        for item in case['input_files']:
+            path = directory / item['path']
+            assert path.is_file(), path
+            assert path.stat().st_size == item['bytes'], path
+            assert sha(path) == item['sha256'], path
+        assert not list((directory / 'output').rglob('*')), directory / 'output'
+        outcomes.append({'skill': skill, 'case_id': case['case_id'], 'status': 'PASS', 'input_files': len(case['input_files'])})
+    if skill == 'ss-windows-runtime':
+        h = preflight['cases'][0]
+        module = next(item for item in h['input_files'] if item['path'] == 'scripts/wo036/WO036-CampaignTools.psm1')
+        assert module['access_role'] == 'runtime_dependency_only'
+        assert module['path'] not in h['readable_input_paths']
+        request = (run / 'WR-H01' / 'request.txt').read_text(encoding='utf-8')
+        readable_section = request.split('Gabarits opérationnels', 1)[0]
+        assert module['path'] not in readable_section
+        assert 'inputs/c5/wrh-module-extract.md' in h['readable_input_paths']
+
+report = {
+    'schema': 'wo062-c5-context-integrity-v1',
+    'status': 'PASS',
+    'cases': outcomes,
+    'case_count': len(outcomes),
+    'model_calls': 0,
+    'oracle_or_prior_answer_copied': False,
+    'note': 'The separate Windows restricted-token access probe is recorded in prepared-access.json and is not overwritten by this byte-integrity check.',
+}
+(ROOT / '.tmp/c5-context-integrity.json').write_text(json.dumps(report, ensure_ascii=False, indent=2) + '\n', encoding='utf-8', newline='\n')
+print(json.dumps({'status': report['status'], 'cases': report['case_count']}))

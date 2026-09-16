@@ -1,0 +1,47 @@
+"""Local unit checks for the C5 WR-H01 event-based reading audit."""
+import importlib.util
+import json
+import pathlib
+
+ROOT = pathlib.Path(__file__).resolve().parent.parent
+spec = importlib.util.spec_from_file_location('c5', ROOT / '.tmp' / 'wo062_evaluate_c5.py')
+m = importlib.util.module_from_spec(spec)
+spec.loader.exec_module(m)
+case = {
+    'runtime_dependency_only': ['scripts/wo036/WO036-CampaignTools.psm1'],
+    'readable_input_paths': ['AGENTS.md', 'inputs/c5/wrh-module-extract.md'],
+}
+
+clean = m.read_policy_audit('WR-H01', [
+    {'command': "Get-Content -LiteralPath 'inputs/c5/wrh-module-extract.md'"},
+    {'command': "Get-Content -LiteralPath 'AGENTS.md' | Select-Object -First 20"},
+], case)
+assert clean['status'] == 'PASS'
+
+module = m.read_policy_audit('WR-H01', [
+    {'command': "Get-Content -Raw 'scripts/wo036/WO036-CampaignTools.psm1'"},
+], case)
+assert module['status'] == 'FAIL' and len(module['runtime_dependency_direct_access']) == 1
+
+repeat = m.read_policy_audit('WR-H01', [
+    {'command': "Get-Content -LiteralPath 'AGENTS.md'"},
+    {'command': "Get-Content -LiteralPath 'AGENTS.md' | Select-Object -First 10"},
+], case)
+assert repeat['status'] == 'FAIL' and len(repeat['repeated_readable_access']) == 1
+
+not_applicable = m.read_policy_audit('WR-N01', [], {})
+assert not_applicable['status'] == 'NOT_APPLICABLE'
+
+result = {
+    'schema': 'wo062-c5-read-policy-tests-v1',
+    'tests': [
+        {'name': 'single_readable_access', 'status': 'PASS'},
+        {'name': 'runtime_only_module_direct_access', 'status': 'PASS'},
+        {'name': 'repeated_readable_access', 'status': 'PASS'},
+        {'name': 'non_historical_case_not_applicable', 'status': 'PASS'},
+    ],
+    'model_calls': 0,
+    'runner_sha256': m.sha(ROOT / '.tmp' / 'wo062_evaluate_c5.py'),
+}
+m.write(ROOT / '.tmp/c5-read-policy-tests.json', result)
+print(json.dumps(result))

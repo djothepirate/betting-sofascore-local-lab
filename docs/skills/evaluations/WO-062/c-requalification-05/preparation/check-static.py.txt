@@ -1,0 +1,66 @@
+"""Deterministic C5 static checks, separate from the evaluated model contexts."""
+import hashlib
+import json
+import pathlib
+
+ROOT = pathlib.Path(__file__).resolve().parent.parent
+EVAL = ROOT / 'docs' / 'skills' / 'evaluations' / 'WO-062'
+PREP = EVAL / 'c-requalification-05' / 'preparation'
+sha = lambda path: hashlib.sha256(path.read_bytes()).hexdigest()
+read = lambda path: path.read_text(encoding='utf-8')
+
+java_skill = ROOT / 'docs' / 'skills' / 'local-lab' / 'ss-java-module' / 'SKILL.md'
+pom = ROOT / 'pom.xml'
+java_cases = json.loads(read(EVAL / 'ss-java-module' / 'cases.json'))
+java_manifest = json.loads(read(EVAL / 'ss-java-module' / 'manifest.json'))
+jm = next(case for case in java_cases['cases'] if case['id'] == 'JM-N01')
+java_sources = {source['id']: source for source in java_manifest['sources']}
+checks = []
+
+def check(name, condition, evidence):
+    checks.append({'name': name, 'status': 'PASS' if condition else 'FAIL', 'evidence': evidence})
+    assert condition, name
+
+java_text = read(java_skill)
+pom_text = read(pom)
+check('java_candidate_version', 'version: "0.1.0-candidate.4"' in java_text, 'candidate metadata')
+check('java_analysis_requirement', 'le POM courant le maintient volontairement bloqué' in java_text and 'supposition issue du seul nom' in java_text, 'composition section')
+check('java_delivery_requirement', 'dont le blocage de\n`sofascore-live-test`' in java_text, 'delivery checklist')
+check('jm_n01_has_pom_source', any(java_sources[source]['path'] == 'pom.xml' for source in jm['source_ids']), 'frozen JM-N01 source ids')
+check('pom_has_blocked_profile_guard', '<id>sofascore-live-test</id>' in pom_text and '<alwaysFail>' in pom_text and 'volontairement bloqué' in pom_text, 'current POM profile guard')
+
+c5 = EVAL / 'c-requalification-05'
+protocol = read(c5 / 'windows-session-protocol.md')
+wrh = read(c5 / 'wrh-harness-template.ps1')
+wrn = read(c5 / 'wrn-conductor-template.ps1')
+wrn_preflight = json.loads(read(PREP / 'wrn-template-preflight-observation.json'))
+prepared_windows = json.loads(read(ROOT / '.tmp' / 'wo062-evaluations' / 'ss-windows-runtime' / 'run-05' / 'preflight.json'))
+wrh_case = next(case for case in prepared_windows['cases'] if case['case_id'] == 'WR-H01')
+check('wrh_protocol_runtime_only', 'runtime, pas une source à ouvrir manuellement' in protocol and 'Ne pas employer contre le module complet' in protocol, 'C5 protocol')
+check('wrh_context_separates_access', wrh_case['runtime_dependency_only'] == ['scripts/wo036/WO036-CampaignTools.psm1'] and 'scripts/wo036/WO036-CampaignTools.psm1' not in wrh_case['readable_input_paths'], 'prepared WR-H01 preflight')
+check('wrh_template_does_not_text_read_module', all(token not in wrh for token in ('Get-Content', 'ReadAllText', 'Get-FileHash', 'Import-Module')), 'frozen WR-H01 template')
+runtime_pos = wrn.index("Write-Event 'runtime_registered'")
+dependency_call_pos = wrn.index('Test-ConductorDependencies ($null -ne $selfImage)', runtime_pos)
+fingerprint_pos = wrn.index("Write-Event 'fixture_fingerprint'", runtime_pos)
+check('wrn_runtime_precedes_fingerprint', runtime_pos < dependency_call_pos < fingerprint_pos, 'frozen WR-N01 template invocation order')
+check('wrn_hash_is_dotnet', 'function Get-DotNetSha256' in wrn and 'sha256 = Get-DotNetSha256 $path' in wrn and 'Get-FileHash -LiteralPath' not in wrn, 'WR-N01 template provenance implementation')
+check('wrn_get_file_hash_optional', "Get-Command -Name Get-FileHash" in wrn and 'invoked = $false' in wrn and 'required = $false' in wrn, 'WR-N01 dependency observation')
+check('wrn_preflight_stops_before_java', all(event['event'] not in ('java_candidates', 'process_started', 'temporary_root_created') for event in wrn_preflight['events']) and wrn_preflight['main_result'] == 'PREFLIGHT_VERIFIED_NO_JAVA', 'executed template preflight evidence')
+
+result = {
+    'schema': 'wo062-c5-static-review-v1',
+    'overall': 'PASS',
+    'checks': checks,
+    'files': [
+        {'path': str(path.relative_to(ROOT)).replace('\\', '/'), 'sha256': sha(path), 'bytes': path.stat().st_size}
+        for path in [java_skill, pom, c5 / 'windows-session-protocol.md', c5 / 'wrh-harness-template.ps1', c5 / 'wrn-conductor-template.ps1', PREP / 'wrn-template-preflight-observation.json']
+    ],
+    'model_calls': 0,
+    'application_or_native_qualification': False,
+}
+(PREP / 'static-review.json').write_text(json.dumps(result, ensure_ascii=False, indent=2) + '\n', encoding='utf-8', newline='\n')
+lines = ['# Revue statique C5', '', 'Verdict : **PASS**.', '', '| Contrôle | Verdict | Preuve |', '| --- | --- | --- |']
+lines.extend(f"| `{item['name']}` | {item['status']} | {item['evidence']} |" for item in checks)
+lines.extend(['', 'Cette revue vérifie les octets et le préflight local. Elle ne constitue ni une session de modèle, ni une qualification comportementale des deux sondes, ni une validation humaine ou installation personnelle.', ''])
+(PREP / 'static-review.md').write_text('\n'.join(lines), encoding='utf-8', newline='\n')
+print(json.dumps({'overall': result['overall'], 'checks': len(checks), 'model_calls': 0}))

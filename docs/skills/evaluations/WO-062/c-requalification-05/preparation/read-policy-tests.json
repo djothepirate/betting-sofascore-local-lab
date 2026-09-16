@@ -1,0 +1,23 @@
+{
+  "schema": "wo062-c5-read-policy-tests-v1",
+  "tests": [
+    {
+      "name": "single_readable_access",
+      "status": "PASS"
+    },
+    {
+      "name": "runtime_only_module_direct_access",
+      "status": "PASS"
+    },
+    {
+      "name": "repeated_readable_access",
+      "status": "PASS"
+    },
+    {
+      "name": "non_historical_case_not_applicable",
+      "status": "PASS"
+    }
+  ],
+  "model_calls": 0,
+  "runner_sha256": "7adbc893b502f4ca71bb7f5196562ea292c8a8ea5916923ee41c2d37fd92f2c2"
+}
