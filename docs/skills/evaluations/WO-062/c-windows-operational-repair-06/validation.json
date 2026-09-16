@@ -1,0 +1,86 @@
+{
+  "schema": "wo062-windows-operational-repair-validation-v1",
+  "status": "PASS_TECHNICAL_REPAIR_ONLY",
+  "executed_at_local_date": "2026-09-16",
+  "model_session_started": false,
+  "qualification_execution_started": false,
+  "candidate_modified": false,
+  "fixture_modified": false,
+  "oracle_modified": false,
+  "historical_c5_evidence_modified": false,
+  "source_templates": [
+    {
+      "path": "../c-requalification-05/wrh-harness-template.ps1",
+      "sha256": "c1d8c2d34ae0990a6d4404e9f8ec6d42bad0b6d2f33f1f0fc922b17182ac17ef",
+      "repaired_copy_sha256": "b1fb5d9f5579dbb8c9c1a39ce70f1c8e45d5d479ba4c9955c5c7b3eb66eb05e3"
+    },
+    {
+      "path": "../c-requalification-05/wrh-postflight-template.ps1",
+      "sha256": "6e9428d28209acd4b8a966a454dc17fd82a03b5500f11058ede532c69b8ecb6b",
+      "repaired_copy_sha256": "e0f3e082cc4bc181ecef4b854334539187393b0410c31ee7734cb2e67f8b1c74"
+    },
+    {
+      "path": "../c-requalification-05/wrn-conductor-template.ps1",
+      "sha256": "b1f4cd49dc1ae97eb7218e75afc9d14dab007d9970131ca38e2bfddcfcc0615a",
+      "repaired_copy_sha256": "650399525bf1cb1bcb956a35e366e5ee0799ed37397b1cbddc335f7c2bb7120b"
+    }
+  ],
+  "checks": [
+    {
+      "id": "WRH-CONTAINMENT-ACCEPT",
+      "verdict": "PASS",
+      "evidence": "The repaired PowerShell 7 template accepts its in-case output/runtime-artifacts path in -PreflightOnly mode, produces PREFLIGHT_OK_NO_HARNESS and creates no child process."
+    },
+    {
+      "id": "WRH-CONTAINMENT-REJECT",
+      "verdict": "PASS",
+      "evidence": "A disposable copy configured with an artifact root outside its case fails and records Path outside case in structured execution evidence."
+    },
+    {
+      "id": "WRH-POSTFLIGHT-ABSENT-RUNTIME",
+      "verdict": "PASS",
+      "evidence": "After removing the empty temporary runtime parent, the repaired postflight returns zero and writes runtime_empty=true under StrictMode."
+    },
+    {
+      "id": "WRN-FAST-FAILURE-IMAGE",
+      "verdict": "PASS",
+      "evidence": "A bounded direct Windows PowerShell 5.1 conductor run completes TWO_MODES_OBSERVED. failure retains a nonempty direct-Java image marked observed before stream reads, returns native code 23 and passes the identity assertion."
+    },
+    {
+      "id": "WRN-SLEEP-OWNED-TIMEOUT",
+      "verdict": "PASS",
+      "evidence": "The same technical run observes sleep alive after 1509.1094 ms from READY and records owned-process verification before stop."
+    },
+    {
+      "id": "C5-COLLECTOR-EMPTY-PARENT",
+      "verdict": "PASS",
+      "evidence": "A regular empty output/runtime parent produces status PASS with zero residue entries and no deletion attempt."
+    },
+    {
+      "id": "C5-COLLECTOR-OWNED-RESIDUE",
+      "verdict": "PASS",
+      "evidence": "A child named owned-residue under output/runtime produces status FAIL and remains listed as evidence; the collector deletes nothing."
+    }
+  ],
+  "runtime": {
+    "wrn_powershell": "C:/Windows/System32/WindowsPowerShell/v1.0/powershell.exe",
+    "wrn_conductor_exit": 0,
+    "wrn_main_result": "TWO_MODES_OBSERVED",
+    "wrn_failure_native_code": 23,
+    "wrn_sleep_timeout_elapsed_ms": 1509.1094
+  },
+  "postconditions": {
+    "c5_source_templates_unchanged": true,
+    "temporary_test_root_cleaned": true,
+    "maven_started": false,
+    "application_started": false,
+    "network_used": false,
+    "docker_started": false,
+    "codex_session_started": false
+  },
+  "limits": [
+    "WR-H01 was tested only through its no-child preflight branch. The WO-044 harness itself was not launched by this repair test.",
+    "The WR-N01 Java run proves the repaired conductor mechanics only. It is not a fresh model session, an evaluated response, a replacement for WR-N01 C5, or a candidate qualification result.",
+    "The next formal C5 successor still requires a new authorisation, fresh contexts, a new host runner integrating c5_runtime_root_collector.py and independent postfreeze review."
+  ]
+}

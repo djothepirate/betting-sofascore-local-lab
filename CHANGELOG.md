@@ -6,6 +6,16 @@ Les évolutions notables du SofaScore Local Lab sont consignées dans ce fichier
 
 ### WO-062 — skills spécialisés du lot 2
 
+- Corrige et teste, hors recette, les gabarits Windows C5 sans modifier leurs sources
+  historiques ni `ss-windows-runtime`. La révision accepte l’artefact interne WR-H01
+  tout en refusant un chemin externe, rend son postflight sûr si `output/runtime` est
+  absent, établit l’image Java détenue avant la lecture des flux WR-N01 et remplace le
+  faux résidu d’un parent runtime vide par une inspection conservatrice de ses entrées.
+  Le [test technique borné](docs/skills/evaluations/WO-062/c-windows-operational-repair-06/validation.json)
+  passe : préflight H sans enfant, postflight, `failure` code 23, `sleep` vivant après
+  1 509 ms et résidu enfant toujours bloquant. Il ne lance ni modèle ni qualification ;
+  l’état Windows reste 6 PASS / 0 FAIL / 2 BLOCKED.
+
 - Exécute les deux sessions Windows C5 hôte-formelles de `ss-windows-runtime
   0.1.0-candidate.1`, sans oracle, réponse antérieure ni relance. `WR-H01` se termine
   en 361,375 s avec audit de lecture PASS, mais son gabarit gelé échoue avant le harnais

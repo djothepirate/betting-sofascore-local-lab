@@ -377,6 +377,22 @@ distinct ; elle n'élargit pas implicitement ce lot de skills.
   `sleep`. Les deux verdicts sont [BLOCKED](../../skills/evaluations/WO-062/ss-windows-runtime/run-05/results.json),
   leurs réponses et gels sont conservés, et aucune relance n'est effectuée.
 
+### Réparation technique des gabarits C5, sans recette
+
+- Après les deux blocages C5, le propriétaire demande la correction de la garde WR-H01,
+  de son postflight, de la collecte d'image WR-N01 et du classement d'un parent runtime
+  vide. La [révision opérationnelle](../../skills/evaluations/WO-062/c-windows-operational-repair-06/README.md)
+  construit des copies réparées sans modifier les trois sources C5, les contextes
+  `run-05`, leurs réponses ou le candidat.
+- Son [test technique](../../skills/evaluations/WO-062/c-windows-operational-repair-06/validation.json)
+  réussit sans modèle : préflight WR-H01 sans enfant, refus du chemin externe, postflight
+  avec racine absente, Java 25 `failure` identifié avant lecture de flux avec code 23,
+  `sleep` observé vivant après 1 509 ms, et collecteur PASS sur parent vide / FAIL sur
+  résidu enfant. Maven, application, Docker, réseau et qualification n'ont pas été lancés.
+- Cette preuve ne remplace pas C5 et n'autorise aucune relance : une future recette exige
+  des contextes frais, un conducteur hôte intégrant le collecteur révisé, une autorisation
+  propriétaire et une revue postfreeze distincte.
+
 ### Ordre restant et consolidation
 
 | Étape | Skill | Résultat attendu avant passage à la suite |
