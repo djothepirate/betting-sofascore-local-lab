@@ -1,0 +1,22 @@
+{
+  "schema": "wo062-c8-prelaunch-checks-v1",
+  "status": "PASS",
+  "candidate_sha256_matches_authorization": true,
+  "cases_exact": [
+    "JM-H01",
+    "JM-N01",
+    "JM-C01",
+    "JM-C02",
+    "JM-S01",
+    "JM-S02",
+    "JM-S03",
+    "JM-S04"
+  ],
+  "workers_exactly_one": true,
+  "all_contexts_output_free": true,
+  "all_contexts_match_c5_except_candidate_skill": true,
+  "observation_08_excluded": true,
+  "oracle_excluded": true,
+  "prior_answers_excluded": true,
+  "model_invoked": false
+}

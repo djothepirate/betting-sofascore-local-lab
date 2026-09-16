@@ -322,6 +322,23 @@ distinct ; elle n'élargit pas implicitement ce lot de skills.
   `NOT_RUN` ; l'observation ne sera pas réutilisée dans une campagne fraîche.
   Le candidat, les sources, fixtures, critères et preuves C6/C7 sont inchangés.
 
+### Campagne formelle C8 candidate.5 — huit cas frais
+
+- Le propriétaire autorise formellement huit sessions neuves : `JM-H01`, `JM-N01`,
+  `JM-C01`, `JM-C02`, `JM-S01`, `JM-S02`, `JM-S03` et `JM-S04`.
+  [L'autorisation C8](../../skills/evaluations/WO-062/c-requalification-08/authorization.json)
+  fixe le candidat `.5`, le SHA exact, un worker séquentiel, une session éphémère
+  `read-only` par cas, 900 secondes par session et aucune relance automatique.
+- Le [préflight C8](../../skills/evaluations/WO-062/c-requalification-08/preparation/prelaunch-checks.json)
+  est `PASS` : les huit contextes sont vierges, les prompts, requêtes et sources
+  correspondent aux enveloppes C5 ; seule la copie locale de `SKILL.md` est passée
+  de `.4` à `.5`. Oracle, réponses, événements, verdicts, plans et matériel C5/C6/C7
+  ainsi qu'observation-08 sont exclus des sessions évaluées.
+- La campagne est distincte de l'observation : `JM-N01` est donc relancé dans un
+  contexte neuf, et aucun résultat antérieur n'est transféré. Chaque sortie sera
+  gelée avant revue ; le résultat formel dépend des huit verdicts et de leur
+  intégrité, sans créer de validation humaine ni installation personnelle.
+
 ### Déblocage Windows — staging hôte sans modèle
 
 - Le nouveau préflight hôte C5 des contextes gelés échoue encore avant PowerShell avec

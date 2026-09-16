@@ -1,0 +1,41 @@
+{
+  "schema": "wo062-c8-preparation-artifact-manifest-v1",
+  "scope": "Static preparation only; no model session, response, oracle or human validation.",
+  "files": [
+    {
+      "path": "context-integrity.json",
+      "bytes": 2861,
+      "sha256": "0bfe1b8b7d5afca1eb14498d6563e47901d1f4ba343468e27a59ee6880f37fa7"
+    },
+    {
+      "path": "evaluator.py.txt",
+      "bytes": 24127,
+      "sha256": "af9a0def5caa7c9784d5ca10a42beeb94fe5d228ced0f1fd0ace6bbcf4e8f411"
+    },
+    {
+      "path": "preflight.py.txt",
+      "bytes": 8773,
+      "sha256": "13fb4c6f43ab1ef20483fd1fc1351a7e10e55ba9364a07862428f65f325cb79d"
+    },
+    {
+      "path": "prelaunch-checks.json",
+      "bytes": 497,
+      "sha256": "8be83b70b638ddd5d4aa3f85da2840ba278b5530f34b43c8190f491eecd1b577"
+    },
+    {
+      "path": "runner-builder.py.txt",
+      "bytes": 2740,
+      "sha256": "8982879da740aa49a0aff18a934318d05d4482cc2fe6a729f6e444bee9b93329"
+    },
+    {
+      "path": "static-review.json",
+      "bytes": 1270,
+      "sha256": "504c2ed0f6b5976fa403f562c0dfee9a5605ba2b1d2a5b4646aa05ddfc1b7405"
+    },
+    {
+      "path": "static-review.md",
+      "bytes": 804,
+      "sha256": "d2942ba0e09b99a4933f11c69d9a236b2761dc5c273432a55cb572fcb725fe5a"
+    }
+  ]
+}

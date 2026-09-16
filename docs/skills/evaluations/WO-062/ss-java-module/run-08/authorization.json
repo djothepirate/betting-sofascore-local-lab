@@ -1,0 +1,66 @@
+{
+  "schema": "wo062-c8-formal-java-campaign-authorization-v1",
+  "decision_date": "2026-09-16",
+  "basis": "The owner explicitly authorizes a fresh formal campaign of all eight ss-java-module candidate.5 cases, including a new JM-N01 after the separate observation-08 PASS.",
+  "run_id": "run-08",
+  "skill": "ss-java-module",
+  "cases": [
+    "JM-H01",
+    "JM-N01",
+    "JM-C01",
+    "JM-C02",
+    "JM-S01",
+    "JM-S02",
+    "JM-S03",
+    "JM-S04"
+  ],
+  "authorized_session_count": 8,
+  "max_model_sessions": 8,
+  "candidate_version": "0.1.0-candidate.5",
+  "candidate_sha256": "d7171f978c2b13c852c2ce5e170d68c1bfc5087552661cfdc6271077a0fe6637",
+  "configured_service_scope": "The configured Codex model service, isolated local candidate, local skill catalogue and the versioned sources for the eight named Java cases are in scope. Each case uses a new host-parent session with codex exec --ephemeral --sandbox read-only.",
+  "freshness": {
+    "new_runtime_directory": true,
+    "new_ephemeral_session_per_case": true,
+    "candidate_bytes_must_match": true,
+    "source_inputs_must_match_frozen_c5_case_envelopes_except_candidate_skill": true,
+    "observation_08_response_or_events_supplied": false,
+    "any_prior_response_or_events_supplied": false,
+    "oracle_supplied": false,
+    "design_history_supplied": false
+  },
+  "model_context_exclusions": [
+    "All prior execution artifacts, events, stderr, traces, timings, freezes, reviews, results, responses and catalogues, including observation-08",
+    "Any prior authorization, central qualification, evaluation plan, source inventory, revision note, historical verdict or Work Order",
+    "Any oracle or reviewer-only criterion",
+    "All Windows evidence and runtime material"
+  ],
+  "execution": {
+    "sandbox": "read-only",
+    "parent": "host non imbrique",
+    "workers": 1,
+    "session_order": [
+      "JM-H01",
+      "JM-N01",
+      "JM-C01",
+      "JM-C02",
+      "JM-S01",
+      "JM-S02",
+      "JM-S03",
+      "JM-S04"
+    ],
+    "automatic_retry": false,
+    "outer_watchdog_seconds_per_session": 900,
+    "network_or_runtime_actions_by_model": false
+  },
+  "formal_qualification": true,
+  "observation_08_reusable_as_formal_result": false,
+  "does_not_authorize": [
+    "Any session beyond the eight listed Java cases",
+    "Automatic retry of a failed, blocked or expired case",
+    "Any Windows model session",
+    "Sandbox bypass or configuration change",
+    "Application changes, builds, tests, provider collection, database, Docker, CI, push, PR, merge or Work Order closure",
+    "Human validation or personal installation"
+  ]
+}

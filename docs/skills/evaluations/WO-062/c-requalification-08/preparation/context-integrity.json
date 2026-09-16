@@ -1,0 +1,90 @@
+{
+  "schema": "wo062-c8-context-integrity-v1",
+  "status": "PASS_PRELAUNCH",
+  "checked_at_utc": "2026-09-16T12:24:53.780343+00:00",
+  "run_id": "run-08",
+  "skill": "ss-java-module",
+  "candidate_version": "0.1.0-candidate.5",
+  "candidate_sha256": "d7171f978c2b13c852c2ce5e170d68c1bfc5087552661cfdc6271077a0fe6637",
+  "candidate_bytes": 11263,
+  "authorization_sha256": "bf956a3c2dac19f4965f33226b3b5d1da183ae70ce8a641ec7f934aef3335caa",
+  "baseline_preflight": "docs/skills/evaluations/WO-062/ss-java-module/run-05/preflight.json",
+  "baseline_preflight_sha256": "a975e1b4cfa71ea0a6ae0f1c5ad275baf40d259401ed8cd236204d496e452fa4",
+  "cases": [
+    {
+      "case_id": "JM-H01",
+      "input_file_count": 14,
+      "prompt_matches_c5": true,
+      "request_matches_c5": true,
+      "only_candidate_skill_delta_from_c5": true,
+      "output_present_before_launch": false
+    },
+    {
+      "case_id": "JM-N01",
+      "input_file_count": 39,
+      "prompt_matches_c5": true,
+      "request_matches_c5": true,
+      "only_candidate_skill_delta_from_c5": true,
+      "output_present_before_launch": false
+    },
+    {
+      "case_id": "JM-C01",
+      "input_file_count": 17,
+      "prompt_matches_c5": true,
+      "request_matches_c5": true,
+      "only_candidate_skill_delta_from_c5": true,
+      "output_present_before_launch": false
+    },
+    {
+      "case_id": "JM-C02",
+      "input_file_count": 27,
+      "prompt_matches_c5": true,
+      "request_matches_c5": true,
+      "only_candidate_skill_delta_from_c5": true,
+      "output_present_before_launch": false
+    },
+    {
+      "case_id": "JM-S01",
+      "input_file_count": 2,
+      "prompt_matches_c5": true,
+      "request_matches_c5": true,
+      "only_candidate_skill_delta_from_c5": true,
+      "output_present_before_launch": false
+    },
+    {
+      "case_id": "JM-S02",
+      "input_file_count": 2,
+      "prompt_matches_c5": true,
+      "request_matches_c5": true,
+      "only_candidate_skill_delta_from_c5": true,
+      "output_present_before_launch": false
+    },
+    {
+      "case_id": "JM-S03",
+      "input_file_count": 2,
+      "prompt_matches_c5": true,
+      "request_matches_c5": true,
+      "only_candidate_skill_delta_from_c5": true,
+      "output_present_before_launch": false
+    },
+    {
+      "case_id": "JM-S04",
+      "input_file_count": 2,
+      "prompt_matches_c5": true,
+      "request_matches_c5": true,
+      "only_candidate_skill_delta_from_c5": true,
+      "output_present_before_launch": false
+    }
+  ],
+  "case_count": 8,
+  "freshness": {
+    "new_runtime_directory": true,
+    "new_case_contexts": true,
+    "all_outputs_empty": true,
+    "all_freeze_directories_absent": true,
+    "observation_08_in_context": false,
+    "oracle_or_previous_answer_in_context": false,
+    "model_invoked": false
+  },
+  "preparation_head": "dd9ec3c1b6b9f542495f6b0078b5fd7c3d695648"
+}
