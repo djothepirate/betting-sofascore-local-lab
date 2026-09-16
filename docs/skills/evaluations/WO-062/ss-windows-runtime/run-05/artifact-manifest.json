@@ -1,0 +1,37 @@
+{
+  "schema": "wo062-windows-runtime-c5-review-manifest-v1",
+  "run_id": "run-05",
+  "candidate_sha256": "b89925d5395238010bb0afe9c1e1a22b0aa5ec4e7d1fb9946c671d241e7976c6",
+  "reviewed_files": [
+    {
+      "path": "results.json",
+      "purpose": "Current C5 result classification"
+    },
+    {
+      "path": "review-WR-H01.json",
+      "purpose": "Frozen-oracle review of the controlled argument-boundary attempt"
+    },
+    {
+      "path": "review-WR-N01.json",
+      "purpose": "Frozen-oracle review of the synthetic native two-mode attempt"
+    }
+  ],
+  "frozen_host_evidence": [
+    {
+      "case_id": "WR-H01",
+      "relative_root": ".tmp/wo062-evaluations/ss-windows-runtime/run-05-host-formal-20260916/frozen/WR-H01",
+      "freeze_sha256": "4499cf6fae4fbadad7a7110aff9468d693061e0c00f61256eb9f392b8124bde9",
+      "trace_sha256": "a543f36534449d2b0548146a4902a25a51e069c5556f8c735103890fd0b5555e"
+    },
+    {
+      "case_id": "WR-N01",
+      "relative_root": ".tmp/wo062-evaluations/ss-windows-runtime/run-05-host-formal-20260916/frozen/WR-N01",
+      "freeze_sha256": "6054cdfca08e86028dad283fb87d305401804db97d21496fc2b7147774d1ba44",
+      "trace_sha256": "3902978aea597be8cc6f56066a10231f59e47fca6c5e7bc56f19b3c972e15f66"
+    }
+  ],
+  "limits": [
+    "The C5 host evidence is frozen in the local ignored evaluation root named above; this manifest records its trace and freeze hashes without rewriting its raw files.",
+    "The present review documents a blocked qualification only. It is not human validation, personal installation, a new candidate, or a substitute for a fresh authorised runtime execution."
+  ]
+}

@@ -22,16 +22,16 @@
   "candidate_body_commit": "9e7b777e3be75f582f2198dfa8cca386b43426c2",
   "candidate_package_commit": "9e7b777e3be75f582f2198dfa8cca386b43426c2",
   "distinct_cases": 8,
-  "executions": 13,
-  "total_executions": 13,
+  "executions": 15,
+  "total_executions": 15,
   "pass": 6,
-  "fail": 1,
-  "blocked": 1,
+  "fail": 0,
+  "blocked": 2,
   "human_validation": false,
   "personal_installation": false,
-  "results": "run-04/current-results.json",
-  "run_results": "run-04/results.json",
-  "artifact_manifest_sha256": "fa095b8bf20e23fae0f08ecf7d2f54a62ff1bd26e394e67d1f5a82fcea3d00e4",
+  "results": "run-05/results.json",
+  "run_results": "run-05/results.json",
+  "artifact_manifest_sha256": "00e4f97e02d04b7e1f9e43471a0d7f9e90e0095300017ea907ff7dc41c30ac12",
   "historical_runs": [
     {
       "run_id": "run-01",
@@ -65,23 +65,34 @@
       "blocked": 1,
       "results": "run-03/results.json",
       "artifact_manifest_sha256": "1e60038ed8168bb83bbd7e2e1730bb4fcaa793f93ba7f071007e8842a2fa6b42"
+    },
+    {
+      "run_id": "run-04",
+      "candidate_version": "0.1.0-candidate.1",
+      "candidate_sha256": "b89925d5395238010bb0afe9c1e1a22b0aa5ec4e7d1fb9946c671d241e7976c6",
+      "executions": 2,
+      "pass": 0,
+      "fail": 1,
+      "blocked": 1,
+      "results": "run-04/results.json",
+      "artifact_manifest_sha256": "fa095b8bf20e23fae0f08ecf7d2f54a62ff1bd26e394e67d1f5a82fcea3d00e4"
     }
   ],
   "execution_totals": {
     "pass": 6,
     "fail": 1,
-    "blocked": 6
+    "blocked": 8
   },
   "current_cases": [
     {
       "case_id": "WR-H01",
-      "verdict": "FAIL",
-      "source_run": "run-04"
+      "verdict": "BLOCKED",
+      "source_run": "run-05"
     },
     {
       "case_id": "WR-N01",
       "verdict": "BLOCKED",
-      "source_run": "run-04"
+      "source_run": "run-05"
     },
     {
       "case_id": "WR-C01",
@@ -114,13 +125,14 @@
       "source_run": "run-01"
     }
   ],
-  "static_review": "run-04/review-static.json",
+  "static_review": "run-05/review-WR-H01.json and run-05/review-WR-N01.json",
   "limits": [
     "Qualification limited to the frozen cases; no general productivity gain measured.",
     "Model and reasoning effort use configured defaults; exact values unavailable. No model override is made by this publisher.",
     "Complete tool-mediated skill loading is reviewed separately; no automatic CLI body-injection claim.",
     "Catalogue reconstruction occurs after execution and is not a capture of the transmitted model request.",
     "These evaluations establish no application build, application test, database, provider collection, scanner or CI pipeline.",
-    "WR-H01 is a controlled PowerShell7 argument capture, not Java application startup. WR-N01 is only a synthetic Java source probe under Windows PowerShell5.1. The two run-01 BLOCKED outcomes remain historical evidence; they are not rewritten."
+    "WR-H01 is a controlled PowerShell7 argument capture, not Java application startup. WR-N01 is only a synthetic Java source probe under Windows PowerShell5.1. The two run-01 BLOCKED outcomes and the run-04 FAIL/BLOCKED outcomes remain historical evidence; they are not rewritten.",
+    "Run-05 starts both C5 cases in fresh host-owned contexts. WR-H01 is BLOCKED before the frozen WO-044 harness starts; WR-N01 is BLOCKED after the new failure-mode observation and before sleep. Neither result qualifies the candidate or authorises a replay."
   ]
 }

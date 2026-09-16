@@ -6,6 +6,17 @@ Les évolutions notables du SofaScore Local Lab sont consignées dans ce fichier
 
 ### WO-062 — skills spécialisés du lot 2
 
+- Exécute les deux sessions Windows C5 hôte-formelles de `ss-windows-runtime
+  0.1.0-candidate.1`, sans oracle, réponse antérieure ni relance. `WR-H01` se termine
+  en 361,375 s avec audit de lecture PASS, mais son gabarit gelé échoue avant le harnais
+  WO-044. `WR-N01` réussit son préflight PS5.1 et observe `failure` avec code 23, puis
+  son conducteur gelé bloque sur l’identité avant `sleep`; le postflight conserve aussi
+  l'observation mécanique du parent `output/runtime` vide. Les deux cas sont
+  [BLOCKED](docs/skills/evaluations/WO-062/ss-windows-runtime/run-05/results.json),
+  sans défaut démontré du candidat. La qualification reste incomplète à 6 PASS / 0 FAIL /
+  2 BLOCKED ; C4, les sources, le code applicatif, les fixtures, l'oracle, la validation
+  humaine et l'installation personnelle restent inchangés.
+
 - Réalise la campagne formelle fraîche C8 de `ss-java-module 0.1.0-candidate.5` :
   huit sessions éphémères séquentielles, `JM-N01` compris, toutes terminées et gelées.
   Les huit revues donnent PASS ; le résultat est [8 PASS / 0 FAIL / 0 BLOCKED](docs/skills/evaluations/WO-062/ss-java-module/run-08/results.json),

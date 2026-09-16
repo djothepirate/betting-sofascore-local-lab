@@ -1,6 +1,6 @@
 # WO-SS-20260915-062 — Développement des skills spécialisés du lot 2
 
-- **Statut :** `OWNER_ACCEPTED — A_INSTALLED — B_INSTALLED — C_QUALIFICATION_INCOMPLETE` ; PB, FQ et CS validés et installés personnellement. Java `.4` est conservé avec ses C6/C7 (sept PASS, un FAIL) ; Java `.5` obtient un PASS en observation ciblée JM-N01, sans qualification formelle. Les deux cas Windows `.1` restent non consommés après préflight hôte formel réussi. Validation humaine C, consolidation D et livraison Git restent distinctes.
+- **Statut :** `OWNER_ACCEPTED — A_INSTALLED — B_INSTALLED — C_QUALIFICATION_INCOMPLETE` ; PB, FQ et CS validés et installés personnellement. Java `.4` est conservé avec ses C6/C7 (sept PASS, un FAIL) ; Java `.5` est formellement qualifié par C8 (huit PASS) mais attend validation humaine. Les deux cas Windows `.1` C5 sont maintenant consommés dans des contextes hôte-formels frais et restent BLOCKED sur les gabarits opérationnels figés ; l'état Windows courant est six PASS, zéro FAIL et deux BLOCKED. Validation humaine C, consolidation D et livraison Git restent distinctes.
 - **Date :** 2026-09-15.
 - **Autorité :** demande propriétaire de préparer un WO avec `ss-work-order`, à partir de la conversation « Skills du lot 2 », dans l'ordre précisé ci-dessous.
 - **Acceptation :** le 15 septembre 2026, le propriétaire confirme « J’accepte le WO-062 » et autorise l'inventaire des sources et la préparation des cas d'évaluation de `ss-provider-benchmark`.
@@ -369,9 +369,13 @@ distinct ; elle n'élargit pas implicitement ce lot de skills.
   rend l'environnement prêt sans créer de nouveau run logique, ni lancer ou
   consommer une recette Windows.
 - Le [plan d’exécution formel](../../skills/evaluations/WO-062/c-requalification-05/post-preparation/windows-host-formal-execution-plan.md)
-  fixe déjà l’ordre unique `WR-H01` puis `WR-N01`, les gardes C5, les preuves à
-  geler et l’arrêt obligatoire avant `WR-N01` si `WR-H01` est incomplet ; il est
-  préparé mais non invoqué.
+  fixe l’ordre unique `WR-H01` puis `WR-N01`, les gardes C5 et le gel avant revue.
+  Il est exécuté une seule fois le 16 septembre depuis la racine hôte-formelle :
+  `WR-H01` termine avec audit de lecture PASS mais son gabarit échoue dans
+  `Assert-Contained` avant le harnais WO-044 ; `WR-N01` passe son préflight PS5.1,
+  observe `failure` et son code 23, puis bloque sur l'identité du processus avant
+  `sleep`. Les deux verdicts sont [BLOCKED](../../skills/evaluations/WO-062/ss-windows-runtime/run-05/results.json),
+  leurs réponses et gels sont conservés, et aucune relance n'est effectuée.
 
 ### Ordre restant et consolidation
 
@@ -616,7 +620,7 @@ observation ciblée non recyclable. Le résultat exact est `8 PASS / 0 FAIL / 0 
 le SHA .5 ; le candidat est formellement qualifié mais reste en attente de validation humaine
 propriétaire. Aucune installation personnelle ne découle de cette qualification.
 Les corrections .4 sur le blocage de sofascore-live-test, la perte terminale du contexte live et le garde textuel précis sont conservées. JM-C02 conserve deux reprises internes de sampling dans une seule session, sans relance du conducteur.
-Le préflight Windows hôte sans modèle est désormais démontré dans un contexte physique formel byte-à-byte conforme, détenu par l'hôte et conservant le run logique C5 `run-05`; il isole l'échec C5 aux ACL/propriétaires de ses contextes gelés. WR-H01 et WR-N01 restent non lancés et non consommés : le préflight ne vaut ni recette ni réponse de modèle.
+Le préflight Windows hôte sans modèle est désormais démontré dans un contexte physique formel byte-à-byte conforme, détenu par l'hôte et conservant le run logique C5 `run-05`; il isole l'échec C5 aux ACL/propriétaires de ses contextes gelés. Les deux sessions `WR-H01` et `WR-N01` sont ensuite lancées une seule fois et répondent avant le watchdog. Elles restent BLOCKED : la première avant le harnais sur la garde du gabarit, la seconde après le code 23 de failure et avant sleep sur l'identité du gabarit. Le [résultat C5](../../skills/evaluations/WO-062/ss-windows-runtime/run-05/results.json) et ses revues postfreeze conservent ces limites sans attribuer un défaut au candidat.
 Validation humaine et installation C restent postérieures à une qualification complète ; suivront ensuite la consolidation D, la livraison Git et la clôture selon le workflow ci-dessus.
 Les trois skills A/B ont terminé préparation, rédaction, qualification, validation propriétaire
 et installation personnelle. Leurs preuves et limites restent conservées. Le WO reste actif ;
