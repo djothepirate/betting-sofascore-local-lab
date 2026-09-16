@@ -1,0 +1,47 @@
+{
+  "schema": "wo062-c6-postflight-integrity-v1",
+  "skill": "ss-java-module",
+  "run_id": "run-06",
+  "case_id": "JM-H01",
+  "verified_on": "2026-09-16",
+  "status": "PASS",
+  "freeze": {
+    "frozen_at_utc": "2026-09-16T07:12:48.162839+00:00",
+    "frozen_before_independent_review": true,
+    "file_count": 12,
+    "freeze_sha256": "36cb8819d9ac37849449d4ec5f42b07756ead826537ae93faf32e54067047bbc",
+    "published_copy_matches_freeze": true
+  },
+  "runtime_input_integrity": {
+    "file_count": 14,
+    "all_bytes_and_sha256_match_trace": true,
+    "candidate_sha256": "f1f6533f678c5cdb4ae6a5bc9c996c062af419005e4f4cd6104a51c91e442d97",
+    "prompt_sha256": "3eab6b461bd8b2964ba5aebb98baaeaa34ba408d7e7f1f47081e6b73395739d9",
+    "request_sha256": "7e5ce27f03c8c8a8207eaf56775a70d5298131d46fe0a6a14b240ca5f330752b",
+    "oracle_supplied": false,
+    "prior_answer_supplied": false
+  },
+  "session": {
+    "mode": "native_codex_exec_ephemeral_read-only",
+    "exit_code": 0,
+    "turn_completed": true,
+    "timed_out": false,
+    "duration_seconds": 306.656,
+    "thread_started": 1,
+    "turn_started": 1,
+    "turn_completed_events": 1,
+    "command_execution_completed": 18,
+    "response_sha256": "6dbfb8e8c3afba4e7777bc5c9c7f1890b62a28a74753094bb77186391af593b9"
+  },
+  "scope": {
+    "candidate_tool_read_observed": true,
+    "completed_commands_limited_to_authorized_local_reads": true,
+    "application_build_test_network_browser_database_docker_or_mutation_observed": false,
+    "second_model_session_observed": false,
+    "source_or_candidate_modified": false
+  },
+  "diagnostic": {
+    "stderr_collaboration_spawn_failure_observed": true,
+    "meaning": "The CLI recorded one unsuccessful collaboration-routing attempt. Native events establish one thread, one turn and no child session; the diagnostic neither started another evaluation nor changed files."
+  }
+}

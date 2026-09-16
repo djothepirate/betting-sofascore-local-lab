@@ -228,7 +228,13 @@ distinct ; elle n'élargit pas implicitement ce lot de skills.
   artefact C5, réponse, oracle, plan, revue, résultat ou matériel Windows. Ses quatorze
   entrées, son prompt et sa demande sont égaux par empreinte au contrat C5 initial, sans
   que les preuves C5 ne soient exposées au modèle. La préparation et les contrôles statiques
-  sont versionnés avant la session ; l'exécution et sa revue restent à produire.
+  sont versionnés avant la session.
+- La session unique s'est terminée normalement en `306.656 s`, avec 18 commandes locales
+  limitées aux entrées autorisées et une réponse finale gelée avant revue. La
+  [revue C6](../../skills/evaluations/WO-062/ss-java-module/run-06/review-JM-H01.md)
+  rend `PASS` pour `JM-H01` du candidat `.4`. Elle couvre aussi explicitement que
+  `sofascore-live-test` reste bloqué. Ce PASS borné n'autorise ni les sept autres cas
+  Java, ni les cas Windows, ni une validation humaine ou installation personnelle.
 
 ### Ordre restant et consolidation
 
@@ -465,9 +471,9 @@ la fusion. La clôture effective suit cette fusion. Publication, fusion, promoti
 installation personnelle ne sont pas déduits de la seule préparation du WO.
 
 **Suite en cours :** les corrections C5 sont gelées et leurs prérequis locaux sont documentés.
-Le propriétaire autorise désormais une recette C6 unique de `JM-H01`, préparée sans réponse
-antérieure ni oracle ; son résultat et sa revue restent à produire. Pour Windows, réparer le
-sandbox `elevated` puis réussir le préflight hôte sans modèle permet de lancer `WR-H01` et
+La recette C6 unique de `JM-H01` est achevée avec un PASS comportemental borné et ses
+preuves gelées ; sept cas Java du candidat `.4` restent non autorisés et `NOT_RUN`. Pour
+Windows, réparer le sandbox `elevated` puis réussir le préflight hôte sans modèle permet de lancer `WR-H01` et
 `WR-N01` avec leur recette C5 inchangée. Validation humaine et installation C restent
 postérieures à une qualification complète, puis viendront la consolidation D, la livraison
 Git et la clôture selon le workflow décrit ci-dessus.
