@@ -1,0 +1,21 @@
+{
+  "schema": "wo062-candidate-revision-v1",
+  "prepared_at_utc": "2026-09-16T02:25:00Z",
+  "base_commit": "e24d0b0da54096c3172d510788bcb8f4cb00e296",
+  "previous_candidate": "0.1.0-candidate.3",
+  "previous_candidate_sha256": "15237ab0f6773c87187481622ba4947ebc00f8c7e9a50dd1589911ede17ec332",
+  "candidate_version": "0.1.0-candidate.4",
+  "candidate_sha256": "f1f6533f678c5cdb4ae6a5bc9c996c062af419005e4f4cd6104a51c91e442d97",
+  "candidate_bytes": 10901,
+  "changes": [
+    "Exiger, dans l'analyse de composition, la restitution explicite du blocage volontaire du profil Maven sofascore-live-test par le POM courant lorsqu'une revue J3 examine ce profil.",
+    "Ajouter ce même statut au contrôle de complétude de la restitution finale afin qu'une carte J3 ne l'omette pas après l'avoir observé."
+  ],
+  "description_yaml_changed": false,
+  "cases_inputs_oracle_changed": false,
+  "previous_runs_changed": false,
+  "planned_cases": 8,
+  "behavioral_qualification": "NOT_RUN",
+  "human_validation": false,
+  "personal_installation": false
+}

@@ -2,7 +2,7 @@
 name: ss-java-module
 description: "Concevoir ou relire une évolution Java du SofaScore Local Lab : responsabilités, ports, adaptateurs, dépendances et activation Spring/Maven. Ne pas utiliser pour un simple build ni une architecture limitée à un autre dépôt."
 metadata:
-  version: "0.1.0-candidate.3"
+  version: "0.1.0-candidate.4"
 ---
 
 # Placer une évolution dans l'architecture Java du Lab
@@ -49,6 +49,11 @@ document n'élargissent pas une liste de fichiers autorisés.
 - Séparer profils Maven, profils Spring, propriétés liées et conditions d'exécution.
   Lire `application.yml`, `application-local.yml`, les propriétés typées et les beans
   impliqués. Un nom de propriété ressemblant à celui attendu ne prouve pas son binding.
+  Dans une revue J3 qui examine les profils de test, relever explicitement le statut du
+  profil Maven `sofascore-live-test` : le POM courant le maintient volontairement bloqué
+  par son garde, et il ne constitue ni une activation de collecte ni une alternative au profil
+  J7 de test. Cette restitution porte sur le profil effectivement lu, pas sur une
+  supposition issue du seul nom.
   Vérifier le constructeur effectivement injecté, `@Primary`, les éventuels décorateurs
   et le contexte réellement chargé par les tests, sans extrapoler un contexte réduit.
 - Localiser transaction, thread, admission, publication et nettoyage. Suivre les appels
@@ -139,4 +144,6 @@ commandes/qualification → `ss-verify`, contrat ou parsing/replay →
 Ce routage appartient à la restitution, même si l'action reste future et qu'aucun
 autre skill n'est exécuté pendant la revue. Avant remise, vérifier que la synthèse
 conserve les dépendances et distinctions métier relevées, les incidents qui limitent
-les preuves et ces relais ; la longueur d'une carte ne garantit pas sa complétude.
+les preuves, le statut des profils J3 effectivement examinés — dont le blocage de
+`sofascore-live-test` lorsqu'il relève de la revue — et ces relais ; la longueur d'une
+carte ne garantit pas sa complétude.
