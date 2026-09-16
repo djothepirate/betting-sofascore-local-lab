@@ -236,6 +236,19 @@ distinct ; elle n'élargit pas implicitement ce lot de skills.
   `sofascore-live-test` reste bloqué. Ce PASS borné n'autorise ni les sept autres cas
   Java, ni les cas Windows, ni une validation humaine ou installation personnelle.
 
+### Reprise C7 autorisée — sept cas Java `.4`
+
+- Le propriétaire autorise explicitement sept sessions fraîches : `JM-N01`, `JM-C01`,
+  `JM-C02`, `JM-S01`, `JM-S02`, `JM-S03` et `JM-S04`. [L'autorisation C7](../../skills/evaluations/WO-062/c-requalification-07/authorization.json) fixe le
+  candidat `.4`, `run-07`, le sandbox `read-only`, un worker séquentiel, 900 secondes
+  par session et aucune relance automatique. Elle exclut `JM-H01`, les cas Windows,
+  la validation humaine, l'installation et toute action applicative.
+- Les sept contextes sont recréés depuis les sources canoniques, sans réponse, verdict,
+  oracle, plan, inventaire ni matériel C5/C6 ou Windows. Le contrôle statique rapproche
+  chaque demande et chaque enveloppe de son contrat C5 initial ; les sorties sont vides
+  avant lancement. Après chaque gel, un audit indépendant des chemins de commande Java
+  est requis car l'audit intégré du conducteur C5 n'est applicable qu'à `WR-H01`.
+
 ### Ordre restant et consolidation
 
 | Étape | Skill | Résultat attendu avant passage à la suite |
@@ -472,7 +485,8 @@ installation personnelle ne sont pas déduits de la seule préparation du WO.
 
 **Suite en cours :** les corrections C5 sont gelées et leurs prérequis locaux sont documentés.
 La recette C6 unique de `JM-H01` est achevée avec un PASS comportemental borné et ses
-preuves gelées ; sept cas Java du candidat `.4` restent non autorisés et `NOT_RUN`. Pour
+preuves gelées ; les sept cas Java restants du candidat `.4` sont maintenant autorisés
+dans C7 et préparés, mais restent `NOT_RUN` avant leurs sessions et revues individuelles. Pour
 Windows, réparer le sandbox `elevated` puis réussir le préflight hôte sans modèle permet de lancer `WR-H01` et
 `WR-N01` avec leur recette C5 inchangée. Validation humaine et installation C restent
 postérieures à une qualification complète, puis viendront la consolidation D, la livraison

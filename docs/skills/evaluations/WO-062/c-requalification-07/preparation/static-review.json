@@ -1,0 +1,42 @@
+{
+  "schema": "wo062-c7-static-review-v1",
+  "status": "PASS_PRELAUNCH",
+  "run_id": "run-07",
+  "scope": {
+    "cases_exact": [
+      "JM-N01",
+      "JM-C01",
+      "JM-C02",
+      "JM-S01",
+      "JM-S02",
+      "JM-S03",
+      "JM-S04"
+    ],
+    "authorized_sessions": 7,
+    "workers": 1,
+    "automatic_retry": false,
+    "sandbox": "read-only",
+    "c6_or_windows_cases_excluded": true,
+    "generic_java_command_path_audit_required_postflight": true
+  },
+  "runner": {
+    "path": ".tmp/wo062_evaluate_c7.py",
+    "sha256": "af08b25703eb6fc04971e28ec10fce4d3fc0a66a5010f23c7bb2390c2375728c",
+    "derived_from_c5_without_modifying_c5": true,
+    "guards": [
+      "prepare accepts only run-07 / ss-java-module / seven C7 cases",
+      "run accepts exactly the seven C7 cases in the declared order",
+      "workers=1",
+      "one fresh output and frozen directory per case",
+      "native Codex exec is ephemeral and read-only"
+    ]
+  },
+  "integrity_checker": {
+    "path": ".tmp/check_c7_java_context.py",
+    "sha256": "f51036ee912d54694069769091790600d5f4ae127863e5b2b7e879e221cbfc4a",
+    "result": "PASS"
+  },
+  "c5_runner_sha256_unchanged": "7adbc893b502f4ca71bb7f5196562ea292c8a8ea5916923ee41c2d37fd92f2c2",
+  "c6_runner_sha256_unchanged": "a54eef3f91fcfbe66160e53512a439d2ce06e2c258d318f686473cd0b8c714c3",
+  "model_invoked": false
+}
