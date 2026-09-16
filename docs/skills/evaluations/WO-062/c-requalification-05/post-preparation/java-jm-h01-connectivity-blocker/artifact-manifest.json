@@ -1,0 +1,51 @@
+{
+  "schema": "wo062-c5-post-preparation-artifact-manifest-v1",
+  "purpose": "Immutable evidence copied after the JM-H01 model-transport blocker; not an evaluated response.",
+  "files": [
+    {
+      "path": "blocker.json",
+      "bytes": 2206,
+      "sha256": "4b82d5ad550239ca2acccf11966d67b97bf3a5bef74a5af858438c268896d5fb"
+    },
+    {
+      "path": "freeze.json",
+      "bytes": 1607,
+      "sha256": "7ec0d8ea7632ed43d202f2d7807ce75c9a335d28653b36de0167e94f9d2a419d"
+    },
+    {
+      "path": "host-runtime.json",
+      "bytes": 371,
+      "sha256": "a0c98023f3999faf8e4e8b403cf38e2558351fd72943d46796c631d1341b7cb9"
+    },
+    {
+      "path": "native-events.json",
+      "bytes": 3554,
+      "sha256": "e6096f9352bcf1daa6fbf3248777a3825282dd538d34db809c8562665d59478b"
+    },
+    {
+      "path": "native-timing-summary.json",
+      "bytes": 432,
+      "sha256": "b23679c1e7bb681217328dcf9fb351eefb7940410eb87ec13f298b31efc5238f"
+    },
+    {
+      "path": "native-timing.jsonl",
+      "bytes": 6237,
+      "sha256": "3eb8433d77c4e467af3a96f873c0f484785c346ae2aad18c186709042bc157a1"
+    },
+    {
+      "path": "README.md",
+      "bytes": 2867,
+      "sha256": "58076b3674c75652582b5d589588b10cb0af12c06cf4b6e6fdb8072557dca526"
+    },
+    {
+      "path": "stderr.log",
+      "bytes": 10978,
+      "sha256": "4a882ed2ea05c5e341369ba20bd66bed1af3185bf8435a95ec1765a9f0fdf247"
+    },
+    {
+      "path": "trace.json",
+      "bytes": 5962,
+      "sha256": "f1cf6851f4c85b45d6a02f65e0068a284d9fa95c8b985970c5bace82f50e6aec"
+    }
+  ]
+}

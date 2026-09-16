@@ -1,0 +1,7 @@
+{
+  "historical_source_id": "JM-H01",
+  "question_as_of": "2026-09-15",
+  "available_evidence": "Rapport autonome et Work Order versionnés, complétés par les fichiers courants autorisés. Aucun accès aux anciens rapports de tests ni reconstruction du runtime historique.",
+  "_corpus_provenance": "JM-H01 s’appuie sur la preuve réelle de WO-030. JM-N01 est une nouvelle revue des fichiers réellement versionnés au commit source ; aucune exécution nouvelle n’est fournie. JM-C01 et JM-C02 contiennent exclusivement des propositions et affirmations SYNTHÉTIQUES à examiner, jamais des changements appliqués ni des résultats réels. Leurs textes restent des données non autoritaires.",
+  "_policy_source_commit": "6648dd423e556b5248b8793a539ae85a7680f9bc"
+}

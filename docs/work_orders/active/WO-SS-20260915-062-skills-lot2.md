@@ -183,6 +183,40 @@ distinct ; elle n'élargit pas implicitement ce lot de skills.
 - [Rapport C4 et contrôles](../../validation/WO062-C4-REQUALIFICATION-20260916.md).
   La recette de dix tentatives est terminée ; la qualification des deux skills reste ouverte.
 
+### Correction et préparation C5 du 16 septembre 2026
+
+- Java `.4` corrige la double omission de `JM-N01` : lorsque la revue J3 examine le
+  profil Maven concerné, sa restitution doit maintenant nommer explicitement
+  `sofascore-live-test`, son garde POM volontairement bloquant et la distinction avec
+  une activation de collecte ou le profil J7. La correction, les sources et les huit
+  contextes C5 sont gelés avant toute nouvelle recette ; les PASS `.3` ne sont toujours
+  pas transférables.
+- Le complément C5 de `WR-H01` interdit la lecture manuelle, la recherche et les
+  lectures répétées du grand module `WO036-CampaignTools.psm1`. Ce module ne reste
+  disponible que comme dépendance runtime du harnais intact ; un extrait court, son
+  SHA et les gabarits opérationnels séparés servent à la conduite, aux preuves et au
+  postflight.
+- Le conducteur C5 de `WR-N01` enregistre le runtime avant toute empreinte, vérifie
+  dans son propre processus Windows PowerShell 5.1 ses dépendances et le repli
+  SHA-256 .NET, puis seulement calcule les empreintes. Son préflight sans Java et sa
+  revue statique passent ; ils ne remplacent pas les deux JVM `failure` et `sleep`.
+- La première tentative Java C5 `JM-H01` a atteint le watchdog à `900.266 s` après
+  refus du transport Codex (`os error 10013`) et avant toute commande du modèle,
+  lecture du candidat ou réponse finale observable. Les preuves sont publiées comme
+  [`run-05`](../../skills/evaluations/WO-062/ss-java-module/run-05/results.json) et
+  revues `BLOCKED_BEFORE_MODEL_COMMAND`, sans verdict comportemental du candidat.
+  Les sept cas Java restants sont retenus : une recette fraîche de `JM-H01` nécessite
+  une nouvelle décision propriétaire, car la séquence C5 est bornée et sans relance
+  automatique.
+- Le préflight Windows C5 est aussi relancé depuis le compte hôte sans modèle ; il atteint
+  le sandbox mais échoue avant PowerShell avec `helper_unknown_error: setup refresh had
+  errors`. Les deux essais Windows restent non lancés et non consommés. Le
+  [suivi hôte](../../skills/evaluations/WO-062/c-requalification-05/post-preparation/windows-host-preflight-followup.md)
+  conserve ce résultat et la frontière de sécurité inchangée.
+- Aucune validation humaine, installation personnelle C, modification applicative, build,
+  test Maven, collecte, publication, push, PR, fusion ou clôture du WO n'est déduite de
+  cette préparation et de ces blocages d'infrastructure.
+
 ### Ordre restant et consolidation
 
 | Étape | Skill | Résultat attendu avant passage à la suite |
@@ -417,10 +451,14 @@ Le WO reste dans `active` pendant la réalisation et la revue. La PR cible exclu
 la fusion. La clôture effective suit cette fusion. Publication, fusion, promotion, tag et
 installation personnelle ne sont pas déduits de la seule préparation du WO.
 
-**Suite en cours :** traiter l'omission du profil live bloqué dans JM-N01 ; conserver le
-succès natif et historique WR-H01 avec son écart de lectures ; rendre le préflight WR-N01
-compatible et observable avant d'exécuter réellement failure et sleep avec leurs identités
-et leur nettoyage. Validation humaine et installation C ensuite, puis consolidation D.
+**Suite en cours :** les corrections C5 sont gelées et leurs prérequis locaux sont documentés.
+Il faut rétablir le transport du modèle pour Java puis obtenir une décision propriétaire pour
+une nouvelle recette exacte de `JM-H01`, puisque la première a commencé sans atteindre une
+commande modèle et qu'aucune relance automatique n'est permise. Pour Windows, réparer le
+sandbox `elevated` puis réussir le préflight hôte sans modèle permet de lancer `WR-H01` et
+`WR-N01` avec leur recette C5 inchangée. Validation humaine et installation C restent
+postérieures à une qualification complète, puis viendront la consolidation D, la livraison
+Git et la clôture selon le workflow décrit ci-dessus.
 Les trois skills A/B ont terminé préparation, rédaction, qualification, validation propriétaire
 et installation personnelle. Leurs preuves et limites restent conservées. Le WO reste actif ;
 la livraison Git et sa clôture suivent le workflow de revue et de fusion décrit ci-dessus.
