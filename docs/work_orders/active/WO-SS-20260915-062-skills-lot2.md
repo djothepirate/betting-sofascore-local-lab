@@ -248,6 +248,10 @@ distinct ; elle n'élargit pas implicitement ce lot de skills.
   chaque demande et chaque enveloppe de son contrat C5 initial ; les sorties sont vides
   avant lancement. Après chaque gel, un audit indépendant des chemins de commande Java
   est requis car l'audit intégré du conducteur C5 n'est applicable qu'à `WR-H01`.
+- Un premier appel local du conducteur C7 s'est arrêté avant `codex exec`, car une
+  assertion C5 résiduelle rejetait `run-07`. Aucun événement, réponse, gel ni session
+  modèle n'a été créé. Le correctif borne le changement au conducteur C7 distinct,
+  conserve les gardes C7 et les sept contextes vides, et laisse C5/C6 inchangés.
 
 ### Ordre restant et consolidation
 

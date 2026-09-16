@@ -16,6 +16,8 @@
   "all_contexts_output_free": true,
   "all_contexts_match_c5_input_envelopes": true,
   "generic_java_command_path_audit_required_postflight": true,
+  "pre_model_launcher_correction_verified": true,
+  "all_case_outputs_still_empty_after_correction": true,
   "c5_runner_unchanged": true,
   "c6_runner_unchanged": true,
   "model_invoked": false

@@ -165,7 +165,6 @@ def run_timed_capture(args,stdin,stdout,stderr,timeout,out):
 
 def run_case(skill,runid,caseid):
     assert runid=='run-07' and skill=='ss-java-module' and caseid in C7_CASES, 'C7 accepts only the seven owner-authorized Java cases'
-    assert runid=="run-05" and ((skill=="ss-java-module" and caseid in ["JM-H01","JM-N01","JM-C01","JM-C02","JM-S01","JM-S02","JM-S03","JM-S04"]) or (skill=="ss-windows-runtime" and caseid in ["WR-H01","WR-N01"])), "Ten authorized C5 sessions only"
     runtime=ROOT/'.tmp/wo062-evaluations'/skill/runid
     case_dir=runtime/caseid;out=case_dir/'output'
     assert not (out/'events.jsonl').exists(),'Never overwrite an attempt'

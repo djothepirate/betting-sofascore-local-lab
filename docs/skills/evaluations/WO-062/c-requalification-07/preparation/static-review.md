@@ -9,3 +9,9 @@ Aucun modèle, build, test applicatif, fournisseur, navigateur, base, Docker, CI
 Après le gel, chaque cas devra recevoir un audit indépendant des chemins de commandes
 Java. Le conducteur C5 dont C7 dérive réserve son audit de lecture intégré à WR-H01 :
 son statut non applicable ne peut pas, à lui seul, prouver le respect des allowlists Java.
+
+Un premier lancement local a révélé une assertion C5 résiduelle. Elle s'est arrêtée avant
+la construction de codex exec, sans événement, réponse ou gel dans aucun cas et donc sans
+session modèle consommée. Le correctif retire cette seule assertion du conducteur C7
+distinct ; les gardes C7 sur le run, le skill, les sept cas et le worker unique restent
+en place. Les conducteurs C5 et C6 ne sont pas modifiés.

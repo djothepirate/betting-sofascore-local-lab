@@ -21,7 +21,7 @@
   },
   "runner": {
     "path": ".tmp/wo062_evaluate_c7.py",
-    "sha256": "af08b25703eb6fc04971e28ec10fce4d3fc0a66a5010f23c7bb2390c2375728c",
+    "sha256": "27cee327e523b88cfcb0ea5cb629bfe2c78ee7f5016cc439b6035f7a2c591b8d",
     "derived_from_c5_without_modifying_c5": true,
     "guards": [
       "prepare accepts only run-07 / ss-java-module / seven C7 cases",
@@ -30,6 +30,14 @@
       "one fresh output and frozen directory per case",
       "native Codex exec is ephemeral and read-only"
     ]
+  },
+  "pre_model_launcher_correction": {
+    "buggy_runner_sha256": "af08b25703eb6fc04971e28ec10fce4d3fc0a66a5010f23c7bb2390c2375728c",
+    "corrected_runner_sha256": "27cee327e523b88cfcb0ea5cb629bfe2c78ee7f5016cc439b6035f7a2c591b8d",
+    "cause": "A C5-only run_id assertion remained after the C7 guard and stopped the local runner before codex exec.",
+    "model_session_started": false,
+    "all_case_outputs_remained_empty": true,
+    "correction": "The inherited C5 assertion is removed only from the distinct C7 runner; the C7 exact run, case and worker guard remains."
   },
   "integrity_checker": {
     "path": ".tmp/check_c7_java_context.py",

@@ -19,23 +19,33 @@
     },
     {
       "path": "evaluator.py.txt",
-      "bytes": 23605,
-      "sha256": "af08b25703eb6fc04971e28ec10fce4d3fc0a66a5010f23c7bb2390c2375728c"
+      "bytes": 23356,
+      "sha256": "27cee327e523b88cfcb0ea5cb629bfe2c78ee7f5016cc439b6035f7a2c591b8d"
     },
     {
       "path": "prelaunch-checks.json",
-      "bytes": 560,
-      "sha256": "d443ca2e4375376773a4f7b89dc0c07778d262f7224387436389dc7acb873556"
+      "bytes": 667,
+      "sha256": "ce36b5d6452bb28c4334b0cff850b2eadf0d99d4d2c489d39d9034d38dc7f14b"
+    },
+    {
+      "path": "runner-correction.json",
+      "bytes": 1183,
+      "sha256": "fe121f73ac7a4905230beeaae42c8cd00dcf2aa53a94a31d583aa5d96cda1b6c"
+    },
+    {
+      "path": "runner-correction.md",
+      "bytes": 738,
+      "sha256": "a1e2a6d9fdf24333d5fd0ca9e5bb80684fbb1637147998acae30cceeee4a4758"
     },
     {
       "path": "static-review.json",
-      "bytes": 1352,
-      "sha256": "9c0d364b3e26337ceafd61b34260ad442ea714fbdec0322908e8aedb10a8715b"
+      "bytes": 1929,
+      "sha256": "9728b335f5d00a47b058b465b4493af86536e714cf3c9d53ca907182f4869d19"
     },
     {
       "path": "static-review.md",
-      "bytes": 1229,
-      "sha256": "4537d5608fe8e66a442b7b6a22ef371f055070a02e08d2b8e4aed842c24c0d99"
+      "bytes": 1652,
+      "sha256": "229aa1dfe827f30e238a5d069c2c4bf56dd15fcb5b0811f8821478325793fe1b"
     }
   ]
 }
