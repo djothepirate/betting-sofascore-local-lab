@@ -1,0 +1,57 @@
+{
+  "schema": "wo062-c5-prepared-runtime-preflight-v1",
+  "purpose": "Non-model access check of prepared C5 contexts. It is not WR-H01/WR-N01 execution, a Java launch or a skill qualification.",
+  "created_and_launched_by": "asusggo2025\\geoff",
+  "model_invoked": false,
+  "runtime_probe_executed": false,
+  "java_started": false,
+  "configuration_changed": false,
+  "cases": [
+    {
+      "case_id": "WR-H01",
+      "started_at_utc": "2026-09-16T08:58:11.172092+00:00",
+      "ended_at_utc": "2026-09-16T08:58:12.123244+00:00",
+      "command": [
+        "C:/Users/geoff/AppData/Local/OpenAI/Codex/bin/12219cbfbcbddde7/codex.exe",
+        "sandbox",
+        "--permission-profile",
+        ":workspace",
+        "-C",
+        "C:\\Dev\\BettingProject\\codex\\betting-sofascore-local-lab\\.tmp\\wo062-skills-lot2\\.tmp\\wo062-evaluations\\ss-windows-runtime\\run-05-host-preflight-20260916\\WR-H01",
+        "powershell.exe",
+        "-NoProfile",
+        "-NonInteractive",
+        "-Command",
+        "$ErrorActionPreference='Stop'; $s=[IO.File]::ReadAllText('.agents/skills/ss-windows-runtime/SKILL.md',[Text.Encoding]::UTF8); if($s.Length -lt 100){throw 'Candidate read failed'}; $p=[IO.Path]::GetFullPath('output/c5-launcher-preflight.txt'); if(Test-Path -LiteralPath $p){throw 'Preexisting temporary target'}; [IO.File]::WriteAllText($p,'C5_PREFLIGHT',[Text.UTF8Encoding]::new($false)); if([IO.File]::ReadAllText($p) -cne 'C5_PREFLIGHT'){throw 'Temporary bytes differ'}; Remove-Item -LiteralPath $p; if(Test-Path -LiteralPath $p){throw 'Temporary residue'}; Write-Output 'C5_PREPARED_SANDBOX_READ_WRITE_CLEANUP=PASS'"
+      ],
+      "exit_code": 0,
+      "stdout": "C5_PREPARED_SANDBOX_READ_WRITE_CLEANUP=PASS\r\n",
+      "stderr": "",
+      "candidate_unchanged": true,
+      "temporary_residue_exists": false
+    },
+    {
+      "case_id": "WR-N01",
+      "started_at_utc": "2026-09-16T08:58:12.123244+00:00",
+      "ended_at_utc": "2026-09-16T08:58:12.835134+00:00",
+      "command": [
+        "C:/Users/geoff/AppData/Local/OpenAI/Codex/bin/12219cbfbcbddde7/codex.exe",
+        "sandbox",
+        "--permission-profile",
+        ":workspace",
+        "-C",
+        "C:\\Dev\\BettingProject\\codex\\betting-sofascore-local-lab\\.tmp\\wo062-skills-lot2\\.tmp\\wo062-evaluations\\ss-windows-runtime\\run-05-host-preflight-20260916\\WR-N01",
+        "powershell.exe",
+        "-NoProfile",
+        "-NonInteractive",
+        "-Command",
+        "$ErrorActionPreference='Stop'; $s=[IO.File]::ReadAllText('.agents/skills/ss-windows-runtime/SKILL.md',[Text.Encoding]::UTF8); if($s.Length -lt 100){throw 'Candidate read failed'}; $p=[IO.Path]::GetFullPath('output/c5-launcher-preflight.txt'); if(Test-Path -LiteralPath $p){throw 'Preexisting temporary target'}; [IO.File]::WriteAllText($p,'C5_PREFLIGHT',[Text.UTF8Encoding]::new($false)); if([IO.File]::ReadAllText($p) -cne 'C5_PREFLIGHT'){throw 'Temporary bytes differ'}; Remove-Item -LiteralPath $p; if(Test-Path -LiteralPath $p){throw 'Temporary residue'}; Write-Output 'C5_PREPARED_SANDBOX_READ_WRITE_CLEANUP=PASS'"
+      ],
+      "exit_code": 0,
+      "stdout": "C5_PREPARED_SANDBOX_READ_WRITE_CLEANUP=PASS\r\n",
+      "stderr": "",
+      "candidate_unchanged": true,
+      "temporary_residue_exists": false
+    }
+  ]
+}

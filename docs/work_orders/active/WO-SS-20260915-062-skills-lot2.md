@@ -1,6 +1,6 @@
 # WO-SS-20260915-062 — Développement des skills spécialisés du lot 2
 
-- **Statut :** `OWNER_ACCEPTED — A_INSTALLED — B_INSTALLED — C_QUALIFICATION_INCOMPLETE` ; PB, FQ et CS validés et installés personnellement. Java `.3` et Windows `.1` réévalués en C4, 38 tentatives C conservées, qualification encore ouverte. Validation humaine C, consolidation D et livraison Git restent distinctes.
+- **Statut :** `OWNER_ACCEPTED — A_INSTALLED — B_INSTALLED — C_QUALIFICATION_INCOMPLETE` ; PB, FQ et CS validés et installés personnellement. Java `.4` est revu dans C6/C7 (sept PASS, un FAIL), et les deux cas Windows `.1` restent non consommés après préflight hôte formel réussi. Validation humaine C, consolidation D et livraison Git restent distinctes.
 - **Date :** 2026-09-15.
 - **Autorité :** demande propriétaire de préparer un WO avec `ss-work-order`, à partir de la conversation « Skills du lot 2 », dans l'ordre précisé ci-dessous.
 - **Acceptation :** le 15 septembre 2026, le propriétaire confirme « J’accepte le WO-062 » et autorise l'inventaire des sources et la préparation des cas d'évaluation de `ss-provider-benchmark`.
@@ -269,6 +269,40 @@ distinct ; elle n'élargit pas implicitement ce lot de skills.
   codex exec ; cette limite de service est conservée dans la revue plutôt que présentée
   comme une exécution sans reprise interne.
 
+### Déblocage Windows — staging hôte sans modèle
+
+- Le nouveau préflight hôte C5 des contextes gelés échoue encore avant PowerShell avec
+  `helper_unknown_error: setup refresh had errors`. Le journal du sandbox relie cet
+  échec à `SetNamedSecurityInfoW: 5` sur les racines `WR-H01`/`WR-N01`, leurs
+  `.agents` et leurs `.git`. Les racines gelées sont détenues par
+  `CodexSandboxOffline`; aucun harnais, JVM, modèle ou session Windows n'a été lancé.
+- Une mutation récursive de propriétaire/ACL de `run-05` n'est pas appliquée. À sa
+  place, deux copies de staging hôte-propriétaires sont créées sans métadonnées de
+  sécurité des sources, puis rapprochées byte-à-byte du contrat C5 : 18 fichiers
+  vérifiés pour `WR-H01`, 16 pour `WR-N01`, `preflight.json` identique et sorties
+  initialement vides.
+- Les deux préflights sans modèle réussissent alors : lecture du candidat, écriture,
+  relecture et suppression du marqueur, avec code 0, stderr vide et aucun résidu en
+  0,951 s (`WR-H01`) et 0,712 s (`WR-N01`). La
+  [preuve de staging](../../skills/evaluations/WO-062/c-requalification-05/post-preparation/windows-host-owned-staging-preflight.md)
+  établit que le sandbox `elevated` fonctionne dans un contexte hôte-propriétaire,
+  sans qualifier les deux sondes.
+- Ce succès isole le blocage aux métadonnées de sécurité des contextes C5. Il ne
+  transforme pas le staging en contexte qualifiable et ne consomme aucune session.
+- Une racine physique formelle, détenue par l'hôte et conservant l'identifiant
+  logique `run-05`, est ensuite préparée sans modèle. Son contrat C5, son
+  autorisation, ses demandes, ses prompts et toutes ses entrées sont byte-à-byte
+  conformes; racines, `.agents` et `.git` sont détenus par `geoff`, les sorties et
+  artefacts interdits sont absents. Son préflight hôte sans modèle réussit aussi
+  pour les deux cas (0,730 s et 0,680 s). Le
+  [reçu formel](../../skills/evaluations/WO-062/c-requalification-05/post-preparation/windows-host-formal-context.md)
+  rend l'environnement prêt sans créer de nouveau run logique, ni lancer ou
+  consommer une recette Windows.
+- Le [plan d’exécution formel](../../skills/evaluations/WO-062/c-requalification-05/post-preparation/windows-host-formal-execution-plan.md)
+  fixe déjà l’ordre unique `WR-H01` puis `WR-N01`, les gardes C5, les preuves à
+  geler et l’arrêt obligatoire avant `WR-N01` si `WR-H01` est incomplet ; il est
+  préparé mais non invoqué.
+
 ### Ordre restant et consolidation
 
 | Étape | Skill | Résultat attendu avant passage à la suite |
@@ -506,7 +540,7 @@ installation personnelle ne sont pas déduits de la seule préparation du WO.
 **Suite en cours :** C7 est achevé : sept sessions Java .4 fraîches, six PASS et un FAIL sémantique JM-N01 sont gelés et revus.
 Le candidat ss-java-module .4 reste incomplet car JM-N01 omet la règle explicite d'absence de transfert de cookie, état ou donnée de session entre contexte live conservé et contexte J3 temporaire.
 Le blocage volontaire de sofascore-live-test est désormais restitué correctement. JM-C02 conserve deux reprises internes de sampling dans une seule session, sans relance du conducteur.
-Avant toute consommation de WR-H01 ou WR-N01, le sandbox Windows elevated doit être débloqué par un préflight hôte sans modèle, en conservant la recette C5 et ses frontières de sécurité.
+Le préflight Windows hôte sans modèle est désormais démontré dans un contexte physique formel byte-à-byte conforme, détenu par l'hôte et conservant le run logique C5 `run-05`; il isole l'échec C5 aux ACL/propriétaires de ses contextes gelés. WR-H01 et WR-N01 restent non lancés et non consommés : le préflight ne vaut ni recette ni réponse de modèle.
 Validation humaine et installation C restent postérieures à une qualification complète ; suivront ensuite la consolidation D, la livraison Git et la clôture selon le workflow ci-dessus.
 Les trois skills A/B ont terminé préparation, rédaction, qualification, validation propriétaire
 et installation personnelle. Leurs preuves et limites restent conservées. Le WO reste actif ;
