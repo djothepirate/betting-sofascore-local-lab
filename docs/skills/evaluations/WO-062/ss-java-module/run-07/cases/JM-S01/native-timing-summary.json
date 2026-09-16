@@ -1,0 +1,13 @@
+{
+  "schema": "wo062-c5-event-timing-v1",
+  "started_at_utc": "2026-09-16T08:19:22.016229+00:00",
+  "ended_at_utc": "2026-09-16T08:19:48.657558+00:00",
+  "duration_seconds": 26.641,
+  "owned_pid": 11564,
+  "exit_code": 0,
+  "timed_out": false,
+  "reader_finished": true,
+  "reader_errors": [],
+  "event_count": 7,
+  "scope": "Local receipt times of CLI JSONL events; not server token timings or proof of model thinking duration."
+}

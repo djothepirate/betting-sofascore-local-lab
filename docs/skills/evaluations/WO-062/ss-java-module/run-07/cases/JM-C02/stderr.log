@@ -1,0 +1,9 @@
+2026-09-16T08:05:34.294991Z  WARN codex_skills::interface: ignoring interface.icon_small: icon path with '..' must resolve under plugin assets/
+2026-09-16T08:05:34.295223Z  WARN codex_skills::interface: ignoring interface.icon_large: icon path with '..' must resolve under plugin assets/
+2026-09-16T08:05:34.303811Z  WARN codex_core::shell_snapshot: Failed to create shell snapshot for powershell: Shell snapshot not supported yet for PowerShell
+2026-09-16T08:05:34.757621Z  WARN codex_skills::interface: ignoring interface.icon_small: icon path with '..' must resolve under plugin assets/
+2026-09-16T08:05:34.757741Z  WARN codex_skills::interface: ignoring interface.icon_large: icon path with '..' must resolve under plugin assets/
+2026-09-16T08:06:00.523125Z ERROR codex_core::tools::router: error=collab spawn failed: no thread with id: 01a0a93f-edae-7661-b246-0435cedcff3c
+2026-09-16T08:12:06.570796Z  WARN codex_core::responses_retry: stream disconnected - retrying sampling request (1/5 in 191ms)... turn_id=01a0a93f-ee3e-73d3-9e38-ac7c77019545 retries=1 max_retries=5 sampling_error=stream disconnected before completion: WebSocket protocol error: Connection reset without closing handshake
+2026-09-16T08:15:39.491351Z  WARN codex_core::responses_retry: stream disconnected - retrying sampling request (2/5 in 417ms)... turn_id=01a0a93f-ee3e-73d3-9e38-ac7c77019545 retries=2 max_retries=5 sampling_error=stream disconnected before completion: WebSocket protocol error: Connection reset without closing handshake
+2026-09-16T08:19:19.127614Z  WARN codex_core::hook_runtime: after_agent hook failed; continuing turn_id=01a0a93f-ee3e-73d3-9e38-ac7c77019545 hook_name=legacy_notify error=Nom de fichier ou extension trop long. (os error 206)

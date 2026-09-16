@@ -251,7 +251,23 @@ distinct ; elle n'élargit pas implicitement ce lot de skills.
 - Un premier appel local du conducteur C7 s'est arrêté avant `codex exec`, car une
   assertion C5 résiduelle rejetait `run-07`. Aucun événement, réponse, gel ni session
   modèle n'a été créé. Le correctif borne le changement au conducteur C7 distinct,
-  conserve les gardes C7 et les sept contextes vides, et laisse C5/C6 inchangés.
+   conserve les gardes C7 et les sept contextes vides, et laisse C5/C6 inchangés.
+- La recette corrigée lance ensuite exactement les sept sessions autorisées dans l’ordre,
+  sans relance du conducteur ni huitième session. Les sept tours se terminent normalement ;
+  les copies publiées de leurs gels correspondent aux SHA-256 de leurs sources. Le
+  [postflight C7](../../skills/evaluations/WO-062/ss-java-module/run-07/postflight-integrity.json)
+  conserve les entrées, commandes, diagnostics et limites de chaque cas.
+- Résultats comportementaux : JM-C01, JM-C02, JM-S01, JM-S02, JM-S03 et JM-S04 sont
+  PASS. JM-N01 est FAIL : sa réponse décrit le contexte J3 temporaire et le contexte live
+  conservé, mais omet de restituer explicitement l’absence de transfert de cookie, d’état
+  ou de donnée de session entre eux. Elle restitue bien, cette fois, que
+  sofascore-live-test reste volontairement bloqué. La qualification du candidat Java .4
+  demeure donc incomplète ; aucune validation humaine ou installation personnelle n’en découle.
+- JM-C02 enregistre deux reconnexions internes de sampling après des ruptures WebSocket,
+  puis un unique turn.completed, dans la même session et sous 900 secondes. Le conducteur
+  reste à automatic_retry=false, avec un seul thread et aucune nouvelle invocation
+  codex exec ; cette limite de service est conservée dans la revue plutôt que présentée
+  comme une exécution sans reprise interne.
 
 ### Ordre restant et consolidation
 
@@ -487,14 +503,11 @@ Le WO reste dans `active` pendant la réalisation et la revue. La PR cible exclu
 la fusion. La clôture effective suit cette fusion. Publication, fusion, promotion, tag et
 installation personnelle ne sont pas déduits de la seule préparation du WO.
 
-**Suite en cours :** les corrections C5 sont gelées et leurs prérequis locaux sont documentés.
-La recette C6 unique de `JM-H01` est achevée avec un PASS comportemental borné et ses
-preuves gelées ; les sept cas Java restants du candidat `.4` sont maintenant autorisés
-dans C7 et préparés, mais restent `NOT_RUN` avant leurs sessions et revues individuelles. Pour
-Windows, réparer le sandbox `elevated` puis réussir le préflight hôte sans modèle permet de lancer `WR-H01` et
-`WR-N01` avec leur recette C5 inchangée. Validation humaine et installation C restent
-postérieures à une qualification complète, puis viendront la consolidation D, la livraison
-Git et la clôture selon le workflow décrit ci-dessus.
+**Suite en cours :** C7 est achevé : sept sessions Java .4 fraîches, six PASS et un FAIL sémantique JM-N01 sont gelés et revus.
+Le candidat ss-java-module .4 reste incomplet car JM-N01 omet la règle explicite d'absence de transfert de cookie, état ou donnée de session entre contexte live conservé et contexte J3 temporaire.
+Le blocage volontaire de sofascore-live-test est désormais restitué correctement. JM-C02 conserve deux reprises internes de sampling dans une seule session, sans relance du conducteur.
+Avant toute consommation de WR-H01 ou WR-N01, le sandbox Windows elevated doit être débloqué par un préflight hôte sans modèle, en conservant la recette C5 et ses frontières de sécurité.
+Validation humaine et installation C restent postérieures à une qualification complète ; suivront ensuite la consolidation D, la livraison Git et la clôture selon le workflow ci-dessus.
 Les trois skills A/B ont terminé préparation, rédaction, qualification, validation propriétaire
 et installation personnelle. Leurs preuves et limites restent conservées. Le WO reste actif ;
 la livraison Git et sa clôture suivent le workflow de revue et de fusion décrit ci-dessus.

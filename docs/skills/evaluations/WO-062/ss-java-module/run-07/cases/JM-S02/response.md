@@ -1,0 +1,9 @@
+Je retiens un seul skill : **`ss-java-module`**.
+
+- **Chemin effectivement lu :** [C:/Dev/BettingProject/codex/betting-sofascore-local-lab/.tmp/wo062-skills-lot2/.tmp/wo062-evaluations/ss-java-module/run-07/JM-S02/.agents/skills/ss-java-module/SKILL.md](C:/Dev/BettingProject/codex/betting-sofascore-local-lab/.tmp/wo062-skills-lot2/.tmp/wo062-evaluations/ss-java-module/run-07/JM-S02/.agents/skills/ss-java-module/SKILL.md)
+- **Lecture :** fichier lu intégralement avec l’outil, sans troncature. Sa présence a également été confirmée par la découverte des fichiers `SKILL.md` dans `.agents/skills`.
+- **Raison de la sélection :** la demande porte sur la répartition des responsabilités dans l’architecture Java du SofaScore Local Lab, la cartographie des classes et dépendances, ainsi que l’effet des profils sur le démarrage. Ce skill couvre explicitement **J3 durable**, les frontières entre admission, orchestration et persistance, la composition Spring/Maven et l’appel au worker. Il demande aussi de proposer une modification minimale justifiée, ce qui correspond à l’ajustement souhaité.
+
+Je ne retiens pas de skill complémentaire à ce stade. **`ss-postgres-change`** deviendrait pertinent si l’ajustement proposé portait effectivement sur une transaction, un schéma ou un ledger ; la mention de la persistance comme responsabilité à cartographier ne suffit pas à établir ce besoin. **`ss-verify`** serait un relais pour une qualification ou un diagnostic de build, qui ne sont pas demandés ici.
+
+Le routage est terminé. Aucun code métier, oracle, résultat antérieur, inventaire commenté ou plan d’évaluation n’a été lu ; aucune analyse métier ni modification n’a été exécutée.

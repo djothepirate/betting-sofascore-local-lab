@@ -1,0 +1,77 @@
+{
+  "case_id": "JM-S02",
+  "skill": "ss-java-module",
+  "run_id": "run-07",
+  "started_at_utc": "2026-09-16T08:19:49.675901+00:00",
+  "ended_at_utc": "2026-09-16T08:20:47.926546+00:00",
+  "duration_seconds": 58.25,
+  "mode": "native_codex_exec_ephemeral_read-only",
+  "execution_mode": "read_only",
+  "cli_version": "codex-cli 0.154.0-alpha.6.2",
+  "model": null,
+  "reasoning_effort": null,
+  "model_note": "Configured defaults; exact model/effort not exposed, no override.",
+  "launch_arguments": [
+    "exec",
+    "--ephemeral",
+    "--sandbox",
+    "read-only",
+    "--cd",
+    "C:\\Dev\\BettingProject\\codex\\betting-sofascore-local-lab\\.tmp\\wo062-skills-lot2\\.tmp\\wo062-evaluations\\ss-java-module\\run-07\\JM-S02",
+    "--json",
+    "--output-last-message",
+    "C:\\Dev\\BettingProject\\codex\\betting-sofascore-local-lab\\.tmp\\wo062-skills-lot2\\.tmp\\wo062-evaluations\\ss-java-module\\run-07\\JM-S02\\output\\response.md",
+    "-"
+  ],
+  "exit_code": 0,
+  "turn_completed": true,
+  "candidate_sha256": "f1f6533f678c5cdb4ae6a5bc9c996c062af419005e4f4cd6104a51c91e442d97",
+  "source_head": "2af5b07e9a5c8c4f96dc3137971b7e11d9ee00e8",
+  "input_files": [
+    {
+      "path": ".agents/skills/ss-java-module/SKILL.md",
+      "sha256": "f1f6533f678c5cdb4ae6a5bc9c996c062af419005e4f4cd6104a51c91e442d97",
+      "bytes": 10901
+    },
+    {
+      "path": ".agents/skills/ss-java-module/agents/openai.yaml",
+      "sha256": "ccc4fc2a4707838dd6defdd73ef6f6c7ee0d69e6df86e41689a46884691573ae",
+      "bytes": 309
+    }
+  ],
+  "prompt_sha256": "17ae6f5922fd55f4ddf70336ab6fd0b968c6627f4bde9c0648aa2b3f517ff35e",
+  "request_sha256": "2c18704eb2fe22496f694c5a1fcfcdcd5f8f2af3fe39ba4a3bde0feb20b4968c",
+  "oracle_supplied": false,
+  "design_history_supplied": false,
+  "raw_events_sha256": "d119266da143de44e3fd5c7b213775243ed4e68d8cdff47e0ef560d735b7d48c",
+  "native_events_sha256": "2322a64b098d6a81f9e4db0d59f23509893242538e9a2ac745d964b0444412b1",
+  "commands_completed": 2,
+  "response_sha256": "d358a48eef7cbeef66f2eb85d12bd3da24d65e2b4e27cfbad103805e61db431e",
+  "catalogue_sha256": "45e5e555e6b68a767455a9beea94046b3ad7f0b881c38840af31e0d5c12a855d",
+  "catalogue_note": "Local reconstruction after execution, not a capture of the transmitted request.",
+  "published_events_note": "Internal reasoning omitted; actual command outputs retained.",
+  "usage": {
+    "input_tokens": 79128,
+    "cached_input_tokens": 57856,
+    "cache_write_input_tokens": 0,
+    "output_tokens": 1416,
+    "reasoning_output_tokens": 598
+  },
+  "selection_instrumented": true,
+  "qualification_limit": "Tool-mediated selection/load with declared envelope; no automatic CLI body-injection claim.",
+  "timed_out": false,
+  "automatic_retry": false,
+  "diagnostics": [],
+  "reading_audit": {
+    "path": "output/reading-audit.json",
+    "sha256": "3d9a511fe5e974222b966d3e5000e14834fe88469b119457d20e7adcc606b158",
+    "status": "NOT_APPLICABLE"
+  },
+  "qualification_status": "NOT_REVIEWED",
+  "runtime_artifacts": [],
+  "collection_completed": true,
+  "collector_exit_code": 0,
+  "collector_started_at_utc": "2026-09-16T08:20:47.926546+00:00",
+  "collector_finished_before_freeze_at_utc": "2026-09-16T08:20:48.759290+00:00",
+  "timing_instrumentation": "Per-event receipt UTC/monotonic time, no model reasoning text; separate collector timestamps"
+}

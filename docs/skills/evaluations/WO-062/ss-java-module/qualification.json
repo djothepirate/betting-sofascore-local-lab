@@ -4,10 +4,10 @@
   "candidate_version": "0.1.0-candidate.4",
   "status": "INCOMPLETE_QUALIFICATION",
   "evaluation_gate": {
-    "status": "AUTHORIZED_REMAINDER_PREPARED",
-    "completed_case": "run-06/review-JM-H01.json",
-    "case_id": "JM-H01",
-    "meaning": "C6 provides one behavioral PASS for candidate.4. C7 is authorized and prepared for the seven remaining cases, which remain NOT_RUN until their own fresh frozen sessions and reviews complete."
+    "status": "C7_COMPLETED_WITH_ONE_SEMANTIC_FAIL",
+    "completed_case": "run-07/results.json",
+    "case_id": "JM-N01",
+    "meaning": "C7 completed all seven remaining candidate.4 Java sessions. Six reviews PASS; JM-N01 fails a mandatory restitution requirement, so complete qualification remains unavailable."
   },
   "source_commit": "6648dd423e556b5248b8793a539ae85a7680f9bc",
   "source_head": "966062d677c30e7ce67b61454bd54695497064f5",
@@ -30,35 +30,69 @@
   "candidate_package_commit": "966062d677c30e7ce67b61454bd54695497064f5",
   "candidate_commit_state": "The first C5 correction commit carries the immutable candidate bytes recorded in revision-04.",
   "distinct_cases": 8,
-  "executions": 2,
-  "behavioral_executions": 1,
-  "launcher_attempts_current_candidate": 2,
-  "model_tool_commands_observed_current_candidate": 18,
-  "total_executions": 27,
-  "pass": 1,
-  "fail": 0,
+  "executions": 9,
+  "behavioral_executions": 8,
+  "launcher_attempts_current_candidate": 9,
+  "model_tool_commands_observed_current_candidate": 108,
+  "total_executions": 34,
+  "pass": 7,
+  "fail": 1,
   "blocked": 0,
-  "not_run": 7,
-  "results": "run-06/results.json",
-  "artifact_manifest": "run-06/artifact-manifest.json",
+  "not_run": 0,
+  "results": "run-07/results.json",
+  "artifact_manifest": "run-07/artifact-manifest.json",
   "qualification_blocker": {
-    "code": "SEVEN_C7_CASES_PREPARED_NOT_LAUNCHED",
-    "case_ids": ["JM-N01", "JM-C01", "JM-C02", "JM-S01", "JM-S02", "JM-S03", "JM-S04"],
-    "meaning": "One C6 PASS does not transfer to the remaining candidate.4 cases; C7 authorizes exactly one fresh session per listed case."
+    "code": "JM_N01_LIVE_CONTEXT_SESSION_STATE_TRANSFER_OMISSION",
+    "case_ids": [
+      "JM-N01"
+    ],
+    "meaning": "The candidate.4 response omits the mandatory statement that no cookie, session state or session data transfers between the retained live context and the temporary J3 context."
   },
   "current_cases": [
-    { "case_id": "JM-H01", "verdict": "PASS", "source_run": "run-06" },
-    { "case_id": "JM-N01", "verdict": "NOT_RUN", "source_run": null },
-    { "case_id": "JM-C01", "verdict": "NOT_RUN", "source_run": null },
-    { "case_id": "JM-C02", "verdict": "NOT_RUN", "source_run": null },
-    { "case_id": "JM-S01", "verdict": "NOT_RUN", "source_run": null },
-    { "case_id": "JM-S02", "verdict": "NOT_RUN", "source_run": null },
-    { "case_id": "JM-S03", "verdict": "NOT_RUN", "source_run": null },
-    { "case_id": "JM-S04", "verdict": "NOT_RUN", "source_run": null }
+    {
+      "case_id": "JM-H01",
+      "verdict": "PASS",
+      "source_run": "run-06"
+    },
+    {
+      "case_id": "JM-N01",
+      "verdict": "FAIL",
+      "source_run": "run-07"
+    },
+    {
+      "case_id": "JM-C01",
+      "verdict": "PASS",
+      "source_run": "run-07"
+    },
+    {
+      "case_id": "JM-C02",
+      "verdict": "PASS",
+      "source_run": "run-07"
+    },
+    {
+      "case_id": "JM-S01",
+      "verdict": "PASS",
+      "source_run": "run-07"
+    },
+    {
+      "case_id": "JM-S02",
+      "verdict": "PASS",
+      "source_run": "run-07"
+    },
+    {
+      "case_id": "JM-S03",
+      "verdict": "PASS",
+      "source_run": "run-07"
+    },
+    {
+      "case_id": "JM-S04",
+      "verdict": "PASS",
+      "source_run": "run-07"
+    }
   ],
   "execution_totals": {
-    "pass": 20,
-    "fail": 6,
+    "pass": 26,
+    "fail": 7,
     "blocked": 1
   },
   "c6_authorized_rerun": {
@@ -73,12 +107,22 @@
   },
   "c7_authorized_remainder": {
     "run_id": "run-07",
-    "case_ids": ["JM-N01", "JM-C01", "JM-C02", "JM-S01", "JM-S02", "JM-S03", "JM-S04"],
+    "case_ids": [
+      "JM-N01",
+      "JM-C01",
+      "JM-C02",
+      "JM-S01",
+      "JM-S02",
+      "JM-S03",
+      "JM-S04"
+    ],
     "authorization": "../c-requalification-07/authorization.json",
     "authorized_session_count": 7,
     "workers": 1,
     "automatic_retry": false,
-    "state": "PREPARED_NOT_LAUNCHED"
+    "state": "COMPLETED_WITH_ONE_SEMANTIC_FAIL",
+    "results": "run-07/results.json",
+    "postflight_integrity": "run-07/postflight-integrity.json"
   },
   "previous_qualification": "revision-04/previous-qualification.json",
   "historical_runs_preserved": [
@@ -91,10 +135,12 @@
   "human_validation": false,
   "personal_installation": false,
   "limits": [
-    "Candidate.4 has one behavioral PASS for JM-H01, but all eight fresh cases must be reviewed before qualification can be complete.",
+    "Candidate.4 has seven PASS reviews and one FAIL review across its eight fresh Java cases; it is not completely qualified.",
+    "JM-C02 completed inside one authorized session but preserves two internal sampling reconnects; no outer retry or new session occurred.",
     "Candidate.3 results remain historical and do not transfer to candidate.4.",
-    "The JM-H01 C5 session remains a frozen BLOCKED_BEFORE_MODEL_COMMAND infrastructure incident. It counts as one launcher attempt but not as a behavioral execution; C6 is the separately authorized fresh PASS.",
-    "The seven Java cases are now authorized only by C7, prepared without prior answers or oracle, and remain NOT_RUN until their fresh sessions and reviews finish. The two Windows C5 cases remain separately blocked before model launch by their host sandbox preflight.",
-    "This partial result establishes no application build, application test, database, provider collection, scanner, CI pipeline, human validation or personal installation."
-  ]
+    "The JM-H01 C5 session remains a frozen BLOCKED_BEFORE_MODEL_COMMAND infrastructure incident. C6 is its separately authorized fresh PASS.",
+    "The Windows cases remain unlaunched and blocked before model launch by their host sandbox preflight. Windows environment unblocking must precede any consumption of WR-H01 or WR-N01.",
+    "This result establishes no application build, application test, database, provider collection, scanner, CI pipeline, human validation or personal installation."
+  ],
+  "c7_execution_source_head": "2af5b07e9a5c8c4f96dc3137971b7e11d9ee00e8"
 }

@@ -1,0 +1,202 @@
+{
+  "case_id": "JM-C02",
+  "skill": "ss-java-module",
+  "run_id": "run-07",
+  "started_at_utc": "2026-09-16T08:05:33.958027+00:00",
+  "ended_at_utc": "2026-09-16T08:19:20.572663+00:00",
+  "duration_seconds": 826.609,
+  "mode": "native_codex_exec_ephemeral_read-only",
+  "execution_mode": "read_only",
+  "cli_version": "codex-cli 0.154.0-alpha.6.2",
+  "model": null,
+  "reasoning_effort": null,
+  "model_note": "Configured defaults; exact model/effort not exposed, no override.",
+  "launch_arguments": [
+    "exec",
+    "--ephemeral",
+    "--sandbox",
+    "read-only",
+    "--cd",
+    "C:\\Dev\\BettingProject\\codex\\betting-sofascore-local-lab\\.tmp\\wo062-skills-lot2\\.tmp\\wo062-evaluations\\ss-java-module\\run-07\\JM-C02",
+    "--json",
+    "--output-last-message",
+    "C:\\Dev\\BettingProject\\codex\\betting-sofascore-local-lab\\.tmp\\wo062-skills-lot2\\.tmp\\wo062-evaluations\\ss-java-module\\run-07\\JM-C02\\output\\response.md",
+    "-"
+  ],
+  "exit_code": 0,
+  "turn_completed": true,
+  "candidate_sha256": "f1f6533f678c5cdb4ae6a5bc9c996c062af419005e4f4cd6104a51c91e442d97",
+  "source_head": "2af5b07e9a5c8c4f96dc3137971b7e11d9ee00e8",
+  "input_files": [
+    {
+      "path": "AGENTS.md",
+      "sha256": "6509ac77cd4c87094a91da7e4c750b5991eeb4585a69a609def5289b91cf6ab5",
+      "bytes": 10320
+    },
+    {
+      "path": "ADR-SS-007-j3-automation-durable-catalog-and-live-pause.md",
+      "sha256": "b819ba63c2fb5cbacf1afca115f6ab0597956b1ff8c9377f3e7beb14fba3eb07",
+      "bytes": 36758
+    },
+    {
+      "path": "docs/architecture/ARCHITECTURE.md",
+      "sha256": "518fc0ff0d0991c9e9765d01899526c536806e952ce5ea2a10cda2cf500ba8ce",
+      "bytes": 41164
+    },
+    {
+      "path": "scripts/Verify-Local.ps1",
+      "sha256": "068bf5a3826fe77c9bb8fe5984b0cd80fef44d04aee17008b4d8e021369ba3ff",
+      "bytes": 6256
+    },
+    {
+      "path": "docs/validation/WO060-J3-IMPLEMENTATION-20260914.md",
+      "sha256": "7607d35276e1074ac734ca0e624c62c7df9b3482258526ccc6ece32bec3f5ac2",
+      "bytes": 13996
+    },
+    {
+      "path": "pom.xml",
+      "sha256": "e01e011e360fa847842d826a5bcf2960c34eae91da037e2a6f002e71a3513a46",
+      "bytes": 16856
+    },
+    {
+      "path": "src/main/java/com/bettingproject/sofascorelocal/application/network/J3RuntimeService.java",
+      "sha256": "6541e21a443baea843695e13219508f8c441f4470db2ea4569cd236675ed8b46",
+      "bytes": 21918
+    },
+    {
+      "path": "src/main/java/com/bettingproject/sofascorelocal/application/network/J3CollectionExecutor.java",
+      "sha256": "17c66c6a576f9427948103367f5b453d25c1f796558368f987646e381becf872",
+      "bytes": 12229
+    },
+    {
+      "path": "src/main/java/com/bettingproject/sofascorelocal/application/network/J3CollectionCompletionService.java",
+      "sha256": "4f24526a7ca0488b2f21bf5ffd6f667c2160ee90f96d3b5eddcfc0860a91a9fa",
+      "bytes": 2228
+    },
+    {
+      "path": "src/main/java/com/bettingproject/sofascorelocal/port/J3AutomationStore.java",
+      "sha256": "bc8c357f37eddf5cd9e42398443a29582ee65202351368725f0abd3efeb29b45",
+      "bytes": 1240
+    },
+    {
+      "path": "src/main/java/com/bettingproject/sofascorelocal/port/J3CollectionStore.java",
+      "sha256": "a4c3344dd3e9a668a9f6c4ef0730d2145c6761a3c8f35dcc6c9d02f4c7ad04d8",
+      "bytes": 1269
+    },
+    {
+      "path": "src/main/java/com/bettingproject/sofascorelocal/adapter/persistence/JdbcJ3AutomationStore.java",
+      "sha256": "78cd826a422ad992c80102acf45a055d235b9756560721da6eb857cea9abd000",
+      "bytes": 15922
+    },
+    {
+      "path": "src/main/java/com/bettingproject/sofascorelocal/adapter/persistence/JdbcJ3CollectionStore.java",
+      "sha256": "66622d3b94f99d9b77cd8075f11ab648b52d018032747ed1c1f518a542aef555",
+      "bytes": 16635
+    },
+    {
+      "path": "src/main/java/com/bettingproject/sofascorelocal/application/network/playwright/ResilientPlaywrightProviderCampaignFactory.java",
+      "sha256": "8836c0d3ba70c05415c629a72727dbc6b255920832a303fc0a52a78a26e3da91",
+      "bytes": 15275
+    },
+    {
+      "path": "src/main/java/com/bettingproject/sofascorelocal/application/network/playwright/ChildJvmPlaywrightProviderSupervisor.java",
+      "sha256": "1cc6dd4fb35c730972578cd49e62e12410eae74bbae143ca0e88f778abec0d5b",
+      "bytes": 98186
+    },
+    {
+      "path": "src/provider-playwright/java/com/bettingproject/sofascorelocal/provider/playwright/worker/ProviderPlaywrightWorkerMain.java",
+      "sha256": "cd530db0edebef8d8379e9e81f28472a30d577b1c14f719a11f33ead5c25c4c7",
+      "bytes": 47929
+    },
+    {
+      "path": "src/provider-playwright/java/com/bettingproject/sofascorelocal/provider/playwright/worker/ProviderPlaywrightWorkerProtocol.java",
+      "sha256": "69503a3710afe68d67b4c58ba7a4939ba6cc32fbcf454fef50aabef8e5a0c65b",
+      "bytes": 23460
+    },
+    {
+      "path": "src/main/java/com/bettingproject/sofascorelocal/application/live/LiveCampaignService.java",
+      "sha256": "d5040046c4cfe7bc946efe8336624679d25c1eba6964add24e1d2afb3507257a",
+      "bytes": 86925
+    },
+    {
+      "path": "src/test/java/com/bettingproject/sofascorelocal/integration/J3RuntimeIT.java",
+      "sha256": "ab7510105d50acdf5df1c4257cdd1532599b4eadfc5eff4f903375b0c58acec8",
+      "bytes": 13676
+    },
+    {
+      "path": "src/test/java/com/bettingproject/sofascorelocal/integration/J3AutomationPersistenceIT.java",
+      "sha256": "a14741f16d95894fc45ee8b9be8a964121e83ca75aecc0273b7db5a88e47db55",
+      "bytes": 8737
+    },
+    {
+      "path": "src/test/java/com/bettingproject/sofascorelocal/integration/J3CollectionExecutionIT.java",
+      "sha256": "de039f13fd3a0a1cc814758118d24c2315b1dc725432d174ef8a043a679efda8",
+      "bytes": 12431
+    },
+    {
+      "path": "src/provider-playwright-test/java/com/bettingproject/sofascorelocal/provider/playwright/worker/J3WorkerScopeProtocolTest.java",
+      "sha256": "6ac1909d9da573d391f8c70f4956f8e3eb817f9ef65c33fee50434bcfa1888d9",
+      "bytes": 2464
+    },
+    {
+      "path": "src/provider-playwright-qualification-test/java/com/bettingproject/sofascorelocal/application/network/playwright/J3LivePauseWorkerQualificationIT.java",
+      "sha256": "4c037634719139918167abf2ceead502aec8b73fe9c9ad37d6901ffed7f5ce74",
+      "bytes": 8180
+    },
+    {
+      "path": "src/test/java/com/bettingproject/sofascorelocal/application/network/playwright/ChildJvmPlaywrightProviderSupervisorSpringContextTest.java",
+      "sha256": "da5788666d9b9a32789e8eedf0e5743e8ee991e6b18d07e628fe2a0d020a2560",
+      "bytes": 1940
+    },
+    {
+      "path": ".agents/skills/ss-java-module/SKILL.md",
+      "sha256": "f1f6533f678c5cdb4ae6a5bc9c996c062af419005e4f4cd6104a51c91e442d97",
+      "bytes": 10901
+    },
+    {
+      "path": ".agents/skills/ss-java-module/agents/openai.yaml",
+      "sha256": "ccc4fc2a4707838dd6defdd73ef6f6c7ee0d69e6df86e41689a46884691573ae",
+      "bytes": 309
+    },
+    {
+      "path": "input.json",
+      "sha256": "af05f011fc5dd3d54d98c65da6bb50111461115e8a2b3cbd390c91a0e7350d43",
+      "bytes": 2558
+    }
+  ],
+  "prompt_sha256": "8f31a50b991db4ba14c10b2eb56f88153d5b0bd9efd2961f198bfc8c334530ef",
+  "request_sha256": "92b39bc3fcdb1f50c4ffebe2515c1a254de959eb4dbc42980a1d043c2ac3f4cc",
+  "oracle_supplied": false,
+  "design_history_supplied": false,
+  "raw_events_sha256": "62e1fa2d04948b4af22e689d6be1533f9159cfffac35ad993e70e008073906a6",
+  "native_events_sha256": "fb8f855bd34c3d7b63dcfa8733d1db7a173c62b303622f4490a45cab6de58ae6",
+  "commands_completed": 41,
+  "response_sha256": "674998bbb9330322426724c759d0d1fdb56eaa037f5bb37c70ecba5499af4864",
+  "catalogue_sha256": "a78dfa67097e252a87a594fbd75dede1ada142e50524ee8eeafc31a806ea2b65",
+  "catalogue_note": "Local reconstruction after execution, not a capture of the transmitted request.",
+  "published_events_note": "Internal reasoning omitted; actual command outputs retained.",
+  "usage": {
+    "input_tokens": 1174981,
+    "cached_input_tokens": 1046400,
+    "cache_write_input_tokens": 0,
+    "output_tokens": 11630,
+    "reasoning_output_tokens": 856
+  },
+  "selection_instrumented": false,
+  "qualification_limit": "Tool-mediated selection/load with declared envelope; no automatic CLI body-injection claim.",
+  "timed_out": false,
+  "automatic_retry": false,
+  "diagnostics": [],
+  "reading_audit": {
+    "path": "output/reading-audit.json",
+    "sha256": "9e25e9c0279d1bc8e79865e05f9ccb23a2a92c1cca89239a6ad710ad6c9397d5",
+    "status": "NOT_APPLICABLE"
+  },
+  "qualification_status": "NOT_REVIEWED",
+  "runtime_artifacts": [],
+  "collection_completed": true,
+  "collector_exit_code": 0,
+  "collector_started_at_utc": "2026-09-16T08:19:20.572663+00:00",
+  "collector_finished_before_freeze_at_utc": "2026-09-16T08:19:21.600612+00:00",
+  "timing_instrumentation": "Per-event receipt UTC/monotonic time, no model reasoning text; separate collector timestamps"
+}

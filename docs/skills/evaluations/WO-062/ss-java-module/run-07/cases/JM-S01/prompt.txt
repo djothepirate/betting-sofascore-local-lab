@@ -1,0 +1,1 @@
+Utilise $ss-java-module pour relire le placement d’un cas d’usage Java et de son adaptateur dans le SofaScore Local Lab.
