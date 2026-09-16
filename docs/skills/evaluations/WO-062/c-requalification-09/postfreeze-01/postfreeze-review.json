@@ -1,0 +1,63 @@
+{
+  "schema": "wo062-c9-postfreeze-review-v1",
+  "reviewed_at_utc": "2026-09-16T14:24:44.503774+00:00",
+  "reviewer_mode": "separate_postfreeze_technical_review",
+  "reviewer_is_human_validation": false,
+  "model_session_started_by_review": false,
+  "runtime_probe_executed_by_review": false,
+  "run_id": "run-06",
+  "candidate_version": "0.1.0-candidate.1",
+  "candidate_sha256": "b89925d5395238010bb0afe9c1e1a22b0aa5ec4e7d1fb9946c671d241e7976c6",
+  "freeze_manifests_sha256": {
+    "WR-H01": "f5657b6c964b9d906e0941f531598d8cdf9db02861c0d5253fb4cc0c4741c81d",
+    "WR-N01": "bd4cdc0abb3b38cf811fc1d67f3209d0e9a19f06a5d266f8935b07be9f5ed250"
+  },
+  "cases": [
+    {
+      "case_id": "WR-H01",
+      "verdict": "PASS",
+      "conditions": {
+        "collection_completed": true,
+        "no_trace_diagnostics": true,
+        "native_exit_zero": true,
+        "two_iterations": true,
+        "prompt_returned_separately": true,
+        "collector_passes_empty_parent": true,
+        "read_policy_pass": true,
+        "input_integrity_pass": true
+      },
+      "session_duration_seconds": 391.672,
+      "watchdog_seconds": 900,
+      "six_minute_target_met": false,
+      "finding": "The fresh repaired H01 harness completed and the collector accepted the empty runtime parent. The response-finalization target of six minutes was missed, while the 900-second watchdog was not approached."
+    },
+    {
+      "case_id": "WR-N01",
+      "verdict": "BLOCKED",
+      "conditions": {
+        "preflight_passed_without_java": true,
+        "normal_conductor_failed_closed": true,
+        "image_failure_recorded": true,
+        "sleep_not_claimed": true,
+        "no_forced_stop": true,
+        "fixture_unchanged": true,
+        "collector_retains_real_residue": true,
+        "input_integrity_pass": true
+      },
+      "session_duration_seconds": 278.266,
+      "watchdog_seconds": 900,
+      "finding": "The repaired conductor failed closed when the failure JVM image was empty. It consequently did not establish failure identity, did not run sleep, performed no forced stop, and preserved its owned temporary root as evidence. This does not satisfy the required two-mode and cleanup proof."
+    }
+  ],
+  "campaign_verdict": "INCOMPLETE_QUALIFICATION",
+  "current_candidate_qualification": {
+    "pass": 7,
+    "fail": 0,
+    "blocked": 1,
+    "basis": "Six historical C4/C5 PASS remain preserved; C9 adds WR-H01 PASS and WR-N01 BLOCKED. Historical C5 BLOCKED evidence is not rewritten."
+  },
+  "historical_c4_c5_evidence_modified": false,
+  "human_validation_authorized": false,
+  "personal_installation_authorized": false,
+  "next_step": "Do not retry from this campaign. Analyze the PS5.1 empty main-module observation and retained owned root before requesting a new authorized recipe."
+}

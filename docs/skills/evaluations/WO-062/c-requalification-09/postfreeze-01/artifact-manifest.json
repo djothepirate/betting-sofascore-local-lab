@@ -1,0 +1,11 @@
+{
+  "schema": "wo062-c9-postfreeze-artifact-manifest-v1",
+  "review_sha256": "60cf70ca2d13ccd619ca09c4183c4021515cc24d1492bfc741b81d48fb7242ec",
+  "markdown_sha256": "ed0eeb641cd539e4e66ad8151dbaabc575d26778f8b0d6d029b389eef5f68ef8",
+  "runtime": "C:\\Dev\\BettingProject\\codex\\betting-sofascore-local-lab\\.tmp\\wo062-skills-lot2\\.tmp\\wo062-evaluations\\ss-windows-runtime\\run-06-host-formal-20260916",
+  "frozen_case_freeze_sha256": {
+    "WR-H01": "f5657b6c964b9d906e0941f531598d8cdf9db02861c0d5253fb4cc0c4741c81d",
+    "WR-N01": "bd4cdc0abb3b38cf811fc1d67f3209d0e9a19f06a5d266f8935b07be9f5ed250"
+  },
+  "historical_c4_c5_evidence_modified": false
+}

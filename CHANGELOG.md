@@ -6,6 +6,17 @@ Les évolutions notables du SofaScore Local Lab sont consignées dans ce fichier
 
 ### WO-062 — skills spécialisés du lot 2
 
+- Réalise la recette Windows fraîche C9 de `ss-windows-runtime 0.1.0-candidate.1`
+  dans deux contextes neufs détenus par l’hôte, construits depuis les copies réparées,
+  avec un conducteur hôte intégrant le collecteur de racine runtime et une revue
+  postfreeze séparée. `WR-H01` est [PASS](docs/skills/evaluations/WO-062/c-requalification-09/postfreeze-01/postfreeze-review.md) :
+  harnais PowerShell 7, deux itérations, code 0, retour de prompt distinct, audit de
+  lecture et parent runtime vide. `WR-N01` est BLOCKED : après un préflight PS5.1 sans
+  JVM, l’image du processus `failure` est vide ; le conducteur refuse l’identité,
+  n’exécute pas `sleep`, ne force aucun arrêt et conserve le vrai résidu détenu. Les
+  preuves C4/C5 et le candidat restent inchangés. Qualification Windows : 7 PASS / 0
+  FAIL / 1 BLOCKED ; ni validation humaine ni installation personnelle.
+
 - Corrige et teste, hors recette, les gabarits Windows C5 sans modifier leurs sources
   historiques ni `ss-windows-runtime`. La révision accepte l’artefact interne WR-H01
   tout en refusant un chemin externe, rend son postflight sûr si `output/runtime` est
