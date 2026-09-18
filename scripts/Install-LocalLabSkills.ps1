@@ -73,6 +73,70 @@ function Test-ApprovedFile {
         (Get-FileHash -LiteralPath $Path -Algorithm SHA256).Hash -eq $Entry.sha256)
 }
 
+function Assert-ApprovedQualification {
+    param(
+        [string]$Package,
+        $Manifest,
+        [string]$RepositoryRoot,
+        [string]$ExpectedSkill
+    )
+    if ($Package -notin @('WindowsRuntime', 'JavaModule')) { return }
+
+    $expectedQualificationPath = if ($Package -eq 'WindowsRuntime') {
+        'docs/skills/evaluations/WO-062/ss-windows-runtime/final-qualification.json'
+    }
+    else {
+        'docs/skills/evaluations/WO-062/ss-java-module/qualification.json'
+    }
+    if (-not ($Manifest.PSObject.Properties.Name -contains 'qualification_path') -or
+        -not ($Manifest.PSObject.Properties.Name -contains 'qualification_sha256') -or
+        $Manifest.qualification_path -isnot [string] -or
+        $Manifest.qualification_path -cne $expectedQualificationPath -or
+        [System.IO.Path]::IsPathRooted($Manifest.qualification_path) -or
+        $Manifest.qualification_sha256 -isnot [string] -or
+        $Manifest.qualification_sha256 -notmatch '^[a-f0-9]{64}$') {
+        throw 'Selected package lacks a portable approved qualification reference.'
+    }
+
+    $qualificationPath = Join-Path $RepositoryRoot $Manifest.qualification_path
+    Assert-NoLinkedAncestor -Path $qualificationPath
+    if (-not (Test-Path -LiteralPath $qualificationPath -PathType Leaf)) {
+        throw 'Approved qualification is missing.'
+    }
+    $qualificationHash = (Get-FileHash -LiteralPath $qualificationPath -Algorithm SHA256).Hash.ToLowerInvariant()
+    if ($qualificationHash -cne $Manifest.qualification_sha256) {
+        throw 'Approved qualification hash mismatch.'
+    }
+    try {
+        $qualification = Get-Content -LiteralPath $qualificationPath -Raw -Encoding UTF8 | ConvertFrom-Json
+    }
+    catch {
+        throw 'Approved qualification is not valid JSON.'
+    }
+    if ($qualification.skill -cne $ExpectedSkill -or
+        $qualification.candidate_version -cne $Manifest.candidate_version -or
+        [int]$qualification.pass -ne 8 -or
+        [int]$qualification.fail -ne 0 -or
+        [int]$qualification.blocked -ne 0) {
+        throw 'Approved qualification does not attest the selected candidate as 8 PASS / 0 FAIL / 0 BLOCKED.'
+    }
+    $qualificationFiles = @($qualification.candidate_files)
+    if ($qualificationFiles.Count -ne @($Manifest.files).Count) {
+        throw 'Approved qualification candidate file count mismatch.'
+    }
+    foreach ($qualificationFile in $qualificationFiles) {
+        $manifestPath = "docs/skills/local-lab/$ExpectedSkill/$($qualificationFile.path)"
+        $manifestFile = @($Manifest.files | Where-Object { $_.path -ceq $manifestPath })
+        if ($manifestFile.Count -ne 1 -or
+            $qualificationFile.bytes -ne $manifestFile[0].bytes -or
+            $qualificationFile.sha256 -cne $manifestFile[0].sha256) {
+            throw 'Approved qualification candidate files do not match the installation manifest.'
+        }
+    }
+}
+
+Assert-ApprovedQualification -Package $Package -Manifest $manifest -RepositoryRoot $repositoryRoot -ExpectedSkill $skillNames[0]
+
 $destinationRoot = [System.IO.Path]::GetFullPath($Destination)
 Assert-NoLinkedAncestor -Path $destinationRoot
 if ((Test-Path -LiteralPath $destinationRoot) -and

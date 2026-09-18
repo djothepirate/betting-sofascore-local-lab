@@ -124,6 +124,13 @@ New-Item -ItemType Directory -Path (Join-Path $badRepository 'scripts'),
 Copy-Item -LiteralPath $installer -Destination (Join-Path $badRepository 'scripts')
 Copy-Item -LiteralPath (Join-Path $repositoryRoot 'docs/skills/local-lab') -Destination (Join-Path $badRepository 'docs/skills') -Recurse
 Copy-Item -LiteralPath (Join-Path $repositoryRoot $manifestRelative) -Destination (Split-Path -Parent (Join-Path $badRepository $manifestRelative))
+$sourceManifest = Get-Content -LiteralPath (Join-Path $repositoryRoot $manifestRelative) -Raw -Encoding UTF8 | ConvertFrom-Json
+if ($sourceManifest.PSObject.Properties.Name -contains 'qualification_path') {
+    $sourceQualification = Join-Path $repositoryRoot $sourceManifest.qualification_path
+    $badQualification = Join-Path $badRepository $sourceManifest.qualification_path
+    New-Item -ItemType Directory -Path (Split-Path -Parent $badQualification) -Force | Out-Null
+    Copy-Item -LiteralPath $sourceQualification -Destination $badQualification
+}
 $badSource = Join-Path $badRepository "docs/skills/local-lab/$lastSkill/agents/openai.yaml"
 [System.IO.File]::AppendAllText($badSource, 'modified', $utf8)
 $badDestination = Join-Path $TestRoot 'must-remain-absent'
@@ -132,7 +139,17 @@ Assert-True (-not (Test-Path -LiteralPath $badDestination)) 'Bad source validati
 Write-Output 'PASS source hash mismatch refused before any copy'
 # Subsequent manifest checks must exercise manifest guards, not reuse the intentionally corrupted source.
 Copy-Item -LiteralPath (Join-Path $repositoryRoot "docs/skills/local-lab/$lastSkill/agents/openai.yaml") -Destination $badSource -Force
+if ($Package -in @('WindowsRuntime', 'JavaModule')) {
+    [System.IO.File]::AppendAllText($badQualification, 'corrupted qualification', $utf8)
+    Assert-Refused { & (Join-Path $badRepository 'scripts/Install-LocalLabSkills.ps1') -Package $Package -Destination $badDestination } '*qualification hash mismatch*'
+    Assert-True (-not (Test-Path -LiteralPath $badDestination)) 'A qualification hash mismatch created a destination.'
+    Copy-Item -LiteralPath $sourceQualification -Destination $badQualification -Force
+    Write-Output 'PASS qualification hash mismatch refused before any copy'
+}
 $caseCount = 7
+if ($Package -in @('WindowsRuntime', 'JavaModule')) {
+    $caseCount++
+}
 if ($Package -ne 'Lot1') {
     $coexist = Join-Path $TestRoot 'lot1 already installed'
     & $installer -Destination $coexist | Out-Null

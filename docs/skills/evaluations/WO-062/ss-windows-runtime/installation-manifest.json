@@ -14,7 +14,7 @@
   "personal_installation_authorized": true,
   "candidate_version": "0.1.0-candidate.1",
   "package": "WindowsRuntime",
-  "qualification_path": "C:\\Dev\\BettingProject\\codex\\betting-sofascore-local-lab\\.tmp\\wo062-skills-lot2\\docs\\skills\\evaluations\\WO-062\\c-requalification-13\\revision-03-appserver-transport\\host-preparation-03-run24\\c13-observation-01\\current-qualification.json",
+  "qualification_path": "docs/skills/evaluations/WO-062/ss-windows-runtime/final-qualification.json",
   "skill_count": 1,
   "schema_version": 1,
   "qualification_sha256": "780185497850e270f3a8c2f7b4598b129aed487a21435cabd38f069d8f613006",

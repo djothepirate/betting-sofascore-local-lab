@@ -10,65 +10,29 @@ Les cinq skills du lot 1 ont été validés par le propriétaire le 5 septembre 
 | [ss-data-contract-replay](local-lab/ss-data-contract-replay/SKILL.md) | Préserver provenance, snapshots, complétude, contrats et validation humaine. |
 | [ss-review-closeout](local-lab/ss-review-closeout/SKILL.md) | Relier revue, qualification, décisions, clôture et état Git courant. |
 
-## Lot 2 — PB, FQ et CS validés et installés personnellement
+## Lot 2 — cinq skills qualifiés, validés humainement et installés personnellement
 
 Le [WO-062](../work_orders/active/WO-SS-20260915-062-skills-lot2.md), préparé le 15 septembre 2026,
-adapte au Local Lab les rôles de la conversation « Skills du lot 2 » dans l'ordre demandé :
+adapte au Local Lab les rôles de la conversation « Skills du lot 2 » dans l’ordre demandé.
 
-| Étape | Skill | Rôle |
-|---|---|---|
-| A | `ss-provider-benchmark` | Protocole reproductible, populations et dénominateurs, coût et limites des mesures. |
-| B | `ss-football-quality` | Cohérence sémantique des données football, anomalies et corrections tardives. |
-| B | `ss-ci-security` | Diagnostic CI et preuve des contrôles réellement applicables au candidat. |
-| C | `ss-java-module` | Placement des responsabilités et dépendances dans les couches Java du Lab. |
-| C | `ss-windows-runtime` | Reproduction et diagnostic dans le runtime Windows concerné. |
+| Étape | Skill | Version livrée | Qualification et état courant |
+|---|---|---|---|
+| A | `ss-provider-benchmark` | `0.1.0-candidate.1` | 12 cas PASS ; validé humainement et installé. |
+| B | `ss-football-quality` | `0.1.0-candidate.1` | 8 cas PASS ; validé humainement et installé. |
+| B | `ss-ci-security` | `0.1.0-candidate.1` | 8 cas PASS ; validé humainement et installé. |
+| C | `ss-java-module` | `0.1.0-candidate.5` | Campagne C8 : 8 PASS / 0 FAIL / 0 BLOCKED ; validé humainement et installé. |
+| C | `ss-windows-runtime` | `0.1.0-candidate.1` | 8 PASS / 0 FAIL / 0 BLOCKED ; validé humainement, installé et usage personnel vérifié. |
 
-Le propriétaire a accepté WO-062 et autorisé la préparation de `ss-provider-benchmark`.
-Son [inventaire de 38 sources](evaluations/WO-062/ss-provider-benchmark/source-inventory.md)
-et ses [12 cas d'évaluation](evaluations/WO-062/ss-provider-benchmark/evaluation-plan.md)
-ont été figés avec un oracle séparé avant rédaction. Le [candidat](local-lab/ss-provider-benchmark/SKILL.md)
-est désormais qualifié sur les douze cas figés : onze PASS de run-01 et le PASS complémentaire
-PB-S01 de run-02, instrumenté avec lecture intégrale du candidat exact. Le [protocole et la scorecard prematch/live](evaluations/WO-062/ss-provider-benchmark/run-01/cases/PB-N01/response.md)
-sont produits. Voir la [qualification et ses limites](../validation/WO062-PROVIDER-BENCHMARK-PBS01-QUALIFICATION-20260915.md).
-La [préparation A1](../validation/WO062-PROVIDER-BENCHMARK-PREPARATION-20260915.md) demeure intacte,
-avec son état historique `NOT_RUN`. Run-01 conserve son BLOCKED initial ; la qualification
-courante renvoie à la preuve complémentaire. Le propriétaire a ensuite accepté le contenu,
-le périmètre et les limites de `0.1.0-candidate.1` et autorisé son installation personnelle :
-[validation et installation A3](../validation/WO062-PROVIDER-BENCHMARK-INSTALLATION-20260915.md).
-Les deux fichiers installés restent exactement ceux évalués ; la version est conservée.
+Les qualifications, validations humaines et manifestes d’installation sont versionnés sous
+[`evaluations/WO-062`](evaluations/WO-062). La [matrice finale portable Windows](evaluations/WO-062/ss-windows-runtime/final-qualification.json)
+est exactement celle liée au manifeste `WindowsRuntime` par SHA-256 ; elle conserve les six
+revues PASS revalidées et les deux cas pratiques `WR-H01` et `WR-N01` rejoués sous autorisation.
+Les traces Windows plus volumineuses restent dans l’archive locale hashée WO-062 afin de ne pas
+alourdir le checkout, sans modifier la matrice de qualification livrée.
 
-Chaque skill devra passer un cas historique connu, une tâche nouvelle et des tests de sélection,
-puis une revue. Les sources du Lab font autorité : J8 ne dispose pas de contrôle externe intégré,
-et la CI suit notamment l'allègement adopté dans WO-061. Le WO distingue les
-[preuves du cadrage](../validation/WO062-SKILLS-LOT2-SCOPING-20260915.md) de cette qualification future.
-
-L'installateur livre **les cinq skills du lot 1 par défaut**. L'option explicite
-`-Package ProviderBenchmark` installe uniquement le premier skill du lot 2, à partir de son
-[manifeste approuvé](evaluations/WO-062/ss-provider-benchmark/installation-manifest.json).
-Les candidats [ss-football-quality](local-lab/ss-football-quality/SKILL.md) et
-[ss-ci-security](local-lab/ss-ci-security/SKILL.md), version `0.1.0-candidate.1`, sont
-désormais qualifiés sur huit cas chacun, avec revue indépendante et [limites documentées](../validation/WO062-FOOTBALL-QUALITY-CI-SECURITY-CANDIDATES-20260915.md).
-Leurs sources et critères ont été figés avant rédaction ; les nouvelles analyses football
-et CI sont produites. Le propriétaire a accepté leur contenu, leur périmètre et leurs limites ;
-les quatre fichiers exacts sont désormais [validés humainement et installés personnellement](../validation/WO062-FOOTBALL-QUALITY-CI-SECURITY-INSTALLATION-20260915.md).
-Le paquet explicite `FootballQualityCiSecurity` suit son [manifeste approuvé](evaluations/WO-062/football-quality-ci-security/installation-manifest.json).
-Le suffixe `candidate.1` conserve l’identité des fichiers évalués et acceptés.
-Les candidats [ss-java-module](local-lab/ss-java-module/SKILL.md) `.3` et
-[ss-windows-runtime](local-lab/ss-windows-runtime/SKILL.md) `.1` sont rédigés.
-La [recette C4](../validation/WO062-C4-REQUALIFICATION-20260916.md) réexécute les huit cas
-Java sur les octets corrigés et les deux sondes Windows dans de nouvelles sessions.
-Les deux omissions ciblées Java sont corrigées ; JM-N01 omet toutefois le maintien du
-profil live bloqué. WR-H01 réunit exécution, postflight et réponse finale en 428,250 s :
-ses critères substantiels sont PASS, sa conformité au complément C4 FAIL pour les lectures.
-WR-N01 reste BLOCKED avant Java, sur `Get-FileHash` absent du conducteur ; failure et sleep
-ne sont pas exécutés. Voir les qualifications courantes
-[Java](evaluations/WO-062/ss-java-module/qualification.json) et
-[Windows](evaluations/WO-062/ss-windows-runtime/qualification.json).
-Les 38 tentatives et toutes les preuves antérieures sont conservées, dont la
-[reprise ciblée C3](../validation/WO062-C-TARGETED-REPRISE-20260916.md), la preuve séparée
-de propriété et le résidu Windows historique.
-La qualification reste ouverte ; validation humaine C, installation et consolidation des dix restent à réaliser.
-
+Chaque skill reste limité au SofaScore Local Lab. Les sources du Lab font autorité, le dépôt ne
+introduit aucun composant applicatif commun avec le Betting Project principal, et le statut reste
+`EXPERIMENTAL`, `LOCAL_ONLY`, `NOT_PRODUCTION_APPROVED` et `NO_CRITICAL_DEPENDENCY`.
 ## Installation personnelle depuis ce dépôt
 
 Dans PowerShell sous Windows, à la racine du checkout :
@@ -92,12 +56,29 @@ powershell.exe -NoProfile -ExecutionPolicy Bypass -File scripts/Install-LocalLab
 powershell.exe -NoProfile -ExecutionPolicy Bypass -File scripts/Install-LocalLabSkills.ps1 -Package FootballQualityCiSecurity -VerifyOnly
 ```
 
+Pour installer ou vérifier `ss-java-module` version `0.1.0-candidate.5` :
+
+```powershell
+powershell.exe -NoProfile -ExecutionPolicy Bypass -File scripts/Install-LocalLabSkills.ps1 -Package JavaModule
+powershell.exe -NoProfile -ExecutionPolicy Bypass -File scripts/Install-LocalLabSkills.ps1 -Package JavaModule -VerifyOnly
+```
+
+Pour installer ou vérifier `ss-windows-runtime` version `0.1.0-candidate.1` :
+
+```powershell
+powershell.exe -NoProfile -ExecutionPolicy Bypass -File scripts/Install-LocalLabSkills.ps1 -Package WindowsRuntime
+powershell.exe -NoProfile -ExecutionPolicy Bypass -File scripts/Install-LocalLabSkills.ps1 -Package WindowsRuntime -VerifyOnly
+```
+
 La destination par défaut est `%USERPROFILE%/.agents/skills`, portée utilisateur documentée par [Codex](https://learn.chatgpt.com/docs/build-skills). Les skills du paquet sélectionné sont alors disponibles dans les worktrees actuels et futurs sur ce compte. Les descriptions ciblent le SofaScore Local Lab et les références sont résolues depuis la racine Git du worktree concerné. Actualiser la tâche ou redémarrer Codex si son catalogue est ancien.
 
 Le paquet reste dans `docs/skills/local-lab` : ne pas en créer une seconde copie homonyme dans `.agents/skills` du dépôt lorsque l'installation utilisateur existe. Codex peut découvrir plusieurs skills de même nom sans les fusionner. Les skills `bp-*` demeurent propres au Betting Project.
 
 L'installateur contrôle les sources du paquet sélectionné (dix pour `Lot1`, deux pour
-`ProviderBenchmark`, quatre pour `FootballQualityCiSecurity`) par taille et SHA-256 avant toute copie, puis tous les fichiers de destination existants. Il ne remplace aucun fichier différent et refuse les fichiers supplémentaires dans un dossier `ss-*`, afin de préserver une variante locale. La casse des chemins relatifs approuvés est exacte : un fichier `skill.md` ne remplace pas `SKILL.md`. Une casse différente du préfixe absolu de destination reste acceptée lorsque Windows résout le même dossier. Réconcilier ou sauvegarder cette variante explicitement avant de réinstaller ; aucun mode d'écrasement forcé n'est fourni. Une installation identique ne réécrit pas les fichiers. `-VerifyOnly` vérifie aussi la présence complète sans créer de répertoire. Les chemins liés sont refusés. Une erreur d'entrée/sortie peut laisser une installation partielle ; les fichiers déjà copiés sont contrôlés lors d'une nouvelle exécution.
+`ProviderBenchmark`, quatre pour `FootballQualityCiSecurity`, deux pour `JavaModule` et deux pour
+`WindowsRuntime`) par taille et SHA-256 avant toute copie, puis tous les fichiers de destination existants.
+Pour `JavaModule` et `WindowsRuntime`, il vérifie aussi le chemin portable, le SHA-256, le candidat et
+le bilan 8 PASS / 0 FAIL / 0 BLOCKED de la qualification liée. Il ne remplace aucun fichier différent et refuse les fichiers supplémentaires dans un dossier `ss-*`, afin de préserver une variante locale. La casse des chemins relatifs approuvés est exacte : un fichier `skill.md` ne remplace pas `SKILL.md`. Une casse différente du préfixe absolu de destination reste acceptée lorsque Windows résout le même dossier. Réconcilier ou sauvegarder cette variante explicitement avant de réinstaller ; aucun mode d'écrasement forcé n'est fourni. Une installation identique ne réécrit pas les fichiers. `-VerifyOnly` vérifie aussi la présence complète sans créer de répertoire. Les chemins liés sont refusés. Une erreur d'entrée/sortie peut laisser une installation partielle ; les fichiers déjà copiés sont contrôlés lors d'une nouvelle exécution.
 
 `-Destination '<dossier de skills>'` permet une installation isolée. Pour qualifier l'installateur sans toucher au compte utilisateur :
 
@@ -105,6 +86,8 @@ L'installateur contrôle les sources du paquet sélectionné (dix pour `Lot1`, d
 powershell.exe -NoProfile -ExecutionPolicy Bypass -File scripts/Test-LocalLabSkillsInstallation.ps1
 powershell.exe -NoProfile -ExecutionPolicy Bypass -File scripts/Test-LocalLabSkillsInstallation.ps1 -Package ProviderBenchmark
 powershell.exe -NoProfile -ExecutionPolicy Bypass -File scripts/Test-LocalLabSkillsInstallation.ps1 -Package FootballQualityCiSecurity
+powershell.exe -NoProfile -ExecutionPolicy Bypass -File scripts/Test-LocalLabSkillsInstallation.ps1 -Package JavaModule
+powershell.exe -NoProfile -ExecutionPolicy Bypass -File scripts/Test-LocalLabSkillsInstallation.ps1 -Package WindowsRuntime
 ```
 
 Ce contrôle crée un dossier temporaire neuf avec les seuls fichiers synthétiques et copies du paquet ; il le conserve pour inspection. Il ne lance ni application, ni Maven, ni Docker.
@@ -115,6 +98,8 @@ Ce contrôle crée un dossier temporaire neuf avec les seuls fichiers synthétiq
 Utilise $ss-provider-benchmark pour préparer une scorecard prematch/live à partir des rapports versionnés du Lab.
 Utilise $ss-football-quality pour examiner cette incohérence de score et de statut dans les preuves J6.
 Utilise $ss-ci-security pour vérifier les contrôles et rapports CI applicables au SHA de cette PR.
+Utilise $ss-java-module pour concevoir ou relire l’intégration Java/Spring/Maven du Lab.
+Utilise $ss-windows-runtime pour diagnostiquer un incident de lanceur Windows, de processus ou de nettoyage.
 Utilise $ss-work-order pour reprendre le WO concerné et établir son état actuel.
 Utilise $ss-verify pour diagnostiquer cet échec CI et réaliser le correctif.
 Utilise $ss-postgres-change et $ss-data-contract-replay pour préparer cette évolution du ledger et de son contrat.

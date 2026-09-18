@@ -19,7 +19,7 @@
   "personal_installation_authorized": true,
   "human_validation": true,
   "scope": "Exact two-file candidate package; no version bump, no change to evaluated instructions; personal installation and bounded discovery/explicit read-only smoke test; no other skill modified.",
-  "qualification_path": "C:\\Dev\\BettingProject\\codex\\betting-sofascore-local-lab\\.tmp\\wo062-skills-lot2\\docs\\skills\\evaluations\\WO-062\\c-requalification-13\\revision-03-appserver-transport\\host-preparation-03-run24\\c13-observation-01\\current-qualification.json",
+  "qualification_path": "docs/skills/evaluations/WO-062/ss-windows-runtime/final-qualification.json",
   "recorded_at_utc": "2026-09-18T00:17:03.8714200Z",
   "goal_objective_path": "C:\\Users\\geoff\\.codex\\attachments\\d6075f6e-9a33-4fd8-b8b0-e5020d58989e\\goal-objective.md",
   "authority": "Explicit owner message in current Codex task",

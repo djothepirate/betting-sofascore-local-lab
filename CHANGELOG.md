@@ -6,6 +6,16 @@ Les évolutions notables du SofaScore Local Lab sont consignées dans ce fichier
 
 ### WO-062 — skills spécialisés du lot 2
 
+- Rend la livraison Windows portable et vérifiable dans tout clone : la matrice finale
+  `8 PASS / 0 FAIL / 0 BLOCKED` est versionnée sous
+  `ss-windows-runtime/final-qualification.json`, avec son SHA-256 inchangé depuis
+  l’archive finale. Le manifeste, le statut et la validation humaine la référencent
+  désormais par chemin relatif. L’installateur `WindowsRuntime` et `JavaModule`
+  vérifie avant toute copie le chemin, le SHA-256, le candidat, le bilan et les deux
+  fichiers candidats de la qualification liée. Les tests négatifs couvrent le refus
+  d’une qualification altérée. Le guide décrit l’état livré et les commandes
+  d’installation et de test des packages Java et Windows.
+
 - Réalise la recette Windows fraîche C9 de `ss-windows-runtime 0.1.0-candidate.1`
   dans deux contextes neufs détenus par l’hôte, construits depuis les copies réparées,
   avec un conducteur hôte intégrant le collecteur de racine runtime et une revue
