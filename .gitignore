@@ -40,3 +40,11 @@ exports/*
 .testcontainers.properties
 .tmp/
 tmp/
+
+# Generated Python and bounded WO-062 diagnostic products
+__pycache__/
+*.py[cod]
+.pytest_cache/
+docs/skills/evaluations/WO-062/interceptor-products/
+docs/skills/evaluations/WO-062/**/build-temp/
+docs/skills/evaluations/WO-062/**/runtime-artifacts/

@@ -3724,3 +3724,9 @@ Les évolutions notables du SofaScore Local Lab sont consignées dans ce fichier
 - profil `sofascore-live-test` bloqué ;
 - aucune URI SofaScore intégrée ;
 - aucun accès au VPS ni exposition réseau non locale.
+
+### WO-062 — clôture de rétention des preuves Windows (2026-09-18)
+
+- Les statuts, validations, manifestes et sources des skills restent versionnés ; ss-java-module est installé après sa qualification 8/0/0 et ss-windows-runtime reste qualifié, installé et vérifié à l’usage.
+- Les 919 artefacts non suivis ont été archivés localement avec tailles et SHA-256 vérifiés, dont un paquet final Windows de 25 pièces. Les 22 caches Python temporaires avaient déjà été retirés sans archive.
+- Les copies de travail C12/C13, contextes temporaires, produits de diagnostic, révisions abandonnées et doublons de scripts/résultats sont retirés du worktree. Aucun candidat, fixture, oracle, code applicatif, configuration, ACL ou politique persistante n’a changé.

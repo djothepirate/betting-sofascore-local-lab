@@ -649,3 +649,10 @@ Validation humaine et installation C restent postérieures à une qualification 
 Les trois skills A/B ont terminé préparation, rédaction, qualification, validation propriétaire
 et installation personnelle. Leurs preuves et limites restent conservées. Le WO reste actif ;
 la livraison Git et sa clôture suivent le workflow de revue et de fusion décrit ci-dessus.
+
+### Clôture de rétention WO-062 (2026-09-18)
+
+- Les sources des skills, les manifestes d’installation, les validations humaines et les statuts courants Java/Windows restent versionnés dans le dépôt.
+- Les 919 copies non suivies de diagnostics, contextes C13, produits générés et preuves détaillées ont été comparées octet à octet à l’archive locale C:\Users\geoff\Documents\Codex\Evidence Archives\WO-062-retention-20260918, puis retirées du worktree. Le paquet final Windows de 25 pièces conserve le candidat, la matrice 8/0/0, les revues WR-H01/WR-N01, les gels, l’installation et l’usage installé, avec manifeste SHA-256.
+- Seuls 22 caches Python avaient été supprimés sans archive lors de la première passe. Aucun candidat, fixture, oracle, fichier applicatif, configuration, ACL, politique persistante ou fichier Git suivi n’a été supprimé.
+- Le worktree est propre des artefacts non suivis. L’archive locale et son index restent la source d’audit des diagnostics historiques ; toute republication de ce corpus interne demande une décision distincte.
