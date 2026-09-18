@@ -1,0 +1,58 @@
+"""Derive a formal eight-case candidate.5 runner without altering earlier runners."""
+from pathlib import Path
+
+
+ROOT = Path(__file__).resolve().parent.parent
+SOURCE = ROOT / "docs/skills/evaluations/WO-062/c-requalification-07/preparation/evaluator.py.txt"
+TARGET = ROOT / ".tmp/wo062_evaluate_c8.py"
+CASES = (
+    "JM-H01",
+    "JM-N01",
+    "JM-C01",
+    "JM-C02",
+    "JM-S01",
+    "JM-S02",
+    "JM-S03",
+    "JM-S04",
+)
+CANDIDATE = "d7171f978c2b13c852c2ce5e170d68c1bfc5087552661cfdc6271077a0fe6637"
+
+
+source = SOURCE.read_text(encoding="utf-8")
+old_cases = "C7_CASES=('JM-N01', 'JM-C01', 'JM-C02', 'JM-S01', 'JM-S02', 'JM-S03', 'JM-S04')"
+assert source.count(old_cases) == 1
+source = source.replace(old_cases, f"C8_CASES={CASES!r}")
+source = source.replace("C7_CASES", "C8_CASES")
+source = source.replace("run-07", "run-08")
+source = source.replace("C7", "C8")
+source = source.replace("c7_contract", "c8_contract")
+source = source.replace("seven owner-authorized Java", "eight owner-authorized Java")
+source = source.replace("seven remaining Java cases", "eight fresh Java cases")
+source = source.replace(
+    "    candidate_hash=sha(candidate/'SKILL.md')\n",
+    "    candidate_hash=sha(candidate/'SKILL.md')\n"
+    "    authorization=read(ROOT/'docs/skills/evaluations/WO-062/c-requalification-08/authorization.json')\n"
+    "    assert authorization['run_id']=='run-08' and authorization['skill']=='ss-java-module'\n"
+    "    assert tuple(authorization['cases'])==C8_CASES and authorization['authorized_session_count']==8\n"
+    "    assert authorization['candidate_sha256']==CANDIDATE_SHA and candidate_hash==CANDIDATE_SHA\n",
+)
+source = source.replace(
+    "    before=read(runtime/'preflight.json');case=next(c for c in before['cases'] if c['case_id']==caseid)\n",
+    "    before=read(runtime/'preflight.json');case=next(c for c in before['cases'] if c['case_id']==caseid)\n"
+    "    authorization=read(ROOT/'docs/skills/evaluations/WO-062/c-requalification-08/authorization.json')\n"
+    "    assert tuple(authorization['cases'])==C8_CASES and authorization['candidate_sha256']==CANDIDATE_SHA\n"
+    "    assert before['candidate_sha256']==CANDIDATE_SHA and len(before['cases'])==8\n",
+)
+source = source.replace(
+    "CLI=pathlib.Path(",
+    f"CANDIDATE_SHA={CANDIDATE!r}\nCLI=pathlib.Path(",
+    1,
+)
+source = source.replace(
+    "render=subprocess.run([str(CLI),'debug','prompt-input'],cwd=case_dir,capture_output=True)",
+    "render=subprocess.run([str(CLI),'debug','prompt-input'],cwd=case_dir,capture_output=True,timeout=30)",
+)
+assert "C8_CASES" in source and "run-08" in source and "CANDIDATE_SHA" in source
+compile(source, str(TARGET), "exec")
+TARGET.write_text(source, encoding="utf-8", newline="\n")
+print(TARGET)

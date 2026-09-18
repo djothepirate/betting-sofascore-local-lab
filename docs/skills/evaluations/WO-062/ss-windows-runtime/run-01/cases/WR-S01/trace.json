@@ -1,0 +1,69 @@
+{
+  "case_id": "WR-S01",
+  "skill": "ss-windows-runtime",
+  "run_id": "run-01",
+  "started_at_utc": "2026-09-15T21:27:30.236661+00:00",
+  "ended_at_utc": "2026-09-15T21:28:00.131339+00:00",
+  "duration_seconds": 29.891,
+  "mode": "native_codex_exec_ephemeral_read-only",
+  "execution_mode": "read_only",
+  "cli_version": "codex-cli 0.154.0-alpha.6.2",
+  "model": null,
+  "reasoning_effort": null,
+  "model_note": "Configured defaults; exact model/effort not exposed, no override.",
+  "launch_arguments": [
+    "exec",
+    "--ephemeral",
+    "--sandbox",
+    "read-only",
+    "--cd",
+    "C:\\Dev\\BettingProject\\codex\\betting-sofascore-local-lab\\.tmp\\wo062-skills-lot2\\.tmp\\wo062-evaluations\\ss-windows-runtime\\run-01\\WR-S01",
+    "--json",
+    "--output-last-message",
+    "C:\\Dev\\BettingProject\\codex\\betting-sofascore-local-lab\\.tmp\\wo062-skills-lot2\\.tmp\\wo062-evaluations\\ss-windows-runtime\\run-01\\WR-S01\\output\\response.md",
+    "-"
+  ],
+  "exit_code": 0,
+  "turn_completed": true,
+  "candidate_sha256": "b89925d5395238010bb0afe9c1e1a22b0aa5ec4e7d1fb9946c671d241e7976c6",
+  "source_head": "9e7b777e3be75f582f2198dfa8cca386b43426c2",
+  "input_files": [
+    {
+      "path": ".agents/skills/ss-windows-runtime/SKILL.md",
+      "sha256": "b89925d5395238010bb0afe9c1e1a22b0aa5ec4e7d1fb9946c671d241e7976c6",
+      "bytes": 9217
+    },
+    {
+      "path": ".agents/skills/ss-windows-runtime/agents/openai.yaml",
+      "sha256": "3038015980952bc18b21f45f0d4af514b35a8841394e4b80824986b7e30ccd9f",
+      "bytes": 300
+    }
+  ],
+  "prompt_sha256": "dfae2879dc7cf5b4a9ae088f2119f5b6e9e79f9127992d6fb0ba43d24a43c745",
+  "request_sha256": "c10e6e79c25edea87a19e46744c75c0039c243b94a5540fdc963bb99bd94fd17",
+  "oracle_supplied": false,
+  "design_history_supplied": false,
+  "raw_events_sha256": "cc414968a66e3cf383d19fd60812dba3e6dd09444409eb5aa061c000dec17047",
+  "native_events_sha256": "14271cc341289fee6f687724e5554f4e284ad797f9538f0b463efd5374ebfc32",
+  "commands_completed": 1,
+  "response_sha256": "1f993f4faa084e09c2490109612cd6363fe95ca968111e73e05bdbd24a764b5f",
+  "catalogue_sha256": "3699f4d1bdf29e1968c303587e093b7986cd40bb89288a75727880bf0711e2c4",
+  "catalogue_note": "Local reconstruction after execution, not a capture of the transmitted request.",
+  "published_events_note": "Internal reasoning omitted; actual command outputs retained.",
+  "usage": {
+    "input_tokens": 41662,
+    "cached_input_tokens": 19456,
+    "cache_write_input_tokens": 0,
+    "output_tokens": 713,
+    "reasoning_output_tokens": 144
+  },
+  "selection_instrumented": true,
+  "qualification_limit": "Tool-mediated selection/load with declared envelope; no automatic CLI injection claim.",
+  "timed_out": false,
+  "automatic_retry": false,
+  "diagnostics": [],
+  "qualification_status": "NOT_REVIEWED",
+  "runtime_artifacts": [],
+  "collection_completed": true,
+  "collector_exit_code": 0
+}

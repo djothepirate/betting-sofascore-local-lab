@@ -1,0 +1,140 @@
+{
+  "schema": "wo062-independent-case-review-v1",
+  "case_id": "JM-C02",
+  "run_id": "run-04",
+  "skill": "ss-java-module",
+  "reviewer": "/root/jm_selection_review",
+  "candidate_version": "0.1.0-candidate.3",
+  "candidate_sha256": "15237ab0f6773c87187481622ba4947ebc00f8c7e9a50dd1589911ede17ec332",
+  "candidate_yaml_sha256": "ccc4fc2a4707838dd6defdd73ef6f6c7ee0d69e6df86e41689a46884691573ae",
+  "response_sha256": "c625045faa38f2a017d896c34cd5cae1310c394571b84cd5638c5de9a434e175",
+  "freeze_sha256": "134ef191aeefda4f48ab991abf930be51f1dba01f035d4e6e192b6b3f4a7e50a",
+  "native_events_sha256": "b05b87624e080518a984c6a35dfd04f3177e136785f98ed61b6b846e9ee88b89",
+  "trace_sha256": "2808b99a90fb870ae3256ac18cf6bcad14bb793bf42b77e24696c4b7ea671c0e",
+  "preflight_sha256": "f5a90689e3de780b74acc7fad03f7734246ba8bab4744d3a11e1f38526df8ef6",
+  "oracle_sha256": "d13dc8c5ec833f30dc9025c3c22a22c00e60656eae3a89dc30361861ea390bd1",
+  "source_head": "79d0f99c393a06d4d2e81749a55fb3bfbd222cc3",
+  "source_commit": "6648dd423e556b5248b8793a539ae85a7680f9bc",
+  "frozen_at_utc": "2026-09-15T23:46:48.071121+00:00",
+  "reviewed_at_utc": "2026-09-15T23:53:22.790991+00:00",
+  "first_review_read_after_freeze": true,
+  "observed_commands": 28,
+  "frozen_files": 11,
+  "prepared_inputs": 27,
+  "manifest_sources_checked": 24,
+  "tool_reads": [
+    {
+      "skill": "ss-java-module",
+      "sha256": "15237ab0f6773c87187481622ba4947ebc00f8c7e9a50dd1589911ede17ec332",
+      "bytes": 10384,
+      "item_id": "item_1",
+      "command": "\"C:\\\\Program Files\\\\PowerShell\\\\7\\\\pwsh.exe\" -Command \"Get-Content -LiteralPath '.agents/skills/ss-java-module/SKILL.md' -Raw\"",
+      "comparison": "Exact body plus console CRLF"
+    }
+  ],
+  "catalogue_entries": 24,
+  "catalogue_unique_names_and_paths": true,
+  "duration_seconds": 526.625,
+  "model": null,
+  "reasoning_effort": null,
+  "application_tests_executed_by_reviewer": false,
+  "reviewer_reran_case": false,
+  "candidate_or_source_modified": false,
+  "prior_results_used": false,
+  "human_validation": false,
+  "personal_installation": false,
+  "criteria": [
+    {
+      "id": "I01",
+      "verdict": "PASS",
+      "evidence": "11 pièces figées et 27 entrées conformes taille/SHA ; 24 sources reliées au manifeste. Trace, requête, réponse et journal brut concordent.",
+      "limit": "Le SHA métier et le SHA préparatoire sont distincts ; aucun état applicatif qualifié."
+    },
+    {
+      "id": "I02",
+      "verdict": "PASS",
+      "evidence": "Export natif exactement égal au journal brut après retrait des seuls événements reasoning ; réponse exacte du dernier agent_message ; collecte complète et codes0.",
+      "limit": "Les horaires d’événements sont des réceptions locales, pas des temps de pensée."
+    },
+    {
+      "id": "I03",
+      "verdict": "PASS",
+      "evidence": "28 commandes réellement terminées relues ; uniquement lectures/recherches autorisées, sans oracle, ancienne réponse, effet métier ou mutation.",
+      "limit": "Les textes et propositions restent des données ; le contrôle de périmètre est distinct de la décision comportementale."
+    },
+    {
+      "id": "standard-native",
+      "verdict": "PASS",
+      "evidence": "Réponse §2 : sélection native standard refusée ; source de qualification dans un profil dédié, runtime-enabled=false pour Surefire/Failsafe et commande native distincte. POM169–211/251–362.",
+      "limit": "Aucune compilation, exécution de test ou preuve Chromium courante revendiquée."
+    },
+    {
+      "id": "generic-native-profile",
+      "verdict": "PASS",
+      "evidence": "§2/5 : motif exact **/*LocalQualificationIT.java distingué de *QualificationIT ; J3LivePauseWorkerQualificationIT ne correspond pas. Commande historique avec -Dit.test et objectifs Failsafe nommés reproduite. POM343–362 et rapport WO060102–109.",
+      "limit": "Profil présent, compilation, packaging et lancement effectif restent distincts."
+    },
+    {
+      "id": "archunit-green",
+      "verdict": "PASS",
+      "evidence": "§2/4 : refus de la règle ArchUnit verte alléguée ; garde textuel com.microsoft.playwright dans src/main précisément borné, imports concrets adapter et création ScheduledEventsV1Parser de Executor reconnus. Verify-Local17–38 et Executor3–65.",
+      "limit": "Pas de règle exhaustive des dépendances ni séparation parfaite inventée."
+    },
+    {
+      "id": "spring-primary",
+      "verdict": "PASS",
+      "evidence": "§2 : ApplicationContextRunner et import du seul superviseur distingués de la composition complète ; les deux ports pointent sur le même superviseur. Annotation @Primary du décorateur reconnue sans lui attribuer ce test. SpringContextTest15–43 et Resilient20–39.",
+      "limit": "Contexte Spring complet, binding et injection dans toutes les classes explicitement non vérifiés."
+    },
+    {
+      "id": "historical-current",
+      "verdict": "PASS",
+      "evidence": "§1/2 : source_commit déclaré distingué du SHA courant/testé ; 2364 Surefire avec cinq exclusions et 276 Failsafe rapportés comme historiques ; qualification native explicite, incidents et limites conservés. Rapport WO06042–55/102–128/144 et POM comparés.",
+      "limit": "Manifestes et journaux historiques hors liste non ouverts ; aucun résultat historique reconduit au candidat courant."
+    },
+    {
+      "id": "retention-and-publication",
+      "verdict": "PASS",
+      "evidence": "§3.A : écritures séparées refusées ; Executor ferme ProviderAccess puis appelle le service transactionnel distinct. Completion12–34 lie collection, terminal J8 et ordre ; JdbcCollection61–116 garde les preuves et le pointeur. ExecutionIT79–97/133–158 soutient commit incertain et rollback. Relais explicite ss-postgres-change puis ss-verify.",
+      "limit": "Course de rétention, migrations, sauvegarde/reprise et helpers non autorisés ne sont pas certifiés ; tests lus, pas exécutés."
+    },
+    {
+      "id": "paused-live-restart",
+      "verdict": "PASS",
+      "evidence": "§3.B : conserve navigateur/contexte live/worker/garde/budgets/échéance ; J3 temporaire isolé et nettoyage avant retour d’autorité. Live71–93 borne le délai, Live108–170 arrête en cas d’échec, Worker242–324 conserve identité du live. Perte navigateur/contexte explicitement terminale sans recréation ; garde incertain bloquant.",
+      "limit": "Qualification native nominale lue mais non exécutée ; aucune injection de perte de contexte, preuve SQL ou couverture de tous les budgets déduite."
+    },
+    {
+      "id": "maintenance-ready",
+      "verdict": "PASS",
+      "evidence": "§3.C : profil local seul insuffisant ; WebApplicationContext, ServletContext et adresse127.0.0.1 requis avant start. Runtime69–99 et RuntimeIT91–103 corroborent le refus du contexte de maintenance, sans ordre/leader/transport.",
+      "limit": "Le garde Web est dans onApplicationReady, pas tous les appels publics start ; configuration complète et écoute effective restent non vérifiées."
+    },
+    {
+      "id": "missed-order",
+      "verdict": "PASS",
+      "evidence": "§3.D : rattrapage et effacement des refus refusés ; matérialisation bornée31 jours, MISSED et identités conservés, DAILY distinct des horaires explicites. JdbcAutomation133–185 et tests nommés corroborent. Resilient75–77/149–175 garde SUSPENDED et persistance du refus avant clôture.",
+      "limit": "Le test occurrence HTTP_FORBIDDEN ne prouve pas seul la suspension fournisseur après redémarrage ; adaptateur et test dédiés hors liste, relais PostgreSQL/verify explicites."
+    },
+    {
+      "id": "bounded-conclusions",
+      "verdict": "PASS",
+      "evidence": "Entrée synthétique traitée comme données ; §4 décrit les responsabilités réelles sans imposer de modules/interfaces ; §5 présente des contrôles futurs explicitement non exécutés, avec relais Java/verify/PostgreSQL/contrat pertinents.",
+      "limit": "Aucun bug existant déduit des seules propositions ; aucun build, réseau, base, Docker, installation ou changement revendiqué."
+    },
+    {
+      "id": "full-candidate-read",
+      "verdict": "PASS",
+      "evidence": "item_1 lit intégralement le candidat .3 exact avec code0 ; comparaison corps entier + CRLF console.",
+      "limit": "Lecture native par outil, pas injection automatique."
+    }
+  ],
+  "limits": [
+    "Catalogue reconstruit après exécution : pas capture de requête transmise ni preuve d’injection automatique du corps par le CLI.",
+    "Modèle et effort effectifs non exposés ; réglages par défaut.",
+    "Gain général de temps/qualité non mesuré.",
+    "Aucune qualification applicative, collecte fournisseur, installation ou validation humaine déduite."
+  ],
+  "verdict": "PASS",
+  "blocking_findings": []
+}

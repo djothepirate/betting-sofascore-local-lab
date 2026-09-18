@@ -1,0 +1,28 @@
+{
+  "case": "WR-H01",
+  "startedUtc": "2026-09-15T22:44:17.1928600Z",
+  "statuses": [
+    "EXPERIMENTAL",
+    "LOCAL_ONLY",
+    "NOT_PRODUCTION_APPROVED",
+    "NO_CRITICAL_DEPENDENCY"
+  ],
+  "budgetMs": 60000,
+  "childTimeoutMs": 10000,
+  "cleanupTimeoutMs": 5000,
+  "primary": "BLOCKED",
+  "nativeExitCode": null,
+  "forcedExitCode": null,
+  "cleanup": "NOT_NEEDED",
+  "error": "Accès refusé ",
+  "observationErrors": [],
+  "caseRoot": "C:\\Dev\\BettingProject\\codex\\betting-sofascore-local-lab\\.tmp\\wo062-skills-lot2\\.tmp\\wo062-evaluations\\ss-windows-runtime\\run-03\\WR-H01",
+  "runtimeRoot": "C:\\Dev\\BettingProject\\codex\\betting-sofascore-local-lab\\.tmp\\wo062-skills-lot2\\.tmp\\wo062-evaluations\\ss-windows-runtime\\run-03\\WR-H01\\output\\runtime",
+  "observedCaptureProcesses": [],
+  "observedTemporaryRoots": [],
+  "observedTemporaryFiles": [],
+  "captureEvidenceLimit": "Frozen harness captures then deletes argv JSON and logs; auxiliary process/file sampling may be incomplete. Child exit codes sampled after harness return are not immediate per-child measurements.",
+  "cleanupDurationMs": 2.8295,
+  "totalDurationMs": 194.609,
+  "endedUtc": "2026-09-15T22:44:17.3457773Z"
+}

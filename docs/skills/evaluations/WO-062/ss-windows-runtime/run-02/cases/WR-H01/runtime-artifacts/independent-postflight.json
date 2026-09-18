@@ -1,0 +1,93 @@
+{
+  "utc": "2026-09-15T22:05:09.5243423Z",
+  "durationMs": 133.8408,
+  "runtimeRoot": "C:\\Dev\\BettingProject\\codex\\betting-sofascore-local-lab\\.tmp\\wo062-skills-lot2\\.tmp\\wo062-evaluations\\ss-windows-runtime\\run-02\\WR-H01\\output\\runtime",
+  "rootChainWithoutReparse": true,
+  "runtimeEntries": [],
+  "runtimeEntryCount": 0,
+  "temporaryRoots": [
+    {
+      "path": "C:\\Dev\\BettingProject\\codex\\betting-sofascore-local-lab\\.tmp\\wo062-skills-lot2\\.tmp\\wo062-evaluations\\ss-windows-runtime\\run-02\\WR-H01\\output\\runtime\\WO044 Java JAR argument boundary e0bcc5c7-8317-4591-8221-ef76740ceafe",
+      "exists": false
+    }
+  ],
+  "harnessPid": 36948,
+  "harnessIdentityStatus": "NOT_FOUND",
+  "sources": [
+    {
+      "relativePath": "AGENTS.md",
+      "before": "6509AC77CD4C87094A91DA7E4C750B5991EEB4585A69A609DEF5289B91CF6AB5",
+      "after": "6509AC77CD4C87094A91DA7E4C750B5991EEB4585A69A609DEF5289B91CF6AB5",
+      "identical": true
+    },
+    {
+      "relativePath": "input.json",
+      "before": "D49BEA0E90CA263B75840A198DD7ABBDF67E2DC45541D5474D9E26B833812A57",
+      "after": "D49BEA0E90CA263B75840A198DD7ABBDF67E2DC45541D5474D9E26B833812A57",
+      "identical": true
+    },
+    {
+      "relativePath": "inputs/runtime-protocol.md",
+      "before": "B4748A356B881A8574A78156C0AC00C90F493874EFE8303D40A7224C12D91A52",
+      "after": "B4748A356B881A8574A78156C0AC00C90F493874EFE8303D40A7224C12D91A52",
+      "identical": true
+    },
+    {
+      "relativePath": ".agents/skills/ss-windows-runtime/SKILL.md",
+      "before": "B89925D5395238010BB0AFE9C1E1A22B0AA5EC4E7D1FB9946C671D241E7976C6",
+      "after": "B89925D5395238010BB0AFE9C1E1A22B0AA5EC4E7D1FB9946C671D241E7976C6",
+      "identical": true
+    },
+    {
+      "relativePath": ".agents/skills/ss-windows-runtime/agents/openai.yaml",
+      "before": "3038015980952BC18B21F45F0D4AF514B35A8841394E4B80824986B7E30CCD9F",
+      "after": "3038015980952BC18B21F45F0D4AF514B35A8841394E4B80824986B7E30CCD9F",
+      "identical": true
+    },
+    {
+      "relativePath": "scripts/wo044/Invoke-WO044JavaJarArgumentBoundaryQualification.ps1",
+      "before": "59996B14941700523007E1F6B0784B102D65E088569F95E882340250D43565E4",
+      "after": "59996B14941700523007E1F6B0784B102D65E088569F95E882340250D43565E4",
+      "identical": true
+    },
+    {
+      "relativePath": "scripts/wo044/Capture-WO044NativeArguments.ps1",
+      "before": "841428737A500FD9CCB1407D3C0822B56872F40B308568EE59AB48BAE88B7818",
+      "after": "841428737A500FD9CCB1407D3C0822B56872F40B308568EE59AB48BAE88B7818",
+      "identical": true
+    },
+    {
+      "relativePath": "scripts/wo036/WO036-CampaignTools.psm1",
+      "before": "43C7BC8EB242161729F6C18F8B0FEB67C46715CE911B27572E4BD13E5956BD74",
+      "after": "43C7BC8EB242161729F6C18F8B0FEB67C46715CE911B27572E4BD13E5956BD74",
+      "identical": true
+    },
+    {
+      "relativePath": "scripts/Tests/WO044JavaJarArgumentBoundary.Tests.ps1",
+      "before": "E1F661B0380C72B86374331B79419E6A2C8B551EBB0D195775F04AA731F1C29F",
+      "after": "E1F661B0380C72B86374331B79419E6A2C8B551EBB0D195775F04AA731F1C29F",
+      "identical": true
+    },
+    {
+      "relativePath": "docs/validation/J9-WO044-JAVA-JAR-PATH-ARGUMENT-BOUNDARY-QUALIFICATION-20260904.md",
+      "before": "02008824316E688B6E42C523AAEC45ACF7B8EDB776F49A9B11A822AFD6A125A7",
+      "after": "02008824316E688B6E42C523AAEC45ACF7B8EDB776F49A9B11A822AFD6A125A7",
+      "identical": true
+    },
+    {
+      "relativePath": "docs/validation/J9-WO053-CTRL-BREAK-DIAGNOSTIC-20260905.md",
+      "before": "8718125554E239925DCB8A785A4143DD8E9232F9D2CB554E91D0A6D864FF55FA",
+      "after": "8718125554E239925DCB8A785A4143DD8E9232F9D2CB554E91D0A6D864FF55FA",
+      "identical": true
+    },
+    {
+      "relativePath": "docs/validation/J9-WO053-REVIEW-HARDENING-20260905.md",
+      "before": "BACD897E4E4621E687935F9AA09F91469F69942869DBC3A95E8792FCDC8CF34E",
+      "after": "BACD897E4E4621E687935F9AA09F91469F69942869DBC3A95E8792FCDC8CF34E",
+      "identical": true
+    }
+  ],
+  "allSourcesIdentical": true,
+  "captureProcesses": "Internal frozen-harness postflight marker; no external CIM inventory available",
+  "deletedByThisPostflight": []
+}

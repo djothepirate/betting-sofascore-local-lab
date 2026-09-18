@@ -1,0 +1,9 @@
+{
+  "authorized_by": "repository owner, current conversation",
+  "decision": "J’autorise les 16 essais",
+  "scope": "8 ss-football-quality + 8 ss-ci-security ephemeral model sessions; candidate, local skills catalogue and case-authorized versioned internal sources only; no oracle.",
+  "initial_launch_rejected": false,
+  "initial_rejection_reason": "Prior explicit authorization covered PB only; owner explicitly authorized FQ/CS before execution.",
+  "personal_installation_authorized": false,
+  "human_content_validation": false
+}

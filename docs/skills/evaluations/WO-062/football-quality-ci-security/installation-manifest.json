@@ -1,0 +1,39 @@
+{
+  "schema_version": 1,
+  "work_order": "WO-062",
+  "package": "FootballQualityCiSecurity",
+  "skill_count": 2,
+  "candidate_version": "0.1.0-candidate.1",
+  "owner_validated": true,
+  "personal_installation_authorized": true,
+  "owner_decisions": [
+    "../ss-football-quality/human-validation.json",
+    "../ss-ci-security/human-validation.json"
+  ],
+  "qualifications": [
+    "../ss-football-quality/qualification.json",
+    "../ss-ci-security/qualification.json"
+  ],
+  "files": [
+    {
+      "path": "docs/skills/local-lab/ss-football-quality/SKILL.md",
+      "bytes": 7330,
+      "sha256": "8489375d22eff31a3248f78a5d3791b549a2f103d061cc6c46647a757d3eec58"
+    },
+    {
+      "path": "docs/skills/local-lab/ss-football-quality/agents/openai.yaml",
+      "bytes": 305,
+      "sha256": "8d295af442808d3efebbe68e8165ef96efd086b5b84908fc12f04c1c66bf51f2"
+    },
+    {
+      "path": "docs/skills/local-lab/ss-ci-security/SKILL.md",
+      "bytes": 7522,
+      "sha256": "ca0bba1cf60c0c9965f21b3201e39c3e5dcba3bd73888c2a2ee5d148dbb8c0c5"
+    },
+    {
+      "path": "docs/skills/local-lab/ss-ci-security/agents/openai.yaml",
+      "bytes": 293,
+      "sha256": "621ecacc03c3acf895d2bd5c87ed94461512e23a6e16cc321ae1818f0962d959"
+    }
+  ]
+}

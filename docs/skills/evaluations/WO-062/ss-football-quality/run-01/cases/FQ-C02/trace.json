@@ -1,0 +1,126 @@
+{
+  "case_id": "FQ-C02",
+  "skill": "ss-football-quality",
+  "run_id": "run-01",
+  "started_at_utc": "2026-09-15T19:52:48.888891+00:00",
+  "ended_at_utc": "2026-09-15T20:00:48.091589+00:00",
+  "duration_seconds": 479.203,
+  "mode": "native_codex_exec_ephemeral_read_only",
+  "cli_version": "codex-cli 0.154.0-alpha.6.2",
+  "model": null,
+  "reasoning_effort": null,
+  "model_note": "Configured defaults; exact model/effort not exposed, no override.",
+  "launch_arguments": [
+    "exec",
+    "--ephemeral",
+    "--sandbox",
+    "read-only",
+    "--cd",
+    "C:\\Dev\\BettingProject\\codex\\betting-sofascore-local-lab\\.tmp\\wo062-skills-lot2\\.tmp\\wo062-evaluations\\ss-football-quality\\run-01\\FQ-C02",
+    "--json",
+    "--output-last-message",
+    "C:\\Dev\\BettingProject\\codex\\betting-sofascore-local-lab\\.tmp\\wo062-skills-lot2\\.tmp\\wo062-evaluations\\ss-football-quality\\run-01\\FQ-C02\\output\\response.md",
+    "-"
+  ],
+  "exit_code": 0,
+  "turn_completed": true,
+  "candidate_sha256": "8489375d22eff31a3248f78a5d3791b549a2f103d061cc6c46647a757d3eec58",
+  "source_head": "bfbe3fb6e787756544508e1a3e5a92674a678bd7",
+  "input_files": [
+    {
+      "path": "AGENTS.md",
+      "sha256": "6509ac77cd4c87094a91da7e4c750b5991eeb4585a69a609def5289b91cf6ab5",
+      "bytes": 10320
+    },
+    {
+      "path": "docs/requirements/J5-FOOTBALL-INCIDENT-RULES.md",
+      "sha256": "1b10902333b641a6e25853e811f4b0e1056e575026439d20e2fa96b819cc26ab",
+      "bytes": 83020
+    },
+    {
+      "path": "docs/architecture/J6-HISTORY-AND-GUARDED-RETENTION.md",
+      "sha256": "08b915e4634652524a7388bd18952122979ee27046c0990a2eba058ba16c0693",
+      "bytes": 18692
+    },
+    {
+      "path": "src/main/java/com/bettingproject/sofascorelocal/adapter/sofascore/eventdata/EventIncidentsV15Parser.java",
+      "sha256": "6286b961b6a5dfce36b93960aa9016decd677fd359244c9d6cbdab9f65916ac3",
+      "bytes": 1048
+    },
+    {
+      "path": "src/main/java/com/bettingproject/sofascorelocal/adapter/sofascore/eventdata/EventIncidentsV16Parser.java",
+      "sha256": "1df5dd003eb0d6a2fa20e9efc3586a7251dbfc4ae74225a121abe7df1e566b88",
+      "bytes": 1747
+    },
+    {
+      "path": "src/main/java/com/bettingproject/sofascorelocal/adapter/sofascore/eventdata/EventIncidentsV17Parser.java",
+      "sha256": "410f47f99cc8e37d93ef89c2518ec08298cd36bbb2c3b97e00f478c0516a9971",
+      "bytes": 1239
+    },
+    {
+      "path": "src/main/java/com/bettingproject/sofascorelocal/application/history/J6HistoryClassifier.java",
+      "sha256": "0f222c27885aa9ee716bd94cf9db8a28c741d9b181972164b7199e35844dc2c8",
+      "bytes": 3943
+    },
+    {
+      "path": "src/main/java/com/bettingproject/sofascorelocal/application/history/J6SemanticDiffService.java",
+      "sha256": "e5237db5f7df61a54fcca894fd7075e103ae1227f49e0b8436a935cd37952865",
+      "bytes": 35633
+    },
+    {
+      "path": "src/test/java/com/bettingproject/sofascorelocal/adapter/sofascore/eventdata/EventIncidentsV15ParserTest.java",
+      "sha256": "65067b0872f40ef6acaa04992abad177812a5e061061739985d9e2dc4b6f8e1c",
+      "bytes": 7547
+    },
+    {
+      "path": "src/test/java/com/bettingproject/sofascorelocal/adapter/sofascore/eventdata/EventIncidentsV16ParserTest.java",
+      "sha256": "7021ca0a0164d7692da4bde25038a477d206c564fb62d276fb259baf876728a1",
+      "bytes": 13244
+    },
+    {
+      "path": "src/test/java/com/bettingproject/sofascorelocal/application/history/J6HistoryClassifierTest.java",
+      "sha256": "f7151ee177b5206ddbb83afc3d240589af6ec4fb4f885f4a436f6a3e43373e3d",
+      "bytes": 5516
+    },
+    {
+      "path": "src/test/resources/fixtures/provider-j5/incidents-terminal-shootout-empty-actions.json",
+      "sha256": "7696df924593de4aafe7ff8c4062ac1dd1fe37295b3e8f40072061d563d90e83",
+      "bytes": 1059
+    },
+    {
+      "path": ".agents/skills/ss-football-quality/SKILL.md",
+      "sha256": "8489375d22eff31a3248f78a5d3791b549a2f103d061cc6c46647a757d3eec58",
+      "bytes": 7330
+    },
+    {
+      "path": ".agents/skills/ss-football-quality/agents/openai.yaml",
+      "sha256": "8d295af442808d3efebbe68e8165ef96efd086b5b84908fc12f04c1c66bf51f2",
+      "bytes": 305
+    },
+    {
+      "path": "input.json",
+      "sha256": "91da9fb3d42e1920ee7b9b74f6b304c0d68414bc2e857e8887728f23787175c1",
+      "bytes": 13758
+    }
+  ],
+  "prompt_sha256": "e443546d439fed29e6025ab0a463db36f55d0d8f0b20d0d6ba9bc737fb31c086",
+  "request_sha256": "4da6b9d844e8eadb996205a0c5e0360e4266063ab20e7bf9fea4ce783c34f87c",
+  "oracle_supplied": false,
+  "design_history_supplied": false,
+  "raw_events_sha256": "f2ff3079a817104ae12e58f4dec13bf6358a4e9d6f09a55a608976225e2890b6",
+  "native_events_sha256": "cc25e7c3cd50f5ff86bd8968271b8205e977e66fd558325f71efff6ea65ff86e",
+  "commands_completed": 21,
+  "response_sha256": "469849e2c9727cc03f0f3c5ad74e41787d1452c7bde82c81791939a2910076ba",
+  "catalogue_sha256": "2e2b746d8e6998e95a13e544503b3f2874fdaac9727dc8ffc81f838f4b9fbc95",
+  "catalogue_note": "Local reconstruction after execution, not a capture of the transmitted request.",
+  "published_events_note": "Internal reasoning omitted; actual command outputs retained.",
+  "usage": {
+    "input_tokens": 517448,
+    "cached_input_tokens": 442496,
+    "cache_write_input_tokens": 0,
+    "output_tokens": 12729,
+    "reasoning_output_tokens": 3098
+  },
+  "selection_instrumented": false,
+  "qualification_limit": "Tool-mediated selection/load with declared envelope; no automatic CLI injection claim."
+}

@@ -1,0 +1,41 @@
+{
+  "schema_version": 1,
+  "purpose": "PERSONAL_INSTALLATION_EVIDENCE",
+  "files": [
+    {
+      "path": "checks.json",
+      "bytes": 497,
+      "sha256": "c878cd2e9e29e2183f676f68b5e8b0b0e47a155a274fa14effa44f1160b10544"
+    },
+    {
+      "path": "discovery.json",
+      "bytes": 1081,
+      "sha256": "66bc779988d86d853614d28184c183557205bcb79cfdee20bd7980e59c6ca4d6"
+    },
+    {
+      "path": "preflight.json",
+      "bytes": 2759,
+      "sha256": "ff8271946c2853608bd1a7c42c8d57df5156a72121588d3d402398e1bbb64348"
+    },
+    {
+      "path": "result.json",
+      "bytes": 2522,
+      "sha256": "9c3d2b10fa8286b7f53bf80f47a979bcc822dac76035837f5f24989e08d7e09a"
+    },
+    {
+      "path": "review.json",
+      "bytes": 1127,
+      "sha256": "34aed4c1d80b22488d813dc729b494c5e016dc98885026329381a0ee75888219"
+    },
+    {
+      "path": "tests-lot1.txt",
+      "bytes": 490,
+      "sha256": "def5a4ee35d7a147d7de876cb1d990ba644459e559810586d5e655914c78b1a0"
+    },
+    {
+      "path": "tests-provider.txt",
+      "bytes": 737,
+      "sha256": "07f430ae2a747776a963e157f07158a20fe2cfa645c7f997602fba8a7bfe3c6a"
+    }
+  ]
+}

@@ -1,0 +1,49 @@
+{
+  "schema": "wo062-c4-windows-static-protocol-review-v1",
+  "verdict": "PASS",
+  "status": "PASS_STATIC_PROTOCOL_ONLY",
+  "reviewed_at_utc": "2026-09-15T23:25:56Z",
+  "local_date": "2026-09-16",
+  "reviewed_head": "79d0f99c393a06d4d2e81749a55fb3bfbd222cc3",
+  "worktree": "C:/Dev/BettingProject/codex/betting-sofascore-local-lab/.tmp/wo062-skills-lot2",
+  "git_state_before": "CLEAN",
+  "git_state_at_final_source_check": "CLEAN",
+  "reviewed_document": "docs/skills/evaluations/WO-062/c-requalification-04/windows-session-protocol.md",
+  "document_sha256": "3658c70cd4a00d2902ecac2e99e79a2daa0fb500ac2f59d8d861b744b97a6c73",
+  "authorization_sha256": "c408f9279f1f0b705b13bf074b7f13db899769761b3a0c0d2e377ebd25fc6d7f",
+  "original_integrity": [
+    {"path": "docs/skills/evaluations/WO-062/ss-windows-runtime/runtime-protocol.md", "bytes": 10630, "sha256": "b4748a356b881a8574a78156c0ac00c90f493874efe8303d40a7224c12d91a52", "matches_original_manifest": true},
+    {"path": "docs/skills/evaluations/WO-062/ss-windows-runtime/fixtures/NativeProbe.java", "bytes": 1009, "sha256": "4e29c5867eba0fb76518de2307391449c83450449bea0393179738505c69bc8b", "matches_original_manifest": true},
+    {"path": "scripts/wo044/Invoke-WO044JavaJarArgumentBoundaryQualification.ps1", "bytes": 11212, "sha256": "59996b14941700523007e1f6b0784b102d65e088569f95e882340250d43565e4", "matches_original_manifest": true},
+    {"path": "scripts/wo044/Capture-WO044NativeArguments.ps1", "bytes": 948, "sha256": "841428737a500fd9ccb1407d3c0822b56872f40b308568ee59ab48bae88b7818", "matches_original_manifest": true},
+    {"path": "scripts/wo036/WO036-CampaignTools.psm1", "bytes": 176724, "sha256": "43c7bc8eb242161729f6c18f8b0feb67c46715ce911b27572e4bd13e5956bd74", "matches_original_manifest": true}
+  ],
+  "ownership_proof_sha256": "70be6ee6153269c440944fdb2b15b21fef065ce5b0e5ad4f5c61f535b18bacef",
+  "ownership_review_sha256": "ee3cddc7f8af80420fc503c2dce665e79e6ef6c47ffc58aa78044b4fcbbad07a",
+  "criteria": [
+    {"id": "C4-W01", "verdict": "PASS", "requirement": "Bounded authorization and separate qualification", "evidence": "Windows .1 run-04 limited to WR-H01/WR-N01; eight separate Java cases; max ten sessions, no automatic retry, oracle or prior responses; no human validation or installation."},
+    {"id": "C4-W02", "verdict": "PASS", "requirement": "Auxiliary parent CIM removed without weakening owned-process guards", "evidence": "C4 lines41-46 use own Process/PID and retained child identity; original WO044 lines66-98 still keep creation time/image/token checks and conditional CIM for a living child.", "limit": "The separate diagnostic observes self_cim_parent access denied in the parent sandbox; the earlier evaluated session did not retain its exact failing line."},
+    {"id": "C4-W03", "verdict": "PASS", "requirement": "Original WR-H01 contract", "evidence": "C4 lines36-39 preserve PS7 Windows, Iterations2, intact dependencies and child-only TEMP/TMP. Original transcript, native code, bounded captures and postflight remain required."},
+    {"id": "C4-W04", "verdict": "PASS", "requirement": "Fresh ownership of both WR-N01 processes", "evidence": "C4 lines57-76 require direct unique discovered Java25, observed PS5.1 Desktop, successive modes with distinct UUID, retained Process/handle/PID/start/image and fixture PID/UUID comparison; no reuse of prior measurements."},
+    {"id": "C4-W05", "verdict": "PASS", "requirement": "Original deadlines and exact cleanup", "evidence": "C4 lines15-18 and77-89 retain 60s/45s global conduct budgets, 10s failure, 10s READY, 1500ms from READY, 5s after Kill; no forced stop without identity, no second mode if remaining budget insufficient, only owned files and empty directories removed."},
+    {"id": "C4-W06", "verdict": "PASS", "requirement": "No expected output or oracle in operational supplement", "evidence": "No prior PID/UUID, expected native code, prior measurement or future PASS marker; timing and identity constraints only. Actual markers, separate prompt-return command, postflight and final answer required.", "limit": "The effective future request envelopes were not part of this review."},
+    {"id": "C4-W07", "verdict": "PASS", "requirement": "Ownership prerequisite not promoted into full qualification", "evidence": "Prior PASS_OWNERSHIP_ONLY involved a distinct OwnershipProbe and natural RELEASE, no failure/sleep or forced stop. C4 lines72-76 explicitly distinguish Process.Start relationship from JVM parent measurement and disallow reuse."}
+  ],
+  "blocking_findings": [],
+  "limits": [
+    "The original internal WO044 CIM guard remains applicable for a living capture child; removing auxiliary CIM does not qualify that cleanup failure branch.",
+    "NativeProbe failure exits immediately after its markers; collect MainModule/start while alive immediately after Start or retain BLOCKED if missing.",
+    "A protocol prescribes deadlines but does not demonstrate their implementation; the future conductor and events must establish all preflight/cleanup fit within60s or45s. The six-minute target and15-minute watchdog do not extend probe budgets.",
+    "Original NativeProbe emits no parent/image/start fields. The new ownership proof must describe retained direct creation plus handle/PID/UUID/image concordance, not borrow the prior OwnershipProbe fields.",
+    "The final request freeze must exclude ownership measurements/reviews, this review, old evaluated responses and oracle. Reviewing the supplement does not certify the future transmitted context."
+  ],
+  "independent_subreview": {"agent": "jm_selection_review", "scope": "WR-N01 supplement versus original protocol and NativeProbe", "verdict": "NO_BLOCKING_FINDING", "source_writes": false, "probe_executed": false, "model_evaluation_launched": false},
+  "reviewer_modified_inputs": false,
+  "reviewer_executed_probe": false,
+  "reviewer_executed_harness": false,
+  "reviewer_called_evaluation_model": false,
+  "full_WR_H01_qualified": false,
+  "full_WR_N01_qualified": false,
+  "authorization_extended_by_review": false,
+  "files_written": [".tmp/c4-windows-protocol-review.md", ".tmp/c4-windows-protocol-review.json"]
+}

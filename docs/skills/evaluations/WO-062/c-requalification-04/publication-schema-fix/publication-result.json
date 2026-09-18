@@ -1,0 +1,1 @@
+{"validation": "PASS", "published": true, "cases": [{"skill": "ss-java-module", "candidate_version": "0.1.0-candidate.3", "pass": 7, "fail": 1, "blocked": 0, "executions": 8, "total_executions": 25}, {"skill": "ss-windows-runtime", "candidate_version": "0.1.0-candidate.1", "pass": 6, "fail": 1, "blocked": 1, "executions": 13, "total_executions": 13}]}

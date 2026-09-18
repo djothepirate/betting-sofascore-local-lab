@@ -1,0 +1,136 @@
+{
+  "schema": "wo062-b-installation-independent-review-v1",
+  "reviewed_at_utc": "2026-09-15T20:27:33.166996+00:00",
+  "reviewer": "/root/b_install_review",
+  "head": "285f4384a4c2fbd4276089fc216c7c74d2cb7495",
+  "verdict": "NO_MATERIAL_FINDINGS",
+  "scope": "Independent read-only integrity checks and static installer/test/manifest review before personal installation",
+  "criteria": [
+    {
+      "id": "candidate_integrity",
+      "status": "PASS",
+      "evidence": "Four delivered files, byte counts and SHA-256 match qualification and owner decisions; exact version 0.1.0-candidate.1. UTF-8 strictly decoded."
+    },
+    {
+      "id": "frozen_proofs",
+      "status": "PASS",
+      "evidence": "50 source Git blobs, 10 preparation files, 161 run artifacts and 102 frozen case files independently recomputed. Both source WO revisions matched historic materialization at the preparation blob. Eight PASS verdicts and all mandatory review criteria PASS per skill."
+    },
+    {
+      "id": "fq_encoding_history",
+      "status": "PASS",
+      "evidence": "FQ H01/N01 traces retain CP1252 YAML hash 53585a6b26f9dcc0d249771ed21eece127acd75ec25e4a4ee88f1b72f51e7f13; six later FQ cases use delivered UTF-8. Historical Git blob CP1252-decoded equals current YAML UTF-8-decoded exactly. SKILL body matches all traces."
+    },
+    {
+      "id": "owner_decision",
+      "status": "STATIC_CONSISTENT",
+      "evidence": "Exact owner statement, four hashes and unchanged candidate version are recorded. Current qualifications human_validation=true, personal_installation=false; no premature installation claim."
+    },
+    {
+      "id": "exact_package",
+      "status": "STATIC_CONSISTENT",
+      "evidence": "Explicit FootballQualityCiSecurity branch lists only ss-football-quality and ss-ci-security. Four exact case-sensitive file paths with cardinality and uniqueness checks. Lot1 remains default and ProviderBenchmark remains explicit."
+    },
+    {
+      "id": "approval_guards",
+      "status": "STATIC_CONSISTENT",
+      "evidence": "Both approval fields must be true Boolean values; candidate_version must equal 0.1.0-candidate.1 case-sensitively before source/destination operations."
+    },
+    {
+      "id": "preserve_local_files",
+      "status": "STATIC_CONSISTENT",
+      "evidence": "All source hashes and all destination conflicts are examined before any write. Exact existing files are retained, changed/additional/case-variant files refused, linked ancestors refused, Copy overwrite=false, post-copy hashes verified. VerifyOnly does not enter write loop."
+    },
+    {
+      "id": "test_delta",
+      "status": "STATIC_CONSISTENT",
+      "evidence": "Tests exercise four-file installation, idempotence, VerifyOnly, late CS YAML conflict before FQ copy, 12 prior files retained with bytes/timestamps, exactly 3 missing files resumed, unapproved Boolean/version/path refusals. Prior Lot1/PB suites preserved through parameterization."
+    }
+  ],
+  "material_findings": [],
+  "eligible_candidate_files": [
+    {
+      "path": "docs/skills/local-lab/ss-football-quality/SKILL.md",
+      "bytes": 7330,
+      "sha256": "8489375d22eff31a3248f78a5d3791b549a2f103d061cc6c46647a757d3eec58"
+    },
+    {
+      "path": "docs/skills/local-lab/ss-football-quality/agents/openai.yaml",
+      "bytes": 305,
+      "sha256": "8d295af442808d3efebbe68e8165ef96efd086b5b84908fc12f04c1c66bf51f2"
+    },
+    {
+      "path": "docs/skills/local-lab/ss-ci-security/SKILL.md",
+      "bytes": 7522,
+      "sha256": "ca0bba1cf60c0c9965f21b3201e39c3e5dcba3bd73888c2a2ee5d148dbb8c0c5"
+    },
+    {
+      "path": "docs/skills/local-lab/ss-ci-security/agents/openai.yaml",
+      "bytes": 293,
+      "sha256": "621ecacc03c3acf895d2bd5c87ed94461512e23a6e16cc321ae1818f0962d959"
+    }
+  ],
+  "reviewed_files": [
+    {
+      "path": "scripts/Install-LocalLabSkills.ps1",
+      "bytes": 6559,
+      "sha256": "aa65ef1f15643201e8877b5debdc5382fee2068b96ec529346bff7e8cf28d2b2"
+    },
+    {
+      "path": "scripts/Test-LocalLabSkillsInstallation.ps1",
+      "bytes": 11993,
+      "sha256": "a7d0336a4d72f56b0908110b866e038ab97dc2f27968a4a52b8bbc8f2179ba4c"
+    },
+    {
+      "path": "docs/skills/evaluations/WO-062/football-quality-ci-security/installation-manifest.json",
+      "bytes": 1239,
+      "sha256": "28e5e35941e7125e57d0db98553e94d4b88276e9db72b270a3827e1b1a10e7f2"
+    },
+    {
+      "path": "docs/skills/evaluations/WO-062/ss-football-quality/qualification.json",
+      "bytes": 2380,
+      "sha256": "692954afbfb96c216036b8fdeef09ea76df9f1833cdab7ae939798b8d24dcfc5"
+    },
+    {
+      "path": "docs/skills/evaluations/WO-062/ss-football-quality/human-validation.json",
+      "bytes": 1973,
+      "sha256": "a2556f9852a076dcbaab5499c010e95eb933b4f312767c8babcab5f362c2f678"
+    },
+    {
+      "path": "docs/skills/local-lab/ss-football-quality/SKILL.md",
+      "bytes": 7330,
+      "sha256": "8489375d22eff31a3248f78a5d3791b549a2f103d061cc6c46647a757d3eec58"
+    },
+    {
+      "path": "docs/skills/local-lab/ss-football-quality/agents/openai.yaml",
+      "bytes": 305,
+      "sha256": "8d295af442808d3efebbe68e8165ef96efd086b5b84908fc12f04c1c66bf51f2"
+    },
+    {
+      "path": "docs/skills/evaluations/WO-062/ss-ci-security/qualification.json",
+      "bytes": 1721,
+      "sha256": "3237ed729f18cb407ed46c7778f40bcfdbde45cd9ab6ff26460525af9c8a1b30"
+    },
+    {
+      "path": "docs/skills/evaluations/WO-062/ss-ci-security/human-validation.json",
+      "bytes": 1958,
+      "sha256": "a57d29c835b67e30bfdce2e8c9bda87aacb36a42c3c6308e4f015e8483fff4ac"
+    },
+    {
+      "path": "docs/skills/local-lab/ss-ci-security/SKILL.md",
+      "bytes": 7522,
+      "sha256": "ca0bba1cf60c0c9965f21b3201e39c3e5dcba3bd73888c2a2ee5d148dbb8c0c5"
+    },
+    {
+      "path": "docs/skills/local-lab/ss-ci-security/agents/openai.yaml",
+      "bytes": 293,
+      "sha256": "621ecacc03c3acf895d2bd5c87ed94461512e23a6e16cc321ae1818f0962d959"
+    }
+  ],
+  "limits": [
+    "Reviewer did not run skill evaluations, installer test scripts, Maven, CI pipelines, provider calls, application or DB. Runtime installer qualification remains the supervising task separate evidence.",
+    "No personal installation or discovery result is claimed by this review.",
+    "Selection/load evidence remains instrumented and catalogues reconstructed. Joint behavioral coexistence and productivity are not established by this review.",
+    "Power failure or concurrent external filesystem edits are not simulated; installer preserves exact pre-existing files but does not implement a transactional rollback of newly copied files."
+  ]
+}

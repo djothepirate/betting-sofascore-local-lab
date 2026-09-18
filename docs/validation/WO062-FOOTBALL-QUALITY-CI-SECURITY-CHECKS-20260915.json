@@ -1,0 +1,80 @@
+{
+  "checks": [
+    {
+      "skill": "ss-football-quality",
+      "frozen_sources": 25,
+      "frozen_cases": 8,
+      "pass": 8,
+      "fail": 0,
+      "blocked": 0,
+      "integrity": "PASS",
+      "utf8_metadata": "PASS"
+    },
+    {
+      "skill": "ss-ci-security",
+      "frozen_sources": 25,
+      "frozen_cases": 8,
+      "pass": 8,
+      "fail": 0,
+      "blocked": 0,
+      "integrity": "PASS",
+      "utf8_metadata": "PASS"
+    }
+  ],
+  "preserved_baseline": "PASS",
+  "app_and_workflows_unchanged": "PASS",
+  "personal_B_skills_absent": true,
+  "twelve_existing_personal_files_equal_unchanged_canonical": true,
+  "schema": "wo062-b-delivery-checks-v1",
+  "checked_at_utc": "2026-09-15T20:14:07.702180+00:00",
+  "baseline_commit": "57c0614627e628077b0a7775eb66a7c490b422e0",
+  "commands_and_results": [
+    {
+      "command": "Official generate_openai_yaml.py then quick_validate.py for both candidates",
+      "result": "PASS format; Windows generator output explicitly normalized to UTF-8, football correction independently reviewed."
+    },
+    {
+      "command": "wo062_evaluate.py run ss-football-quality --cases FQ-H01 FQ-N01 FQ-C01 FQ-C02 FQ-S01 FQ-S02 FQ-S03 FQ-S04 --workers 2",
+      "result": "8 native sessions completed, exit 0; 8 independent PASS; model/effort exact values unavailable."
+    },
+    {
+      "command": "wo062_evaluate.py run ss-ci-security --cases CS-H01 CS-N01 CS-C01 CS-C02 CS-S01 CS-S02 CS-S03 CS-S04 --workers 2",
+      "result": "8 native sessions completed, exit 0; 8 independent PASS; model/effort exact values unavailable."
+    },
+    {
+      "command": "check_b_delivery.py",
+      "result": "Frozen sources, five preparation files per skill, candidate hashes/UTF-8/YAML, run manifests, responses, reviews and all case freezes agree. Baseline app, workflows, PB, Lot1 and personal copies preserved."
+    },
+    {
+      "command": "check_b_links.py",
+      "result": "356 links PASS before adding the link to this checks file; final follow-up link check recorded in delivery tool output."
+    },
+    {
+      "command": "check_b_secrets.py",
+      "result": "PASS_HIGH_CONFIDENCE_DIFF",
+      "scope": "Current complete bytes of changed/added files since 57c0614627e628077b0a7775eb66a7c490b422e0",
+      "method": "Nine current ci/check-no-secrets.sh regex families, evaluated locally with Python re; POSIX space translated to \\s; case insensitive. Not a CI invocation nor full-history scan. No matched value printed.",
+      "files_at_this_check": 187,
+      "findings": []
+    }
+  ],
+  "application_test_reuse": {
+    "executed_this_step": false,
+    "reason": "Application code, tests, migrations, workflows and installer unchanged since baseline.",
+    "command": "powershell.exe -NoProfile -ExecutionPolicy Bypass -File scripts/Verify-Local.ps1",
+    "effective_maven": "mvnw.cmd -DskipITs clean verify",
+    "report_guard": "java ci/VerifyTestReports.java standard",
+    "finished_at_utc": "2026-09-15T15:58:40Z",
+    "declared": 2440,
+    "executed": 2435,
+    "skipped": 5,
+    "failures": 0,
+    "errors": 0,
+    "proof": "WO062-SKILLS-LOT2-SCOPING-20260915.md"
+  },
+  "scope_limits": [
+    "This record summarizes content checks before final local commit; Git byte preservation and clean status are checked after commit.",
+    "No real provider collection, pipeline, scanner, distribution or personal FQ/CS installation.",
+    "The two H/N football cases validate the exact SKILL body with their original CP1252 metadata; six later FQ cases and all eight CS cases use the delivered UTF-8 package."
+  ]
+}

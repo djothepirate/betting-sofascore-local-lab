@@ -1,0 +1,43 @@
+{
+  "schema": "wo062-c6-static-launch-review-v1",
+  "verdict": "PASS",
+  "reviewed_at_utc": "2026-09-16T07:00:49.488954+00:00",
+  "criteria": [
+    {
+      "id": "C6-S01",
+      "verdict": "PASS",
+      "evidence": "C6 evaluator asserts run-06 and prepares only JM-H01."
+    },
+    {
+      "id": "C6-S02",
+      "verdict": "PASS",
+      "evidence": "C6 run guard asserts ss-java-module, JM-H01 and workers=1."
+    },
+    {
+      "id": "C6-S03",
+      "verdict": "PASS",
+      "evidence": "Fresh case has no events, response or frozen evidence before launch."
+    },
+    {
+      "id": "C6-S04",
+      "verdict": "PASS",
+      "evidence": "All 14 inputs equal C5 frozen input envelope; candidate, prompt and request hashes match."
+    },
+    {
+      "id": "C6-S05",
+      "verdict": "PASS",
+      "evidence": "No oracle, prior response, review, result, plan, inventory or Windows input occurs under the model case root."
+    },
+    {
+      "id": "C6-S06",
+      "verdict": "PASS",
+      "evidence": "C5 evaluator and C5 authorization are unchanged; C6 is a separate additive one-session authorization."
+    }
+  ],
+  "limits": [
+    "Static/preflight review does not invoke the model or assess JM-H01 semantics.",
+    "Read-only model sandbox remains procedural and does not prove automatic candidate body injection."
+  ],
+  "model_invoked": false,
+  "source_or_candidate_modified": false
+}

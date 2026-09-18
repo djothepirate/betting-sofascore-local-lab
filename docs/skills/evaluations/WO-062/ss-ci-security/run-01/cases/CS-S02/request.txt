@@ -1,0 +1,3 @@
+À partir de la demande ci-dessous et du catalogue réellement découvert, détermine les skills pertinents. Pour chaque skill retenu, lis intégralement son fichier SKILL.md avec un outil, puis indique le nom, le chemin effectivement lu et la raison de sa sélection. Si aucun skill ne convient, dis-le. Arrête-toi après ce routage : n’exécute pas la tâche métier. Ne lis aucun oracle, résultat antérieur, inventaire commenté ou plan d’évaluation. Demande à router :
+
+Dans le SofaScore Local Lab, les tests sont verts mais l’upload des rapports a échoué. Le run précédent avait réussi sur une autre révision ; peut-on considérer la PR actuelle qualifiée, et quelles preuves faut-il conserver ?

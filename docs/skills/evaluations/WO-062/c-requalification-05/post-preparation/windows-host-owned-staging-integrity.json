@@ -1,0 +1,30 @@
+{
+  "schema": "wo062-c5-host-copy-integrity-v1",
+  "purpose": "Verify that the disposable host-owned staging contexts are byte-identical to frozen C5 run-05 inputs before the non-model sandbox access probe.",
+  "created_and_launched_by": "asusggo2025\\geoff",
+  "source_run_id": "run-05",
+  "staging_run_label": "run-05-host-preflight-20260916",
+  "source_preflight_sha256": "269ba6e1ce7e5f540a79e788035c2323442b410f389dc13a2921aaa8519b988b",
+  "staging_preflight_sha256": "269ba6e1ce7e5f540a79e788035c2323442b410f389dc13a2921aaa8519b988b",
+  "preflight_byte_identical": true,
+  "cases": [
+    {
+      "case_id": "WR-H01",
+      "source_owner": "ASUSGGO2025\\CodexSandboxOffline",
+      "stage_owner": "ASUSGGO2025\\geoff",
+      "files_checked": 18,
+      "byte_integrity": true,
+      "output_empty": true
+    },
+    {
+      "case_id": "WR-N01",
+      "source_owner": "ASUSGGO2025\\CodexSandboxOffline",
+      "stage_owner": "ASUSGGO2025\\geoff",
+      "files_checked": 16,
+      "byte_integrity": true,
+      "output_empty": true
+    }
+  ],
+  "status": "PASS",
+  "qualification_scope": "Diagnostic-only staging. It is not a C5 qualification context and it does not authorize or consume a model session."
+}

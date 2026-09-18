@@ -1,0 +1,127 @@
+{
+  "schema": "wo062-independent-static-review-v1",
+  "work_order": "WO-062",
+  "review_id": "C4-JAVA-STATIC",
+  "skill": "ss-java-module",
+  "reviewer": "/root/jm_counter_review",
+  "supporting_reviewer": "/root/jm_selection_review",
+  "reviewed_on": "2026-09-16",
+  "verdict": "PASS",
+  "scope": "STATIC_ONLY",
+  "behavioral_qualification": "NOT_RUN",
+  "candidate_version": "0.1.0-candidate.3",
+  "candidate_sha256": "15237ab0f6773c87187481622ba4947ebc00f8c7e9a50dd1589911ede17ec332",
+  "candidate_bytes": 10384,
+  "candidate_body_commit": "cf36a0cea4788402a5da391867c58ef1a479c942",
+  "reviewed_head": "cf36a0cea4788402a5da391867c58ef1a479c942",
+  "comparison_base_commit": "2428914d813ee1dcd05bdac29e25fe8c473c0521",
+  "previous_candidate_version": "0.1.0-candidate.2",
+  "previous_candidate_sha256": "255655544771ae6cf2a71b967aba8efeb7e53e64acc41ca31dc784e16a719118",
+  "yaml_sha256": "ccc4fc2a4707838dd6defdd73ef6f6c7ee0d69e6df86e41689a46884691573ae",
+  "revision_record_sha256": "3764dc796d203c621b5323b24da208ef74f924bb0511962c6115eb69ce480249",
+  "criteria": [
+    {
+      "criterion_id": "identity-and-diff",
+      "required": true,
+      "result": "PASS",
+      "evidence": "SKILL.md lu intégralement ; diff 2428914..cf36a0c limité à version .2→.3 et deux passages du corps. 10 384 octets, SHA256 conforme à revision-03/revision.json.",
+      "limit": "Version .2 conservée comme antécédent ; aucune réussite ancienne transférée."
+    },
+    {
+      "criterion_id": "terminal-loss-transition",
+      "required": true,
+      "result": "PASS",
+      "evidence": "SKILL.md 85–93 distingue le retour nominal de la perte du navigateur/contexte live : session terminée, sans reprise automatique ni recréation. AGENTS.md:51 et ADR-SS-007:348/385 portent cette règle.",
+      "limit": "Règle de session live ; ne supprime ni les ordres J3 autorisés ni le contexte temporaire J3 dans la pause nominale."
+    },
+    {
+      "criterion_id": "source-consistency",
+      "required": true,
+      "result": "PASS",
+      "evidence": "LiveCampaignService.java:147–169 interdit la reprise en cas de transport/nettoyage incertain et publie STOPPED ; WorkerMain.java:282–306 exige navigateur connecté et identité du liveContext avant/après le temporaire.",
+      "limit": "Revue statique des sources ; ni panne injectée ni cycle navigateur exécuté. Le détail des transitions demeure à vérifier lors des futurs essais."
+    },
+    {
+      "criterion_id": "exact-textual-guard",
+      "required": true,
+      "result": "PASS",
+      "evidence": "SKILL.md:99–106 demande cible et arborescence exactes ; Verify-Local.ps1:17–27 vise src/main et le motif \\\\bcom\\\\.microsoft\\\\.playwright\\\\b, puis Select-String insensible à la casse aux lignes 42–44.",
+      "limit": "Le scan filtre .java/.yml/.yaml/.properties. Ce filtre réel est consigné ici ; le skill ne revendique pas une analyse exhaustive ni un graphe ArchUnit."
+    },
+    {
+      "criterion_id": "interfaces-and-library",
+      "required": true,
+      "result": "PASS",
+      "evidence": "Le nom des interfaces internes Playwright est distingué du paquet de la bibliothèque. La séparation worker/profil/classpath existante est conservée.",
+      "limit": "Aucune interdiction générique des interfaces internes, aucun nouveau module ou mécanisme d'isolation inventé."
+    },
+    {
+      "criterion_id": "scope-and-contradictions",
+      "required": true,
+      "result": "PASS",
+      "evidence": "Les deux ajouts renforcent la restitution de règles déjà adoptées. Le contexte J3 temporaire, le nettoyage avant retour, le live conservé, le monomodule et les relais spécialisés restent présents.",
+      "limit": "Aucun endpoint, transport, automatisation, responsabilité supplémentaire, nouveau pouvoir d'action ou réponse de cas prescrite."
+    },
+    {
+      "criterion_id": "metadata-stability",
+      "required": true,
+      "result": "PASS",
+      "evidence": "Sous-revue parallèle indépendante : frontmatter identique à 2428914 hors metadata.version ; name/description inchangés ; agents/openai.yaml strictement identique, SHA256 ccc4fc2a4707838dd6defdd73ef6f6c7ee0d69e6df86e41689a46884691573ae.",
+      "limit": "Métadonnées de sélection inchangées ; leur conservation n'établit pas une sélection native réussie."
+    },
+    {
+      "criterion_id": "preparation-immutability",
+      "required": true,
+      "result": "PASS",
+      "evidence": "Oracle, cases, inputs, manifest, source-inventory et evaluation-plan identiques à 2428914 et au gel initial 21e16cc ; empreintes recalculées et consignées.",
+      "limit": "Aucune adaptation de l'oracle ou préparation aux réponses nouvelles."
+    },
+    {
+      "criterion_id": "historical-evidence",
+      "required": true,
+      "result": "PASS",
+      "evidence": "Aucun diff des run-01, run-02 ou run-03 ; revision-03/previous-qualification.json est la copie exacte de qualification.json à2428914.",
+      "limit": "Les échecs antérieurs restent historiques ; leur conservation ne qualifie pas le nouveau corps."
+    },
+    {
+      "criterion_id": "revision-record-and-status",
+      "required": true,
+      "result": "PASS",
+      "evidence": "revision.json annonce .3 et les deux seules corrections, base2428914, 8 cas NOT_RUN ; qualification.json porte CORRECTED_PENDING_EVALUATION, 0 nouvelle exécution et 8 NOT_RUN.",
+      "limit": "Validation humaine et installation personnelle false ; corps .3 au commit cf36a0c vérifié par git log du chemin."
+    },
+    {
+      "criterion_id": "read-only-review",
+      "required": true,
+      "result": "PASS",
+      "evidence": "État Git propre à l'ouverture ; lectures, recherches, hashes et git diff --check effectués. Diff whitespace sans anomalie. Seuls les deux rapports de revue sont écrits sous .tmp.",
+      "limit": "Aucun modèle, probe, test applicatif, navigateur, base de données ou modification du candidat par cette revue."
+    }
+  ],
+  "required_criteria_missing": [],
+  "preparation_hashes": {
+    "oracle.md": "d13dc8c5ec833f30dc9025c3c22a22c00e60656eae3a89dc30361861ea390bd1",
+    "cases.json": "c3e76e6b92ea2ac3ec3ef03684512b41b70be90355ac1be87bbf3fffc3d228aa",
+    "inputs.json": "302410617523c10bd12015ad72d0f9869ca455715528e12008e5a0e3cdf4440f",
+    "manifest.json": "a0907baba5a15606b6a735873a3e8ab9cc4043dfe8d852f3b843e1ec61b68290",
+    "source-inventory.md": "5a374ccbbbb25e39f87b17909c28083d9bd0567f03d184162c302719c8ddd4ca",
+    "evaluation-plan.md": "d015760826da4c55dadff09cea6b91d3e4aea9cf44dff3cfbda02bbfbaab86e7"
+  },
+  "format_validation": {
+    "source": "coordinator_report",
+    "initial_attempt": "FAILED_MISSING_PYYAML",
+    "subsequent_attempt": "PASS_WITH_EXISTING_LOCAL_PYYAML",
+    "independently_rerun": false,
+    "note": "Incident d'environnement communiqué par le coordinateur ; non présenté comme une exécution du relecteur."
+  },
+  "source_or_candidate_modified": false,
+  "model_sessions_launched": 0,
+  "application_tests_executed": false,
+  "human_validation": false,
+  "personal_installation": false,
+  "limitations": [
+    "PASS de cohérence statique du corps exact .3, pas verdict comportemental ou qualification de l'application.",
+    "Les huit cas prévus doivent porter le nouveau candidat exact ; aucune réussite .2 transférée.",
+    "Validation de format rapportée par le coordinateur, distincte des contrôles directs de cette revue."
+  ]
+}

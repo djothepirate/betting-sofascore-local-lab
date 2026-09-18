@@ -1,0 +1,1 @@
+Dans le SofaScore Local Lab, exécute la vérification standard Windows du changement documentaire, relève immédiatement les codes natifs et les résultats des rapports. Aucun diagnostic de pipeline distant ni de distribution n’est demandé.

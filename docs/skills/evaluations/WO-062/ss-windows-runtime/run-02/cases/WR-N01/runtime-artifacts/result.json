@@ -1,0 +1,180 @@
+{
+    "schema":  "WR-N01-session-1",
+    "sessionId":  "66a0391d-820d-4d03-b7f1-e3c17b4ce664",
+    "status":  "OBSERVATION_OR_CLEANUP_FAILURE",
+    "startedUtc":  "2026-09-15T21:59:26.8479321Z",
+    "invariants":  [
+                       "EXPERIMENTAL",
+                       "LOCAL_ONLY",
+                       "NOT_PRODUCTION_APPROVED",
+                       "NO_CRITICAL_DEPENDENCY"
+                   ],
+    "caseRoot":  "C:\\Dev\\BettingProject\\codex\\betting-sofascore-local-lab\\.tmp\\wo062-skills-lot2\\.tmp\\wo062-evaluations\\ss-windows-runtime\\run-02\\WR-N01",
+    "temporaryRoot":  "C:\\Dev\\BettingProject\\codex\\betting-sofascore-local-lab\\.tmp\\wo062-skills-lot2\\.tmp\\wo062-evaluations\\ss-windows-runtime\\run-02\\WR-N01\\output\\runtime\\WR native probe 66a0391d-820d-4d03-b7f1-e3c17b4ce664",
+    "temporaryDirectory":  "C:\\Dev\\BettingProject\\codex\\betting-sofascore-local-lab\\.tmp\\wo062-skills-lot2\\.tmp\\wo062-evaluations\\ss-windows-runtime\\run-02\\WR-N01\\output\\runtime\\WR native probe 66a0391d-820d-4d03-b7f1-e3c17b4ce664\\temp",
+    "budgetsMs":  {
+                      "version":  5000,
+                      "readiness":  10000,
+                      "failure":  10000,
+                      "cleanup":  5000,
+                      "afterReady":  1500,
+                      "global":  45000
+                  },
+    "processes":  [
+                      {
+                          "mode":  "version",
+                          "runId":  "1b2e7828-43b0-41ba-a44f-bc22689a35d9",
+                          "executable":  "C:\\Program Files\\Common Files\\Oracle\\Java\\javapath\\java.exe",
+                          "arguments":  "\"-XX:-UsePerfData\" \"-Djava.io.tmpdir=C:\\Dev\\BettingProject\\codex\\betting-sofascore-local-lab\\.tmp\\wo062-skills-lot2\\.tmp\\wo062-evaluations\\ss-windows-runtime\\run-02\\WR-N01\\output\\runtime\\WR native probe 66a0391d-820d-4d03-b7f1-e3c17b4ce664\\temp\" \"-Duser.home=C:\\Dev\\BettingProject\\codex\\betting-sofascore-local-lab\\.tmp\\wo062-skills-lot2\\.tmp\\wo062-evaluations\\ss-windows-runtime\\run-02\\WR-N01\\output\\runtime\\WR native probe 66a0391d-820d-4d03-b7f1-e3c17b4ce664\" \"--version\"",
+                          "command":  "\"C:\\Program Files\\Common Files\\Oracle\\Java\\javapath\\java.exe\" \"-XX:-UsePerfData\" \"-Djava.io.tmpdir=C:\\Dev\\BettingProject\\codex\\betting-sofascore-local-lab\\.tmp\\wo062-skills-lot2\\.tmp\\wo062-evaluations\\ss-windows-runtime\\run-02\\WR-N01\\output\\runtime\\WR native probe 66a0391d-820d-4d03-b7f1-e3c17b4ce664\\temp\" \"-Duser.home=C:\\Dev\\BettingProject\\codex\\betting-sofascore-local-lab\\.tmp\\wo062-skills-lot2\\.tmp\\wo062-evaluations\\ss-windows-runtime\\run-02\\WR-N01\\output\\runtime\\WR native probe 66a0391d-820d-4d03-b7f1-e3c17b4ce664\" \"--version\"",
+                          "workingDirectory":  "C:\\Dev\\BettingProject\\codex\\betting-sofascore-local-lab\\.tmp\\wo062-skills-lot2\\.tmp\\wo062-evaluations\\ss-windows-runtime\\run-02\\WR-N01\\output\\runtime\\WR native probe 66a0391d-820d-4d03-b7f1-e3c17b4ce664",
+                          "targetedEnvironment":  {
+                                                      "PSModulePath":  "inherited unchanged",
+                                                      "TEMP":  "C:\\Dev\\BettingProject\\codex\\betting-sofascore-local-lab\\.tmp\\wo062-skills-lot2\\.tmp\\wo062-evaluations\\ss-windows-runtime\\run-02\\WR-N01\\output\\runtime\\WR native probe 66a0391d-820d-4d03-b7f1-e3c17b4ce664\\temp",
+                                                      "TMP":  "C:\\Dev\\BettingProject\\codex\\betting-sofascore-local-lab\\.tmp\\wo062-skills-lot2\\.tmp\\wo062-evaluations\\ss-windows-runtime\\run-02\\WR-N01\\output\\runtime\\WR native probe 66a0391d-820d-4d03-b7f1-e3c17b4ce664\\temp",
+                                                      "removedNames":  [
+                                                                           "JAVA_TOOL_OPTIONS",
+                                                                           "_JAVA_OPTIONS",
+                                                                           "JDK_JAVA_OPTIONS",
+                                                                           "CLASSPATH"
+                                                                       ]
+                                                  },
+                          "useShellExecute":  false,
+                          "createNoWindow":  true,
+                          "stdoutEncoding":  "UTF-8 strict",
+                          "stderrEncoding":  "UTF-8 strict",
+                          "startedUtc":  "2026-09-15T21:59:27.0755509Z",
+                          "startGlobalMs":  772.6644,
+                          "outcome":  "JAVA_25_OBSERVED",
+                          "nativeExitCode":  0,
+                          "forcedExitCode":  null,
+                          "exitCaptureSource":  "Process.ExitCode immediately after observed exit",
+                          "readyObservedMs":  null,
+                          "stdout":  "java 25.0.4 2026-07-21 LTS\nJava(TM) SE Runtime Environment (build 25.0.4+7-LTS-189)\nJava HotSpot(TM) 64-Bit Server VM (build 25.0.4+7-LTS-189, mixed mode, sharing)\n",
+                          "stderr":  "",
+                          "ownedExitConfirmed":  true,
+                          "pid":  32700,
+                          "handle":  2664,
+                          "creationUtc":  "2026-09-15T21:59:27.0833248Z",
+                          "creationTicks":  639251063670833248,
+                          "observedExecutable":  "C:\\Program Files\\Common Files\\Oracle\\Java\\javapath\\java.exe",
+                          "exitCaptureGlobalMs":  980.7916,
+                          "exitCaptureUtc":  "2026-09-15T21:59:27.2843890Z",
+                          "exitElapsedMs":  213.906,
+                          "finalHandleExitConfirmed":  true,
+                          "handleReleased":  true
+                      },
+                      {
+                          "mode":  "failure",
+                          "runId":  "a7dbc7be-ca57-4771-b3d3-aafbf30f04cd",
+                          "executable":  "C:\\Program Files\\Common Files\\Oracle\\Java\\javapath\\java.exe",
+                          "arguments":  "\"-XX:-UsePerfData\" \"-Djava.io.tmpdir=C:\\Dev\\BettingProject\\codex\\betting-sofascore-local-lab\\.tmp\\wo062-skills-lot2\\.tmp\\wo062-evaluations\\ss-windows-runtime\\run-02\\WR-N01\\output\\runtime\\WR native probe 66a0391d-820d-4d03-b7f1-e3c17b4ce664\\temp\" \"-Duser.home=C:\\Dev\\BettingProject\\codex\\betting-sofascore-local-lab\\.tmp\\wo062-skills-lot2\\.tmp\\wo062-evaluations\\ss-windows-runtime\\run-02\\WR-N01\\output\\runtime\\WR native probe 66a0391d-820d-4d03-b7f1-e3c17b4ce664\" \"C:\\Dev\\BettingProject\\codex\\betting-sofascore-local-lab\\.tmp\\wo062-skills-lot2\\.tmp\\wo062-evaluations\\ss-windows-runtime\\run-02\\WR-N01\\inputs\\fixtures\\NativeProbe.java\" \"failure\" \"a7dbc7be-ca57-4771-b3d3-aafbf30f04cd\"",
+                          "command":  "\"C:\\Program Files\\Common Files\\Oracle\\Java\\javapath\\java.exe\" \"-XX:-UsePerfData\" \"-Djava.io.tmpdir=C:\\Dev\\BettingProject\\codex\\betting-sofascore-local-lab\\.tmp\\wo062-skills-lot2\\.tmp\\wo062-evaluations\\ss-windows-runtime\\run-02\\WR-N01\\output\\runtime\\WR native probe 66a0391d-820d-4d03-b7f1-e3c17b4ce664\\temp\" \"-Duser.home=C:\\Dev\\BettingProject\\codex\\betting-sofascore-local-lab\\.tmp\\wo062-skills-lot2\\.tmp\\wo062-evaluations\\ss-windows-runtime\\run-02\\WR-N01\\output\\runtime\\WR native probe 66a0391d-820d-4d03-b7f1-e3c17b4ce664\" \"C:\\Dev\\BettingProject\\codex\\betting-sofascore-local-lab\\.tmp\\wo062-skills-lot2\\.tmp\\wo062-evaluations\\ss-windows-runtime\\run-02\\WR-N01\\inputs\\fixtures\\NativeProbe.java\" \"failure\" \"a7dbc7be-ca57-4771-b3d3-aafbf30f04cd\"",
+                          "workingDirectory":  "C:\\Dev\\BettingProject\\codex\\betting-sofascore-local-lab\\.tmp\\wo062-skills-lot2\\.tmp\\wo062-evaluations\\ss-windows-runtime\\run-02\\WR-N01\\output\\runtime\\WR native probe 66a0391d-820d-4d03-b7f1-e3c17b4ce664",
+                          "targetedEnvironment":  {
+                                                      "PSModulePath":  "inherited unchanged",
+                                                      "TEMP":  "C:\\Dev\\BettingProject\\codex\\betting-sofascore-local-lab\\.tmp\\wo062-skills-lot2\\.tmp\\wo062-evaluations\\ss-windows-runtime\\run-02\\WR-N01\\output\\runtime\\WR native probe 66a0391d-820d-4d03-b7f1-e3c17b4ce664\\temp",
+                                                      "TMP":  "C:\\Dev\\BettingProject\\codex\\betting-sofascore-local-lab\\.tmp\\wo062-skills-lot2\\.tmp\\wo062-evaluations\\ss-windows-runtime\\run-02\\WR-N01\\output\\runtime\\WR native probe 66a0391d-820d-4d03-b7f1-e3c17b4ce664\\temp",
+                                                      "removedNames":  [
+                                                                           "JAVA_TOOL_OPTIONS",
+                                                                           "_JAVA_OPTIONS",
+                                                                           "JDK_JAVA_OPTIONS",
+                                                                           "CLASSPATH"
+                                                                       ]
+                                                  },
+                          "useShellExecute":  false,
+                          "createNoWindow":  true,
+                          "stdoutEncoding":  "UTF-8 strict",
+                          "stderrEncoding":  "UTF-8 strict",
+                          "startedUtc":  "2026-09-15T21:59:27.3960407Z",
+                          "startGlobalMs":  1093.1158,
+                          "outcome":  "NATIVE_EXIT",
+                          "nativeExitCode":  23,
+                          "forcedExitCode":  null,
+                          "exitCaptureSource":  "Process.ExitCode immediately after observed exit",
+                          "readyObservedMs":  486.4807,
+                          "stdout":  "WR_PROBE_RUN=a7dbc7be-ca57-4771-b3d3-aafbf30f04cd\nWR_PROBE_PID=26528\nWR_PROBE_TEXT=café équipe\nWR_PROBE_READY\nWR_PROBE_NATIVE_FAILURE\n",
+                          "stderr":  "",
+                          "ownedExitConfirmed":  true,
+                          "pid":  34004,
+                          "handle":  2420,
+                          "creationUtc":  "2026-09-15T21:59:27.3988876Z",
+                          "creationTicks":  639251063673988876,
+                          "observedExecutable":  null,
+                          "exitCaptureGlobalMs":  1563.7221000000002,
+                          "exitCaptureUtc":  "2026-09-15T21:59:27.8663377Z",
+                          "exitElapsedMs":  470.7955,
+                          "readyGlobalMs":  1579.8691000000001,
+                          "readyUtc":  "2026-09-15T21:59:27.8828526Z",
+                          "finalHandleExitConfirmed":  true,
+                          "handleReleased":  true
+                      }
+                  ],
+    "errors":  [
+                   "Fixture PID mismatch",
+                   "Filesystem cleanup: Unexpected residue retained, removal refused: C:\\Dev\\BettingProject\\codex\\betting-sofascore-local-lab\\.tmp\\wo062-skills-lot2\\.tmp\\wo062-evaluations\\ss-windows-runtime\\run-02\\WR-N01\\output\\runtime\\WR native probe 66a0391d-820d-4d03-b7f1-e3c17b4ce664\\temp\\JavaLauncher.log"
+               ],
+    "sourceCommit":  "NOT_OBSERVED_GIT_OUTSIDE_READ_ALLOWLIST",
+    "runtime":  {
+                    "PSVersionTable":  {
+                                           "PSRemotingProtocolVersion":  "2.3",
+                                           "BuildVersion":  "10.0.26100.9444",
+                                           "PSVersion":  "5.1.26100.9444",
+                                           "PSCompatibleVersions":  "1.0 2.0 3.0 4.0 5.0 5.1.26100.9444",
+                                           "PSEdition":  "Desktop",
+                                           "CLRVersion":  "4.0.30319.42000",
+                                           "WSManStackVersion":  "3.0",
+                                           "SerializationVersion":  "1.1.0.1"
+                                       },
+                    "PSHOME":  "C:\\Windows\\System32\\WindowsPowerShell\\v1.0",
+                    "executable":  "C:\\Windows\\System32\\WindowsPowerShell\\v1.0\\powershell.exe",
+                    "pid":  39520,
+                    "creationUtc":  "2026-09-15T21:59:25.8369550Z",
+                    "executableFileVersion":  "10.0.26100.8875 (WinBuild.160101.0800)",
+                    "windows":  "Microsoft Windows NT 10.0.26200.0",
+                    "platform":  "Win32NT",
+                    "is64BitOS":  true,
+                    "is64BitProcess":  true,
+                    "processArchitecture":  "AMD64",
+                    "clr":  "4.0.30319.42000",
+                    "currentDirectory":  "C:\\Dev\\BettingProject\\codex\\betting-sofascore-local-lab\\.tmp\\wo062-skills-lot2\\.tmp\\wo062-evaluations\\ss-windows-runtime\\run-02\\WR-N01",
+                    "processCurrentDirectory":  "C:\\Dev\\BettingProject\\codex\\betting-sofascore-local-lab\\.tmp\\wo062-skills-lot2\\.tmp\\wo062-evaluations\\ss-windows-runtime\\run-02\\WR-N01",
+                    "consoleOutputEncoding":  "utf-8",
+                    "evidenceEncoding":  "UTF-8 without BOM",
+                    "scriptEncoding":  "UTF-8 without BOM, ASCII source",
+                    "stopwatchFrequency":  10000000,
+                    "stopwatchHighResolution":  true
+                },
+    "fixture":  {
+                    "path":  "C:\\Dev\\BettingProject\\codex\\betting-sofascore-local-lab\\.tmp\\wo062-skills-lot2\\.tmp\\wo062-evaluations\\ss-windows-runtime\\run-02\\WR-N01\\inputs\\fixtures\\NativeProbe.java",
+                    "unchanged":  true,
+                    "sha256Before":  "4e29c5867eba0fb76518de2307391449c83450449bea0393179738505c69bc8b",
+                    "sha256After":  "4e29c5867eba0fb76518de2307391449c83450449bea0393179738505c69bc8b"
+                },
+    "conductorSha256":  "c2d87e3d7da7806c84a93e0bcfa16ac16a1f20126fafe696e60f00fb2ceb61dd",
+    "java":  {
+                 "versionOutput":  "java 25.0.4 2026-07-21 LTS\nJava(TM) SE Runtime Environment (build 25.0.4+7-LTS-189)\nJava HotSpot(TM) 64-Bit Server VM (build 25.0.4+7-LTS-189, mixed mode, sharing)\n",
+                 "fileVersion":  "25.0.4.0",
+                 "resolvedExecutable":  "C:\\Program Files\\Common Files\\Oracle\\Java\\javapath\\java.exe"
+             },
+    "ownedDirectories":  [
+                             "C:\\Dev\\BettingProject\\codex\\betting-sofascore-local-lab\\.tmp\\wo062-skills-lot2\\.tmp\\wo062-evaluations\\ss-windows-runtime\\run-02\\WR-N01\\output\\runtime\\WR native probe 66a0391d-820d-4d03-b7f1-e3c17b4ce664",
+                             "C:\\Dev\\BettingProject\\codex\\betting-sofascore-local-lab\\.tmp\\wo062-skills-lot2\\.tmp\\wo062-evaluations\\ss-windows-runtime\\run-02\\WR-N01\\output\\runtime\\WR native probe 66a0391d-820d-4d03-b7f1-e3c17b4ce664\\temp"
+                         ],
+    "ownedFiles":  [
+
+                   ],
+    "errorLocation":  "à Assert-IdentityOutput, C:\\Dev\\BettingProject\\codex\\betting-sofascore-local-lab\\.tmp\\wo062-skills-lot2\\.tmp\\wo062-evaluations\\ss-windows-runtime\\run-02\\WR-N01\\output\\runtime-artifacts\\Invoke-WRN01.ps1 : ligne 164\r\nà \u003cScriptBlock\u003e, C:\\Dev\\BettingProject\\codex\\betting-sofascore-local-lab\\.tmp\\wo062-skills-lot2\\.tmp\\wo062-evaluations\\ss-windows-runtime\\run-02\\WR-N01\\output\\runtime-artifacts\\Invoke-WRN01.ps1 : ligne 217",
+    "postflight":  {
+                       "rootAbsent":  false,
+                       "observedUtc":  "2026-09-15T21:59:27.9541427Z",
+                       "allOwnedHandlesExited":  true,
+                       "parentTargetedEnvironmentUnchanged":  true,
+                       "cleanupElapsedMs":  33.1145,
+                       "ownedProcessCount":  2
+                   },
+    "totalElapsedMs":  1659.3235,
+    "withinGlobalBudget":  true,
+    "conductorExitCode":  2,
+    "finishedUtc":  "2026-09-15T21:59:27.9644257Z"
+}

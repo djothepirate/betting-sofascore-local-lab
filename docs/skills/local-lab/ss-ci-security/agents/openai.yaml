@@ -1,0 +1,4 @@
+interface:
+  display_name: "CI et sécurité du Local Lab"
+  short_description: "Qualifier tests, preuves CI et distribution locale"
+  default_prompt: "Utilise $ss-ci-security pour examiner une qualification CI du SofaScore Local Lab, ses preuves, sa provenance et ses limites de sécurité."

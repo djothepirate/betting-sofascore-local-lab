@@ -1,0 +1,244 @@
+{
+  "source_commit": "74d3f38afd64ce587353fbd645cad7a388e9756c",
+  "note": "Frozen answers retain their original absolute audit links. corpus/<path> maps to this repository path at source_commit. The source copies remain under the isolated run directory.",
+  "case_source_roots": {
+    "PB-H01": "C:\\Dev\\BettingProject\\codex\\betting-sofascore-local-lab\\.tmp\\wo062-skills-lot2\\.tmp\\pb-evaluations\\run-01\\PB-H01\\corpus",
+    "PB-N01": "C:\\Dev\\BettingProject\\codex\\betting-sofascore-local-lab\\.tmp\\wo062-skills-lot2\\.tmp\\pb-evaluations\\run-01\\PB-N01\\corpus",
+    "PB-C01": "C:\\Dev\\BettingProject\\codex\\betting-sofascore-local-lab\\.tmp\\wo062-skills-lot2\\.tmp\\pb-evaluations\\run-01\\PB-C01\\corpus",
+    "PB-C02": "C:\\Dev\\BettingProject\\codex\\betting-sofascore-local-lab\\.tmp\\wo062-skills-lot2\\.tmp\\pb-evaluations\\run-01\\PB-C02\\corpus",
+    "PB-C03": "C:\\Dev\\BettingProject\\codex\\betting-sofascore-local-lab\\.tmp\\wo062-skills-lot2\\.tmp\\pb-evaluations\\run-01\\PB-C03\\corpus",
+    "PB-C04": "C:\\Dev\\BettingProject\\codex\\betting-sofascore-local-lab\\.tmp\\wo062-skills-lot2\\.tmp\\pb-evaluations\\run-01\\PB-C04\\corpus",
+    "PB-C05": "C:\\Dev\\BettingProject\\codex\\betting-sofascore-local-lab\\.tmp\\wo062-skills-lot2\\.tmp\\pb-evaluations\\run-01\\PB-C05\\corpus",
+    "PB-C06": "C:\\Dev\\BettingProject\\codex\\betting-sofascore-local-lab\\.tmp\\wo062-skills-lot2\\.tmp\\pb-evaluations\\run-01\\PB-C06\\corpus"
+  },
+  "sources": [
+    {
+      "id": "N01",
+      "path": "AGENTS.md",
+      "git_blob_oid": "32be42cccccdf85f27d8b0e3846dec4a5c740ebf",
+      "worktree_sha256": "6509ac77cd4c87094a91da7e4c750b5991eeb4585a69a609def5289b91cf6ab5"
+    },
+    {
+      "id": "N02",
+      "path": "ADR-SS-001-experimentation-endpoints-sofascore-depuis-windows.md",
+      "git_blob_oid": "9fa2ede3a218e3d36a5e044bbfbc391940830164",
+      "worktree_sha256": "55ac93119d80772941f5c9d0b20c4331b856924329f6814f9ddbec6a783265db"
+    },
+    {
+      "id": "N03",
+      "path": "ADR-SS-002-bounded-multi-dossier-provider-robustness.md",
+      "git_blob_oid": "f2073ded1103799da4a1e459437a2047dc9453ee",
+      "worktree_sha256": "43a1e3b44e772907311c5ea44f3de884a4029c36017aa816b592937ae15ae238"
+    },
+    {
+      "id": "N04",
+      "path": "ADR-SS-005-bounded-local-live-j4-j5-campaigns.md",
+      "git_blob_oid": "e929f8516b0cc02b4cdac3214c7acdd29dc17bf6",
+      "worktree_sha256": "82c9942bb80192cac9dae5c06a55539461d0c91c7e98de92ae7f2c5d5dcca36e"
+    },
+    {
+      "id": "N05",
+      "path": "ADR-SS-006-j3-manual-pagination-cap-35.md",
+      "git_blob_oid": "a466d6261264a758a88631a5adde81ac29b6449e",
+      "worktree_sha256": "ab77fc33c993a060c7dea0ad26bea7a295fa36daf3a75df9cd363c31a48368b5"
+    },
+    {
+      "id": "N06",
+      "path": "ADR-SS-007-j3-automation-durable-catalog-and-live-pause.md",
+      "git_blob_oid": "797b5fdbb1443f08f4c01084321c43c1e514e752",
+      "worktree_sha256": "b819ba63c2fb5cbacf1afca115f6ab0597956b1ff8c9377f3e7beb14fba3eb07"
+    },
+    {
+      "id": "N07",
+      "path": "docs/architecture/J8-BENCHMARK-METRICS.md",
+      "git_blob_oid": "e623c0c341aa42e59bfd86f22f1ca9ed74e375b6",
+      "worktree_sha256": "2d9d8fc787465ab1d6252148691a524ea481354a03fc7ca8a01c3a1fb538a036"
+    },
+    {
+      "id": "N08",
+      "path": "docs/architecture/J6-HISTORY-AND-GUARDED-RETENTION.md",
+      "git_blob_oid": "6160c028e1ec93205101ef30de162a8b8101948d",
+      "worktree_sha256": "08b915e4634652524a7388bd18952122979ee27046c0990a2eba058ba16c0693"
+    },
+    {
+      "id": "P01",
+      "path": "docs/runbooks/J8-BENCHMARK.md",
+      "git_blob_oid": "d46a280b986c4eff381246d92e7fd8cbd96b535c",
+      "worktree_sha256": "3eda5c80961793a70f202010e37b896406cb617448908e345e0f8c177728421d"
+    },
+    {
+      "id": "P02",
+      "path": "scripts/Export-J8Benchmark.ps1",
+      "git_blob_oid": "0a094bccbba0b5e6344ee4902d81041113041809",
+      "worktree_sha256": "840e40af2d46376d3760ca0352386b102d7999780176053b3eef293c37d3d78f"
+    },
+    {
+      "id": "I01",
+      "path": "src/main/java/com/bettingproject/sofascorelocal/cli/J8BenchmarkExportCommand.java",
+      "git_blob_oid": "bee6ff2bd6348003af4c7f1b4c49c8339f69eaf1",
+      "worktree_sha256": "28b6b9f5d45ad30e0e5b6d6b4d47e79bf0e6881ce5994b25b14c2998ed4c03be"
+    },
+    {
+      "id": "I02",
+      "path": "src/main/java/com/bettingproject/sofascorelocal/application/benchmark/J8BenchmarkWindow.java",
+      "git_blob_oid": "079c4932deea16081e4513eab43d51d6cb29483a",
+      "worktree_sha256": "b69f3f63798dba67d8a4fd493a3f45ee469c88c21cf702d4615662ef1a28ec7c"
+    },
+    {
+      "id": "I03",
+      "path": "src/main/java/com/bettingproject/sofascorelocal/application/benchmark/J8BenchmarkService.java",
+      "git_blob_oid": "d59549929cf5be1dda263c9a250b308a4d96c1b8",
+      "worktree_sha256": "60d4e1eb279425fcc232bd6e5b003d7f92835ae3657f5cb3839fd1beb93dd258"
+    },
+    {
+      "id": "I04",
+      "path": "src/main/java/com/bettingproject/sofascorelocal/application/benchmark/J8BenchmarkReport.java",
+      "git_blob_oid": "8c0b8965e12ab625090f76c378b232dec0e5079c",
+      "worktree_sha256": "6bbbf6ff086146f6cf5548aef00e79d7fc037d62d1342443aa455d500d5d9e81"
+    },
+    {
+      "id": "I05",
+      "path": "src/main/java/com/bettingproject/sofascorelocal/application/benchmark/J8BenchmarkMarkdownRenderer.java",
+      "git_blob_oid": "a8bef413f34f0c2272f99aa87848374b7df4b966",
+      "worktree_sha256": "75e3830848db9ded33d118544c4338ac5a9b77b9cb54582ba9fc0bb03e062e30"
+    },
+    {
+      "id": "I06",
+      "path": "src/main/java/com/bettingproject/sofascorelocal/application/benchmark/J8DirectObservationCohorts.java",
+      "git_blob_oid": "390e188d80d3d1568d5efc65cd00c83c677f0401",
+      "worktree_sha256": "996e61d858caf177ab1db9572f31b9d2627e4b603e18a43563902a9683272187"
+    },
+    {
+      "id": "I07",
+      "path": "src/main/java/com/bettingproject/sofascorelocal/adapter/persistence/JdbcJ8BenchmarkReadStore.java",
+      "git_blob_oid": "589cef11e8665785dc0d87e93152a5b39446fa62",
+      "worktree_sha256": "08c65cc6551ff8cbc8f3a03e31ffdf2caa243fd5649ac33e8f8a082032a4f9a4"
+    },
+    {
+      "id": "I08",
+      "path": "src/main/java/com/bettingproject/sofascorelocal/application/network/J8BenchmarkAuditService.java",
+      "git_blob_oid": "d9db483621828b2ac4acb570a63e8d4facacc6df",
+      "worktree_sha256": "7289b7ddfa73b6959192946216eb70d11ddc823d228b601c700823c274232c85"
+    },
+    {
+      "id": "I09",
+      "path": "src/main/java/com/bettingproject/sofascorelocal/application/network/J3RuntimeService.java",
+      "git_blob_oid": "22e5234c288dd9724bec7fa61a1c702954c10824",
+      "worktree_sha256": "6541e21a443baea843695e13219508f8c441f4470db2ea4569cd236675ed8b46"
+    },
+    {
+      "id": "I10",
+      "path": "src/main/resources/db/migration/V27__j8_benchmark_evidence.sql",
+      "git_blob_oid": "6687973b2cb5166d833c1dce40e54d8d4d5527f9",
+      "worktree_sha256": "90352c054c008170b85fa70700436d690d5a93673b0dedbbed8b13629aa3b8d9"
+    },
+    {
+      "id": "I11",
+      "path": "src/main/resources/db/migration/V53__j3_scheduled_events_page_cap_35.sql",
+      "git_blob_oid": "d82d76b4b1335da6a3f0b577d350292c44e626ef",
+      "worktree_sha256": "f6d6bbecb2868a3f53911499dcb9d2342d050cb411a314c5748d386bd28a99d5"
+    },
+    {
+      "id": "T01",
+      "path": "src/test/java/com/bettingproject/sofascorelocal/application/benchmark/J8BenchmarkServiceTest.java",
+      "git_blob_oid": "415e739d3cf592d22440b4db68a45880377530e5",
+      "worktree_sha256": "f1b96b58392723f7f26e01b032308339ed820f352a982cdc4d9cce7499f231ea"
+    },
+    {
+      "id": "T02",
+      "path": "src/test/java/com/bettingproject/sofascorelocal/application/benchmark/J8BenchmarkWindowTest.java",
+      "git_blob_oid": "c4380183a9a3f58f79b98ba40c7473a47c17cf20",
+      "worktree_sha256": "f3f0ff66e804b930b59146b77e083f4e805237b45c79ace89bf23963ab7c7611"
+    },
+    {
+      "id": "T03",
+      "path": "src/test/java/com/bettingproject/sofascorelocal/application/benchmark/J8BenchmarkMarkdownRendererTest.java",
+      "git_blob_oid": "47068ea22282e6776101ad192a1439e4c06c7973",
+      "worktree_sha256": "36e7127189863331d7c093bde82df3dbff39d2a65e326ab5af4763fa387da23c"
+    },
+    {
+      "id": "T04",
+      "path": "src/test/java/com/bettingproject/sofascorelocal/adapter/persistence/JdbcJ8BenchmarkReadStoreTest.java",
+      "git_blob_oid": "cbf06909309870d99ab912c3acc260c9a8c1698a",
+      "worktree_sha256": "1b6cdcfcb0c8b993b3eb0072071d8405f4027ef39f155b63a4aeef098f99ebd5"
+    },
+    {
+      "id": "H01",
+      "path": "docs/benchmark/J8-BENCHMARK-REPORT-20260830.md",
+      "git_blob_oid": "0cab32b38518789e9c86174ab2e44e7fcc0b26df",
+      "worktree_sha256": "6d9a46b4391beffe9c1c54591089f0b035a5ed81f9522c03998a0feff18e7e52"
+    },
+    {
+      "id": "H02",
+      "path": "docs/validation/J8-SECOND-BOUNDED-CAMPAIGN-20260830.md",
+      "git_blob_oid": "12853e4bd0a7634b01b4cf806eea1441504ab124",
+      "worktree_sha256": "6b800011eb05cea1a3177f53cc05717b228db3656e5d02f986f0977597ab9e05"
+    },
+    {
+      "id": "H03",
+      "path": "docs/validation/J8-FINAL-VALIDATION-20260830.md",
+      "git_blob_oid": "d2c9c0f67e6625f7a616195bddd5e943389e847b",
+      "worktree_sha256": "d1670002c5fcc1d5e50a4291f5a438760805ae1a3e5b435f665205601357bc9c"
+    },
+    {
+      "id": "H04",
+      "path": "docs/work_orders/completed/WO-SS-20260829-016-benchmark-j8.md",
+      "git_blob_oid": "cba89b2f35b9b1e54fd8637f0503d6ad572d2b4d",
+      "worktree_sha256": "467fb190e12cb8b00957d49c38db9f47dbebd4176d2c0fd099de99f71cad6abc"
+    },
+    {
+      "id": "H05",
+      "path": "docs/validation/WO058-PREMATCH-TEMPORAL-20260907.md",
+      "git_blob_oid": "a785d6ca0de3df3d534f0de8b2a2804a90023814",
+      "worktree_sha256": "f01f53c585436c68d27346225bb66de6e69cb0613a31f30b08e48efd9c1c97b5"
+    },
+    {
+      "id": "H06",
+      "path": "docs/validation/WO058-REAL-LIVE-V8-403-OBSERVATIONS-20260910.md",
+      "git_blob_oid": "0f4e2bcec20298feeb8a898abbb75b0f27c3cc1b",
+      "worktree_sha256": "399ea38dfc5c09a861958cc951e0faa8d6ec5da4207c24b6afe6139e68271f1a"
+    },
+    {
+      "id": "H07",
+      "path": "docs/validation/WO060-LIVE-V11-PROFILE-20260914.json",
+      "git_blob_oid": "3fbe7e7f4832995d99b1f5e6726543fc906bc74e",
+      "worktree_sha256": "80490d1bb1b781006277234a3337ca9fab3e72bda32bc8ec1da699055e2f326d"
+    },
+    {
+      "id": "N09",
+      "path": "docs/architecture/LIVE-J4-J5-CAMPAIGNS.md",
+      "git_blob_oid": "ffedeed4b8d05029a57f78234343058d85ab50c1",
+      "worktree_sha256": "472754969ae9696ed6c748073757fe027a6103b86415f24fb3091ee0b7b8e771"
+    },
+    {
+      "id": "P03",
+      "path": "docs/runbooks/J3-AUTOMATION-AND-DURABLE-CATALOG.md",
+      "git_blob_oid": "092c3c916e9889a4deeb675bca1ee45e14bd5ec7",
+      "worktree_sha256": "2ce9e97781fd0b70fa1931e005526ae0e44ed42a8e66301cca590b5f0d90af8d"
+    },
+    {
+      "id": "I12",
+      "path": "src/main/java/com/bettingproject/sofascorelocal/adapter/persistence/live/JdbcLiveCampaignPressureReadStore.java",
+      "git_blob_oid": "340a7b6b53f36d7bc8493ba18664714d9ab9aa18",
+      "worktree_sha256": "7e8bba1f7fb8f21db9df9903173c699e43a9762b72b15acc3c9a8732ff6735cc"
+    },
+    {
+      "id": "H08",
+      "path": "docs/validation/WO058-TEMPORAL-SUMMARY-20260907.json",
+      "git_blob_oid": "b4a8d441d9812ad893b34f61964ff8e50232a0a1",
+      "worktree_sha256": "d50ea2da6f1a90877622af440bfb37307978782a4ea52c64d63ac83e85296700"
+    },
+    {
+      "id": "H09",
+      "path": "docs/validation/WO060-J3-LIVE-WORKER-20260914.json",
+      "git_blob_oid": "a0f3d2d5f086aee700fa2679df4fd24cb53f0202",
+      "worktree_sha256": "c48ea964bc3f7af883e95e0e9808f5eda5279bbfb4c504e58540b58b1c3346fe"
+    },
+    {
+      "id": "H10",
+      "path": "docs/validation/WO060-J3-IMPLEMENTATION-20260914.md",
+      "git_blob_oid": "1243f8fb010fbebf6ee237ef399a546c035cfe48",
+      "worktree_sha256": "7607d35276e1074ac734ca0e624c62c7df9b3482258526ccc6ece32bec3f5ac2"
+    }
+  ]
+}

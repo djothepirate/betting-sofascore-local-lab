@@ -1,0 +1,25 @@
+{
+  "schema": "wo062-runtime-context-diagnostic-v1",
+  "recorded_at_utc": "2026-09-15T21:37:18.822074+00:00",
+  "observation": "WR-H01/N01 run-01 : setup refresh refuse SetNamedSecurityInfoW avec erreur 5 sur la racine, .agents et .git ; aucun processus de recette créé.",
+  "run_01_directory_owner": "ASUSGGO2025\\CodexSandboxOffline",
+  "launcher_account": "asusggo2025\\geoff",
+  "bounded_correction": "Créer les nouveaux contextes sous le même compte que le lanceur. Les anciennes permissions, réponses, entrées et preuves ne sont pas corrigées ; aucune configuration persistante ou désactivation du sandbox.",
+  "non_model_probes": [
+    "ownership-preflight.json",
+    "prepared-cases.json"
+  ],
+  "probe_result": "PASS_READ_WRITE_CLEANUP",
+  "initial_cli_syntax_attempt": "ownership-preflight-cli-syntax-error.json",
+  "official_cli_profile_reference": "https://learn.chatgpt.com/docs/permissions",
+  "profile": ":workspace",
+  "limits": [
+    "Un préflight d’accès local ne qualifie pas les sondes WR-H01/N01 ni un skill.",
+    "Le préflight sans modèle utilise le profil intégré :workspace ; les sessions modèles conservent --sandbox workspace-write.",
+    "La différence de propriétaire et les refus ACL sont observés ; aucune réparation générale du sandbox ni causalité d’un incident applicatif Windows n’est établie."
+  ],
+  "log_source": "C:\\Users\\geoff\\.codex\\.sandbox\\sandbox.2026-09-15.log",
+  "excerpt": "sandbox-setup-excerpt.txt",
+  "model_invoked_by_diagnostic": false,
+  "runtime_probe_executed_by_diagnostic": false
+}

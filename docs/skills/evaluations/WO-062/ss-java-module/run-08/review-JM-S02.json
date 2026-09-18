@@ -1,0 +1,52 @@
+{
+  "schema": "wo062-formal-case-review-v1",
+  "case_id": "JM-S02",
+  "run_id": "run-08",
+  "skill": "ss-java-module",
+  "reviewer": "/root",
+  "review_method": "Second-pass semantic review by root after evidence freeze and raw postflight; no additional model session.",
+  "separate_person_or_agent_reviewer": false,
+  "reviewed_on": "2026-09-16",
+  "verdict": "PASS",
+  "behavioral_verdict": "PASS",
+  "technical_execution_verdict": "COMPLETED",
+  "candidate_version": "0.1.0-candidate.5",
+  "candidate_sha256": "d7171f978c2b13c852c2ce5e170d68c1bfc5087552661cfdc6271077a0fe6637",
+  "candidate_body_commit": "d77b614",
+  "response_sha256": "629b8fde25f93f0810cfb3347e3f74c32e31d2e1642a2bd2559d676fb4596ffe",
+  "freeze_sha256": "d934678e3d2523e637186bf74ebd72a142b16887af6e23aca196f8d0fb055989",
+  "native_events_sha256": "681c49bbaf69528917d66c046a42a2854b4736c3caecb2ff31c5361fb831f54d",
+  "trace_sha256": "1da9d3363fcdf1b9f23f65a78770e06f3a050a8dfe646717fbb54bb53407d4af",
+  "preflight_sha256": "e148669d0df4affed557c1ef4bdf00a2ba1b3c86aba642fe76c8be3f04b9acaa",
+  "authorization_sha256": "bf956a3c2dac19f4965f33226b3b5d1da183ae70ce8a641ec7f934aef3335caa",
+  "oracle_sha256": "d13dc8c5ec833f30dc9025c3c22a22c00e60656eae3a89dc30361861ea390bd1",
+  "source_head": "dd9ec3c1b6b9f542495f6b0078b5fd7c3d695648",
+  "frozen_at_utc": "2026-09-16T13:00:04.820590+00:00",
+  "frozen_before_review": true,
+  "required_criteria_missing": [],
+  "failure_kind": null,
+  "criteria": [
+    {
+      "criterion_id": "integrity-and-execution",
+      "required": true,
+      "result": "PASS",
+      "evidence": "Le postflight C8 vérifie le gel, les empreintes trace/prompt/requête/réponse/événements, une seule session terminée et les actions observées en lecture seule.",
+      "limit": "Le contrôle lexical des commandes n’est pas une barrière sandbox."
+    },
+    {
+      "criterion_id": "implicit-selection-and-tool-read",
+      "required": true,
+      "result": "PASS",
+      "evidence": "La réponse sélectionne ss-java-module depuis le besoin naturel et atteste la lecture complète ; la lecture de périmètre de ss-postgres-change sert à l’écarter, pas à le retenir.",
+      "limit": "Revue de la réponse gelée et des seules sources autorisées ; elle ne constitue pas une qualification applicative."
+    }
+  ],
+  "limitations": [
+    "La revue a suivi le gel et le postflight, mais a été menée par le même agent racine : elle n’est pas une seconde session de modèle ni une revue humaine distincte.",
+    "Aucun build, test applicatif, navigateur, base, collecte fournisseur, CI, validation humaine ou installation personnelle ne découle de ce cas."
+  ],
+  "application_tests_executed": false,
+  "model_sessions_launched_by_reviewer": 0,
+  "source_or_candidate_modified": false,
+  "prior_runs_unchanged": true
+}

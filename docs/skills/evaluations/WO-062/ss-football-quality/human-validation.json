@@ -1,0 +1,35 @@
+{
+  "schema_version": 1,
+  "work_order": "WO-062",
+  "recorded_at_utc": "2026-09-15T20:25:11.903609+00:00",
+  "authority": "Explicit owner message in current Codex task",
+  "decision": "CONTENT_SCOPE_AND_DOCUMENTED_LIMITS_ACCEPTED",
+  "owner_statement": "J'ai pris connaissance du contenu, du périmètre et des limites documentées de ces deux candidats et j'accepte qu'ils deviennent les versions humaines validées pouvant être installées dans mon environnement personnel.",
+  "skill": "ss-football-quality",
+  "candidate_version": "0.1.0-candidate.1",
+  "candidate_body_commit": "bfbe3fb6e787756544508e1a3e5a92674a678bd7",
+  "candidate_package_commit": "11394e327448827c13ad3006d3afc2d9199c1e15",
+  "qualification_commit": "285f4384a4c2fbd4276089fc216c7c74d2cb7495",
+  "files": [
+    {
+      "path": "docs/skills/local-lab/ss-football-quality/SKILL.md",
+      "bytes": 7330,
+      "sha256": "8489375d22eff31a3248f78a5d3791b549a2f103d061cc6c46647a757d3eec58"
+    },
+    {
+      "path": "docs/skills/local-lab/ss-football-quality/agents/openai.yaml",
+      "bytes": 305,
+      "sha256": "8d295af442808d3efebbe68e8165ef96efd086b5b84908fc12f04c1c66bf51f2"
+    }
+  ],
+  "human_validation": true,
+  "personal_installation_authorized": true,
+  "scope": "Exact qualified files and version; personal installation authorized by current owner acceptance. No Java/Windows approval or version change.",
+  "limits_preserved": [
+    "Qualification limited to the frozen cases; no productivity gain measured.",
+    "Model and reasoning effort use configured defaults, exact values unavailable in observed CLI events.",
+    "Selection and complete tool-mediated loading are instrumented; no automatic body injection claim.",
+    "Each selection catalogue includes the candidate plus existing personal skills, not both uninstalled B candidates together.",
+    "No actual provider collection, CI pipeline, scanner or application test is claimed by these documentary evaluations."
+  ]
+}

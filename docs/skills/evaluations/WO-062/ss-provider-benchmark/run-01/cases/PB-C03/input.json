@@ -1,0 +1,38 @@
+{
+  "provenance": "SYNTHETIC_EVALUATION_INPUT_NOT_PROVIDER_DATA",
+  "input": {
+    "question": "Calculer complétude pondérée et distribution des statuts.",
+    "endpoint": "EVENT_INCIDENTS",
+    "dimensions": {
+      "competition": null,
+      "season": null,
+      "eventStatus": null
+    },
+    "rows": [
+      {
+        "id": "O1",
+        "status": "PARTIAL",
+        "presentSignals": 1,
+        "expectedSignals": 2
+      },
+      {
+        "id": "O2",
+        "status": "PARTIAL",
+        "presentSignals": 9,
+        "expectedSignals": 10
+      },
+      {
+        "id": "O3",
+        "status": "EMPTY_VALID",
+        "presentSignals": 0,
+        "expectedSignals": 0
+      },
+      {
+        "id": "O4",
+        "status": "UNAVAILABLE",
+        "presentSignals": null,
+        "expectedSignals": null
+      }
+    ]
+  }
+}

@@ -1,0 +1,36 @@
+{
+  "schema": "wo062-c4-publication-schema-fix-v1",
+  "frozen_at_utc": "2026-09-16T00:00:13.136057+00:00",
+  "files": [
+    {
+      "path": "publication-result.json",
+      "bytes": 355,
+      "sha256": "6bb02132e5334b77ff5b4ac6920926c0fe211d8fa6240af202e4e003d8d39fe1"
+    },
+    {
+      "path": "publication-tests.json",
+      "bytes": 1034,
+      "sha256": "7aba688f3e38bc8a032761458ccfc874eaa6e07426a8a6f5cb6796badbac703b"
+    },
+    {
+      "path": "publisher.py.txt",
+      "bytes": 10721,
+      "sha256": "8ffbd5bbf50e17578ed193f2874e462c9fd04c92cfdf346c91051ad0e5dea8dc"
+    },
+    {
+      "path": "review.json",
+      "bytes": 5241,
+      "sha256": "7e79ae37a7be47389a06a9c3f5fdcc5dbe80db8dc3e377f9762cf74f302f2485"
+    },
+    {
+      "path": "review.md",
+      "bytes": 4919,
+      "sha256": "08032946c0fe0914f6ad262822d1144c4b59cae00f5ed9084135d71181febe2a"
+    },
+    {
+      "path": "validation-history.json",
+      "bytes": 780,
+      "sha256": "2e841e70e228716537ed472131e56f10212b6c955c9b45fae4ccca79ae331348"
+    }
+  ]
+}

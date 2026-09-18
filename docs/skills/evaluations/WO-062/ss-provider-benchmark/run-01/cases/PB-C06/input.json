@@ -1,0 +1,42 @@
+{
+  "provenance": "SYNTHETIC_EVALUATION_INPUT_NOT_PROVIDER_DATA",
+  "input": {
+    "question": "Reprendre les classifications J6 fournies et calculer les délais réellement définis par J8.",
+    "eventId": 1001,
+    "transitions": [
+      {
+        "id": "V1",
+        "classification": "LOCAL_REPARSE",
+        "source": "DIRECT_LOCAL_ENDPOINT",
+        "receivedAt": "2026-09-01T10:02:00Z"
+      },
+      {
+        "id": "V2",
+        "classification": "LATE_ENRICHMENT",
+        "source": "DIRECT_LOCAL_ENDPOINT",
+        "previousFamilyVersionAt": "2026-09-01T10:00:00Z",
+        "previousDirectStateAt": "2026-09-01T10:03:00Z",
+        "previousDirectStateStatus": "finished",
+        "receivedAt": "2026-09-01T10:04:00Z"
+      },
+      {
+        "id": "V3",
+        "classification": "LATE_CORRECTION",
+        "source": "DIRECT_LOCAL_ENDPOINT",
+        "previousFamilyVersionAt": "2026-09-01T10:04:00Z",
+        "previousDirectStateAt": "2026-09-01T10:05:00Z",
+        "previousDirectStateStatus": "finished",
+        "receivedAt": "2026-09-01T10:07:00Z"
+      }
+    ],
+    "interleavedSources": [
+      "MANUAL_LOCAL_JSON_IMPORT",
+      "SYNTHETIC_FIXTURE"
+    ],
+    "variant": {
+      "transition": "V3",
+      "previousDirectStateAt": null
+    },
+    "assumption": "Les appariements courant/précédent et états directs sont prouvés sauf dans la variante ; J6 a produit les classifications ci-dessus. Ne pas réimplémenter J6."
+  }
+}

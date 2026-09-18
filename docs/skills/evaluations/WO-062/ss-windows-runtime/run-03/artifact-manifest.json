@@ -1,0 +1,143 @@
+{
+  "schema": "wo062-skill-run-artifacts-v1",
+  "skill": "ss-windows-runtime",
+  "run_id": "run-03",
+  "files": [
+    {
+      "path": "authorization.json",
+      "bytes": 1572,
+      "sha256": "d6507ab7bf482b84d8a942652015bc7567ad23439bbd060a34ce2bc8b6009aa8"
+    },
+    {
+      "path": "cases/WR-H01/catalogue.txt",
+      "bytes": 8593,
+      "sha256": "3d4f0fd5c10cb26ba8708eb2482caf48b939c68aed1d56449000fb542588c03c"
+    },
+    {
+      "path": "cases/WR-H01/freeze.json",
+      "bytes": 2928,
+      "sha256": "7c89b4b8ca3162be3aaa901acaa2d7cf6c0eb2bc3ccc7615a2a6429e457d3544"
+    },
+    {
+      "path": "cases/WR-H01/host-runtime.json",
+      "bytes": 371,
+      "sha256": "e729a3b00610ffd63ff19ec6a5c8fccaf051b798fa0ec604ea50c969b972df19"
+    },
+    {
+      "path": "cases/WR-H01/input.json",
+      "bytes": 1475,
+      "sha256": "d49bea0e90ca263b75840a198dd7abbdf67e2dc45541d5474d9e26b833812a57"
+    },
+    {
+      "path": "cases/WR-H01/native-events.json",
+      "bytes": 329481,
+      "sha256": "98764b1e5016e61c596c19d65458f3b3ebdaa46d5a624697481ed531a3a4320e"
+    },
+    {
+      "path": "cases/WR-H01/native-timing-summary.json",
+      "bytes": 434,
+      "sha256": "80b0a9ffaa0fa197bd47be84e4dcce7e3258c4993627bffad0c380b6bac8a039"
+    },
+    {
+      "path": "cases/WR-H01/native-timing.jsonl",
+      "bytes": 13577,
+      "sha256": "f3b6423b65c16e4ff33accf5c5d4f90c0b3aba420fa231ecc9df3aaf1e406d9a"
+    },
+    {
+      "path": "cases/WR-H01/prompt.txt",
+      "bytes": 677,
+      "sha256": "fa04ddaebf0c1b1a65645c05aabec1ad62e729aefc168d3862afd201ac88b2ab"
+    },
+    {
+      "path": "cases/WR-H01/request.txt",
+      "bytes": 2858,
+      "sha256": "0d3e207cf60be51260519dc0fc7787e9b20150fb51d2b4423a6405a42e8baa86"
+    },
+    {
+      "path": "cases/WR-H01/response.md",
+      "bytes": 4918,
+      "sha256": "14c84a8fbfb11d13b090b4e17070615e2b876b6bd6df6174594589e813f80771"
+    },
+    {
+      "path": "cases/WR-H01/runtime-artifacts/Complete-WRH01.ps1",
+      "bytes": 3488,
+      "sha256": "ec45de428f419f8c6f83d83302bc3f33da1ab3380352653480325a6eaaea7875"
+    },
+    {
+      "path": "cases/WR-H01/runtime-artifacts/Invoke-WRH01.ps1",
+      "bytes": 10664,
+      "sha256": "bd86fbc9b765c9a66c9ccc9d9d777445f0aa6b2a3db5ae64124e2db38fd680e6"
+    },
+    {
+      "path": "cases/WR-H01/runtime-artifacts/execution-context.json",
+      "bytes": 1405,
+      "sha256": "46bd7960e019352a50deab9f49ea6be84ef42d64415b44b6d4364b17e44390d1"
+    },
+    {
+      "path": "cases/WR-H01/runtime-artifacts/postflight.json",
+      "bytes": 666,
+      "sha256": "537f5b882de6467cab57db692a9e8276d002f3eb30a2719df580140f6c26c701"
+    },
+    {
+      "path": "cases/WR-H01/runtime-artifacts/prompt-return.txt",
+      "bytes": 48,
+      "sha256": "a72d10c9d0683b46a78ccd27d49175e22d84160f7a816d8ac7254fb0c9552f10"
+    },
+    {
+      "path": "cases/WR-H01/runtime-artifacts/result.json",
+      "bytes": 1228,
+      "sha256": "292b281c2d7e59149690048b48722e6f38caf5778f4384b36729da7ebb418628"
+    },
+    {
+      "path": "cases/WR-H01/runtime-artifacts/stages.txt",
+      "bytes": 284,
+      "sha256": "3de2e7dffbfe2b7daf1b48ddfc9304d807d4363ac7b5ff9cf99eecd86150edfe"
+    },
+    {
+      "path": "cases/WR-H01/stderr.log",
+      "bytes": 734,
+      "sha256": "c55493142d6c8c687bea875239fde8121cab2ed9cc7925f1b3ce9ceb26d337a5"
+    },
+    {
+      "path": "cases/WR-H01/trace.json",
+      "bytes": 6361,
+      "sha256": "2a188856a6c4be753cdeef17f785ca8a265bddae4a0c6e5831770ad54ec5873f"
+    },
+    {
+      "path": "current-results.json",
+      "bytes": 4082,
+      "sha256": "adb88dd444a6c691b2f41c7b82368fed8d40a0b3e405e3518c2cb7bfb0bc8753"
+    },
+    {
+      "path": "preflight.json",
+      "bytes": 3569,
+      "sha256": "f9adb83bb0aff10fba842b8d61abc7e35c90e8346ca4243eb9ee882ec629fab1"
+    },
+    {
+      "path": "previous-qualification.json",
+      "bytes": 4046,
+      "sha256": "e5f2a50d3cd4cb59365355c9b7c96524da6136a9d5cc3344d0d9cfb8efb25ae0"
+    },
+    {
+      "path": "publication-provenance.json",
+      "bytes": 1109,
+      "sha256": "980981469c37bfcc1543a4032a1ed4cb4acf8627b148894cd478490ebc90c769"
+    },
+    {
+      "path": "results.json",
+      "bytes": 735,
+      "sha256": "ec5ebab17002f2b0997eb1fc64170d4665f98c808582951673cc41abfc05371c"
+    },
+    {
+      "path": "review-WR-H01.json",
+      "bytes": 15105,
+      "sha256": "6a11e9fff7c208da998a76c2a91ec120e789659d266a81e49647982eab64d07d"
+    },
+    {
+      "path": "review-WR-H01.md",
+      "bytes": 11139,
+      "sha256": "048db5a3732fcbc9064381647d8916afd047c33e0148f91d7dbeaf0016885605"
+    }
+  ],
+  "hash_contract": "Exact published bytes; manifest excludes itself. Raw internal reasoning is excluded."
+}

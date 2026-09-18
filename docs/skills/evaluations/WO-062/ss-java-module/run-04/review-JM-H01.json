@@ -1,0 +1,150 @@
+{
+  "schema": "wo062-independent-case-review-v1",
+  "case_id": "JM-H01",
+  "run_id": "run-04",
+  "skill": "ss-java-module",
+  "reviewer": "/root/jm_counter_review",
+  "integrity_supporting_reviewer": "/root/jm_selection_review",
+  "reviewed_on": "2026-09-16",
+  "verdict": "PASS",
+  "behavioral_verdict": "PASS",
+  "candidate_version": "0.1.0-candidate.3",
+  "candidate_sha256": "15237ab0f6773c87187481622ba4947ebc00f8c7e9a50dd1589911ede17ec332",
+  "candidate_body_commit": "cf36a0cea4788402a5da391867c58ef1a479c942",
+  "response_sha256": "808d439c0c6a7f96783bf778d7adc72beb138afcd1735855019a8db28484217b",
+  "freeze_sha256": "4daceae2acec92d49edcb985c1d5d1f3a7a7a2ee9ac1f49a1731ea52df01ee34",
+  "native_events_sha256": "a3cc4435e37a1e5fd72a0a20994f0c821e45600c2adb91b97435f8a5897f6027",
+  "trace_sha256": "b58385aea1d7239222f710b57863414f49bfd6c8410ea1deca5184476ba58ae5",
+  "preflight_sha256": "f5a90689e3de780b74acc7fad03f7734246ba8bab4744d3a11e1f38526df8ef6",
+  "oracle_sha256": "d13dc8c5ec833f30dc9025c3c22a22c00e60656eae3a89dc30361861ea390bd1",
+  "source_head": "79d0f99c393a06d4d2e81749a55fb3bfbd222cc3",
+  "reviewed_head": "cb67d18c66aaa3989bfc6121ed7b51945fd95f9f",
+  "policy_source_commit": "6648dd423e556b5248b8793a539ae85a7680f9bc",
+  "frozen_at_utc": "2026-09-15T23:33:50.645658+00:00",
+  "frozen_before_review": true,
+  "required_criteria_missing": [],
+  "criteria": [
+    {
+      "criterion_id": "integrity",
+      "required": true,
+      "result": "PASS",
+      "evidence": "11 pièces figées exactes en taille/SHA256, inventaire sans ajout/absence/doublon ; 14 entrées conformes entre preflight, trace et copies. Réponse égale au dernier message final et événements publiés fidèles aux commandes/sorties brutes.",
+      "limit": "Gel observé avant lecture ; retrait des seuls événements de raisonnement interne dans le journal publié."
+    },
+    {
+      "criterion_id": "candidate-tool-read",
+      "required": true,
+      "result": "PASS",
+      "evidence": "item_1, code0 : Get-Content -LiteralPath '.agents/skills/ss-java-module/SKILL.md' -Raw. Sortie complète comparée au fichier .3 exact, SHA15237ab0…ec332 ; copie identique au canonique.",
+      "limit": "Lecture outil réelle établie ; aucune injection automatique du corps CLI déduite."
+    },
+    {
+      "criterion_id": "independence-and-authorized-actions",
+      "required": true,
+      "result": "PASS",
+      "evidence": "14 commandes terminées/code0 : Get-Content, rg et repérage de sections sur les13 chemins autorisés. Requête intégrale limitée à enveloppe, liste des fichiers et prompt immuable ; oracle et anciennes réponses absents.",
+      "limit": "Catalogue reconstruit après exécution, aucune capture de requête transmise. Aucun lancement applicatif ou mutation observé."
+    },
+    {
+      "criterion_id": "lab-source-and-scope",
+      "required": true,
+      "result": "PASS",
+      "evidence": "Réponse1–19 : cas Lab, corpus disponible, SHA source de politique6648dd423e556b5248b8793a539ae85a7680f9bc, absence d'inspection Git et distinction historique/actuel/gouvernance.",
+      "limit": "La préparation79d0f99 et le HEAD de revuecb67d18 ne sont pas présentés comme révision applicative testée."
+    },
+    {
+      "criterion_id": "H01-defect-and-port",
+      "required": true,
+      "result": "PASS",
+      "evidence": "Réponse23–38 : deux gardes seulement positives acceptaient65536 ; port TCP loopback distingué de validité syntaxique URI. Correction bornée[1,65535].",
+      "limit": "Aucune interface architecturale créée/supprimée ni refonte déduite de ce correctif."
+    },
+    {
+      "criterion_id": "H02-parent-child-boundaries",
+      "required": true,
+      "result": "PASS",
+      "evidence": "Réponse27–28 et58–93 : isSafeConfiguration/parseOrigin nommées ; origine transmise par environnement, validation indépendante enfant avant effets selon preuve historique.",
+      "limit": "Ordre actuel complet de lancement non affirmé sans point d'entrée/superviseur autorisé ; seconde barrière conservée."
+    },
+    {
+      "criterion_id": "H03-matrix-and-unchanged-contracts",
+      "required": true,
+      "result": "PASS",
+      "evidence": "Réponse40–50/87–101 : absent(-1),0,65536 refusés ;1/65535 acceptés structurellement sans connexion. IPC et ScheduledEventsTransportRequest déjà bornés ; origine fournisseur fixe, six familles et contrat voisin préservés.",
+      "limit": "Construction d'URI ne vaut pas appel autorisé ; évolution du protocole courant séparée du delta historique à174."
+    },
+    {
+      "criterion_id": "H04-historical-revisions",
+      "required": true,
+      "result": "PASS",
+      "evidence": "Réponse25 : base daf55bf76521f81893f86d04fde3c2903bf22362 ;186 : commit qualifié154349a2fbebe3fd0a43a63c7105f690ff04976b.",
+      "limit": "Aucune assimilation avec le SHA de politique, de préparation ou de recette .3."
+    },
+    {
+      "criterion_id": "H05-actual-checks",
+      "required": true,
+      "result": "PASS",
+      "evidence": "Réponse107–136/180 : prédicat direct et Bean Validation ; claimExecution réellement invoqué avec PROVIDER_TRANSPORT_UNAVAILABLE, executionMayContinue=false, CONFIRMED_READY ; fromEnvironment/uriFor en mémoire ; renforcement historique du claim restitué.",
+      "limit": "JAR de test factice et causalité de la borne distingués de l'exécutabilité native et du blocage loopback."
+    },
+    {
+      "criterion_id": "H06-historical-commands-and-current-selection",
+      "required": true,
+      "result": "PASS",
+      "evidence": "Réponse138–182 : quatre commandes historiques offline et résultats datés ; matrice pure séparée des suites loopback/Testcontainers ; POM courant integration-tests et sources/profils/Surefire explicités.",
+      "limit": "Anciens totaux jamais réutilisés comme résultat courant ; offline ne garantit pas absence d'effets locaux."
+    },
+    {
+      "criterion_id": "H07-environment-incident",
+      "required": true,
+      "result": "PASS",
+      "evidence": "Réponse178 : premier accès refusé à spring-orm-7.0.8.jar avant tests, relance hors sandbox avec cache explicite sous offline puis succès.",
+      "limit": "Incident environnemental conservé ; ni régression du correctif ni permission de fallback ou réseau."
+    },
+    {
+      "criterion_id": "H08-owner-history-and-current-J3",
+      "required": true,
+      "result": "PASS",
+      "evidence": "Réponse184–220 : rapport en attente à13:47:21UTC, validation du WO à14:00:53UTC ; chronology cohérente. ADR007v0.3, clic/ordres durables adoptés, temporaire isolé et live conservé ; perte live→session terminée sans reprise/recréation.",
+      "limit": "Validation historique ne vaut pas réseau/push/merge ; confirmations du test interne non imposées au parcours utilisateur actuel."
+    },
+    {
+      "criterion_id": "H09-minimal-requalification",
+      "required": true,
+      "result": "PASS",
+      "evidence": "Réponse222–262 : aucune borne à réappliquer ; deux commandes ciblées proposées pour gardes/claim, critères de preuve et contrôles applicables au delta futur.",
+      "limit": "Tout reste proposé/non exécuté ; aucun PostgreSQL artificiellement exigé pour une seule borne TCP."
+    },
+    {
+      "criterion_id": "architecture-and-dependencies",
+      "required": true,
+      "result": "PASS",
+      "evidence": "Réponse58–101/140–159 : rôles configuration/policy/supervision/worker/domaine, dépendances visibles, monomodule et sources supplémentaires distingués ; aucune couche parfaite ni interface inventée.",
+      "limit": "Garde textuel com.microsoft.playwright/src/main identifié comme prescription du skill ; Verify-Local hors corpus explicitement non inspecté/non exécuté."
+    },
+    {
+      "criterion_id": "invariants-and-runtime-separation",
+      "required": true,
+      "result": "PASS",
+      "evidence": "Réponse138–159/195–218 : Java25, Boot4.1.0, wrapper, loopback, statuts Lab, profils/sorties/classifier worker, compilation≠exécution et absence de navigateur standard.",
+      "limit": "Aucun ArchUnit vert, contexte Spring complet ou navigateur qualifié à partir d'une annotation ou d'un nom de test."
+    },
+    {
+      "criterion_id": "evidence-limits-and-handoffs",
+      "required": true,
+      "result": "PASS",
+      "evidence": "Réponse7–19/91/125/159/216/226–262 distingue code, tests, résultats historiques et preuve courante ; sources manquantes inconnues ; relais ss-verify, ss-postgres-change et ss-data-contract-replay selon évolution.",
+      "limit": "Pas de bug certain déduit d'une couverture absente ; pas de nouvelle action hors périmètre."
+    }
+  ],
+  "limitations": [
+    "PASS limité au comportement observé de JM-H01 .3 ; aucun test applicatif ni qualification complète du parcours actuel.",
+    "Catalogue reconstruit après session, pas capture du contexte transmis ni preuve d'injection automatique.",
+    "Modèle et effort effectifs non exposés ; horodatages de réception locaux, aucun temps de pensée ou gain global déduit.",
+    "Les anciennes réponses n'ont pas servi d'oracle ; référence comportementale = oracle original et sources autorisées."
+  ],
+  "application_tests_executed": false,
+  "model_sessions_launched_by_reviewer": 0,
+  "source_or_candidate_modified": false,
+  "prior_runs_unchanged": true
+}

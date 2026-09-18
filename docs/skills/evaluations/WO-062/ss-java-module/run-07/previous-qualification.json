@@ -1,0 +1,90 @@
+{
+  "schema": "wo062-current-skill-qualification-v1",
+  "skill": "ss-java-module",
+  "candidate_version": "0.1.0-candidate.4",
+  "status": "INCOMPLETE_QUALIFICATION",
+  "evaluation_gate": {
+    "status": "INCOMPLETE_REMAINING_CASES",
+    "completed_case": "run-06/review-JM-H01.json",
+    "case_id": "JM-H01",
+    "meaning": "C6 provides one behavioral PASS for candidate.4 after a fresh isolated session. Seven required candidate.4 cases remain NOT_RUN, so the candidate remains incomplete and cannot reach human validation or personal installation."
+  },
+  "source_commit": "6648dd423e556b5248b8793a539ae85a7680f9bc",
+  "source_head": "966062d677c30e7ce67b61454bd54695497064f5",
+  "c6_execution_source_head": "91fccf1f29e2c27f95ddfb65c4a5019ff2c4c65f",
+  "preparation_manifest_sha256": "a0907baba5a15606b6a735873a3e8ab9cc4043dfe8d852f3b843e1ec61b68290",
+  "candidate_files": [
+    {
+      "path": "SKILL.md",
+      "bytes": 10901,
+      "sha256": "f1f6533f678c5cdb4ae6a5bc9c996c062af419005e4f4cd6104a51c91e442d97"
+    },
+    {
+      "path": "agents/openai.yaml",
+      "bytes": 309,
+      "sha256": "ccc4fc2a4707838dd6defdd73ef6f6c7ee0d69e6df86e41689a46884691573ae"
+    }
+  ],
+  "candidate_body_commit": "966062d677c30e7ce67b61454bd54695497064f5",
+  "candidate_package_commit": "966062d677c30e7ce67b61454bd54695497064f5",
+  "candidate_commit_state": "The first C5 correction commit carries the immutable candidate bytes recorded in revision-04.",
+  "distinct_cases": 8,
+  "executions": 2,
+  "behavioral_executions": 1,
+  "launcher_attempts_current_candidate": 2,
+  "model_tool_commands_observed_current_candidate": 18,
+  "total_executions": 27,
+  "pass": 1,
+  "fail": 0,
+  "blocked": 0,
+  "not_run": 7,
+  "results": "run-06/results.json",
+  "artifact_manifest": "run-06/artifact-manifest.json",
+  "qualification_blocker": {
+    "code": "SEVEN_CANDIDATE_CASES_NOT_RUN",
+    "case_ids": ["JM-N01", "JM-C01", "JM-C02", "JM-S01", "JM-S02", "JM-S03", "JM-S04"],
+    "meaning": "One C6 PASS does not transfer to the remaining candidate.4 cases."
+  },
+  "current_cases": [
+    { "case_id": "JM-H01", "verdict": "PASS", "source_run": "run-06" },
+    { "case_id": "JM-N01", "verdict": "NOT_RUN", "source_run": null },
+    { "case_id": "JM-C01", "verdict": "NOT_RUN", "source_run": null },
+    { "case_id": "JM-C02", "verdict": "NOT_RUN", "source_run": null },
+    { "case_id": "JM-S01", "verdict": "NOT_RUN", "source_run": null },
+    { "case_id": "JM-S02", "verdict": "NOT_RUN", "source_run": null },
+    { "case_id": "JM-S03", "verdict": "NOT_RUN", "source_run": null },
+    { "case_id": "JM-S04", "verdict": "NOT_RUN", "source_run": null }
+  ],
+  "execution_totals": {
+    "pass": 20,
+    "fail": 6,
+    "blocked": 1
+  },
+  "c6_authorized_rerun": {
+    "run_id": "run-06",
+    "case_id": "JM-H01",
+    "authorization": "../c-requalification-06/authorization.json",
+    "authorized_session_count": 1,
+    "automatic_retry": false,
+    "state": "COMPLETED_PASS",
+    "review": "run-06/review-JM-H01.json",
+    "result": "run-06/results.json"
+  },
+  "previous_qualification": "revision-04/previous-qualification.json",
+  "historical_runs_preserved": [
+    "run-01",
+    "run-02",
+    "run-03",
+    "run-04",
+    "run-05"
+  ],
+  "human_validation": false,
+  "personal_installation": false,
+  "limits": [
+    "Candidate.4 has one behavioral PASS for JM-H01, but all eight fresh cases must be reviewed before qualification can be complete.",
+    "Candidate.3 results remain historical and do not transfer to candidate.4.",
+    "The JM-H01 C5 session remains a frozen BLOCKED_BEFORE_MODEL_COMMAND infrastructure incident. It counts as one launcher attempt but not as a behavioral execution; C6 is the separately authorized fresh PASS.",
+    "The seven Java cases are not authorized by the C6 decision and remain NOT_RUN. The two Windows C5 cases remain separately blocked before model launch by their host sandbox preflight.",
+    "This partial result establishes no application build, application test, database, provider collection, scanner, CI pipeline, human validation or personal installation."
+  ]
+}

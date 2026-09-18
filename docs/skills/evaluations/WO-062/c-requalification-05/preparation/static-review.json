@@ -1,0 +1,100 @@
+{
+  "schema": "wo062-c5-static-review-v1",
+  "overall": "PASS",
+  "checks": [
+    {
+      "name": "java_candidate_version",
+      "status": "PASS",
+      "evidence": "candidate metadata"
+    },
+    {
+      "name": "java_analysis_requirement",
+      "status": "PASS",
+      "evidence": "composition section"
+    },
+    {
+      "name": "java_delivery_requirement",
+      "status": "PASS",
+      "evidence": "delivery checklist"
+    },
+    {
+      "name": "jm_n01_has_pom_source",
+      "status": "PASS",
+      "evidence": "frozen JM-N01 source ids"
+    },
+    {
+      "name": "pom_has_blocked_profile_guard",
+      "status": "PASS",
+      "evidence": "current POM profile guard"
+    },
+    {
+      "name": "wrh_protocol_runtime_only",
+      "status": "PASS",
+      "evidence": "C5 protocol"
+    },
+    {
+      "name": "wrh_context_separates_access",
+      "status": "PASS",
+      "evidence": "prepared WR-H01 preflight"
+    },
+    {
+      "name": "wrh_template_does_not_text_read_module",
+      "status": "PASS",
+      "evidence": "frozen WR-H01 template"
+    },
+    {
+      "name": "wrn_runtime_precedes_fingerprint",
+      "status": "PASS",
+      "evidence": "frozen WR-N01 template invocation order"
+    },
+    {
+      "name": "wrn_hash_is_dotnet",
+      "status": "PASS",
+      "evidence": "WR-N01 template provenance implementation"
+    },
+    {
+      "name": "wrn_get_file_hash_optional",
+      "status": "PASS",
+      "evidence": "WR-N01 dependency observation"
+    },
+    {
+      "name": "wrn_preflight_stops_before_java",
+      "status": "PASS",
+      "evidence": "executed template preflight evidence"
+    }
+  ],
+  "files": [
+    {
+      "path": "docs/skills/local-lab/ss-java-module/SKILL.md",
+      "sha256": "f1f6533f678c5cdb4ae6a5bc9c996c062af419005e4f4cd6104a51c91e442d97",
+      "bytes": 10901
+    },
+    {
+      "path": "pom.xml",
+      "sha256": "e01e011e360fa847842d826a5bcf2960c34eae91da037e2a6f002e71a3513a46",
+      "bytes": 16856
+    },
+    {
+      "path": "docs/skills/evaluations/WO-062/c-requalification-05/windows-session-protocol.md",
+      "sha256": "15d42d9601d1ef85652370ba80562d38c923d43f2c31528e833ba7294f2dab27",
+      "bytes": 5870
+    },
+    {
+      "path": "docs/skills/evaluations/WO-062/c-requalification-05/wrh-harness-template.ps1",
+      "sha256": "c1d8c2d34ae0990a6d4404e9f8ec6d42bad0b6d2f33f1f0fc922b17182ac17ef",
+      "bytes": 8859
+    },
+    {
+      "path": "docs/skills/evaluations/WO-062/c-requalification-05/wrn-conductor-template.ps1",
+      "sha256": "b1f4cd49dc1ae97eb7218e75afc9d14dab007d9970131ca38e2bfddcfcc0615a",
+      "bytes": 29020
+    },
+    {
+      "path": "docs/skills/evaluations/WO-062/c-requalification-05/preparation/wrn-template-preflight-observation.json",
+      "sha256": "0288f3a60f2f7e6017d6d244420a271d54e7578c1e9363fa1cc4d0c40b68345e",
+      "bytes": 10108
+    }
+  ],
+  "model_calls": 0,
+  "application_or_native_qualification": false
+}

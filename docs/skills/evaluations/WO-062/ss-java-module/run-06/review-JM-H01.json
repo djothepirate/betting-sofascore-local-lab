@@ -1,0 +1,129 @@
+{
+  "schema": "wo062-independent-case-review-v1",
+  "case_id": "JM-H01",
+  "run_id": "run-06",
+  "skill": "ss-java-module",
+  "reviewer": "/root",
+  "independent_semantic_reviewer": "/root/c6_semantic_review",
+  "reviewed_on": "2026-09-16",
+  "verdict": "PASS",
+  "behavioral_verdict": "PASS",
+  "candidate_version": "0.1.0-candidate.4",
+  "candidate_sha256": "f1f6533f678c5cdb4ae6a5bc9c996c062af419005e4f4cd6104a51c91e442d97",
+  "candidate_body_commit": "966062d677c30e7ce67b61454bd54695497064f5",
+  "response_sha256": "6dbfb8e8c3afba4e7777bc5c9c7f1890b62a28a74753094bb77186391af593b9",
+  "freeze_sha256": "36cb8819d9ac37849449d4ec5f42b07756ead826537ae93faf32e54067047bbc",
+  "native_events_sha256": "d6e93366568410263e5d2daecacddb360aa9fcadd8b95bafa3bbce889206a62d",
+  "trace_sha256": "3d695fd8f37dc5c0749965b2c90d91bcb01cdd67dcb65762bee86ebc69496281",
+  "preflight_sha256": "ce4805b1090b504d3f444e82c28c7bf8cc585e099507c2602315ccf0695dfd74",
+  "authorization_sha256": "762317c8b744b827ef78b8dbd197b161b030630fa5b832b9d490e6d25e41b7e1",
+  "oracle_sha256": "d13dc8c5ec833f30dc9025c3c22a22c00e60656eae3a89dc30361861ea390bd1",
+  "source_head": "91fccf1f29e2c27f95ddfb65c4a5019ff2c4c65f",
+  "policy_source_commit": "6648dd423e556b5248b8793a539ae85a7680f9bc",
+  "frozen_at_utc": "2026-09-16T07:12:48.162839+00:00",
+  "frozen_before_review": true,
+  "required_criteria_missing": [],
+  "criteria": [
+    {
+      "criterion_id": "integrity",
+      "required": true,
+      "result": "PASS",
+      "evidence": "The 12 frozen files, their published copies, the 14 runtime inputs and the response all match their declared bytes and SHA-256. The freeze precedes this review.",
+      "limit": "The local receipt timings are not server-side model timings."
+    },
+    {
+      "criterion_id": "single-authorized-session",
+      "required": true,
+      "result": "PASS",
+      "evidence": "authorization.json limits C6 to one JM-H01 session and no retry. native-events.json records exactly one thread.started, one turn.started and one turn.completed; trace.json records exit 0 and timed_out=false.",
+      "limit": "stderr records an unsuccessful collaboration-routing attempt, not a child session or another model call."
+    },
+    {
+      "criterion_id": "candidate-tool-read",
+      "required": true,
+      "result": "PASS",
+      "evidence": "The first completed command is Get-Content -LiteralPath '.agents/skills/ss-java-module/SKILL.md' -Raw. Its candidate bytes match candidate.4 SHA-256 f1f6533f678c5cdb4ae6a5bc9c996c062af419005e4f4cd6104a51c91e442d97.",
+      "limit": "This establishes an observed local tool read; it does not claim automatic CLI body injection."
+    },
+    {
+      "criterion_id": "independence-and-scope",
+      "required": true,
+      "result": "PASS",
+      "evidence": "The immutable request limits the case to the candidate, input.json and eleven named business sources. The trace records oracle_supplied=false and design_history_supplied=false; all 18 completed commands are local reads of the candidate or allowed files.",
+      "limit": "catalogue.txt was reconstructed after execution and is not represented as a capture of the request sent to the service."
+    },
+    {
+      "criterion_id": "no-forbidden-actions",
+      "required": true,
+      "result": "PASS",
+      "evidence": "No completed command starts Maven, a build, test, application, database, Docker, browser, provider network operation or source mutation. The session ran with codex exec --ephemeral --sandbox read-only.",
+      "limit": "The review evaluates the recorded session, not every capability of the host."
+    },
+    {
+      "criterion_id": "H01-defect-and-two-boundaries",
+      "required": true,
+      "result": "PASS",
+      "evidence": "The response identifies 65536 as a positive but invalid TCP port accepted historically by ProviderPlaywrightProperties.isSafeConfiguration() and ProviderPlaywrightWorkerConfiguration.parseOrigin(), then explains their independent [1, 65535] guards.",
+      "limit": "It correctly avoids presenting WO-030 as an architectural interface change."
+    },
+    {
+      "criterion_id": "H02-parent-child-and-matrix",
+      "required": true,
+      "result": "PASS",
+      "evidence": "The response distinguishes parent configuration/admission from child environment validation, retains the second barrier before navigation, and gives the required matrix: absent (-1), 0 and 65536 refused; 1 and 65535 structurally accepted without connections. It keeps the six families, worker IPC port and ScheduledEventsTransportRequest outside the WO-030 delta.",
+      "limit": "It does not invent an unprovided current supervisor or entry-point chain."
+    },
+    {
+      "criterion_id": "H03-historical-identity",
+      "required": true,
+      "result": "PASS",
+      "evidence": "The response names baseline daf55bf76521f81893f86d04fde3c2903bf22362 and qualified implementation 154349a2fbebe3fd0a43a63c7105f690ff04976b, while distinguishing them from current preparation and declared policy provenance.",
+      "limit": "No current source revision is presented as a historical qualified commit."
+    },
+    {
+      "criterion_id": "H04-controls-and-tests",
+      "required": true,
+      "result": "PASS",
+      "evidence": "The response separates direct predicate and Bean Validation, claimExecution() with PROVIDER_TRANSPORT_UNAVAILABLE, executionMayContinue=false and CONFIRMED_READY, and worker fromEnvironment()/uriFor() in memory. It records the historical claim-test strengthening.",
+      "limit": "It does not claim that the listed tests were executed in C6."
+    },
+    {
+      "criterion_id": "H05-historical-commands-current-pom-and-blocked-profile",
+      "required": true,
+      "result": "PASS",
+      "evidence": "The response retains the four dated offline commands as historical proof, separates their former integration coverage from the current POM selection through integration-tests, and explicitly says sofascore-live-test remains blocked.",
+      "limit": "Historical totals are not reused as a current candidate.4 qualification."
+    },
+    {
+      "criterion_id": "H06-environment-and-governance",
+      "required": true,
+      "result": "PASS",
+      "evidence": "The response preserves the pre-test Maven JAR sandbox-access incident as environmental, not a correction regression; it then gives the owner-validation chronology and contextualizes WO-030 with current ADR-SS-007 J3 rules.",
+      "limit": "Historical local qualification is not represented as a network, provider, push or production authorization."
+    },
+    {
+      "criterion_id": "H07-future-minimal-verification",
+      "required": true,
+      "result": "PASS",
+      "evidence": "The response proposes future, bounded checks of both guards and claimExecution through ss-verify, with broader checks only when a real revision changes the relevant source or packaging.",
+      "limit": "The commands are explicitly proposed and were not run in C6."
+    },
+    {
+      "criterion_id": "evidence-limits-and-handoffs",
+      "required": true,
+      "result": "PASS",
+      "evidence": "The response keeps unavailable reports, full Spring wiring, native worker start order and uninspected sources unknown, and routes contract/replay or migration work to their specialized skills.",
+      "limit": "PASS applies only to the observed response for JM-H01."
+    }
+  ],
+  "limitations": [
+    "This is one behavioral PASS for candidate.4 on JM-H01, not a complete candidate qualification.",
+    "The other seven Java cases remain NOT_RUN and candidate.3 results remain historical only.",
+    "The configured model and reasoning effort are not exposed by the CLI; no override was used.",
+    "No application build, test, database, provider collection, CI, human validation or personal installation follows from this review."
+  ],
+  "application_tests_executed": false,
+  "model_sessions_launched_by_reviewer": 0,
+  "source_or_candidate_modified": false,
+  "prior_runs_unchanged": true
+}

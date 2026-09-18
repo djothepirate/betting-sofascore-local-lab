@@ -1,0 +1,301 @@
+{
+  "schema": "wo062-football-quality-preparation-v1",
+  "status": "PREPARED_NOT_RUN",
+  "purpose": "EVALUATION_PREPARATION_NOT_INSTALLATION",
+  "preparation_stage": "B1",
+  "source_commit": "57c0614627e628077b0a7775eb66a7c490b422e0",
+  "source_branch": "feature/V0.1.0-RC01-CODEX-WO-SS-20260915-062",
+  "prepared_on": "2026-09-15",
+  "frozen_at": "2026-09-15T19:34:57Z",
+  "skill_name": "ss-football-quality",
+  "skill_exists": false,
+  "skill_sha256": null,
+  "case_count": 8,
+  "selection_method": "NATIVE_DISCOVERY_WITH_INSTRUMENTED_FULL_TOOL_READ",
+  "automatic_skill_body_injection": "NOT_CERTIFIED",
+  "hash_contract": "git_blob_oid identifies committed source bytes; worktree_sha256 identifies the exact local materialization. Evaluation files use UTF-8 LF. The manifest excludes its own recursive hash; record its SHA-256 in the preparation report.",
+  "sources": [
+    {
+      "id": "N01",
+      "category": "normative",
+      "path": "AGENTS.md",
+      "use": "Socle, invariants, exceptions et périmètre local",
+      "locator": "Invariants de sécurité",
+      "bytes": 10320,
+      "worktree_sha256": "6509ac77cd4c87094a91da7e4c750b5991eeb4585a69a609def5289b91cf6ab5",
+      "git_blob_oid": "32be42cccccdf85f27d8b0e3846dec4a5c740ebf"
+    },
+    {
+      "id": "N02",
+      "category": "scope",
+      "path": "docs/work_orders/active/WO-SS-20260915-062-skills-lot2.md",
+      "use": "Contrat B1 et réception ; réservé à la préparation, pas aux sessions évaluées",
+      "locator": "Sections 4 B1 et 6",
+      "bytes": 27906,
+      "worktree_sha256": "acb62635bdd5030ea6b2c15d4dba35f2c8f1906760a510e64b7c75c39099f6b9",
+      "git_blob_oid": "3e97ea512bb76063d42e732d6413c4f4c1cfb4c7"
+    },
+    {
+      "id": "N03",
+      "category": "contract",
+      "path": "docs/architecture/J4-CANONICAL-EVENTS-AND-LOCAL-DETAIL.md",
+      "use": "Identité stable, UTC, résultat V3 et provenance",
+      "locator": "Sections 3–6",
+      "bytes": 14149,
+      "worktree_sha256": "0994aaf72ae3c3dac4380bf10edb0792e7e99c57b9c544564b91c9c30c10b3d0",
+      "git_blob_oid": "077d1eb49e820553b481b3159a0747ae0212d64f"
+    },
+    {
+      "id": "N04",
+      "category": "contract",
+      "path": "docs/requirements/J5-FOOTBALL-INCIDENT-RULES.md",
+      "use": "Vocabulaire fermé des incidents, prolongation, VAR, penalties, séance sans minute",
+      "locator": "Sections 1, 3, 8, 9.0 et 10.2",
+      "bytes": 83020,
+      "worktree_sha256": "1b10902333b641a6e25853e811f4b0e1056e575026439d20e2fa96b819cc26ab",
+      "git_blob_oid": "68a004a1fd6f402a5ffd2af76f3c003e6897b34d"
+    },
+    {
+      "id": "N05",
+      "category": "contract",
+      "path": "docs/architecture/J5-GUARDED-REAL-EVENT-DATA.md",
+      "use": "Raw-first, versions, EMPTY_VALID/PARTIAL/UNAVAILABLE ; ligne lineups-v3 historique",
+      "locator": "Sections 1 et 5",
+      "bytes": 46154,
+      "worktree_sha256": "363805e242a277471a24465148007fc70ad54eb0757ce50793ab6089871c0f6d",
+      "git_blob_oid": "3fd1fd76912fa8c47a2b75ad3b9bd91a94fbd87a"
+    },
+    {
+      "id": "N06",
+      "category": "contract",
+      "path": "docs/architecture/J4-J5-PEOPLE-V4.md",
+      "use": "Détails/compositions V4, pays inconnus, source exacte et diff J6",
+      "locator": "Contrats et provenance ; Diff sémantique J6",
+      "bytes": 3773,
+      "worktree_sha256": "9c29a577c3b75ad12cb8bd255700deae2fd4bc6d375e47b84582c6cead39b938",
+      "git_blob_oid": "d2c3f5d47a5a0d408bd0e1297e1684cfe5c92482"
+    },
+    {
+      "id": "N07",
+      "category": "contract",
+      "path": "docs/architecture/J6-HISTORY-AND-GUARDED-RETENTION.md",
+      "use": "Réceptions, cinq flux, appariement, classification et état terminal",
+      "locator": "Sections 2.2–6",
+      "bytes": 18692,
+      "worktree_sha256": "08b915e4634652524a7388bd18952122979ee27046c0990a2eba058ba16c0693",
+      "git_blob_oid": "6160c028e1ec93205101ef30de162a8b8101948d"
+    },
+    {
+      "id": "N08",
+      "category": "contract",
+      "path": "docs/architecture/J5-LINEUPS-V3-PLAYER-DETAILS.md",
+      "use": "Absence/bloc vide/zéro, titulaires et indisponibles, compatibilité V4",
+      "locator": "Contrat de lecture ; Conservation et compatibilité",
+      "bytes": 7627,
+      "worktree_sha256": "7c11059d50f7c92c8470934e1175669ca1ffa71fb85f185e9e135281b0376daf",
+      "git_blob_oid": "e9fd17d3280dbcd3e7fd7d64774eb3f7bbcae3d8"
+    },
+    {
+      "id": "P01",
+      "category": "procedure",
+      "path": "docs/runbooks/J7-CANONICAL-EVENT-EXPORT.md",
+      "use": "Lecture d'une preuve minimisée ; contrat fermé, pas d'export brut",
+      "locator": "Sections 7 et 9",
+      "bytes": 12549,
+      "worktree_sha256": "c35a383fb5a59a12235e6e61aed30d0e6bfad9be3ae2fa3f607138e42e1e5271",
+      "git_blob_oid": "07b322d2057f87495ec98f162d45f261b78b223c"
+    },
+    {
+      "id": "I01",
+      "category": "implementation",
+      "path": "src/main/java/com/bettingproject/sofascorelocal/adapter/sofascore/eventdata/EventIncidentsV15Parser.java",
+      "use": "Extension exacte absent/tableau vide dans une séance terminale",
+      "locator": "acceptsUnminutedShootoutAction",
+      "bytes": 1048,
+      "worktree_sha256": "6286b961b6a5dfce36b93960aa9016decd677fd359244c9d6cbdab9f65916ac3",
+      "git_blob_oid": "5caae1748aa367e97153a27fcb096dd3db4358dd"
+    },
+    {
+      "id": "I02",
+      "category": "implementation",
+      "path": "src/main/java/com/bettingproject/sofascorelocal/adapter/sofascore/eventdata/EventIncidentsV16Parser.java",
+      "use": "Penalty awarded et refus structuré du score unilatéral",
+      "locator": "inGamePenaltyClasses ; expectsPenaltyOutcomeDetails",
+      "bytes": 1747,
+      "worktree_sha256": "1df5dd003eb0d6a2fa20e9efc3586a7251dbfc4ae74225a121abe7df1e566b88",
+      "git_blob_oid": "d9a4352a89d3a61f15efec99a447728148309f90"
+    },
+    {
+      "id": "I03",
+      "category": "implementation",
+      "path": "src/main/java/com/bettingproject/sofascorelocal/adapter/sofascore/eventdata/EventIncidentsV17Parser.java",
+      "use": "Version courante, héritage V16 et ajout exact Professional handball",
+      "locator": "PARSER_VERSION ; cardReasons",
+      "bytes": 1239,
+      "worktree_sha256": "410f47f99cc8e37d93ef89c2518ec08298cd36bbb2c3b97e00f478c0516a9971",
+      "git_blob_oid": "fdffe52cde5c049bf8be2b24b1f0764837e8e9c1"
+    },
+    {
+      "id": "I04",
+      "category": "implementation",
+      "path": "src/main/java/com/bettingproject/sofascorelocal/application/history/J6HistoryClassifier.java",
+      "use": "Ordre des classes et exclusions score./completeness. pour l'enrichissement",
+      "locator": "classify ; isAdditionsOnly",
+      "bytes": 3943,
+      "worktree_sha256": "0f222c27885aa9ee716bd94cf9db8a28c741d9b181972164b7199e35844dc2c8",
+      "git_blob_oid": "ccb5a30921a50e41dc040b90e9c4e07b04c93e70"
+    },
+    {
+      "id": "I05",
+      "category": "implementation",
+      "path": "src/main/java/com/bettingproject/sofascorelocal/application/history/J6SemanticDiffService.java",
+      "use": "Comparaisons, inconnus, appariements et score dérivé",
+      "locator": "compareDetails ; compareIncidents ; pair ; score",
+      "bytes": 35633,
+      "worktree_sha256": "e5237db5f7df61a54fcca894fd7075e103ae1227f49e0b8436a935cd37952865",
+      "git_blob_oid": "8d376b214141d860602f251d4517875b5e1dc9da"
+    },
+    {
+      "id": "I06",
+      "category": "implementation",
+      "path": "src/main/java/com/bettingproject/sofascorelocal/adapter/sofascore/eventdetails/EventDetailsV4Parser.java",
+      "use": "Contrat V4 reposant sur V3 ; personnes facultatives",
+      "locator": "parse",
+      "bytes": 3843,
+      "worktree_sha256": "90ada85342cd8e47dd2d7209ae8f37aa83477586afd70548d7d291bf45b50dd8",
+      "git_blob_oid": "b1bad168bc9673e88aefac3c1e24055114db032f"
+    },
+    {
+      "id": "I07",
+      "category": "implementation",
+      "path": "src/main/java/com/bettingproject/sofascorelocal/adapter/sofascore/eventdata/EventLineupsV4Parser.java",
+      "use": "V4 conserve V3 et ajoute pays sans nouvelle complétude sportive",
+      "locator": "parse ; team",
+      "bytes": 3855,
+      "worktree_sha256": "cd82473ec262fe81b8ed076501f5977d0b1b91d39026d37b6179e0563216177e",
+      "git_blob_oid": "0551e440507952972c43a1b5da19c2926c0e2a18"
+    },
+    {
+      "id": "I08",
+      "category": "implementation",
+      "path": "src/main/java/com/bettingproject/sofascorelocal/adapter/sofascore/eventdata/EventStatisticsV2Parser.java",
+      "use": "Identité du claim ; cellules home/away indépendantes ; comptage et vide valide",
+      "locator": "parse ; Completeness",
+      "bytes": 8004,
+      "worktree_sha256": "54439954277505d5fddee2a91dcf1e91f3f2a8eee133cf8e115a5549e0c4a2c7",
+      "git_blob_oid": "78049086a3357617fb0048c1d311777ec7f19aa0"
+    },
+    {
+      "id": "T01",
+      "category": "test_source",
+      "path": "src/test/java/com/bettingproject/sofascorelocal/adapter/sofascore/eventdata/EventIncidentsV15ParserTest.java",
+      "use": "Séance valide 4 incidents ; 3 minutes inconnues et mutations invalides",
+      "locator": "acceptsEmptyActionArraysOnlyInsideTheCoherentTerminalUnminutedShootout et contre-exemples",
+      "bytes": 7547,
+      "worktree_sha256": "65067b0872f40ef6acaa04992abad177812a5e061061739985d9e2dc4b6f8e1c",
+      "git_blob_oid": "2ea3a0e750676536c447169979465034ffea052d"
+    },
+    {
+      "id": "T02",
+      "category": "test_source",
+      "path": "src/test/java/com/bettingproject/sofascorelocal/adapter/sofascore/eventdata/EventIncidentsV16ParserTest.java",
+      "use": "Award minimal 2/2, côté absent 50 %, score absent/null/zéro",
+      "locator": "preservesAnAwardWithoutInventingAShooterOrAShotOutcome et contre-exemples",
+      "bytes": 13244,
+      "worktree_sha256": "7021ca0a0164d7692da4bde25038a477d206c564fb62d276fb259baf876728a1",
+      "git_blob_oid": "186072b37c33ee9395008d7f17f9f59145a5916a"
+    },
+    {
+      "id": "T04",
+      "category": "test_source",
+      "path": "src/test/java/com/bettingproject/sofascorelocal/application/history/J6HistoryClassifierTest.java",
+      "use": "Priorités de classification, enrichissement et vocabulaire terminal",
+      "locator": "Trois méthodes de test",
+      "bytes": 5516,
+      "worktree_sha256": "f7151ee177b5206ddbb83afc3d240589af6ec4fb4f885f4a436f6a3e43373e3d",
+      "git_blob_oid": "0c1f5de5894731d74cd8dfbc413639922b822728"
+    },
+    {
+      "id": "T05",
+      "category": "test_source",
+      "path": "src/test/java/com/bettingproject/sofascorelocal/application/history/J6SemanticDiffServiceTest.java",
+      "use": "V4 officiels/pays, absent/vide/zéro et appariement incidents",
+      "locator": "reportsV4OfficialNameAndCountryCorrections et tests ciblés",
+      "bytes": 34041,
+      "worktree_sha256": "0f0f3fd67c05d738b7e4f6de15057c38f068ad6c6ac7a31e88847a4d18abaca5",
+      "git_blob_oid": "44735fa909bb202d8c666e15486b73a54a18ceaa"
+    },
+    {
+      "id": "H01",
+      "category": "historical",
+      "path": "docs/work_orders/completed/WO-SS-20260830-017-j5-incidents-empty-shootout-action-v15.md",
+      "use": "Snapshot 717, V14/V15, qualification bornée 3 appels déjà consommée",
+      "locator": "Sections 2, 4, 9 et 13",
+      "bytes": 19315,
+      "worktree_sha256": "bf53c17ca5e11b6bf1cdbbed5432233405d90d572beab9e2af8c495b57031524",
+      "git_blob_oid": "9e43d0df5d1537a07237d38442ba4d59ac7e7120"
+    },
+    {
+      "id": "H02",
+      "category": "historical",
+      "path": "docs/validation/WO058-INCIDENT-AWARDED-20260907.md",
+      "use": "Snapshot 2340 ; rejet V15, replay V16 exact local 27 incidents",
+      "locator": "Diagnostic exact ; Correction versionnée ; Qualification",
+      "bytes": 8143,
+      "worktree_sha256": "b69538e4705c76958eb6c6aa1ce729fe50d017602e4e65816eac3f5504f7726c",
+      "git_blob_oid": "2ec2d800c5b4cc16a5829acd0dd27dfbb21e11ef"
+    },
+    {
+      "id": "H03",
+      "category": "historical_qualification",
+      "path": "docs/validation/WO058-J6-V4-PEOPLE-COUNTRY-DIFFS-20260913.md",
+      "use": "Régression réelle de projection et preuve locale du 13 septembre",
+      "locator": "Constat ; Projection J6 ; Régressions ajoutées",
+      "bytes": 3284,
+      "worktree_sha256": "3aaf0868d016acac42833d2f4386800bfe3490381d76db6e49d82b1d48d67730",
+      "git_blob_oid": "96767728cfbba9e31456d9be56ea98c37f2fbd53"
+    },
+    {
+      "id": "F01",
+      "category": "synthetic_fixture",
+      "path": "src/test/resources/fixtures/provider-j5/incidents-terminal-shootout-empty-actions.json",
+      "use": "Fixture minimale versionnée, sans contenu du snapshot réel 717",
+      "locator": "Document complet",
+      "bytes": 1059,
+      "worktree_sha256": "7696df924593de4aafe7ff8c4062ac1dd1fe37295b3e8f40072061d563d90e83",
+      "git_blob_oid": "a9d37951869b2aa746553269d697cb86bf00af3a"
+    }
+  ],
+  "evaluation_files": [
+    {
+      "path": "source-inventory.md",
+      "bytes": 11183,
+      "sha256": "5f67617016897c6b9498ef60cd724b2b039965ff999df183058c522c3add524e",
+      "role": "SUPERVISOR_ONLY"
+    },
+    {
+      "path": "evaluation-plan.md",
+      "bytes": 6021,
+      "sha256": "98747fa021a4cca8d8fd86eead79369d99f9b8edd24c1291e5ef3c73a477d76f",
+      "role": "SUPERVISOR_ONLY"
+    },
+    {
+      "path": "oracle.md",
+      "bytes": 14522,
+      "sha256": "89a97391468b606a4e693d897314383fbbc50d85082dc18fb03bad608a52fe69",
+      "role": "REVIEWER_ONLY"
+    },
+    {
+      "path": "cases.json",
+      "bytes": 5870,
+      "sha256": "5ba4f5b75bf8a57c632581c0434328b1e08d5e0b444349ce0a3de9affd5c81ae",
+      "role": "EXTRACT_SELECTED_CASE_ONLY"
+    },
+    {
+      "path": "inputs.json",
+      "bytes": 24093,
+      "sha256": "3e0062f716c1474d32076dbabd240600471fff7770a9ac1573ba1975a4a2673b",
+      "role": "EXTRACT_SELECTED_CASE_ONLY"
+    }
+  ]
+}

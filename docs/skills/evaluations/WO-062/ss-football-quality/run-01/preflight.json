@@ -1,0 +1,402 @@
+{
+  "prepared_at_utc": "2026-09-15T19:42:27.580522+00:00",
+  "skill": "ss-football-quality",
+  "run_id": "run-01",
+  "candidate_version": "0.1.0-candidate.1",
+  "candidate_sha256": "8489375d22eff31a3248f78a5d3791b549a2f103d061cc6c46647a757d3eec58",
+  "source_head": "bfbe3fb6e787756544508e1a3e5a92674a678bd7",
+  "preparation_manifest_sha256": "ab5cf47000fe47b9fc76541ecf9e29a9a429e17d9947c86004078ae850f49adc",
+  "case_count": 8,
+  "cases": [
+    {
+      "case_id": "FQ-H01",
+      "kind": "historical",
+      "input_files": [
+        {
+          "path": "AGENTS.md",
+          "sha256": "6509ac77cd4c87094a91da7e4c750b5991eeb4585a69a609def5289b91cf6ab5",
+          "bytes": 10320
+        },
+        {
+          "path": "docs/requirements/J5-FOOTBALL-INCIDENT-RULES.md",
+          "sha256": "1b10902333b641a6e25853e811f4b0e1056e575026439d20e2fa96b819cc26ab",
+          "bytes": 83020
+        },
+        {
+          "path": "src/main/java/com/bettingproject/sofascorelocal/adapter/sofascore/eventdata/EventIncidentsV15Parser.java",
+          "sha256": "6286b961b6a5dfce36b93960aa9016decd677fd359244c9d6cbdab9f65916ac3",
+          "bytes": 1048
+        },
+        {
+          "path": "src/test/java/com/bettingproject/sofascorelocal/adapter/sofascore/eventdata/EventIncidentsV15ParserTest.java",
+          "sha256": "65067b0872f40ef6acaa04992abad177812a5e061061739985d9e2dc4b6f8e1c",
+          "bytes": 7547
+        },
+        {
+          "path": "docs/work_orders/completed/WO-SS-20260830-017-j5-incidents-empty-shootout-action-v15.md",
+          "sha256": "bf53c17ca5e11b6bf1cdbbed5432233405d90d572beab9e2af8c495b57031524",
+          "bytes": 19315
+        },
+        {
+          "path": "src/test/resources/fixtures/provider-j5/incidents-terminal-shootout-empty-actions.json",
+          "sha256": "7696df924593de4aafe7ff8c4062ac1dd1fe37295b3e8f40072061d563d90e83",
+          "bytes": 1059
+        },
+        {
+          "path": ".agents/skills/ss-football-quality/SKILL.md",
+          "sha256": "8489375d22eff31a3248f78a5d3791b549a2f103d061cc6c46647a757d3eec58",
+          "bytes": 7330
+        },
+        {
+          "path": ".agents/skills/ss-football-quality/agents/openai.yaml",
+          "sha256": "53585a6b26f9dcc0d249771ed21eece127acd75ec25e4a4ee88f1b72f51e7f13",
+          "bytes": 298
+        }
+      ],
+      "prompt_sha256": "6c3c3ef78e84b7728949048ed3d00f8df504aca8cc10633bc980c8dd4ef7cb03",
+      "request_sha256": "11852661cb75825568cd58c67e8206e40f7716a730976b18b814f50645504983",
+      "oracle_supplied": false,
+      "design_history_supplied": false,
+      "candidate_body_manually_pasted": false
+    },
+    {
+      "case_id": "FQ-N01",
+      "kind": "new_task",
+      "input_files": [
+        {
+          "path": "AGENTS.md",
+          "sha256": "6509ac77cd4c87094a91da7e4c750b5991eeb4585a69a609def5289b91cf6ab5",
+          "bytes": 10320
+        },
+        {
+          "path": "docs/architecture/J4-CANONICAL-EVENTS-AND-LOCAL-DETAIL.md",
+          "sha256": "0994aaf72ae3c3dac4380bf10edb0792e7e99c57b9c544564b91c9c30c10b3d0",
+          "bytes": 14149
+        },
+        {
+          "path": "docs/architecture/J5-GUARDED-REAL-EVENT-DATA.md",
+          "sha256": "363805e242a277471a24465148007fc70ad54eb0757ce50793ab6089871c0f6d",
+          "bytes": 46154
+        },
+        {
+          "path": "docs/architecture/J4-J5-PEOPLE-V4.md",
+          "sha256": "9c29a577c3b75ad12cb8bd255700deae2fd4bc6d375e47b84582c6cead39b938",
+          "bytes": 3773
+        },
+        {
+          "path": "docs/architecture/J6-HISTORY-AND-GUARDED-RETENTION.md",
+          "sha256": "08b915e4634652524a7388bd18952122979ee27046c0990a2eba058ba16c0693",
+          "bytes": 18692
+        },
+        {
+          "path": "docs/architecture/J5-LINEUPS-V3-PLAYER-DETAILS.md",
+          "sha256": "7c11059d50f7c92c8470934e1175669ca1ffa71fb85f185e9e135281b0376daf",
+          "bytes": 7627
+        },
+        {
+          "path": "docs/runbooks/J7-CANONICAL-EVENT-EXPORT.md",
+          "sha256": "c35a383fb5a59a12235e6e61aed30d0e6bfad9be3ae2fa3f607138e42e1e5271",
+          "bytes": 12549
+        },
+        {
+          "path": "src/main/java/com/bettingproject/sofascorelocal/adapter/sofascore/eventdata/EventIncidentsV16Parser.java",
+          "sha256": "1df5dd003eb0d6a2fa20e9efc3586a7251dbfc4ae74225a121abe7df1e566b88",
+          "bytes": 1747
+        },
+        {
+          "path": "src/main/java/com/bettingproject/sofascorelocal/adapter/sofascore/eventdata/EventIncidentsV17Parser.java",
+          "sha256": "410f47f99cc8e37d93ef89c2518ec08298cd36bbb2c3b97e00f478c0516a9971",
+          "bytes": 1239
+        },
+        {
+          "path": "src/main/java/com/bettingproject/sofascorelocal/application/history/J6SemanticDiffService.java",
+          "sha256": "e5237db5f7df61a54fcca894fd7075e103ae1227f49e0b8436a935cd37952865",
+          "bytes": 35633
+        },
+        {
+          "path": "src/main/java/com/bettingproject/sofascorelocal/adapter/sofascore/eventdetails/EventDetailsV4Parser.java",
+          "sha256": "90ada85342cd8e47dd2d7209ae8f37aa83477586afd70548d7d291bf45b50dd8",
+          "bytes": 3843
+        },
+        {
+          "path": "src/main/java/com/bettingproject/sofascorelocal/adapter/sofascore/eventdata/EventLineupsV4Parser.java",
+          "sha256": "cd82473ec262fe81b8ed076501f5977d0b1b91d39026d37b6179e0563216177e",
+          "bytes": 3855
+        },
+        {
+          "path": "src/test/java/com/bettingproject/sofascorelocal/application/history/J6SemanticDiffServiceTest.java",
+          "sha256": "0f0f3fd67c05d738b7e4f6de15057c38f068ad6c6ac7a31e88847a4d18abaca5",
+          "bytes": 34041
+        },
+        {
+          "path": "docs/validation/WO058-INCIDENT-AWARDED-20260907.md",
+          "sha256": "b69538e4705c76958eb6c6aa1ce729fe50d017602e4e65816eac3f5504f7726c",
+          "bytes": 8143
+        },
+        {
+          "path": "docs/validation/WO058-J6-V4-PEOPLE-COUNTRY-DIFFS-20260913.md",
+          "sha256": "3aaf0868d016acac42833d2f4386800bfe3490381d76db6e49d82b1d48d67730",
+          "bytes": 3284
+        },
+        {
+          "path": ".agents/skills/ss-football-quality/SKILL.md",
+          "sha256": "8489375d22eff31a3248f78a5d3791b549a2f103d061cc6c46647a757d3eec58",
+          "bytes": 7330
+        },
+        {
+          "path": ".agents/skills/ss-football-quality/agents/openai.yaml",
+          "sha256": "53585a6b26f9dcc0d249771ed21eece127acd75ec25e4a4ee88f1b72f51e7f13",
+          "bytes": 298
+        }
+      ],
+      "prompt_sha256": "8a2191774f3001957837be8db5d704b3dccc486c8bcd607fc4bec5936a6cb408",
+      "request_sha256": "3d6d020836c015874ecf170a5da0d0aeff85152f101407b568a6662fab921d09",
+      "oracle_supplied": false,
+      "design_history_supplied": false,
+      "candidate_body_manually_pasted": false
+    },
+    {
+      "case_id": "FQ-C01",
+      "kind": "counterexample",
+      "input_files": [
+        {
+          "path": "AGENTS.md",
+          "sha256": "6509ac77cd4c87094a91da7e4c750b5991eeb4585a69a609def5289b91cf6ab5",
+          "bytes": 10320
+        },
+        {
+          "path": "docs/architecture/J4-CANONICAL-EVENTS-AND-LOCAL-DETAIL.md",
+          "sha256": "0994aaf72ae3c3dac4380bf10edb0792e7e99c57b9c544564b91c9c30c10b3d0",
+          "bytes": 14149
+        },
+        {
+          "path": "docs/architecture/J5-GUARDED-REAL-EVENT-DATA.md",
+          "sha256": "363805e242a277471a24465148007fc70ad54eb0757ce50793ab6089871c0f6d",
+          "bytes": 46154
+        },
+        {
+          "path": "docs/architecture/J4-J5-PEOPLE-V4.md",
+          "sha256": "9c29a577c3b75ad12cb8bd255700deae2fd4bc6d375e47b84582c6cead39b938",
+          "bytes": 3773
+        },
+        {
+          "path": "docs/architecture/J5-LINEUPS-V3-PLAYER-DETAILS.md",
+          "sha256": "7c11059d50f7c92c8470934e1175669ca1ffa71fb85f185e9e135281b0376daf",
+          "bytes": 7627
+        },
+        {
+          "path": "src/main/java/com/bettingproject/sofascorelocal/adapter/sofascore/eventdata/EventStatisticsV2Parser.java",
+          "sha256": "54439954277505d5fddee2a91dcf1e91f3f2a8eee133cf8e115a5549e0c4a2c7",
+          "bytes": 8004
+        },
+        {
+          "path": ".agents/skills/ss-football-quality/SKILL.md",
+          "sha256": "8489375d22eff31a3248f78a5d3791b549a2f103d061cc6c46647a757d3eec58",
+          "bytes": 7330
+        },
+        {
+          "path": ".agents/skills/ss-football-quality/agents/openai.yaml",
+          "sha256": "8d295af442808d3efebbe68e8165ef96efd086b5b84908fc12f04c1c66bf51f2",
+          "bytes": 305
+        },
+        {
+          "path": "input.json",
+          "sha256": "af04d4783882206d1646235f5bf50c5648b1bff15365828d36500cca83fbb5f7",
+          "bytes": 7200
+        }
+      ],
+      "prompt_sha256": "1ccf2117fcfbe6a1e3456d04dce6974a0ecad87d69661e10ef99cf32db29f1dc",
+      "request_sha256": "b01124f268602ff43a6f32ae7414a49fb79713cc814cf7c033b9802f4ad3cb03",
+      "oracle_supplied": false,
+      "design_history_supplied": false,
+      "candidate_body_manually_pasted": false
+    },
+    {
+      "case_id": "FQ-C02",
+      "kind": "counterexample",
+      "input_files": [
+        {
+          "path": "AGENTS.md",
+          "sha256": "6509ac77cd4c87094a91da7e4c750b5991eeb4585a69a609def5289b91cf6ab5",
+          "bytes": 10320
+        },
+        {
+          "path": "docs/requirements/J5-FOOTBALL-INCIDENT-RULES.md",
+          "sha256": "1b10902333b641a6e25853e811f4b0e1056e575026439d20e2fa96b819cc26ab",
+          "bytes": 83020
+        },
+        {
+          "path": "docs/architecture/J6-HISTORY-AND-GUARDED-RETENTION.md",
+          "sha256": "08b915e4634652524a7388bd18952122979ee27046c0990a2eba058ba16c0693",
+          "bytes": 18692
+        },
+        {
+          "path": "src/main/java/com/bettingproject/sofascorelocal/adapter/sofascore/eventdata/EventIncidentsV15Parser.java",
+          "sha256": "6286b961b6a5dfce36b93960aa9016decd677fd359244c9d6cbdab9f65916ac3",
+          "bytes": 1048
+        },
+        {
+          "path": "src/main/java/com/bettingproject/sofascorelocal/adapter/sofascore/eventdata/EventIncidentsV16Parser.java",
+          "sha256": "1df5dd003eb0d6a2fa20e9efc3586a7251dbfc4ae74225a121abe7df1e566b88",
+          "bytes": 1747
+        },
+        {
+          "path": "src/main/java/com/bettingproject/sofascorelocal/adapter/sofascore/eventdata/EventIncidentsV17Parser.java",
+          "sha256": "410f47f99cc8e37d93ef89c2518ec08298cd36bbb2c3b97e00f478c0516a9971",
+          "bytes": 1239
+        },
+        {
+          "path": "src/main/java/com/bettingproject/sofascorelocal/application/history/J6HistoryClassifier.java",
+          "sha256": "0f222c27885aa9ee716bd94cf9db8a28c741d9b181972164b7199e35844dc2c8",
+          "bytes": 3943
+        },
+        {
+          "path": "src/main/java/com/bettingproject/sofascorelocal/application/history/J6SemanticDiffService.java",
+          "sha256": "e5237db5f7df61a54fcca894fd7075e103ae1227f49e0b8436a935cd37952865",
+          "bytes": 35633
+        },
+        {
+          "path": "src/test/java/com/bettingproject/sofascorelocal/adapter/sofascore/eventdata/EventIncidentsV15ParserTest.java",
+          "sha256": "65067b0872f40ef6acaa04992abad177812a5e061061739985d9e2dc4b6f8e1c",
+          "bytes": 7547
+        },
+        {
+          "path": "src/test/java/com/bettingproject/sofascorelocal/adapter/sofascore/eventdata/EventIncidentsV16ParserTest.java",
+          "sha256": "7021ca0a0164d7692da4bde25038a477d206c564fb62d276fb259baf876728a1",
+          "bytes": 13244
+        },
+        {
+          "path": "src/test/java/com/bettingproject/sofascorelocal/application/history/J6HistoryClassifierTest.java",
+          "sha256": "f7151ee177b5206ddbb83afc3d240589af6ec4fb4f885f4a436f6a3e43373e3d",
+          "bytes": 5516
+        },
+        {
+          "path": "src/test/resources/fixtures/provider-j5/incidents-terminal-shootout-empty-actions.json",
+          "sha256": "7696df924593de4aafe7ff8c4062ac1dd1fe37295b3e8f40072061d563d90e83",
+          "bytes": 1059
+        },
+        {
+          "path": ".agents/skills/ss-football-quality/SKILL.md",
+          "sha256": "8489375d22eff31a3248f78a5d3791b549a2f103d061cc6c46647a757d3eec58",
+          "bytes": 7330
+        },
+        {
+          "path": ".agents/skills/ss-football-quality/agents/openai.yaml",
+          "sha256": "8d295af442808d3efebbe68e8165ef96efd086b5b84908fc12f04c1c66bf51f2",
+          "bytes": 305
+        },
+        {
+          "path": "input.json",
+          "sha256": "91da9fb3d42e1920ee7b9b74f6b304c0d68414bc2e857e8887728f23787175c1",
+          "bytes": 13758
+        }
+      ],
+      "prompt_sha256": "e443546d439fed29e6025ab0a463db36f55d0d8f0b20d0d6ba9bc737fb31c086",
+      "request_sha256": "4da6b9d844e8eadb996205a0c5e0360e4266063ab20e7bf9fea4ce783c34f87c",
+      "oracle_supplied": false,
+      "design_history_supplied": false,
+      "candidate_body_manually_pasted": false
+    },
+    {
+      "case_id": "FQ-S01",
+      "kind": "selection_explicit",
+      "input_files": [
+        {
+          "path": ".agents/skills/ss-football-quality/SKILL.md",
+          "sha256": "8489375d22eff31a3248f78a5d3791b549a2f103d061cc6c46647a757d3eec58",
+          "bytes": 7330
+        },
+        {
+          "path": ".agents/skills/ss-football-quality/agents/openai.yaml",
+          "sha256": "8d295af442808d3efebbe68e8165ef96efd086b5b84908fc12f04c1c66bf51f2",
+          "bytes": 305
+        }
+      ],
+      "prompt_sha256": "8d8310bf41d7b4ca090833962cfc52a9e38af5c31e0f5a1606e979cbff70b9e5",
+      "request_sha256": "46516786fd24a0809301fdf4a0d333846684f7793b12fa0a4058898fb334a58c",
+      "oracle_supplied": false,
+      "design_history_supplied": false,
+      "candidate_body_manually_pasted": false
+    },
+    {
+      "case_id": "FQ-S02",
+      "kind": "selection_implicit",
+      "input_files": [
+        {
+          "path": ".agents/skills/ss-football-quality/SKILL.md",
+          "sha256": "8489375d22eff31a3248f78a5d3791b549a2f103d061cc6c46647a757d3eec58",
+          "bytes": 7330
+        },
+        {
+          "path": ".agents/skills/ss-football-quality/agents/openai.yaml",
+          "sha256": "8d295af442808d3efebbe68e8165ef96efd086b5b84908fc12f04c1c66bf51f2",
+          "bytes": 305
+        }
+      ],
+      "prompt_sha256": "a8eb2c73eaac0996e2bc288535d0d816cc1abd38d67e5e18fb62a230757c2d2a",
+      "request_sha256": "69dc730fcbb3297722c5a06c70b1ad48f70dc45e84ed9fbfc37491342f24cbec",
+      "oracle_supplied": false,
+      "design_history_supplied": false,
+      "candidate_body_manually_pasted": false
+    },
+    {
+      "case_id": "FQ-S03",
+      "kind": "selection_negative_lot1",
+      "input_files": [
+        {
+          "path": ".agents/skills/ss-football-quality/SKILL.md",
+          "sha256": "8489375d22eff31a3248f78a5d3791b549a2f103d061cc6c46647a757d3eec58",
+          "bytes": 7330
+        },
+        {
+          "path": ".agents/skills/ss-football-quality/agents/openai.yaml",
+          "sha256": "8d295af442808d3efebbe68e8165ef96efd086b5b84908fc12f04c1c66bf51f2",
+          "bytes": 305
+        }
+      ],
+      "prompt_sha256": "9f95618b83cd6febb0fa1542b30defb4138899b7d9359ad7e9ba279ce6188509",
+      "request_sha256": "cacca51a67c33f0c1260122d9f59b91dce0f0a0a643137d187ad7def0db8e8c7",
+      "oracle_supplied": false,
+      "design_history_supplied": false,
+      "candidate_body_manually_pasted": false
+    },
+    {
+      "case_id": "FQ-S04",
+      "kind": "selection_negative_other_repo",
+      "input_files": [
+        {
+          "path": ".agents/skills/ss-football-quality/SKILL.md",
+          "sha256": "8489375d22eff31a3248f78a5d3791b549a2f103d061cc6c46647a757d3eec58",
+          "bytes": 7330
+        },
+        {
+          "path": ".agents/skills/ss-football-quality/agents/openai.yaml",
+          "sha256": "8d295af442808d3efebbe68e8165ef96efd086b5b84908fc12f04c1c66bf51f2",
+          "bytes": 305
+        }
+      ],
+      "prompt_sha256": "e4e3b3572460355b260203ce823fbf4dc5974763f13bd991bc1bb4b77dcf9c07",
+      "request_sha256": "c1ca5f5fa74f936f75ee302cd0185227727cbce8c76776c9165dac24a81d7c10",
+      "oracle_supplied": false,
+      "design_history_supplied": false,
+      "candidate_body_manually_pasted": false
+    }
+  ],
+  "metadata_encoding_correction": {
+    "reason": "Official generator used host cp1252. Normalize identical Unicode YAML to UTF-8 before remaining sessions; started sessions retain their original inputs and traces. SKILL.md body unchanged.",
+    "started_original_metadata": [
+      "FQ-H01",
+      "FQ-N01"
+    ],
+    "not_started_corrected_metadata": [
+      "FQ-C01",
+      "FQ-C02",
+      "FQ-S01",
+      "FQ-S02",
+      "FQ-S03",
+      "FQ-S04"
+    ],
+    "original_yaml_sha256": "53585a6b26f9dcc0d249771ed21eece127acd75ec25e4a4ee88f1b72f51e7f13",
+    "corrected_yaml_sha256": "8d295af442808d3efebbe68e8165ef96efd086b5b84908fc12f04c1c66bf51f2"
+  }
+}

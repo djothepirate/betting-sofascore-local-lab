@@ -1,0 +1,25 @@
+**********************
+Début de la transcription PowerShell
+Heure de début : 20260915235925
+Nom d’utilisateur : ASUSGGO2025\CodexSandboxOffline
+Utilisateur RunAs : ASUSGGO2025\CodexSandboxOffline
+Nom de la configuration : 
+Ordinateur : ASUSGGO2025 (Microsoft Windows NT 10.0.26200.0)
+Application hôte : C:\Program Files\PowerShell\7\pwsh.dll -NoProfile -Command try { [Console]::OutputEncoding=[System.Text.Encoding]::UTF8 } catch {}
+& '.\output\runtime-artifacts\Invoke-Qualification.ps1'
+ID de processus : 37520
+PSVersion: 7.6.6
+PSEdition: Core
+GitCommitId: 7.6.6
+OS: Microsoft Windows 10.0.26200
+Platform: Win32NT
+PSCompatibleVersions: 1.0, 2.0, 3.0, 4.0, 5.0, 5.1, 6.0, 7.0
+PSRemotingProtocolVersion: 2.4
+SerializationVersion: 1.1.0.1
+WSManStackVersion: 3.0
+**********************
+
+**********************
+Fin de la transcription PowerShell
+Heure de fin : 20260915235928
+**********************

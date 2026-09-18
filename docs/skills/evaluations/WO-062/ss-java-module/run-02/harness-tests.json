@@ -1,0 +1,12 @@
+{
+  "kind": "synthetic_pure_or_mocked_checks",
+  "launcher_sha256": "8a72b9b69d452bdcc545cc85ce4931beef5a58a41625eba3e12d9c240f44425f",
+  "model_calls": 0,
+  "external_process_calls": 0,
+  "environment_read": false,
+  "tests_run": 17,
+  "failures": 0,
+  "errors": 0,
+  "success": true,
+  "artifacts_root": "C:\\Dev\\BettingProject\\codex\\betting-sofascore-local-lab\\.tmp\\wo062-skills-lot2\\.tmp\\c-harness-synthetic\\b72fc2cc-d974-464c-92d2-ef85df3baf8c"
+}

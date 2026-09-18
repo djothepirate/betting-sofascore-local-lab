@@ -1,0 +1,58 @@
+{
+  "schema": "wo062-windows-operational-repair-manifest-v1",
+  "status": "PASS_TECHNICAL_REPAIR_ONLY",
+  "source_templates_preserved": [
+    {
+      "path": "../c-requalification-05/wrh-harness-template.ps1",
+      "sha256": "c1d8c2d34ae0990a6d4404e9f8ec6d42bad0b6d2f33f1f0fc922b17182ac17ef"
+    },
+    {
+      "path": "../c-requalification-05/wrh-postflight-template.ps1",
+      "sha256": "6e9428d28209acd4b8a966a454dc17fd82a03b5500f11058ede532c69b8ecb6b"
+    },
+    {
+      "path": "../c-requalification-05/wrn-conductor-template.ps1",
+      "sha256": "b1f4cd49dc1ae97eb7218e75afc9d14dab007d9970131ca38e2bfddcfcc0615a"
+    }
+  ],
+  "files": [
+    {
+      "path": "README.md",
+      "bytes": 3076,
+      "sha256": "318716f1c07fac776920528399f1e51737cbde4cba5d2fb08587cbf159d9e23a"
+    },
+    {
+      "path": "build_repaired_templates.py",
+      "bytes": 11258,
+      "sha256": "0b37f8ca29cff101a8f75bdaea520573188699330bf5370b9d68bf6ff209d56f"
+    },
+    {
+      "path": "c5_runtime_root_collector.py",
+      "bytes": 3130,
+      "sha256": "03120d1891d58abd76bcf12b6a9fdfc223900a0397da74d34ccd7f2913d063bf"
+    },
+    {
+      "path": "test_operational_repair.py",
+      "bytes": 11601,
+      "sha256": "62d2e24a589aebcdc2cf5efa6eab9af44a7ae90170848188378a5afd55a92659"
+    },
+    {
+      "path": "validation.json",
+      "bytes": 3966,
+      "sha256": "9516a254700ca3c151ca5d5a16b9869cead5c037240c24e281c39eea842cba6b"
+    },
+    {
+      "path": "static-review.md",
+      "bytes": 3367,
+      "sha256": "46e1bc3ccc173951518ec23a309be1d4b8951f82242a1405944c98c312e34fd4"
+    }
+  ],
+  "non_qualification_boundary": {
+    "model_session_started": false,
+    "qualification_execution_started": false,
+    "candidate_modified": false,
+    "fixture_modified": false,
+    "oracle_modified": false,
+    "historical_c5_evidence_modified": false
+  }
+}

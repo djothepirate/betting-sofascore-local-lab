@@ -1,0 +1,41 @@
+{
+  "case": "PB-C01",
+  "started_at_utc": "2026-09-15T16:46:40Z",
+  "start_time_note": "Premier instant UTC observé, après la lecture initiale de la liste autorisée.",
+  "finished_at_utc": "2026-09-15T16:49:45Z",
+  "provenance": "SYNTHETIC_EVALUATION_INPUT_NOT_PROVIDER_DATA",
+  "skill_applied": "candidate/SKILL.md",
+  "files_read": [
+    "allowed-files.txt",
+    "prompt.txt",
+    "candidate/SKILL.md",
+    "input.json",
+    "corpus/AGENTS.md",
+    "corpus/docs/architecture/J8-BENCHMARK-METRICS.md",
+    "corpus/src/main/java/com/bettingproject/sofascorelocal/application/benchmark/J8BenchmarkService.java",
+    "corpus/src/main/java/com/bettingproject/sofascorelocal/adapter/persistence/JdbcJ8BenchmarkReadStore.java"
+  ],
+  "source_root": "C:\\Dev\\BettingProject\\codex\\betting-sofascore-local-lab\\.tmp\\wo062-skills-lot2\\.tmp\\pb-evaluations\\run-01\\PB-C01",
+  "tools_actions": [
+    "functions.exec avec exec_command : lectures locales PowerShell Get-Content et recherches rg limitées aux chemins autorisés; extraits Java numérotés.",
+    "clock__curr_time : observation UTC de début.",
+    "Lecture des définitions et confrontation aux méthodes pertinentes du code; calculs arithmétiques et nearest-rank sur input.json.",
+    "Création du répertoire output et écriture UTF-8 de response.md et trace.json uniquement.",
+    "Aucun réseau, application, DB, Docker, test, collecte, oracle ou lecture de référence sortante."
+  ],
+  "outputs_written": [
+    "output/response.md",
+    "output/trace.json"
+  ],
+  "limits": [
+    "Entrée entièrement synthétique; aucune observation fournisseur réelle.",
+    "Fenêtre UTC et asOf non fournis; dates et résultats terminaux de campagne absents.",
+    "Indicateurs normalizedProofAtAsOf acceptés comme assertions du cas, sans vérification en base.",
+    "Projection abrégée : hash J8 de population et contrôle des chevauchements non reproductibles.",
+    "Aucune donnée de dossier J4/J5; ratios par dossier sans dénominateur.",
+    "Runbook, ADR sortants, J8BenchmarkWindow et tests hors corpus non lus.",
+    "Note opérateur contenue dans les données ignorée comme instruction.",
+    "Aucun modèle ni effort exposé faute de métadonnée observée."
+  ],
+  "status": "completed"
+}

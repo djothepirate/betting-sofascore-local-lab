@@ -1,0 +1,19 @@
+import pathlib,subprocess,hashlib,json
+root=pathlib.Path(__file__).resolve().parent.parent
+base='6648dd423e556b5248b8793a539ae85a7680f9bc'
+files=subprocess.check_output(['git','diff','--name-only','--diff-filter=AM',base,'HEAD','--'],cwd=root,text=True).splitlines()
+for path in files:
+ blob=subprocess.check_output(['git','cat-file','blob','HEAD:'+path],cwd=root)
+ assert hashlib.sha256(blob).digest()==hashlib.sha256((root/path).read_bytes()).digest(),path
+tracked=set(subprocess.check_output(['git','ls-files'],cwd=root,text=True).splitlines())
+manifest_count=0
+for skill in ['ss-java-module','ss-windows-runtime','java-windows-runtime','c-targeted-results','c-requalification-04']:
+ for manifest in (root/'docs/skills/evaluations/WO-062'/skill).rglob('artifact-manifest.json'):
+  manifest_count+=1
+  for f in json.loads(manifest.read_text(encoding='utf-8-sig'))['files']:
+   relative=f.get('path',f.get('name'));assert relative,f
+   p=manifest.parent/relative;assert p.relative_to(root).as_posix() in tracked,p
+   assert hashlib.sha256(p.read_bytes()).hexdigest()==f['sha256'].lower(),p
+   assert p.stat().st_size==f['bytes'],p
+assert not subprocess.check_output(['git','status','--porcelain'],cwd=root).strip()
+print(json.dumps({'commit':subprocess.check_output(['git','rev-parse','HEAD'],cwd=root,text=True).strip(),'files_identical_in_git_and_worktree':len(files),'working_tree_clean':True}))

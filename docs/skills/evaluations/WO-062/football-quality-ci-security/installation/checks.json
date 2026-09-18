@@ -1,0 +1,209 @@
+{
+  "schema_version": 1,
+  "work_order": "WO-062",
+  "checked_at_utc": "2026-09-15T20:44:17.179062+00:00",
+  "baseline": "285f4384a4c2fbd4276089fc216c7c74d2cb7495",
+  "status": "PASS",
+  "exact_approved_candidate_files": 4,
+  "personal_files_checked": 16,
+  "prior_personal_files_and_timestamps_preserved": 12,
+  "personal_catalogue_entries": 8,
+  "isolated_installer_cases_passed": 32,
+  "current_qualification_changes": "Only owner/installation state; frozen evaluation results and limitations unchanged.",
+  "preserved_paths": [
+    "docs/skills/local-lab",
+    "docs/skills/evaluations/SKL-002",
+    "docs/skills/evaluations/WO-062/ss-provider-benchmark",
+    "src",
+    "pom.xml",
+    "AGENTS.md",
+    ".github",
+    ".gitlab-ci.yml",
+    "ci",
+    "ADR-SS-001-experimentation-endpoints-sofascore-depuis-windows.md",
+    "ADR-SS-002-bounded-multi-dossier-provider-robustness.md",
+    "ADR-SS-003-optional-integration-topology.md",
+    "ADR-SS-004-integration-continue-et-distribution-locale-uniquement.md",
+    "ADR-SS-005-bounded-local-live-j4-j5-campaigns.md",
+    "ADR-SS-006-j3-manual-pagination-cap-35.md",
+    "ADR-SS-007-j3-automation-durable-catalog-and-live-pause.md",
+    "docs/skills/evaluations/WO-062/ss-football-quality/source-inventory.md",
+    "docs/skills/evaluations/WO-062/ss-football-quality/cases.json",
+    "docs/skills/evaluations/WO-062/ss-football-quality/inputs.json",
+    "docs/skills/evaluations/WO-062/ss-football-quality/oracle.md",
+    "docs/skills/evaluations/WO-062/ss-football-quality/evaluation-plan.md",
+    "docs/skills/evaluations/WO-062/ss-football-quality/manifest.json",
+    "docs/skills/evaluations/WO-062/ss-football-quality/run-01",
+    "docs/skills/evaluations/WO-062/ss-ci-security/source-inventory.md",
+    "docs/skills/evaluations/WO-062/ss-ci-security/cases.json",
+    "docs/skills/evaluations/WO-062/ss-ci-security/inputs.json",
+    "docs/skills/evaluations/WO-062/ss-ci-security/oracle.md",
+    "docs/skills/evaluations/WO-062/ss-ci-security/evaluation-plan.md",
+    "docs/skills/evaluations/WO-062/ss-ci-security/manifest.json",
+    "docs/skills/evaluations/WO-062/ss-ci-security/run-01"
+  ],
+  "applicable_script_hashes_match_execution": true,
+  "local_links_checked": 386,
+  "utf8_changed_files": 30,
+  "secret_patterns": 9,
+  "secret_findings": 0,
+  "secret_check_method": "Current bytes of changed/added files since baseline; nine regex families from ci/check-no-secrets.sh, POSIX space translated to Python whitespace, case-insensitive. No CI or full-history scan.",
+  "evidence_scope": "Read-only final verification. Installer tests and discovery are the earlier preserved executions; no model or Maven invoked by this check.",
+  "checked_file_bytes": "Native worktree bytes; PowerShell scripts use CRLF as required by .gitattributes. Git text blobs normalize those scripts to LF and checkout restores CRLF.",
+  "self_exclusions": [
+    "installation/checks.json",
+    "installation/artifact-manifest.json"
+  ],
+  "checked_files": [
+    {
+      "path": ".gitattributes",
+      "bytes": 4802,
+      "sha256": "b0c6a2c1eccbf2b749be9dc28242c3cd048004ff870720605b640924bb79032f"
+    },
+    {
+      "path": "CHANGELOG.md",
+      "bytes": 298196,
+      "sha256": "26b2429eb8958b86660d82f63ee129dd57beee528c29c2bc77ee9b53ea21c96c"
+    },
+    {
+      "path": "README.md",
+      "bytes": 185715,
+      "sha256": "f86501e5173c3330a64f56ae804d59148a78682ee7a378c5fd0806d928b6f4cd"
+    },
+    {
+      "path": "docs/skills/README.md",
+      "bytes": 11310,
+      "sha256": "95046ce5d56df5a19cfda6211511fd9b6dea0593344206cde095fec5bd9230da"
+    },
+    {
+      "path": "docs/skills/evaluations/WO-062/football-quality-ci-security/installation-manifest.json",
+      "bytes": 1239,
+      "sha256": "28e5e35941e7125e57d0db98553e94d4b88276e9db72b270a3827e1b1a10e7f2"
+    },
+    {
+      "path": "docs/skills/evaluations/WO-062/football-quality-ci-security/installation/discovery.json",
+      "bytes": 4898,
+      "sha256": "c0bb5cc3686f44aece45b37e1904bfe5f000b6934adb55419ddc12ca61720cc1"
+    },
+    {
+      "path": "docs/skills/evaluations/WO-062/football-quality-ci-security/installation/idempotence.log",
+      "bytes": 60,
+      "sha256": "6f5cd111765dda66a20f79ecd63bc34f5fdf02b8c451e8543ca4d2e416316091"
+    },
+    {
+      "path": "docs/skills/evaluations/WO-062/football-quality-ci-security/installation/initial-runtime-failure.json",
+      "bytes": 1939,
+      "sha256": "a6a41a79e694916cb7bd1f6477cde7afe101856f8bf38fa46d76fbf7f40dcbea"
+    },
+    {
+      "path": "docs/skills/evaluations/WO-062/football-quality-ci-security/installation/install-failed-01.log",
+      "bytes": 731,
+      "sha256": "c2eef6f5f23b353fa1d55f505320d60d1364111e5ef15272ed56c4c99f8ad3d7"
+    },
+    {
+      "path": "docs/skills/evaluations/WO-062/football-quality-ci-security/installation/install.log",
+      "bytes": 60,
+      "sha256": "b61846721717d57e2e6aef64cfed8bd9db612cda9dc1921ce696bdd05c753344"
+    },
+    {
+      "path": "docs/skills/evaluations/WO-062/football-quality-ci-security/installation/installation-execution.json",
+      "bytes": 3565,
+      "sha256": "d138278d8658121f3067291d452f279e2150c312304398f8f2c113256e1b3fe9"
+    },
+    {
+      "path": "docs/skills/evaluations/WO-062/football-quality-ci-security/installation/preflight.json",
+      "bytes": 4578,
+      "sha256": "16ce209ce048d97e516bfcaa58866f31a73416dd3c92089086517d9793ea2524"
+    },
+    {
+      "path": "docs/skills/evaluations/WO-062/football-quality-ci-security/installation/result.json",
+      "bytes": 6057,
+      "sha256": "e2969264f020b828d6b4c9c577d974ee2667953250714e2654fc1e986eee1072"
+    },
+    {
+      "path": "docs/skills/evaluations/WO-062/football-quality-ci-security/installation/review.json",
+      "bytes": 6725,
+      "sha256": "6e12bd79aba9a0ba4fa97a88c3f448b6fff62100968ba8f107ac074a8b2cbd40"
+    },
+    {
+      "path": "docs/skills/evaluations/WO-062/football-quality-ci-security/installation/review.md",
+      "bytes": 3853,
+      "sha256": "16b487edea56fde91b6534a95bcc00f709b39c39cd8d5d5fd72ead78e7037f3f"
+    },
+    {
+      "path": "docs/skills/evaluations/WO-062/football-quality-ci-security/installation/ss-ci-security-qualification-before-installation.json",
+      "bytes": 1721,
+      "sha256": "3237ed729f18cb407ed46c7778f40bcfdbde45cd9ab6ff26460525af9c8a1b30"
+    },
+    {
+      "path": "docs/skills/evaluations/WO-062/football-quality-ci-security/installation/ss-football-quality-qualification-before-installation.json",
+      "bytes": 2380,
+      "sha256": "692954afbfb96c216036b8fdeef09ea76df9f1833cdab7ae939798b8d24dcfc5"
+    },
+    {
+      "path": "docs/skills/evaluations/WO-062/football-quality-ci-security/installation/tests-b.txt",
+      "bytes": 903,
+      "sha256": "a2d888acc5baef2029e27f3f4d1de2696c55c1f190450e6d9697be004a96e4e5"
+    },
+    {
+      "path": "docs/skills/evaluations/WO-062/football-quality-ci-security/installation/tests-lot1.txt",
+      "bytes": 490,
+      "sha256": "def5a4ee35d7a147d7de876cb1d990ba644459e559810586d5e655914c78b1a0"
+    },
+    {
+      "path": "docs/skills/evaluations/WO-062/football-quality-ci-security/installation/tests-provider.txt",
+      "bytes": 743,
+      "sha256": "2f6132fc82511a32b11936a3ec4b1aaf00802b2217b80ab3cb673a0c3f253fa8"
+    },
+    {
+      "path": "docs/skills/evaluations/WO-062/football-quality-ci-security/installation/verify.log",
+      "bytes": 59,
+      "sha256": "3623c25c7d45403b9989b66fa1c6463ab4dfdb15b185b275c0ee21e7289db4c0"
+    },
+    {
+      "path": "docs/skills/evaluations/WO-062/ss-ci-security/human-validation.json",
+      "bytes": 1958,
+      "sha256": "a57d29c835b67e30bfdce2e8c9bda87aacb36a42c3c6308e4f015e8483fff4ac"
+    },
+    {
+      "path": "docs/skills/evaluations/WO-062/ss-ci-security/qualification.json",
+      "bytes": 1866,
+      "sha256": "69f5c60d8228924fb266a2f1afa58829b13f531a5830e44698e91dce9c51e024"
+    },
+    {
+      "path": "docs/skills/evaluations/WO-062/ss-football-quality/human-validation.json",
+      "bytes": 1973,
+      "sha256": "a2556f9852a076dcbaab5499c010e95eb933b4f312767c8babcab5f362c2f678"
+    },
+    {
+      "path": "docs/skills/evaluations/WO-062/ss-football-quality/qualification.json",
+      "bytes": 2525,
+      "sha256": "daa48553faeafd49257045914f2077c9a055f3941c236ffd34795e1449516b6a"
+    },
+    {
+      "path": "docs/validation/WO062-FOOTBALL-QUALITY-CI-SECURITY-CANDIDATES-20260915.md",
+      "bytes": 10713,
+      "sha256": "0a9e711920fd986268b92e1bfdf959487a5193e3ae95262a868e0fafe2a2ed68"
+    },
+    {
+      "path": "docs/validation/WO062-FOOTBALL-QUALITY-CI-SECURITY-INSTALLATION-20260915.md",
+      "bytes": 9389,
+      "sha256": "aa4b9d8eaca2ccddc093936b06652cf66938414c55442489526fa70f33769374"
+    },
+    {
+      "path": "docs/work_orders/active/WO-SS-20260915-062-skills-lot2.md",
+      "bytes": 30672,
+      "sha256": "c7fd49cc7c7c2dcbe0adf362266864d5867af3b7b94c6ad5b09d0cda4b3c5cbf"
+    },
+    {
+      "path": "scripts/Install-LocalLabSkills.ps1",
+      "bytes": 6559,
+      "sha256": "aa65ef1f15643201e8877b5debdc5382fee2068b96ec529346bff7e8cf28d2b2"
+    },
+    {
+      "path": "scripts/Test-LocalLabSkillsInstallation.ps1",
+      "bytes": 11993,
+      "sha256": "a7d0336a4d72f56b0908110b866e038ab97dc2f27968a4a52b8bbc8f2179ba4c"
+    }
+  ]
+}

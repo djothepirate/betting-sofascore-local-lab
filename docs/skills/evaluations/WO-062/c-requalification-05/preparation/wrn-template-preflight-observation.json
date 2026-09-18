@@ -1,0 +1,147 @@
+{
+    "case":  "WR-N01",
+    "phase":  "preflight",
+    "session_uuid":  "54a55fbc-360b-4c50-958d-60144a453ad2",
+    "temporary_root":  "C:\\Dev\\BettingProject\\codex\\betting-sofascore-local-lab\\.tmp\\wo062-skills-lot2\\.tmp\\wrn-c5-template-preflight\\output\\runtime\\WR native probe 54a55fbc-360b-4c50-958d-60144a453ad2",
+    "main_result":  "PREFLIGHT_VERIFIED_NO_JAVA",
+    "cleanup_result":  "CONFIRMED",
+    "conductor_exit":  0,
+    "events":  [
+                   {
+                       "event":  "runtime_registered",
+                       "utc":  "2026-09-16T00:34:29.0254667Z",
+                       "monotonic_ms":  258.4562,
+                       "data":  {
+                                    "is_64bit_process":  true,
+                                    "clr":  "4.0.30319.42000",
+                                    "windows":  "Microsoft Windows NT 10.0.26200.0",
+                                    "cwd":  "C:\\Dev\\BettingProject\\codex\\betting-sofascore-local-lab\\.tmp\\wo062-skills-lot2",
+                                    "fixture_fingerprint_recorded":  false,
+                                    "fixture":  "C:\\Dev\\BettingProject\\codex\\betting-sofascore-local-lab\\.tmp\\wo062-skills-lot2\\.tmp\\wrn-c5-template-preflight\\inputs\\fixtures\\NativeProbe.java",
+                                    "artifact_encoding":  "UTF-8 no BOM strict",
+                                    "process_cwd":  "C:\\Dev\\BettingProject\\codex\\betting-sofascore-local-lab\\.tmp\\wo062-skills-lot2",
+                                    "pshome":  "C:\\Windows\\System32\\WindowsPowerShell\\v1.0",
+                                    "console_encoding":  "utf-8",
+                                    "statuses":  [
+                                                     "EXPERIMENTAL",
+                                                     "LOCAL_ONLY",
+                                                     "NOT_PRODUCTION_APPROVED",
+                                                     "NO_CRITICAL_DEPENDENCY"
+                                                 ],
+                                    "executable_observation_error":  null,
+                                    "executable":  "C:\\Windows\\System32\\WindowsPowerShell\\v1.0\\powershell.exe",
+                                    "platform":  "Win32NT",
+                                    "conductor_pid":  37900,
+                                    "is_64bit_os":  true,
+                                    "output_encoding":  "us-ascii",
+                                    "ps_version_table":  {
+                                                             "PSVersion":  "5.1.26100.9444",
+                                                             "PSEdition":  "Desktop",
+                                                             "PSCompatibleVersions":  "1.0 2.0 3.0 4.0 5.0 5.1.26100.9444",
+                                                             "BuildVersion":  "10.0.26100.9444",
+                                                             "CLRVersion":  "4.0.30319.42000",
+                                                             "WSManStackVersion":  "3.0",
+                                                             "PSRemotingProtocolVersion":  "2.3",
+                                                             "SerializationVersion":  "1.1.0.1"
+                                                         }
+                                }
+                   },
+                   {
+                       "event":  "conductor_dependencies_checked",
+                       "utc":  "2026-09-16T00:34:29.0813884Z",
+                       "monotonic_ms":  310.3403,
+                       "data":  {
+                                    "phase":  "before_fixture_fingerprint_and_java",
+                                    "runtime_is_windows_powershell_5_1_desktop":  true,
+                                    "dotnet_sha256":  {
+                                                          "provider":  "System.Security.Cryptography.SHA256",
+                                                          "vector":  "ASCII abc",
+                                                          "expected":  "BA7816BF8F01CFEA414140DE5DAE2223B00361A396177A9CB410FF61F20015AD",
+                                                          "actual":  "BA7816BF8F01CFEA414140DE5DAE2223B00361A396177A9CB410FF61F20015AD",
+                                                          "passed":  true
+                                                      },
+                                    "dotnet_sha256_error":  null,
+                                    "get_file_hash_observation":  {
+                                                                      "available":  true,
+                                                                      "invoked":  false,
+                                                                      "required":  false,
+                                                                      "command_type":  "Function",
+                                                                      "module":  "Microsoft.PowerShell.Utility"
+                                                                  },
+                                    "process_api":  {
+                                                        "process_type":  "System.Diagnostics.Process",
+                                                        "start_info_type":  "System.Diagnostics.ProcessStartInfo",
+                                                        "redirect_supported":  true,
+                                                        "main_module_observed":  true
+                                                    },
+                                    "process_api_error":  null,
+                                    "current_process_image_observed":  true,
+                                    "utf8":  {
+                                                 "web_name":  "utf-8",
+                                                 "strict_encoder":  true,
+                                                 "sample_byte_count":  17
+                                             },
+                                    "utf8_error":  null,
+                                    "java_discovery_or_launch":  "NOT_PERFORMED",
+                                    "psmodulepath_mutation":  "NOT_PERFORMED",
+                                    "passed":  true
+                                }
+                   },
+                   {
+                       "event":  "fixture_fingerprint",
+                       "utc":  "2026-09-16T00:34:29.0889057Z",
+                       "monotonic_ms":  317.90180000000004,
+                       "data":  {
+                                    "path":  "C:\\Dev\\BettingProject\\codex\\betting-sofascore-local-lab\\.tmp\\wo062-skills-lot2\\.tmp\\wrn-c5-template-preflight\\inputs\\fixtures\\NativeProbe.java",
+                                    "sha256":  "4e29c5867eba0fb76518de2307391449c83450449bea0393179738505c69bc8b",
+                                    "provider":  "System.Security.Cryptography.SHA256",
+                                    "recorded_after_runtime_and_dependency_checks":  true
+                                }
+                   },
+                   {
+                       "event":  "preflight_only_complete",
+                       "utc":  "2026-09-16T00:34:29.0889057Z",
+                       "monotonic_ms":  317.9853,
+                       "data":  {
+                                    "java_launch":  "NOT_PERFORMED",
+                                    "temporary_root_created":  false,
+                                    "java_discovery":  "NOT_PERFORMED"
+                                }
+                   },
+                   {
+                       "event":  "fixture_postflight",
+                       "utc":  "2026-09-16T00:34:29.0899142Z",
+                       "monotonic_ms":  318.76390000000004,
+                       "data":  {
+                                    "sha256_before":  "4e29c5867eba0fb76518de2307391449c83450449bea0393179738505c69bc8b",
+                                    "path":  "C:\\Dev\\BettingProject\\codex\\betting-sofascore-local-lab\\.tmp\\wo062-skills-lot2\\.tmp\\wrn-c5-template-preflight\\inputs\\fixtures\\NativeProbe.java",
+                                    "sha256_after":  "4e29c5867eba0fb76518de2307391449c83450449bea0393179738505c69bc8b",
+                                    "unchanged":  true
+                                }
+                   },
+                   {
+                       "event":  "temporary_root_postflight",
+                       "utc":  "2026-09-16T00:34:29.0925460Z",
+                       "monotonic_ms":  322.278,
+                       "data":  {
+                                    "cleanup":  "CONFIRMED",
+                                    "path":  "C:\\Dev\\BettingProject\\codex\\betting-sofascore-local-lab\\.tmp\\wo062-skills-lot2\\.tmp\\wrn-c5-template-preflight\\output\\runtime\\WR native probe 54a55fbc-360b-4c50-958d-60144a453ad2",
+                                    "parent_targeted_environment_unchanged":  true,
+                                    "absent":  true
+                                }
+                   },
+                   {
+                       "event":  "conductor_return",
+                       "utc":  "2026-09-16T00:34:29.0935454Z",
+                       "monotonic_ms":  322.7736,
+                       "data":  {
+                                    "exit_code":  0,
+                                    "main_result":  "PREFLIGHT_VERIFIED_NO_JAVA",
+                                    "elapsed_ms":  322.6757,
+                                    "budget_ms":  45000,
+                                    "phase":  "preflight",
+                                    "cleanup_result":  "CONFIRMED"
+                                }
+                   }
+               ]
+}

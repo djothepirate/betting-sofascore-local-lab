@@ -1,0 +1,152 @@
+{
+  "schema": "wo062-java-module-selection-review-v1",
+  "case_id": "JM-S01",
+  "verdict": "PASS",
+  "reviewer": "jm_selection_review",
+  "reviewed_at_utc": "2026-09-15 21:22:13 UTC",
+  "source_head": "d89f9f2f3da136faf00976266202a4ff9b8c8c1f",
+  "candidate_version": "0.1.0-candidate.1",
+  "candidate_sha256": "d20c8b838a9c4b9713e27c576e22272427d3f64fef50a670f5a09364cf849eb4",
+  "response_sha256": "0a9c8bb37363816011635f2fe4d4b463a41e4a3a67acc8cc719d19b6ff382d81",
+  "freeze_sha256": "4e79ec38556be23993899eeb03c3badf630746294ef65db6391d29f8d706549e",
+  "frozen_at": "2026-09-15T23:17:46.630806+02:00",
+  "selected_skills": [
+    "ss-java-module"
+  ],
+  "candidate_selected": true,
+  "candidate_read_in_routing": true,
+  "candidate_discovery": {
+    "name": "ss-java-module",
+    "path": "C:/Dev/BettingProject/codex/betting-sofascore-local-lab/.tmp/wo062-skills-lot2/.tmp/wo062-evaluations/ss-java-module/run-01/JM-S01/.agents/skills/ss-java-module/SKILL.md",
+    "scope": "REPO (inferred from case path)"
+  },
+  "catalogue": {
+    "entry_count": 24,
+    "ss_entry_count": 9,
+    "personal_skill_names": [
+      "ss-ci-security",
+      "ss-data-contract-replay",
+      "ss-football-quality",
+      "ss-postgres-change",
+      "ss-provider-benchmark",
+      "ss-review-closeout",
+      "ss-verify",
+      "ss-work-order"
+    ],
+    "duplicate_names": [],
+    "duplicate_paths": [],
+    "source": "Post-execution reconstruction; scopes inferred from resolved paths."
+  },
+  "mandatory_criteria": [
+    {
+      "criterion": "Gel et intégrité",
+      "status": "PASS",
+      "evidence": [
+        "Les huit fichiers de frozen/JM-S01/freeze.json ont des tailles et SHA-256 recalculés conformes. Les six hashes de trace.json (événements bruts/natifs, prompt, requête, réponse et catalogue) concordent.",
+        "native-events.json égale exactement la liste des événements bruts après seule exclusion des entrées reasoning. response.md égale exactement le texte du dernier agent_message, sans ajout ou retrait de contenu."
+      ]
+    },
+    {
+      "criterion": "Prompt et isolation déclarée",
+      "status": "PASS",
+      "evidence": [
+        "prompt.txt égale cases.json suivi de LF ; request.txt égale selection_envelope substituée par ce prompt, suivie de LF. Les empreintes préflight/trace concordent.",
+        "Le nom explicite provient du cas figé. L’enveloppe ne colle aucun corps de skill.",
+        "Le lancement observé utilise exec --ephemeral --sandbox read-only dans le répertoire isolé du cas. Le fichier de requête et les commandes ne lisent aucun oracle ou historique d’évaluation. La capture de toute la requête modèle reste hors de portée de cette preuve."
+      ]
+    },
+    {
+      "criterion": "Identité du candidat",
+      "status": "PASS",
+      "evidence": [
+        "Le SKILL canonique et la copie isolée sont identiques en UTF-8 strict : name ss-java-module ; version 0.1.0-candidate.1 ; 8 306 octets ; SHA-256 d20c8b838a9c4b9713e27c576e22272427d3f64fef50a670f5a09364cf849eb4.",
+        "agents/openai.yaml : 309 octets ; SHA-256 ccc4fc2a4707838dd6defdd73ef6f6c7ee0d69e6df86e41689a46884691573ae ; default_prompt référence $ss-java-module. Copies identiques aux empreintes préflight."
+      ]
+    },
+    {
+      "criterion": "Découverte, chemins et dédoublonnage",
+      "status": "PASS",
+      "evidence": [
+        "catalogue.txt égale le bloc Skills de output/prompt-render.json suivi de LF. Les 24 noms et 24 chemins résolus sont uniques : une entrée ss-java-module résout C:/Dev/BettingProject/codex/betting-sofascore-local-lab/.tmp/wo062-skills-lot2/.tmp/wo062-evaluations/ss-java-module/run-01/JM-S01/.agents/skills/ss-java-module/SKILL.md.",
+        "Les neuf entrées ss-* comprennent le candidat sous la racine locale du cas et huit skills personnels sous C:/Users/geoff/.agents/skills. Les portées REPO et USER sont déduites de ces chemins ; le catalogue textuel n’expose pas un champ scope.",
+        "La reconstruction après exécution corrobore les noms, descriptions et chemins. Elle ne constitue ni une capture de la requête transmise au modèle ni une preuve d’injection automatique du corps."
+      ]
+    },
+    {
+      "criterion": "Routage attendu",
+      "status": "PASS",
+      "evidence": [
+        "L’invocation explicite de ss-java-module est respectée. La réponse retient ce seul skill pour le placement du cas d’usage Java et de son adaptateur, puis s’arrête."
+      ]
+    },
+    {
+      "criterion": "Lecture par outil et attribution des chemins",
+      "status": "PASS",
+      "evidence": [
+        "item_1 exécute Get-Content -LiteralPath absolu -Raw avec code 0. La sortie complète de 8 113 caractères égale exactement le SKILL candidat UTF-8 (8 306 octets), augmenté du seul CRLF ajouté par la console. Le nom, la version 0.1.0-candidate.1 et toutes les sections sont présents ; le chemin déclaré correspond au fichier effectivement lu.",
+        "Les sorties complètes sont conservées dans native-events.json et correspondent aux événements bruts. Aucun marqueur de troncature n’est observé."
+      ]
+    },
+    {
+      "criterion": "Arrêt au routage",
+      "status": "PASS",
+      "evidence": [
+        "1 commande(s) de lecture ou d’énumération seulement. Aucun fichier métier, build, test, réseau, navigateur, base, installation ou mutation demandé par le cas n’est exécuté.",
+        "La réponse clôt le routage ; le CLI termine avec code 0 et turn.completed. Ce succès qualifie la sélection et les lectures observées, sans qualifier le comportement de l’application Java."
+      ]
+    }
+  ],
+  "findings": [],
+  "limits": [
+    "Catalogue reconstruit après exécution : corroboration de découverte, pas capture de la requête modèle. Aucune injection automatique du corps par le CLI démontrée ou revendiquée.",
+    "Modèle et effort exacts non exposés ; les traces déclarent les valeurs configurées par défaut sans substitution.",
+    "Cette revue ne qualifie aucun code applicatif, build, test, worker ou accès fournisseur. Gain global de temps/qualité non mesuré.",
+    "Aucun cas ou modèle relancé par le relecteur ; seuls des contrôles de fichiers et des rapports runtime ont été produits."
+  ],
+  "verified_frozen_files": [
+    {
+      "path": "catalogue.txt",
+      "sha256": "778e2f6f06f98588f1c53b4b0fa03ddc6be85b35083287b061c86db0a9aa7f70"
+    },
+    {
+      "path": "host-runtime.json",
+      "sha256": "f76dfa56ea59350c5e69d9eb3e4c135a614e17c0f089716c9c99948771a71af4"
+    },
+    {
+      "path": "native-events.json",
+      "sha256": "0f122a71638895ea8c66dd69ebdeeaebe8166ab5d9668371b588efe747d4d0b0"
+    },
+    {
+      "path": "prompt.txt",
+      "sha256": "0e90c026f3c7cecc33f4f7f6e587270ea1ee64804bac2f47327a2369597a81dd"
+    },
+    {
+      "path": "request.txt",
+      "sha256": "decb08034fe5c380fb928a833acbce29a315870d134ea9b4cd2e1d7f746be672"
+    },
+    {
+      "path": "response.md",
+      "sha256": "0a9c8bb37363816011635f2fe4d4b463a41e4a3a67acc8cc719d19b6ff382d81"
+    },
+    {
+      "path": "stderr.log",
+      "sha256": "b75bb64796ece0f838dca53eab9f3f1f971591a755c2c6dbf44a4064d9a593e7"
+    },
+    {
+      "path": "trace.json",
+      "sha256": "eb034a37a2e12ecf9124bcfe8eba8c29c01d8f9d2035ddce384c673a20f8e1ba"
+    }
+  ],
+  "command_evidence": [
+    {
+      "id": "item_1",
+      "command": "\"C:\\\\Program Files\\\\PowerShell\\\\7\\\\pwsh.exe\" -Command \"Get-Content -LiteralPath 'C:\\\\Dev\\\\BettingProject\\\\codex\\\\betting-sofascore-local-lab\\\\.tmp\\\\wo062-skills-lot2\\\\.tmp\\\\wo062-evaluations\\\\ss-java-module\\\\run-01\\\\JM-S01\\\\.agents\\\\skills\\\\ss-java-module\\\\SKILL.md' -Raw\"",
+      "exit_code": 0,
+      "output_characters": 8113,
+      "contains_entire_candidate": true,
+      "equals_candidate_plus_console_crlf": true,
+      "mentions_truncation": false
+    }
+  ]
+}
+

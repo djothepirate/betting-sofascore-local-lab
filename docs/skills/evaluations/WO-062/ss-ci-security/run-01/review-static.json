@@ -1,0 +1,122 @@
+{
+  "schema_version": "1.0",
+  "review_type": "INDEPENDENT_STATIC_REVIEW",
+  "review_date": "2026-09-15",
+  "reviewer": "/root/cs_candidate_review",
+  "work_order": "WO-SS-20260915-062",
+  "skill": "ss-ci-security",
+  "candidate_version": "0.1.0-candidate.1",
+  "reviewed_root": "C:/Dev/BettingProject/codex/betting-sofascore-local-lab/.tmp/wo062-skills-lot2",
+  "reviewed_head": "658309c0e8d9d18e7d96396d8768ac90d8d16cca",
+  "source_inventory_reference_commit": "57c0614627e628077b0a7775eb66a7c490b422e0",
+  "verdict": "NO_MATERIAL_FINDINGS",
+  "verdict_fr": "Aucun défaut matériel relevé dans le périmètre statique examiné.",
+  "material_findings": [],
+  "criteria": [
+    {
+      "id": "wo061_boundaries",
+      "status": "STATIC_CONSISTENT",
+      "finding": "Déclenchements actuels correctement distingués : GitHub PR et demande manuelle ; GitLab MR de promotion, tag et Web. Aucun rétablissement implicite des bundles intermédiaires ou des scans d'observation automatiques."
+    },
+    {
+      "id": "tests_and_evidence_retention",
+      "status": "STATIC_CONSISTENT",
+      "finding": "Présence et intégrité XML, compteurs, exécution effective, résumé Failsafe, upload obligatoire et rétention correctement distingués ; conservation défaillante distincte d'une régression applicative."
+    },
+    {
+      "id": "git_provenance_and_routes",
+      "status": "STATIC_CONSISTENT",
+      "finding": "Tête de PR distincte du commit de merge testé ; SHA source exact, historique complet et cible ancêtre pour la promotion GitLab ; exception seed bornée."
+    },
+    {
+      "id": "security_controls",
+      "status": "STATIC_CONSISTENT",
+      "finding": "Dependency-Check CVSS 11 présenté comme observation avec erreurs bloquantes ; exemptions de secrets liées aux blobs audités ; aucune purge implicitement autorisée."
+    },
+    {
+      "id": "local_distribution_and_sbom",
+      "status": "STATIC_CONSISTENT",
+      "finding": "Version et références finales, métadonnées SBOM et double génération correctement décrites ; génération de sommes distincte de leur vérification ; fixtures à Maven simulé distinctes d'une reproductibilité réelle."
+    },
+    {
+      "id": "routing_and_metadata",
+      "status": "STATIC_CONSISTENT",
+      "finding": "Frontières ss-verify et ss-review-closeout cohérentes ; default_prompt invoque $ss-ci-security."
+    },
+    {
+      "id": "local_references",
+      "status": "PRESENT",
+      "verified_count": 16,
+      "finding": "Les chemins et routages contrôlés existent ; les noms de gardes abrégés se résolvent sous ci/ comme indiqué dans le contexte."
+    },
+    {
+      "id": "utf8",
+      "status": "STRICT_UTF8_VALID",
+      "finding": "Les deux fichiers sont décodables en UTF-8 strict sans BOM, U+FFFD ni NUL."
+    }
+  ],
+  "files": [
+    {
+      "path": "docs/skills/local-lab/ss-ci-security/SKILL.md",
+      "bytes": 7522,
+      "sha256": "ca0bba1cf60c0c9965f21b3201e39c3e5dcba3bd73888c2a2ee5d148dbb8c0c5",
+      "hash_scope": "reviewed_windows_worktree_bytes",
+      "strict_utf8": true,
+      "bom": false,
+      "replacement_character_count": 0,
+      "nul_count": 0
+    },
+    {
+      "path": "docs/skills/local-lab/ss-ci-security/agents/openai.yaml",
+      "bytes": 293,
+      "sha256": "621ecacc03c3acf895d2bd5c87ed94461512e23a6e16cc321ae1818f0962d959",
+      "hash_scope": "reviewed_windows_worktree_bytes",
+      "strict_utf8": true,
+      "bom": false,
+      "replacement_character_count": 0,
+      "nul_count": 0
+    }
+  ],
+  "source_freshness": {
+    "compared_from": "57c0614627e628077b0a7775eb66a7c490b422e0",
+    "compared_to": "658309c0e8d9d18e7d96396d8768ac90d8d16cca",
+    "scope": [
+      "AGENTS.md",
+      "ADR-SS-004-integration-continue-et-distribution-locale-uniquement.md",
+      "docs/runbooks/CI-LOCAL-QUOTAS.md",
+      ".github/workflows/ci.yml",
+      ".gitlab-ci.yml",
+      "ci/",
+      "docs/skills/local-lab/ss-verify/SKILL.md"
+    ],
+    "changed_paths": []
+  },
+  "isolation": {
+    "oracle_read": false,
+    "evaluation_cases_read": false,
+    "evaluation_inputs_read": false,
+    "evaluation_results_read": false,
+    "network_used": false,
+    "pipeline_started": false,
+    "tests_executed": false,
+    "scanner_executed": false,
+    "application_started": false,
+    "database_started": false,
+    "tracked_files_modified": false,
+    "git_clean_before_and_after_review": true
+  },
+  "behavioral_qualification": "NOT_EXECUTED_NOT_ESTABLISHED",
+  "limitations": [
+    "La revue établit uniquement la cohérence statique avec les sources locales examinées.",
+    "Aucune PR, CI réelle, protection distante, analyse de sécurité ou distribution réelle n'est qualifiée.",
+    "Aucun lien distant n'a été ouvert.",
+    "Les empreintes portent sur les octets Windows examinés, pas sur des OID Git ni une autre matérialisation.",
+    "La fixation de cette revue achevée ne lance aucun nouveau test et produit uniquement les deux pièces statiques temporaires demandées."
+  ],
+  "preserved_classifications": [
+    "EXPERIMENTAL",
+    "LOCAL_ONLY",
+    "NOT_PRODUCTION_APPROVED",
+    "NO_CRITICAL_DEPENDENCY"
+  ]
+}

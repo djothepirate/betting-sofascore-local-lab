@@ -1,0 +1,8 @@
+{
+  "driverInvocation": "& 'C:\\Dev\\BettingProject\\codex\\betting-sofascore-local-lab\\.tmp\\wo062-skills-lot2\\.tmp\\wo062-evaluations\\ss-windows-runtime\\run-02\\WR-H01\\output\\runtime-artifacts\\Invoke-WRH01Harness.ps1'",
+  "driverScriptExitCode": 0,
+  "codeMeaning": "Driver script exit statement, copied immediately; native harness Process.ExitCode stored separately",
+  "startUtc": "2026-09-15T22:03:58.3226359Z",
+  "returnUtc": "2026-09-15T22:04:01.9317418Z",
+  "durationMs": 3609.1594
+}

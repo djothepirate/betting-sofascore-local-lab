@@ -1,0 +1,194 @@
+{
+  "case_id": "WR-H01",
+  "skill": "ss-windows-runtime",
+  "run_id": "run-04",
+  "started_at_utc": "2026-09-15T23:30:02.819348+00:00",
+  "ended_at_utc": "2026-09-15T23:37:11.065942+00:00",
+  "duration_seconds": 428.25,
+  "mode": "native_codex_exec_ephemeral_workspace-write",
+  "execution_mode": "bounded_local_runtime",
+  "cli_version": "codex-cli 0.154.0-alpha.6.2",
+  "model": null,
+  "reasoning_effort": null,
+  "model_note": "Configured defaults; exact model/effort not exposed, no override.",
+  "launch_arguments": [
+    "exec",
+    "--ephemeral",
+    "--sandbox",
+    "workspace-write",
+    "--cd",
+    "C:\\Dev\\BettingProject\\codex\\betting-sofascore-local-lab\\.tmp\\wo062-skills-lot2\\.tmp\\wo062-evaluations\\ss-windows-runtime\\run-04\\WR-H01",
+    "--json",
+    "--output-last-message",
+    "C:\\Dev\\BettingProject\\codex\\betting-sofascore-local-lab\\.tmp\\wo062-skills-lot2\\.tmp\\wo062-evaluations\\ss-windows-runtime\\run-04\\WR-H01\\output\\response.md",
+    "-"
+  ],
+  "exit_code": 0,
+  "turn_completed": true,
+  "candidate_sha256": "b89925d5395238010bb0afe9c1e1a22b0aa5ec4e7d1fb9946c671d241e7976c6",
+  "source_head": "79d0f99c393a06d4d2e81749a55fb3bfbd222cc3",
+  "input_files": [
+    {
+      "path": "AGENTS.md",
+      "sha256": "6509ac77cd4c87094a91da7e4c750b5991eeb4585a69a609def5289b91cf6ab5",
+      "bytes": 10320
+    },
+    {
+      "path": "docs/validation/J9-WO044-JAVA-JAR-PATH-ARGUMENT-BOUNDARY-QUALIFICATION-20260904.md",
+      "sha256": "02008824316e688b6e42c523aaec45acf7b8edb776f49a9b11a822afd6a125a7",
+      "bytes": 8729
+    },
+    {
+      "path": "docs/validation/J9-WO053-CTRL-BREAK-DIAGNOSTIC-20260905.md",
+      "sha256": "8718125554e239925dcb8a785a4143dd8e9232f9d2cb554e91d0a6d864ff55fa",
+      "bytes": 7335
+    },
+    {
+      "path": "docs/validation/J9-WO053-REVIEW-HARDENING-20260905.md",
+      "sha256": "bacd897e4e4621e687935f9aa09f91469f69942869dbc3a95e8792fcdc8cf34e",
+      "bytes": 4179
+    },
+    {
+      "path": "scripts/wo036/WO036-CampaignTools.psm1",
+      "sha256": "43c7bc8eb242161729f6c18f8b0feb67c46715ce911b27572e4bd13e5956bd74",
+      "bytes": 176724
+    },
+    {
+      "path": "scripts/wo044/Invoke-WO044JavaJarArgumentBoundaryQualification.ps1",
+      "sha256": "59996b14941700523007e1f6b0784b102d65e088569f95e882340250d43565e4",
+      "bytes": 11212
+    },
+    {
+      "path": "scripts/wo044/Capture-WO044NativeArguments.ps1",
+      "sha256": "841428737a500fd9ccb1407d3c0822b56872f40b308568ee59ab48bae88b7818",
+      "bytes": 948
+    },
+    {
+      "path": "scripts/Tests/WO044JavaJarArgumentBoundary.Tests.ps1",
+      "sha256": "e1f661b0380c72b86374331b79419e6a2c8b551ebb0d195775f04aa731f1c29f",
+      "bytes": 4669
+    },
+    {
+      "path": "inputs/runtime-protocol.md",
+      "sha256": "b4748a356b881a8574a78156c0ac00c90f493874efe8303d40a7224c12d91a52",
+      "bytes": 10630
+    },
+    {
+      "path": ".agents/skills/ss-windows-runtime/SKILL.md",
+      "sha256": "b89925d5395238010bb0afe9c1e1a22b0aa5ec4e7d1fb9946c671d241e7976c6",
+      "bytes": 9217
+    },
+    {
+      "path": ".agents/skills/ss-windows-runtime/agents/openai.yaml",
+      "sha256": "3038015980952bc18b21f45f0d4af514b35a8841394e4b80824986b7e30ccd9f",
+      "bytes": 300
+    },
+    {
+      "path": "input.json",
+      "sha256": "d49bea0e90ca263b75840a198dd7abbdf67e2dc45541d5474d9e26b833812a57",
+      "bytes": 1475
+    },
+    {
+      "path": "inputs/windows-session-protocol.md",
+      "bytes": 6479,
+      "sha256": "3658c70cd4a00d2902ecac2e99e79a2daa0fb500ac2f59d8d861b744b97a6c73"
+    }
+  ],
+  "prompt_sha256": "fa04ddaebf0c1b1a65645c05aabec1ad62e729aefc168d3862afd201ac88b2ab",
+  "request_sha256": "5dbf0a9ae579add35c7430b9c86156fe4222154a91c0ad36986fd16600888287",
+  "oracle_supplied": false,
+  "design_history_supplied": false,
+  "raw_events_sha256": "5e728093cfd6129efba17806a79df2f250f2c18732cee79a68617d99ef620156",
+  "native_events_sha256": "4571c14527c03e0ed5bf1290429cb7f8457f9d28e14e8c5a58f57194a3b648a7",
+  "commands_completed": 15,
+  "response_sha256": "11e6ec4e1fac52be3b5b52c739489f3b79e6dda9ebdd29227e3e18edd437e905",
+  "catalogue_sha256": "d5543afca7606fdaf7461a598b9d2d609d80972097206670c689fc86345e0427",
+  "catalogue_note": "Local reconstruction after execution, not a capture of the transmitted request.",
+  "published_events_note": "Internal reasoning omitted; actual command outputs retained.",
+  "usage": {
+    "input_tokens": 560761,
+    "cached_input_tokens": 498688,
+    "cache_write_input_tokens": 0,
+    "output_tokens": 12890,
+    "reasoning_output_tokens": 2115
+  },
+  "selection_instrumented": false,
+  "qualification_limit": "Tool-mediated selection/load with declared envelope; no automatic CLI injection claim.",
+  "timed_out": false,
+  "automatic_retry": false,
+  "diagnostics": [],
+  "qualification_status": "NOT_REVIEWED",
+  "runtime_artifacts": [
+    {
+      "path": "commands.txt",
+      "frozen": true,
+      "sha256": "bde38c7eb7b7c2866b9e168305e5fc7283588da356a4be81bbe400645a2cdbd7",
+      "bytes": 1847
+    },
+    {
+      "path": "conclusion.txt",
+      "frozen": true,
+      "sha256": "ff3ce3e9e7daa43250ba0dbbc2d306eb3272aa07263b188b9f63683c669e0835",
+      "bytes": 160
+    },
+    {
+      "path": "diagnostic.md",
+      "frozen": true,
+      "sha256": "036dfe4e0e001a1d0e062f002d31729e890bf552430560d0765d400ee9c50581",
+      "bytes": 9493
+    },
+    {
+      "path": "evidence-available.txt",
+      "frozen": true,
+      "sha256": "e1e7ce73bf8424abcfdd5c922122c4158651eeac8ed77999dd922443efad4c5c",
+      "bytes": 54
+    },
+    {
+      "path": "execution.json",
+      "frozen": true,
+      "sha256": "7035a255839772c13cbc14f9afa4a81e16917c732ac1bfb72d4385f5731772e7",
+      "bytes": 7963
+    },
+    {
+      "path": "harness.stderr.txt",
+      "frozen": true,
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      "bytes": 0
+    },
+    {
+      "path": "harness.stdout.txt",
+      "frozen": true,
+      "sha256": "2ea5456171ee72aba19170d19f6bd8fb94af6ec7579d49c057b6478804e97d9d",
+      "bytes": 547
+    },
+    {
+      "path": "Invoke-WR-H01.ps1",
+      "frozen": true,
+      "sha256": "53cd3c93c75ff4b53fbf40ac3206acb53f0310c270ac9368939c5290fec4fc48",
+      "bytes": 10144
+    },
+    {
+      "path": "postflight.json",
+      "frozen": true,
+      "sha256": "55cc3a2907f8c9b79071da641bc9a77c7580db5664ab2304517a0b2234f2442b",
+      "bytes": 771
+    },
+    {
+      "path": "prompt-returned.txt",
+      "frozen": true,
+      "sha256": "33cdd95864a15a9a21e164882ffa024b608def07249a9d6b974e745a3249acb4",
+      "bytes": 51
+    },
+    {
+      "path": "Test-WR-H01Postflight.ps1",
+      "frozen": true,
+      "sha256": "8d9d77bc8da161ce10ccf3a9c0fd69dfe012d62390f93313807f5eea396c55e2",
+      "bytes": 2190
+    }
+  ],
+  "collection_completed": true,
+  "collector_exit_code": 0,
+  "collector_started_at_utc": "2026-09-15T23:37:11.065942+00:00",
+  "collector_finished_before_freeze_at_utc": "2026-09-15T23:37:12.171151+00:00",
+  "timing_instrumentation": "Per-event receipt UTC/monotonic time, no model reasoning text; separate collector timestamps"
+}

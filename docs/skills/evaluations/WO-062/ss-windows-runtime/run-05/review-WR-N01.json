@@ -1,0 +1,37 @@
+{
+  "schema": "wo062-windows-runtime-c5-case-review-v1",
+  "case_id": "WR-N01",
+  "candidate_sha256": "b89925d5395238010bb0afe9c1e1a22b0aa5ec4e7d1fb9946c671d241e7976c6",
+  "review_type": "postfreeze semantic review by the executing agent; not an independent or human validation",
+  "verdict": "BLOCKED",
+  "evidence": {
+    "trace": "3902978aea597be8cc6f56066a10231f59e47fca6c5e7bc56f19b3c972e15f66",
+    "native_events": "a9573e53826a2a59e79dde5f1b08eb2e825d25037deff1a697775888d9167219",
+    "response": "61f0cf8498e1e68cf7a236ab7630411ba098b4ae11663b3294a5bcab6fa8189b",
+    "postflight": "6400698f2ed2ff4647f60cb1035639e029181920b81cc87b2c4f6651daea643a"
+  },
+  "checks": [
+    {
+      "id": "N01-01",
+      "verdict": "PASS",
+      "finding": "The separate Windows PowerShell 5.1 Desktop preflight registered its runtime before fingerprinting, confirmed conductor dependencies and .NET SHA-256 fallback, and did not launch Java."
+    },
+    {
+      "id": "N01-02",
+      "verdict": "PASS_LIMITED",
+      "finding": "The fresh normal conductor established a direct Java 25 path, retained its Process object and captured failure's native exit code 23 from that object. Its fixture output includes the UUID, PID and UTF-8 text café équipe."
+    },
+    {
+      "id": "N01-03",
+      "verdict": "BLOCKED",
+      "finding": "The frozen conductor stored image=null with no image-observation error, then rejected Assert-ProbeIdentity for failure. It stopped before starting sleep, so the 1,500-ms live expiry, owned forced stop and post-stop confirmation were never observed."
+    },
+    {
+      "id": "N01-04",
+      "verdict": "PASS_LIMITED",
+      "finding": "The normal invocation returned within its 45-second budget and independently observed both exact temporary roots and all known owned PIDs absent. The empty output/runtime parent directory remains present and is conservatively recorded by the collector as RuntimeRootResidue; it cannot repair the missing sleep evidence."
+    }
+  ],
+  "candidate_regression_found": false,
+  "qualification_effect": "No PASS can be awarded because both ordered JVM modes and the live timeout treatment are mandatory. The response correctly treats the partial failure observation as incomplete rather than a qualified two-mode result."
+}

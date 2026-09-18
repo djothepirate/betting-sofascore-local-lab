@@ -1,0 +1,30 @@
+{
+  "schema": "wo062-c4-publication-atomicity-tests-v1",
+  "tests": [
+    {
+      "case": "normal",
+      "status": "PASS",
+      "exception": null
+    },
+    {
+      "case": "atomic_replace_failure",
+      "status": "PASS",
+      "exception": "PermissionError"
+    },
+    {
+      "case": "manifest_mismatch",
+      "status": "PASS",
+      "exception": "EvidenceError"
+    },
+    {
+      "case": "input_drift",
+      "status": "PASS",
+      "exception": "AssertionError"
+    }
+  ],
+  "passed": 4,
+  "publisher_sha256": "8ffbd5bbf50e17578ed193f2874e462c9fd04c92cfdf346c91051ad0e5dea8dc",
+  "test_sha256": "658e5a0c2064d18891a32ad52b32d5827f003150cf334a782e6e7e8b9672d028",
+  "scope": "Four local synthetic publication fixtures. No model, runtime probe, real qualification mutation or recursive deletion. Atomicity is per skill, not a transaction across both skills.",
+  "fixtures": "C:\\Dev\\BettingProject\\codex\\betting-sofascore-local-lab\\.tmp\\wo062-skills-lot2\\.tmp\\c4-publisher-tests\\59f5dde7-94ac-4b7f-8fe0-a0175b0d206e"
+}

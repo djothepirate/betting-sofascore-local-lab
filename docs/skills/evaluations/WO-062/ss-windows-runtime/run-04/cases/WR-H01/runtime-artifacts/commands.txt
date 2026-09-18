@@ -1,0 +1,27 @@
+WR-H01 - commandes de conduite effectivement executees
+Encodage des preuves : UTF-8. Les sorties de lecture/preparation ne sont pas des essais du harnais.
+
+1. Outil exec_command, evenement bf60ae :
+& './output/runtime-artifacts/Invoke-WR-H01.ps1'
+Code du processus outil : 0.
+Commande native exacte (executable, tableau ArgumentList, rendu et environnement enfant) : execution.json / command.
+Lancement natif par System.Diagnostics.Process.Start ; UseShellExecute=false ; CreateNoWindow=true.
+Code du harnais : 0, copie immediatement apres WaitForExit vrai, avant toute autre operation.
+LASTEXITCODE n'est pas utilise pour ce lancement par objet Process.
+Temps monotones : preflight 158.0314 ms ; harnais 2686.1568 ms ; conduite 2872.3827 ms.
+Sorties integrales : harness.stdout.txt ; harness.stderr.txt (vide).
+
+2. Outil exec_command distinct, evenement 8e352e, apres le retour de 1 :
+$marker = 'WR_PROMPT_RETURNED UTC=' + [DateTime]::UtcNow.ToString('O'); [IO.File]::WriteAllText((Join-Path (Get-Location).Path 'output/runtime-artifacts/prompt-returned.txt'), $marker, [Text.UTF8Encoding]::new($false,$true)); Write-Output $marker
+Code du processus outil : 0.
+Sortie : WR_PROMPT_RETURNED UTC=2026-09-15T23:33:15.3798568Z.
+
+3. Outil exec_command distinct, evenement 63fc3e :
+& './output/runtime-artifacts/Test-WR-H01Postflight.ps1'
+Code du processus outil : 0.
+Sortie : postflight.json. Duree monotone 83.3556 ms.
+UTC : 2026-09-15T23:33:48.1453075Z.
+PID exterieur 8500 absent ; output/runtime contient zero entree.
+
+Une seule tentative du harnais. Aucun arret force effectue. Aucun Pester, Java, Maven, Docker, navigateur, HTTP, application, base, installation ou changement persistant execute.
+Les quatre codes enfants de capture sont controles par le harnais fige, sans export numerique individuel ; aucune duree par capture n'est revendiquee.

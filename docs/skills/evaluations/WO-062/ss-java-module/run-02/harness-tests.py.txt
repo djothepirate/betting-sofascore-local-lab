@@ -1,0 +1,145 @@
+"""Synthetic collector checks: no CLI, model, environment or external process is used."""
+import contextlib
+import hashlib
+import importlib.util
+import io
+import json
+import pathlib
+import subprocess
+import types
+import unittest
+import uuid
+
+HERE=pathlib.Path(__file__).resolve().parent
+LAUNCHER=HERE/'wo062_evaluate_c.py'
+RUNROOT=HERE/'c-harness-synthetic'/str(uuid.uuid4())
+RUNROOT.mkdir(parents=True)
+spec=importlib.util.spec_from_file_location('collector_under_test',LAUNCHER)
+collector=importlib.util.module_from_spec(spec)
+spec.loader.exec_module(collector)
+collector.os=types.SimpleNamespace(environ={})
+
+class FakeSubprocess:
+    TimeoutExpired=subprocess.TimeoutExpired
+    def __init__(self,scenario,case_dir):
+        self.scenario=scenario;self.case_dir=case_dir;self.calls=[]
+    def run(self,args,**kwargs):
+        self.calls.append(list(args))
+        if args[0]=='powershell.exe':
+            assert kwargs['env']=={}
+            return types.SimpleNamespace(returncode=0,stdout=b'synthetic tool identity',stderr=b'')
+        if args[1:3]==['debug','prompt-input']:
+            return types.SimpleNamespace(returncode=0,stdout=b'{}',stderr=b'')
+        assert args[1]=='exec'
+        assert kwargs['timeout']==900
+        out=self.case_dir/'output'
+        kwargs['stderr'].write(b'synthetic stderr\n')
+        if self.scenario=='timeout':
+            kwargs['stdout'].write(b'{"type":"turn.started"}\n')
+            raise self.TimeoutExpired(args,900)
+        events=[{'type':'item.completed','item':{'type':'reasoning','text':'synthetic excluded marker'}},{'type':'item.completed','item':{'type':'command_execution','command':'synthetic read skill','exit_code':0,'aggregated_output':'synthetic candidate body'}},{'type':'turn.completed'}]
+        if self.scenario=='missing_turn':events=events[:-1]
+        data='\n'.join(json.dumps(e) for e in events)+'\n'
+        if self.scenario=='invalid_json':data+='not json\n'
+        if self.scenario=='invalid_event_shape':data+='[]\n'
+        kwargs['stdout'].write(data.encode('utf-8'))
+        if self.scenario!='missing_response':
+            (out/'response.md').write_text('' if self.scenario=='empty_response' else 'Synthetic response.\n',encoding='utf-8')
+        if self.scenario=='changed_input':(self.case_dir/'source.txt').write_text('changed',encoding='utf-8')
+        if self.scenario=='changed_request':(self.case_dir/'request.txt').write_text('changed request',encoding='utf-8')
+        artifacts=out/'runtime-artifacts'
+        if self.scenario!='missing_artifacts':
+            artifacts.mkdir()
+            (artifacts/'result.json').write_text('{"synthetic":true}\n',encoding='utf-8')
+        if self.scenario=='invalid_artifact_utf8':(artifacts/'invalid.txt').write_bytes(b'\xff\xfe\xff')
+        if self.scenario=='invalid_artifact_suffix':(artifacts/'invalid.bin').write_bytes(b'synthetic')
+        return types.SimpleNamespace(returncode=7 if self.scenario=='native_nonzero' else 0)
+    def check_output(self,args,**kwargs):
+        self.calls.append(list(args))
+        assert args[1:]==['--version']
+        return 'synthetic-cli\n'
+
+class HarnessTests(unittest.TestCase):
+    def setup_case(self,scenario='success',skill='ss-windows-runtime',caseid='WR-H01',kind='historical',mode='bounded_local_runtime'):
+        root=RUNROOT/self._testMethodName
+        runtime=root/'.tmp/wo062-evaluations'/skill/'synthetic-only'
+        case_dir=runtime/caseid
+        (case_dir/'output').mkdir(parents=True)
+        for name in ['request.txt','case-prompt.txt','source.txt']:(case_dir/name).write_text('synthetic '+name,encoding='utf-8')
+        case={'case_id':caseid,'kind':kind,'execution_mode':mode,'input_files':[{'path':'source.txt','sha256':collector.sha(case_dir/'source.txt')}],'prompt_sha256':collector.sha(case_dir/'case-prompt.txt'),'request_sha256':collector.sha(case_dir/'request.txt')}
+        collector.write(runtime/'preflight.json',{'candidate_sha256':'synthetic-candidate','source_head':'synthetic-head','cases':[case]})
+        collector.ROOT=root
+        fake=FakeSubprocess(scenario,case_dir);collector.subprocess=fake
+        return skill,caseid,case_dir,runtime/'frozen'/caseid,fake
+    def execute(self,scenario='success',**kwargs):
+        skill,caseid,case_dir,frozen,fake=self.setup_case(scenario,**kwargs)
+        with contextlib.redirect_stdout(io.StringIO()):code=collector.run_case(skill,'synthetic-only',caseid)
+        trace=collector.read(frozen/'trace.json')
+        manifest=collector.read(frozen/'freeze.json')
+        self.assertEqual(trace,collector.read(case_dir/'output/trace.json'))
+        for f in manifest['files']:
+            self.assertEqual(f['sha256'],collector.sha(frozen/f['path']))
+            self.assertEqual(f['bytes'],(frozen/f['path']).stat().st_size)
+        self.assertEqual(trace['qualification_status'],'NOT_REVIEWED')
+        self.assertFalse(trace['automatic_retry'])
+        native=collector.read(frozen/'native-events.json')
+        self.assertFalse(any(e.get('item',{}).get('type')=='reasoning' for e in native))
+        self.assertIn('stderr.log',[f['path'] for f in manifest['files']])
+        return code,trace,case_dir,frozen,fake
+    def assert_failure(self,scenario,stage):
+        code,trace,*_=self.execute(scenario)
+        self.assertNotEqual(code,0)
+        self.assertFalse(trace['collection_completed'])
+        self.assertIn(stage,[e['stage'] for e in trace['diagnostics']])
+        return trace
+    def test_successful_runtime_freezes_artifacts(self):
+        code,trace,_,frozen,fake=self.execute()
+        self.assertEqual(code,0);self.assertTrue(trace['collection_completed'])
+        self.assertTrue((frozen/'runtime-artifacts/result.json').is_file())
+        self.assertEqual(fake.calls[1][fake.calls[1].index('--sandbox')+1],'workspace-write')
+    def test_wr_n01_is_allowed(self):
+        code,*_=self.execute(caseid='WR-N01',kind='new_task')
+        self.assertEqual(code,0)
+    def test_java_is_read_only(self):
+        code,_,_,_,fake=self.execute(skill='ss-java-module',caseid='JM-H01',mode='read_only')
+        self.assertEqual(code,0)
+        self.assertEqual(fake.calls[1][fake.calls[1].index('--sandbox')+1],'read-only')
+    def test_selection_is_read_only(self):
+        code,_,_,_,fake=self.execute(caseid='WR-S01',kind='selection_positive',mode='read_only')
+        self.assertEqual(code,0)
+        self.assertEqual(fake.calls[1][fake.calls[1].index('--sandbox')+1],'read-only')
+    def test_mode_guards(self):
+        for skill,caseid,kind,mode in [('ss-java-module','JM-H01','historical','bounded_local_runtime'),('ss-windows-runtime','WR-S01','selection_positive','bounded_local_runtime'),('ss-windows-runtime','WR-H01','selection_positive','bounded_local_runtime'),('ss-windows-runtime','WR-C01','counterexample','bounded_local_runtime'),('ss-windows-runtime','WR-H01','historical','unknown')]:
+            with self.subTest(skill=skill,caseid=caseid,kind=kind,mode=mode):
+                with self.assertRaises(ValueError):collector.runtime_execution_for(skill,{'case_id':caseid,'kind':kind,'execution_mode':mode})
+    def test_timeout_freezes_and_does_not_retry(self):
+        code,trace,case_dir,frozen,fake=self.execute('timeout')
+        self.assertNotEqual(code,0);self.assertTrue(trace['timed_out']);self.assertIsNone(trace['exit_code'])
+        self.assertEqual(sum(1 for a in fake.calls if len(a)>1 and a[1]=='exec'),1)
+        self.assertFalse(any(a[1:3]==['debug','prompt-input'] for a in fake.calls))
+        old=collector.sha(frozen/'freeze.json')
+        with self.assertRaises(AssertionError):collector.run_case('ss-windows-runtime','synthetic-only','WR-H01')
+        self.assertEqual(old,collector.sha(frozen/'freeze.json'))
+    def test_invalid_json_freezes(self):self.assert_failure('invalid_json','event_parsing')
+    def test_invalid_event_shape_freezes(self):self.assert_failure('invalid_event_shape','event_parsing')
+    def test_missing_completion_is_not_green(self):self.assert_failure('missing_turn','completion')
+    def test_missing_response_is_not_green(self):self.assert_failure('missing_response','completion')
+    def test_empty_response_is_not_green(self):self.assert_failure('empty_response','completion')
+    def test_changed_source_freezes(self):self.assert_failure('changed_input','input_integrity')
+    def test_changed_request_freezes(self):self.assert_failure('changed_request','input_integrity')
+    def test_invalid_artifact_encoding_freezes(self):
+        trace=self.assert_failure('invalid_artifact_utf8','runtime_artifact')
+        self.assertFalse(next(a for a in trace['runtime_artifacts'] if a['path']=='invalid.txt')['frozen'])
+    def test_invalid_artifact_suffix_freezes(self):self.assert_failure('invalid_artifact_suffix','runtime_artifact')
+    def test_missing_artifacts_is_not_green(self):self.assert_failure('missing_artifacts','runtime_artifact')
+    def test_native_nonzero_is_preserved(self):
+        code,trace,*_=self.execute('native_nonzero')
+        self.assertEqual(code,7);self.assertEqual(trace['exit_code'],7)
+        self.assertFalse(trace['collection_completed'])
+
+if __name__=='__main__':
+    result=unittest.TextTestRunner(verbosity=2).run(unittest.defaultTestLoader.loadTestsFromTestCase(HarnessTests))
+    report={'kind':'synthetic_pure_or_mocked_checks','launcher_sha256':hashlib.sha256(LAUNCHER.read_bytes()).hexdigest(),'model_calls':0,'external_process_calls':0,'environment_read':False,'tests_run':result.testsRun,'failures':len(result.failures),'errors':len(result.errors),'success':result.wasSuccessful(),'artifacts_root':str(RUNROOT)}
+    (HERE/'c-harness-synthetic-results.json').write_text(json.dumps(report,indent=2)+'\n',encoding='utf-8')
+    print(json.dumps(report))
+    raise SystemExit(0 if result.wasSuccessful() else 1)

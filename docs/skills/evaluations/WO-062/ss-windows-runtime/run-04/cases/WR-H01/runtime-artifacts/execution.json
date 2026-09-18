@@ -1,0 +1,109 @@
+{
+  "case": "WR-H01",
+  "startedUtc": "2026-09-15T23:33:07.4135870Z",
+  "budgetMs": 60000,
+  "stage": "COMPLETE",
+  "result": "NATIVE_EXIT_ZERO",
+  "nativeExitCode": 0,
+  "forcedExitCode": null,
+  "cleanup": "OUTER_PROCESS_EXIT_CONFIRMED_BY_RETAINED_HANDLE",
+  "events": [
+    {
+      "name": "PROCESS_STARTED",
+      "utc": "2026-09-15T23:33:07.5540213Z",
+      "elapsedMs": 176.9644
+    },
+    {
+      "name": "NATIVE_EXIT_OBSERVED",
+      "utc": "2026-09-15T23:33:10.2245221Z",
+      "elapsedMs": 2847.443
+    },
+    {
+      "name": "DRIVER_RETURN",
+      "utc": "2026-09-15T23:33:10.2494482Z",
+      "elapsedMs": 2872.3621
+    }
+  ],
+  "runtime": {
+    "psVersionTable": {
+      "GitCommitId": "7.6.6",
+      "Platform": "Win32NT",
+      "SerializationVersion": "1.1.0.1",
+      "OS": "Microsoft Windows 10.0.26200",
+      "PSCompatibleVersions": "1.0 2.0 3.0 4.0 5.0 5.1 6.0 7.0",
+      "PSRemotingProtocolVersion": "2.4",
+      "PSVersion": "7.6.6",
+      "PSEdition": "Core",
+      "WSManStackVersion": "3.0"
+    },
+    "psHome": "C:\\Program Files\\PowerShell\\7",
+    "executable": "C:\\Program Files\\PowerShell\\7\\pwsh.exe",
+    "executableVersion": "7.6.6.500",
+    "driverPid": 31404,
+    "architecture": "X64",
+    "os": "Microsoft Windows 10.0.26200",
+    "cwd": "C:\\Dev\\BettingProject\\codex\\betting-sofascore-local-lab\\.tmp\\wo062-skills-lot2\\.tmp\\wo062-evaluations\\ss-windows-runtime\\run-04\\WR-H01",
+    "childCwd": "C:\\Dev\\BettingProject\\codex\\betting-sofascore-local-lab\\.tmp\\wo062-skills-lot2\\.tmp\\wo062-evaluations\\ss-windows-runtime\\run-04\\WR-H01\\output\\runtime",
+    "stdoutDecoder": "UTF-8 strict",
+    "evidenceEncoding": "UTF-8 without BOM",
+    "consoleOutputEncoding": "utf-8",
+    "outputEncoding": "utf-8",
+    "childVersionEvidence": "Same observed executable as this running PS7 driver; frozen child script not instrumented"
+  },
+  "command": {
+    "fileName": "C:\\Program Files\\PowerShell\\7\\pwsh.exe",
+    "argumentList": [
+      "-NoLogo",
+      "-NoProfile",
+      "-NonInteractive",
+      "-File",
+      "C:\\Dev\\BettingProject\\codex\\betting-sofascore-local-lab\\.tmp\\wo062-skills-lot2\\.tmp\\wo062-evaluations\\ss-windows-runtime\\run-04\\WR-H01\\scripts\\wo044\\Invoke-WO044JavaJarArgumentBoundaryQualification.ps1",
+      "-Iterations",
+      "2"
+    ],
+    "display": "\"C:\\Program Files\\PowerShell\\7\\pwsh.exe\" -NoLogo -NoProfile -NonInteractive -File \"C:\\Dev\\BettingProject\\codex\\betting-sofascore-local-lab\\.tmp\\wo062-skills-lot2\\.tmp\\wo062-evaluations\\ss-windows-runtime\\run-04\\WR-H01\\scripts\\wo044\\Invoke-WO044JavaJarArgumentBoundaryQualification.ps1\" -Iterations 2",
+    "childEnvironmentOverride": {
+      "TMP": "C:\\Dev\\BettingProject\\codex\\betting-sofascore-local-lab\\.tmp\\wo062-skills-lot2\\.tmp\\wo062-evaluations\\ss-windows-runtime\\run-04\\WR-H01\\output\\runtime",
+      "TEMP": "C:\\Dev\\BettingProject\\codex\\betting-sofascore-local-lab\\.tmp\\wo062-skills-lot2\\.tmp\\wo062-evaluations\\ss-windows-runtime\\run-04\\WR-H01\\output\\runtime"
+    },
+    "useShellExecute": false,
+    "createNoWindow": true
+  },
+  "preflightMs": 158.0314,
+  "child": {
+    "pid": 8500,
+    "startedUtc": "2026-09-15T23:33:07.5421609Z",
+    "image": "C:\\Program Files\\PowerShell\\7\\pwsh.exe",
+    "handle": 2132,
+    "instance": "84e8be71-87e5-4cff-86da-cc722a3a5a71",
+    "instanceScope": "Driver record, not an argument added to frozen harness",
+    "creatorPid": 31404
+  },
+  "harnessElapsedMs": 2686.1568,
+  "sourcesUnchanged": true,
+  "sourceVerification": "Allowlisted supplied files used in place; byte hashes compared before/after. No independent reference hash supplied.",
+  "outerProcessExited": true,
+  "observedTemporaryRoots": [
+    "C:\\Dev\\BettingProject\\codex\\betting-sofascore-local-lab\\.tmp\\wo062-skills-lot2\\.tmp\\wo062-evaluations\\ss-windows-runtime\\run-04\\WR-H01\\output\\runtime\\WO044 Java JAR argument boundary f47a9460-2e0e-447b-aac7-3e04e3aeaad9"
+  ],
+  "observedTemporaryFiles": [
+    "C:\\Dev\\BettingProject\\codex\\betting-sofascore-local-lab\\.tmp\\wo062-skills-lot2\\.tmp\\wo062-evaluations\\ss-windows-runtime\\run-04\\WR-H01\\output\\runtime\\WO044 Java JAR argument boundary f47a9460-2e0e-447b-aac7-3e04e3aeaad9\\synthetic application with spaces.jar",
+    "C:\\Dev\\BettingProject\\codex\\betting-sofascore-local-lab\\.tmp\\wo062-skills-lot2\\.tmp\\wo062-evaluations\\ss-windows-runtime\\run-04\\WR-H01\\output\\runtime\\WO044 Java JAR argument boundary f47a9460-2e0e-447b-aac7-3e04e3aeaad9\\baseline-unquoted.stderr.log",
+    "C:\\Dev\\BettingProject\\codex\\betting-sofascore-local-lab\\.tmp\\wo062-skills-lot2\\.tmp\\wo062-evaluations\\ss-windows-runtime\\run-04\\WR-H01\\output\\runtime\\WO044 Java JAR argument boundary f47a9460-2e0e-447b-aac7-3e04e3aeaad9\\baseline-unquoted.stdout.log",
+    "C:\\Dev\\BettingProject\\codex\\betting-sofascore-local-lab\\.tmp\\wo062-skills-lot2\\.tmp\\wo062-evaluations\\ss-windows-runtime\\run-04\\WR-H01\\output\\runtime\\WO044 Java JAR argument boundary f47a9460-2e0e-447b-aac7-3e04e3aeaad9\\baseline-unquoted.arguments.json",
+    "C:\\Dev\\BettingProject\\codex\\betting-sofascore-local-lab\\.tmp\\wo062-skills-lot2\\.tmp\\wo062-evaluations\\ss-windows-runtime\\run-04\\WR-H01\\output\\runtime\\WO044 Java JAR argument boundary f47a9460-2e0e-447b-aac7-3e04e3aeaad9\\qualified-01.stderr.log",
+    "C:\\Dev\\BettingProject\\codex\\betting-sofascore-local-lab\\.tmp\\wo062-skills-lot2\\.tmp\\wo062-evaluations\\ss-windows-runtime\\run-04\\WR-H01\\output\\runtime\\WO044 Java JAR argument boundary f47a9460-2e0e-447b-aac7-3e04e3aeaad9\\qualified-01.stdout.log",
+    "C:\\Dev\\BettingProject\\codex\\betting-sofascore-local-lab\\.tmp\\wo062-skills-lot2\\.tmp\\wo062-evaluations\\ss-windows-runtime\\run-04\\WR-H01\\output\\runtime\\WO044 Java JAR argument boundary f47a9460-2e0e-447b-aac7-3e04e3aeaad9\\qualified-01.arguments.json",
+    "C:\\Dev\\BettingProject\\codex\\betting-sofascore-local-lab\\.tmp\\wo062-skills-lot2\\.tmp\\wo062-evaluations\\ss-windows-runtime\\run-04\\WR-H01\\output\\runtime\\WO044 Java JAR argument boundary f47a9460-2e0e-447b-aac7-3e04e3aeaad9\\qualified-02.stderr.log",
+    "C:\\Dev\\BettingProject\\codex\\betting-sofascore-local-lab\\.tmp\\wo062-skills-lot2\\.tmp\\wo062-evaluations\\ss-windows-runtime\\run-04\\WR-H01\\output\\runtime\\WO044 Java JAR argument boundary f47a9460-2e0e-447b-aac7-3e04e3aeaad9\\qualified-02.stdout.log",
+    "C:\\Dev\\BettingProject\\codex\\betting-sofascore-local-lab\\.tmp\\wo062-skills-lot2\\.tmp\\wo062-evaluations\\ss-windows-runtime\\run-04\\WR-H01\\output\\runtime\\WO044 Java JAR argument boundary f47a9460-2e0e-447b-aac7-3e04e3aeaad9\\qualified-02.arguments.json",
+    "C:\\Dev\\BettingProject\\codex\\betting-sofascore-local-lab\\.tmp\\wo062-skills-lot2\\.tmp\\wo062-evaluations\\ss-windows-runtime\\run-04\\WR-H01\\output\\runtime\\WO044 Java JAR argument boundary f47a9460-2e0e-447b-aac7-3e04e3aeaad9\\qualified-no-space.stderr.log",
+    "C:\\Dev\\BettingProject\\codex\\betting-sofascore-local-lab\\.tmp\\wo062-skills-lot2\\.tmp\\wo062-evaluations\\ss-windows-runtime\\run-04\\WR-H01\\output\\runtime\\WO044 Java JAR argument boundary f47a9460-2e0e-447b-aac7-3e04e3aeaad9\\qualified-no-space.stdout.log",
+    "C:\\Dev\\BettingProject\\codex\\betting-sofascore-local-lab\\.tmp\\wo062-skills-lot2\\.tmp\\wo062-evaluations\\ss-windows-runtime\\run-04\\WR-H01\\output\\runtime\\WO044 Java JAR argument boundary f47a9460-2e0e-447b-aac7-3e04e3aeaad9\\qualified-no-space.arguments.json"
+  ],
+  "temporaryInventoryScope": "Names observed while running; exact child identities and file ownership managed internally by unchanged harness; raw capture files intentionally not retained",
+  "runtimeEntriesAfterReturn": [],
+  "parentTempTmpUnchanged": true,
+  "totalElapsedMs": 2872.3827,
+  "withinBudget": true
+}

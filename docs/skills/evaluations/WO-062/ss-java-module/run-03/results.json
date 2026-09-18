@@ -1,0 +1,24 @@
+{
+  "schema": "wo062-frozen-skill-results-v1",
+  "skill": "ss-java-module",
+  "run_id": "run-03",
+  "candidate_version": "0.1.0-candidate.2",
+  "candidate_sha256": "255655544771ae6cf2a71b967aba8efeb7e53e64acc41ca31dc784e16a719118",
+  "source_head": "4a83e121d8c28833b7617313ab277bc4341f078e",
+  "reviewed_at_utc": "2026-09-15T22:59:05.832878+00:00",
+  "case_count": 1,
+  "prepared_case_count": 1,
+  "cases": [
+    {
+      "case_id": "JM-N01",
+      "verdict": "FAIL",
+      "source_run": "run-03",
+      "review": "review-JM-N01.json",
+      "response": "cases/JM-N01/response.md",
+      "response_sha256": "0a343748b9b74f51739363af7b79e458e24fdacf0cce89d694e5d1747f5b04c5"
+    }
+  ],
+  "pass": 0,
+  "fail": 1,
+  "blocked": 0
+}

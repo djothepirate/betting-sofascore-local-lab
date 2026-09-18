@@ -1,0 +1,60 @@
+{
+  "schema": "wo062-c4-preparation-manifest-v1",
+  "files": [
+    {
+      "path": "evaluator.py.txt",
+      "bytes": 20221,
+      "sha256": "47e6c97f6306424c4ef26e6a567cf60c93fb37ebb4eaf14641e55eee2249d444"
+    },
+    {
+      "path": "input-audit.json",
+      "bytes": 3951,
+      "sha256": "7b7c078bd526200c5cd25512bcab1767cfd5ec7b7aea37e2c8bad7aa1ac77c46"
+    },
+    {
+      "path": "java-static-review.json",
+      "bytes": 7455,
+      "sha256": "88d6ab90ff24cfd757668dbd5d43e2cb598ac020faf6cc2658e971f81424dd63"
+    },
+    {
+      "path": "java-static-review.md",
+      "bytes": 7951,
+      "sha256": "e3673395e8d2a04752a32fb399f798c51df2c5b355d9cd50b5d5958a1c672bf0"
+    },
+    {
+      "path": "prepare-contexts.py.txt",
+      "bytes": 1657,
+      "sha256": "b0d1fd417c70253c576fffb238e463cce3bff9f8f4f45cbf42befe7d1c516040"
+    },
+    {
+      "path": "prepared-access.json",
+      "bytes": 3098,
+      "sha256": "fb56799f1a98ad8a959ea58c509ff5f4d9eb744b18b83d401f0f1408df0b2221"
+    },
+    {
+      "path": "prepared-access.py.txt",
+      "bytes": 2401,
+      "sha256": "87753d00e7ce2b4b51fc43e64d5da57e9c356fd21371840d06b4095a49acd7ab"
+    },
+    {
+      "path": "ss-java-module-preflight.json",
+      "bytes": 27898,
+      "sha256": "f5a90689e3de780b74acc7fad03f7734246ba8bab4744d3a11e1f38526df8ef6"
+    },
+    {
+      "path": "ss-windows-runtime-preflight.json",
+      "bytes": 6287,
+      "sha256": "d94cfbb974c41ced35b20e421636978d9789509384e9066f4b8a83dd426c267a"
+    },
+    {
+      "path": "timing-tests.json",
+      "bytes": 867,
+      "sha256": "41c30760c72e8e1c2022d3fdf7a6388a92da464f853f08f1c7e78c09e9c9c2f0"
+    },
+    {
+      "path": "timing-tests.py.txt",
+      "bytes": 2537,
+      "sha256": "7979ccfb553f1599f748beb7aec2bf7d9c538571349d3b71af12e9b8d7d4143d"
+    }
+  ]
+}

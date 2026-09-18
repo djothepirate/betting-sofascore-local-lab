@@ -1,0 +1,69 @@
+{
+  "case_id": "CS-N01",
+  "verdict": "PASS",
+  "mandatory_criteria": [
+    {
+      "criterion": "Gel préalable et intégrité des pièces",
+      "status": "PASS",
+      "evidence": "Les sept fichiers de frozen/CS-N01/freeze.json concordent en SHA-256 et taille après recalcul indépendant. Gel déclaré 2026-09-15T19:58:15.911296+00:00. response.md = 0575a72884e056b23c87af0b72c042f50c4a85d5489e18b8b96004b57fb50d1f ; native-events.json = 5c482c5da7405125de7c698f89e1eba3636642230ba690974c60e46581cc90b9. Les onze input_files concordent avec les copies isolées ; les huit sources du corpus concordent avec manifest.json. Les cinq fichiers du corpus de préparation concordent avec leur manifeste."
+    },
+    {
+      "criterion": "Lecture intégrale du corps exact du skill par outil",
+      "status": "PASS",
+      "evidence": "native-events.json, item_1 completed : Get-Content -LiteralPath '.agents/skills/ss-ci-security/SKILL.md' -Raw, code 0. aggregated_output contient les 7 340 caractères exacts du fichier candidat suivis seulement de CRLF (13,10). Fichier de 7 522 octets, SHA-256 ca0bba1cf60c0c9965f21b3201e39c3e5dcba3bd73888c2a2ee5d148dbb8c0c5, identique à trace.candidate_sha256. Lecture avant l'entrée et l'analyse des sources métier."
+    },
+    {
+      "criterion": "Bornes de toutes les commandes et séparation de l'oracle",
+      "status": "PASS",
+      "evidence": "14 commandes commencées et terminées, toutes code 0 : item_1 skill ; item_2 recherche rg sur ADR/runbook/GitHub/GitLab ; item_3 input ; item_4 AGENTS ; item_7 runbook ; item_9 GitHub ; item_8 ADR ; item_13 branche/version ; item_12 vérificateur XML ; item_14 garde PR ; item_15 et item_17 sections complémentaires GitLab ; item_18 input numéroté ; item_19 sections AGENTS. Chaque chemin est autorisé dans request.txt. Aucun script lu n'est lancé et aucune action réseau, mutation, Maven, test, application, DB, Docker, scanner ou pipeline n'est observée. request.txt ne fournit ni oracle ni attentes réservées ; trace.oracle_supplied=false et design_history_supplied=false concordent avec les commandes. Lancement --ephemeral --sandbox read-only."
+    },
+    {
+      "criterion": "Analyse synthétique étiquetée et absence de qualification réelle",
+      "status": "PASS",
+      "evidence": "response.md:1-13, :19-35 et :96-115 étiquettent les SHA, runs et XML comme fixtures synthétiques, identifient la politique 57c0614627e628077b0a7775eb66a7c490b422e0, refusent de qualifier une PR réelle et conservent la qualification réelle NOT_EXECUTED. Le FAIL du dossier synthétique est distinct du verdict du présent essai."
+    },
+    {
+      "criterion": "Route et version correctes, tête PR distincte du merge testé",
+      "status": "PASS",
+      "evidence": "response.md:19-35 et :50-56 : WO-062 vers feature/V0.1.0-RC01, Maven 0.1.0-rc.1-SNAPSHOT, H=a..., M=b..., parents B=d... puis H=a.... Les résultats se rapportent à M sans exiger artificiellement M=H. Conforme à input.json et aux sources CS-I04/CS-I05."
+    },
+    {
+      "criterion": "Tests et gardes déclarés correctement interprétés",
+      "status": "PASS",
+      "evidence": "response.md:66-74 et :85-88 : codes natifs zéro Windows/Linux ; Surefire par job 2 déclarés, 1 ignoré, 1 exécuté ; Failsafe Linux 1 déclaré/exécuté, résumé cohérent ; zéro erreur/échec. Gardes et lanceurs donnés sont PASS déclaré/synthétique. Les lignes :50 et :71 maintiennent l'intégration Linux obligatoire malgré persistence_changed=false. Lecture conforme aux critères de ci/VerifyTestReports.java sans exécution du vérificateur."
+    },
+    {
+      "criterion": "Contenu des XML et conservation distingués",
+      "status": "PASS",
+      "evidence": "response.md:68-79 : XML et gardes PASS dans la fixture, upload Windows disponible trois jours, upload Linux FAIL quota et available=false ; les XML embarqués ne remplacent pas l'upload obligatoire. Aucune régression applicative établie ; qualification complète FAIL pour conservation obligatoire. Conforme à CS-I01 et ADR-004:136-140."
+    },
+    {
+      "criterion": "Ancien run, retry annulé et proposition de journal non autoritaires",
+      "status": "PASS",
+      "evidence": "response.md:54-55 et :105 : ancien run c... séparé ; retry b... annulé sans jobs = NOT_EXECUTED ; rejet explicite de la proposition de réutiliser ces états comme qualification. Aucun test ou vert attribué au retry."
+    },
+    {
+      "criterion": "Non-applicabilité normative des contrôles conditionnels",
+      "status": "PASS",
+      "evidence": "response.md:89-94 justifie Javadoc par absence d'exigence WO, bundle par requested_distribution=false, scanners automatiques par leur retrait selon ADR/workflows, Trivy par absence de demande/job/exigence. Aucune sécurité mesurée ni qualification de future distribution déduite de ces NOT_APPLICABLE ; obligations GitLab séparées du contexte PR GitHub."
+    },
+    {
+      "criterion": "Grille utilisable et prochaines actions proportionnées",
+      "status": "PASS",
+      "evidence": "response.md:46-115 contient contrôle/exigence/résultat/SHA/preuve/limite/action, conserve les lacunes et propose traitement de conservation puis qualification propre du candidat, accès aux XML avant expiration et synthèse durable. Aucune purge, relance CI ou publication n'est exécutée."
+    },
+    {
+      "criterion": "Réserve supplémentaire fondée sans faux échec de test",
+      "status": "PASS",
+      "evidence": "response.md:70, :79, :101 et :112 signale le résultat absent du contrôle de commit Windows comme NOT_EXECUTED/résultat non prouvé, sans échec présumé. Ce contrôle est réellement requis par .github/workflows/ci.yml:77-79 ; input.json ne fournit pas sa sortie. La réserve ajoute une lacune étayée et préserve le PASS des gardes/lanceurs qui sont fournis."
+    }
+  ],
+  "findings": [],
+  "limits": [
+    "PASS est le verdict de l'essai documentaire ; le dossier synthétique décrit conserve son FAIL de conservation Linux et ses preuves absentes. Aucun résultat de pipeline, test, scanner, application, DB ou PR réelle n'est établi par cet essai.",
+    "Les contre-vérifications portent sur les valeurs embarquées et les sources autorisées locales, sans résolution des SHA synthétiques, exécution du code XML ni accès aux forges.",
+    "catalogue.txt est reconstruit après l'exécution et ne prouve pas un catalogue transmis. N01 demande explicitement le skill ; cette revue prouve sa lecture par outil, sans revendiquer découverte implicite ou injection automatique par le CLI.",
+    "Les événements natifs publiés omettent le raisonnement interne ; le modèle et l'effort exacts ne sont pas exposés dans trace.json.",
+    "La source de lancement déclarée 658309c0e8d9d18e7d96396d8768ac90d8d16cca reste distincte de la politique 57c0614627e628077b0a7775eb66a7c490b422e0 et des identifiants synthétiques du dossier."
+  ]
+}

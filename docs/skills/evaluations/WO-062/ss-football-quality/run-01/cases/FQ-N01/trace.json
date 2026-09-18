@@ -1,0 +1,136 @@
+{
+  "case_id": "FQ-N01",
+  "skill": "ss-football-quality",
+  "run_id": "run-01",
+  "started_at_utc": "2026-09-15T19:43:26.839587+00:00",
+  "ended_at_utc": "2026-09-15T19:52:47.688569+00:00",
+  "duration_seconds": 560.859,
+  "mode": "native_codex_exec_ephemeral_read_only",
+  "cli_version": "codex-cli 0.154.0-alpha.6.2",
+  "model": null,
+  "reasoning_effort": null,
+  "model_note": "Configured defaults; exact model/effort not exposed, no override.",
+  "launch_arguments": [
+    "exec",
+    "--ephemeral",
+    "--sandbox",
+    "read-only",
+    "--cd",
+    "C:\\Dev\\BettingProject\\codex\\betting-sofascore-local-lab\\.tmp\\wo062-skills-lot2\\.tmp\\wo062-evaluations\\ss-football-quality\\run-01\\FQ-N01",
+    "--json",
+    "--output-last-message",
+    "C:\\Dev\\BettingProject\\codex\\betting-sofascore-local-lab\\.tmp\\wo062-skills-lot2\\.tmp\\wo062-evaluations\\ss-football-quality\\run-01\\FQ-N01\\output\\response.md",
+    "-"
+  ],
+  "exit_code": 0,
+  "turn_completed": true,
+  "candidate_sha256": "8489375d22eff31a3248f78a5d3791b549a2f103d061cc6c46647a757d3eec58",
+  "source_head": "bfbe3fb6e787756544508e1a3e5a92674a678bd7",
+  "input_files": [
+    {
+      "path": "AGENTS.md",
+      "sha256": "6509ac77cd4c87094a91da7e4c750b5991eeb4585a69a609def5289b91cf6ab5",
+      "bytes": 10320
+    },
+    {
+      "path": "docs/architecture/J4-CANONICAL-EVENTS-AND-LOCAL-DETAIL.md",
+      "sha256": "0994aaf72ae3c3dac4380bf10edb0792e7e99c57b9c544564b91c9c30c10b3d0",
+      "bytes": 14149
+    },
+    {
+      "path": "docs/architecture/J5-GUARDED-REAL-EVENT-DATA.md",
+      "sha256": "363805e242a277471a24465148007fc70ad54eb0757ce50793ab6089871c0f6d",
+      "bytes": 46154
+    },
+    {
+      "path": "docs/architecture/J4-J5-PEOPLE-V4.md",
+      "sha256": "9c29a577c3b75ad12cb8bd255700deae2fd4bc6d375e47b84582c6cead39b938",
+      "bytes": 3773
+    },
+    {
+      "path": "docs/architecture/J6-HISTORY-AND-GUARDED-RETENTION.md",
+      "sha256": "08b915e4634652524a7388bd18952122979ee27046c0990a2eba058ba16c0693",
+      "bytes": 18692
+    },
+    {
+      "path": "docs/architecture/J5-LINEUPS-V3-PLAYER-DETAILS.md",
+      "sha256": "7c11059d50f7c92c8470934e1175669ca1ffa71fb85f185e9e135281b0376daf",
+      "bytes": 7627
+    },
+    {
+      "path": "docs/runbooks/J7-CANONICAL-EVENT-EXPORT.md",
+      "sha256": "c35a383fb5a59a12235e6e61aed30d0e6bfad9be3ae2fa3f607138e42e1e5271",
+      "bytes": 12549
+    },
+    {
+      "path": "src/main/java/com/bettingproject/sofascorelocal/adapter/sofascore/eventdata/EventIncidentsV16Parser.java",
+      "sha256": "1df5dd003eb0d6a2fa20e9efc3586a7251dbfc4ae74225a121abe7df1e566b88",
+      "bytes": 1747
+    },
+    {
+      "path": "src/main/java/com/bettingproject/sofascorelocal/adapter/sofascore/eventdata/EventIncidentsV17Parser.java",
+      "sha256": "410f47f99cc8e37d93ef89c2518ec08298cd36bbb2c3b97e00f478c0516a9971",
+      "bytes": 1239
+    },
+    {
+      "path": "src/main/java/com/bettingproject/sofascorelocal/application/history/J6SemanticDiffService.java",
+      "sha256": "e5237db5f7df61a54fcca894fd7075e103ae1227f49e0b8436a935cd37952865",
+      "bytes": 35633
+    },
+    {
+      "path": "src/main/java/com/bettingproject/sofascorelocal/adapter/sofascore/eventdetails/EventDetailsV4Parser.java",
+      "sha256": "90ada85342cd8e47dd2d7209ae8f37aa83477586afd70548d7d291bf45b50dd8",
+      "bytes": 3843
+    },
+    {
+      "path": "src/main/java/com/bettingproject/sofascorelocal/adapter/sofascore/eventdata/EventLineupsV4Parser.java",
+      "sha256": "cd82473ec262fe81b8ed076501f5977d0b1b91d39026d37b6179e0563216177e",
+      "bytes": 3855
+    },
+    {
+      "path": "src/test/java/com/bettingproject/sofascorelocal/application/history/J6SemanticDiffServiceTest.java",
+      "sha256": "0f0f3fd67c05d738b7e4f6de15057c38f068ad6c6ac7a31e88847a4d18abaca5",
+      "bytes": 34041
+    },
+    {
+      "path": "docs/validation/WO058-INCIDENT-AWARDED-20260907.md",
+      "sha256": "b69538e4705c76958eb6c6aa1ce729fe50d017602e4e65816eac3f5504f7726c",
+      "bytes": 8143
+    },
+    {
+      "path": "docs/validation/WO058-J6-V4-PEOPLE-COUNTRY-DIFFS-20260913.md",
+      "sha256": "3aaf0868d016acac42833d2f4386800bfe3490381d76db6e49d82b1d48d67730",
+      "bytes": 3284
+    },
+    {
+      "path": ".agents/skills/ss-football-quality/SKILL.md",
+      "sha256": "8489375d22eff31a3248f78a5d3791b549a2f103d061cc6c46647a757d3eec58",
+      "bytes": 7330
+    },
+    {
+      "path": ".agents/skills/ss-football-quality/agents/openai.yaml",
+      "sha256": "53585a6b26f9dcc0d249771ed21eece127acd75ec25e4a4ee88f1b72f51e7f13",
+      "bytes": 298
+    }
+  ],
+  "prompt_sha256": "8a2191774f3001957837be8db5d704b3dccc486c8bcd607fc4bec5936a6cb408",
+  "request_sha256": "3d6d020836c015874ecf170a5da0d0aeff85152f101407b568a6662fab921d09",
+  "oracle_supplied": false,
+  "design_history_supplied": false,
+  "raw_events_sha256": "ae9b2a5e5c2f056c43cb654f417222f9855f28b435e5fdc14d7f182713586e96",
+  "native_events_sha256": "7f890deff1fcca281e8e64e2748df1b67fe2093b1945e85a8db449d6bd9e4631",
+  "commands_completed": 19,
+  "response_sha256": "024b7f60bd96aaf0294b344da38f40caf3b8ea249f829f9ec5351a96e1f17ba6",
+  "catalogue_sha256": "ee15b4bcba4cbe9b9771645630218efb2cbde7dffefe32bfd828e5bf945f7b3b",
+  "catalogue_note": "Local reconstruction after execution, not a capture of the transmitted request.",
+  "published_events_note": "Internal reasoning omitted; actual command outputs retained.",
+  "usage": {
+    "input_tokens": 481810,
+    "cached_input_tokens": 412544,
+    "cache_write_input_tokens": 0,
+    "output_tokens": 11376,
+    "reasoning_output_tokens": 2060
+  },
+  "selection_instrumented": false,
+  "qualification_limit": "Tool-mediated selection/load with declared envelope; no automatic CLI injection claim."
+}

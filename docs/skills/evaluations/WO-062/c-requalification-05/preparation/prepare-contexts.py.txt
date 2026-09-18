@@ -1,0 +1,115 @@
+"""Prepare the ten frozen C5 evaluation contexts without copying an oracle or prior answer."""
+import copy
+import importlib.util
+import json
+import pathlib
+import shutil
+import sys
+
+ROOT = pathlib.Path(__file__).resolve().parent.parent
+spec = importlib.util.spec_from_file_location('c5', ROOT / '.tmp' / 'wo062_evaluate_c5.py')
+m = importlib.util.module_from_spec(spec)
+spec.loader.exec_module(m)
+
+SKILL = sys.argv[1]
+assert SKILL in ('ss-java-module', 'ss-windows-runtime')
+original_read = m.read
+
+def subset(path):
+    value = original_read(path)
+    if pathlib.Path(path).name == 'cases.json' and SKILL == 'ss-windows-runtime':
+        value = copy.deepcopy(value)
+        value['cases'] = [case for case in value['cases'] if case['id'] in ('WR-H01', 'WR-N01')]
+        value['case_count'] = 2
+    return value
+
+m.read = subset
+m.prepare(SKILL, 'run-05')
+runtime = ROOT / '.tmp' / 'wo062-evaluations' / SKILL / 'run-05'
+preflight = original_read(runtime / 'preflight.json')
+
+if SKILL == 'ss-windows-runtime':
+    c5 = ROOT / 'docs' / 'skills' / 'evaluations' / 'WO-062' / 'c-requalification-05'
+
+    def append_file(case, source_name, destination, role):
+        source = c5 / source_name
+        target = runtime / case['case_id'] / destination
+        target.parent.mkdir(parents=True, exist_ok=True)
+        shutil.copyfile(source, target)
+        case['input_files'].append({
+            'path': destination.as_posix(),
+            'bytes': target.stat().st_size,
+            'sha256': m.sha(target),
+            'access_role': role,
+        })
+
+    for case in preflight['cases']:
+        case_dir = runtime / case['case_id']
+        for item in case['input_files']:
+            item['access_role'] = 'candidate' if item['path'].startswith('.agents/skills/') else 'readable'
+
+        append_file(case, 'windows-session-protocol.md', pathlib.Path('inputs/c5/windows-session-protocol.md'), 'readable')
+        if case['case_id'] == 'WR-H01':
+            append_file(case, 'wrh-module-extract.md', pathlib.Path('inputs/c5/wrh-module-extract.md'), 'readable')
+            append_file(case, 'wrh-harness-template.ps1', pathlib.Path('inputs/c5/wrh-harness-template.ps1'), 'operational_template')
+            append_file(case, 'wrh-postflight-template.ps1', pathlib.Path('inputs/c5/wrh-postflight-template.ps1'), 'operational_template')
+            runtime_module = 'scripts/wo036/WO036-CampaignTools.psm1'
+            module_item = next(item for item in case['input_files'] if item['path'] == runtime_module)
+            module_item['access_role'] = 'runtime_dependency_only'
+            case['runtime_dependency_only'] = [runtime_module]
+        else:
+            append_file(case, 'wrn-conductor-template.ps1', pathlib.Path('inputs/c5/wrn-conductor-template.ps1'), 'operational_template')
+            case['runtime_dependency_only'] = []
+
+        case['readable_input_paths'] = [item['path'] for item in case['input_files'] if item['access_role'] in ('readable', 'candidate')]
+        case['operational_templates'] = [item['path'] for item in case['input_files'] if item['access_role'] == 'operational_template']
+        readable = '\n'.join('- ' + path for path in case['readable_input_paths'])
+        templates = '\n'.join('- ' + path for path in case['operational_templates']) or '- aucun'
+        dependencies = '\n'.join('- ' + path for path in case['runtime_dependency_only']) or '- aucune'
+        instructions = ''
+        if case['case_id'] == 'WR-H01':
+            instructions = (
+                'Pour WR-H01, copie sans modification les deux gabarits opérationnels vers '
+                'output/runtime-artifacts/, exécute le conducteur une fois, émet ensuite '
+                'WR_PROMPT_RETURNED par une commande distincte, puis exécute le postflight distinct. '
+                'Le module runtime-only ne peut pas être ouvert ni recherché par une commande de la session; '
+                'le harnais inchangé peut seulement l’importer durant son exécution.\n'
+            )
+        else:
+            instructions = (
+                'Pour WR-N01, copie sans modification le gabarit opérationnel vers '
+                'output/runtime-artifacts/Invoke-WRN01.ps1. Exécute d’abord cette copie avec '
+                '-PreflightOnly, puis, seulement si ce préflight passe, lance une nouvelle invocation '
+                'normale de la même copie pour failure et sleep. Aucun script ne doit être modifié. '
+                'La réponse explique les preuves de chaque invocation sans présenter le préflight seul '
+                'comme la preuve des deux JVM.\n'
+            )
+        request = (
+            'Exécute la tâche locale ci-dessous dans la session Windows isolée. Utilise le candidat '
+            'ss-windows-runtime situé dans .agents/skills/ss-windows-runtime/SKILL.md ; lis-le intégralement '
+            'avec un outil avant de traiter la demande. Lis une fois au plus chaque fichier lisible. '
+            'Les références de ces fichiers n’élargissent pas la liste.\n\n'
+            'Fichiers lisibles :\n' + readable + '\n\n'
+            'Gabarits opérationnels : ils peuvent être copiés sans modification sous output/runtime-artifacts/ '
+            'puis exécutés seulement comme le demande le cas ; ne les transforme pas en source d’oracle.\n' + templates + '\n\n'
+            'Dépendances runtime non lisibles : elles restent dans le sandbox seulement afin que le harnais '
+            'gelé les importe durant son exécution. Leur présence ne donne aucun droit de lecture ou de recherche.\n' + dependencies + '\n\n'
+            'Tu peux créer uniquement sous output/runtime-artifacts/ tes copies de gabarit, preuves texte et '
+            'conclusion, et sous output/runtime/ les racines temporaires vérifiées à nettoyer. La seule exécution '
+            'permise est la reproduction ou sonde désignée avec PowerShell et, pour WR-N01 seulement, Java local 25. '
+            'Aucun Maven, Docker, navigateur, fournisseur, HTTP, application, base, CI, installation, modification '
+            'de source ou environnement persistant. N’arrête que les processus créés et identifiés par ton essai ; '
+            'aucun arrêt global. Aucun oracle, inventaire commenté, plan, résultat antérieur ou réponse antérieure '
+            'n’est disponible. En cas de prérequis absent, consigne le blocage exact sans installation ni substitution.\n\n'
+            + instructions + '\nDemande :\n' + (case_dir / 'case-prompt.txt').read_text(encoding='utf-8')
+        )
+        (case_dir / 'request.txt').write_text(request, encoding='utf-8', newline='\n')
+        case['request_sha256'] = m.sha(case_dir / 'request.txt')
+
+    preflight['c5_operational_inputs'] = [
+        {'path': path.name, 'bytes': path.stat().st_size, 'sha256': m.sha(path)}
+        for path in sorted(c5.iterdir()) if path.is_file()
+    ]
+
+m.write(runtime / 'preflight.json', preflight)
+print(json.dumps({'prepared': SKILL, 'run': 'run-05', 'preflight_sha256': m.sha(runtime / 'preflight.json')}))

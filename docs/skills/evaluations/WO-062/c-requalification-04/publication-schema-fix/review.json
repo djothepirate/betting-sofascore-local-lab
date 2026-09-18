@@ -1,0 +1,109 @@
+{
+  "schema": "wo062-c4-publisher-schema-review-v1",
+  "reviewer": "/root/jm_counter_review",
+  "reviewed_on": "2026-09-16",
+  "source_head": "cb67d18c66aaa3989bfc6121ed7b51945fd95f9f",
+  "verdict": "PASS",
+  "scope": "TARGETED_STATIC_SCHEMA_COMPATIBILITY_REVIEW",
+  "publisher": {
+    "path": ".tmp/publish_c4.py",
+    "sha256": "8ffbd5bbf50e17578ed193f2874e462c9fd04c92cfdf346c91051ad0e5dea8dc"
+  },
+  "compared_to": {
+    "path": "docs/skills/evaluations/WO-062/c-requalification-04/publication-support/publisher.py.txt",
+    "sha256": "702819539f583435082609adf703e87f38a18c40aa7dcd38640bc5e872a49985"
+  },
+  "criteria": [
+    {
+      "criterion_id": "delta-limited",
+      "result": "PASS",
+      "evidence": "Diff contre publication-support/publisher.py.txt : seul le bloc historique62–68 change ; ajout de lecture old['preflight.json'], comparaison de hash candidat et comparaison de version si présente dans results.",
+      "limit": "Aucun import/lancement du publieur ; comparaison de code uniquement."
+    },
+    {
+      "criterion_id": "verified-version-source",
+      "result": "PASS",
+      "evidence": "La version provient des octets old['preflight.json'] retournés par verify_manifest ; le hash du manifest est confronté à expected_manifests avant cette lecture.",
+      "limit": "La version historique doit toujours exister dans le preflight ; aucune valeur actuelle ou supposée n'est substituée."
+    },
+    {
+      "criterion_id": "identity-preserved",
+      "result": "PASS",
+      "evidence": "oldpre.candidate_sha256 == res.candidate_sha256 obligatoire ; si results expose candidate_version, égalité avec preflight obligatoire. L'agrégat reprend alors la version du preflight et le hash du résultat.",
+      "limit": "Un désaccord de hash/version reste bloquant ; le correctif ne tolère que l'absence historique du champ dans results."
+    },
+    {
+      "criterion_id": "actual-historical-schemas",
+      "result": "PASS",
+      "evidence": "Six couples preflight/results lus pour Java et Windows run01–03. Les deux run01 n'ont pas candidate_version dans results ; leurs preflight la portent. Les quatre autres versions concordent et les six hashes candidat sont égaux.",
+      "limit": "Les douze fichiers correspondent à leurs entrées de manifest ; aucun historique réécrit."
+    },
+    {
+      "criterion_id": "previous-controls-unchanged",
+      "result": "PASS",
+      "evidence": "Le diff laisse inchangés les contrôles run/skill/version/freeze des revues C4, les six reprises Windows, les compteurs25/13 et publish_validated avec staging/replace/rollback.",
+      "limit": "L'échec ultérieur pour skill absent de WR-H01 est rapporté par le coordinateur ; aucun assouplissement ni correction de cette revue par le présent relecteur."
+    },
+    {
+      "criterion_id": "frozen-support-and-evidence-scope",
+      "result": "PASS",
+      "evidence": "Les9pièces de publication-support restent conformes à leur manifeste ; ancien publisher SHA70281953…49985, anciennes revues et4tests conservés.",
+      "limit": "Les4tests fournis portent sur la version précédente et la fonction de publication inchangée ; ils ne sont pas présentés comme une nouvelle exécution de ce script corrigé."
+    }
+  ],
+  "new_blocking_findings": [],
+  "observed_historical_schemas": [
+    {
+      "skill": "ss-java-module",
+      "run_id": "run-01",
+      "version": "0.1.0-candidate.1",
+      "results_version_present": false
+    },
+    {
+      "skill": "ss-java-module",
+      "run_id": "run-02",
+      "version": "0.1.0-candidate.2",
+      "results_version_present": true
+    },
+    {
+      "skill": "ss-java-module",
+      "run_id": "run-03",
+      "version": "0.1.0-candidate.2",
+      "results_version_present": true
+    },
+    {
+      "skill": "ss-windows-runtime",
+      "run_id": "run-01",
+      "version": "0.1.0-candidate.1",
+      "results_version_present": false
+    },
+    {
+      "skill": "ss-windows-runtime",
+      "run_id": "run-02",
+      "version": "0.1.0-candidate.1",
+      "results_version_present": true
+    },
+    {
+      "skill": "ss-windows-runtime",
+      "run_id": "run-03",
+      "version": "0.1.0-candidate.1",
+      "results_version_present": true
+    }
+  ],
+  "coordinator_report": {
+    "first_dry_run": "KeyError candidate_version dans results historique avant publication",
+    "second_dry_run": "Étape historique franchie puis refus de metadata skill manquante dans revue WR-H01",
+    "independently_executed": false
+  },
+  "limitations": [
+    "PASS de cette correction isolée ; aucun succès global du dry-run ou de publication revendiqué.",
+    "Les contrôles précédents sont inchangés ; les limites de publication atomique par skill restent celles de la revue précédente.",
+    "Les9pièces du support ont été vérifiées, sans importer/exécuter leur code ou relancer leurs tests.",
+    "Des modifications documentaires du coordinateur et publication-support non suivi étaient présents à l'ouverture ; ils n'ont pas été modifiés par la revue."
+  ],
+  "publisher_imported_or_executed": false,
+  "model_or_probe_launched": false,
+  "delegated": false,
+  "source_or_candidate_modified": false,
+  "tracked_files_modified_by_reviewer": false
+}

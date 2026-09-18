@@ -140,6 +140,19 @@ les HTTP 404 des trois familles J5 comme des indisponibilités à réinterroger 
 planifié, et bloque la sélection J4 d'une rencontre déjà suivie, sauf `STOPPED_ERROR`.
 La reprise fournisseur après ce correctif reste à valider par l'opérateur.
 
+**Skills du lot 2 — clôture pré-fusion le 18 septembre 2026 :** le
+[WO-062](docs/work_orders/completed/WO-SS-20260915-062-skills-lot2.md) livre, dans l'ordre prévu,
+ss-provider-benchmark, ss-football-quality, ss-ci-security, ss-java-module et
+ss-windows-runtime. Les versions livrées sont qualifiées, validées humainement et installées
+personnellement : Provider Benchmark (12 PASS), Football Quality (8 PASS), CI Security (8 PASS),
+Java Module 0.1.0-candidate.5 (8 PASS / 0 FAIL / 0 BLOCKED) et Windows Runtime
+0.1.0-candidate.1 (8 PASS / 0 FAIL / 0 BLOCKED). La
+[matrice finale Windows portable](docs/skills/evaluations/WO-062/ss-windows-runtime/final-qualification.json)
+est liée au manifeste par SHA-256 ; les traces C13 détaillées restent dans l'archive locale
+hashée. Les commandes d'installation et de vérification figurent dans le
+[guide des skills](docs/skills/README.md). La PR #38 doit encore fusionner vers
+feature/V0.1.0-RC01 pour rendre cette clôture effective.
+
 **Skills du lot 1 validés — 5 septembre 2026 :** les cinq skills `ss-*` sont livrés avec
 leur [guide et installateur personnel](docs/skills/README.md), sous
 [WO-054](docs/work_orders/completed/WO-SS-20260905-054-skills-lot1.md).

@@ -1,0 +1,75 @@
+{
+  "schema": "wo062-c-harness-review-v1",
+  "completed_at_utc": "2026-09-15T20:58:13Z",
+  "status": "LOCAL_CORRECTIONS_VERIFIED",
+  "worktree": "C:/Dev/BettingProject/codex/betting-sofascore-local-lab/.tmp/wo062-skills-lot2",
+  "source_head_observed": "6648dd423e556b5248b8793a539ae85a7680f9bc",
+  "old_launcher": {
+    "path": ".tmp/wo062_evaluate.py",
+    "sha256": "17640bd78caf18abb834f72a1610c0bc613ce4bc14645a29a1d5f7e3311d000d",
+    "unchanged": true
+  },
+  "reviewed_launcher": {
+    "path": ".tmp/wo062_evaluate_c.py",
+    "initial_sha256": "6740545ed509780f187fa468016a6068b90b0483bfa4cc1532e5744a270d6f06",
+    "final_sha256": "8a72b9b69d452bdcc545cc85ce4931beef5a58a41625eba3e12d9c240f44425f"
+  },
+  "findings": [
+    {
+      "id": "C-HARNESS-01",
+      "status": "FIXED",
+      "initial_lines": [90, 91],
+      "defect": "workspace-write depended only on a scenario flag and admitted Java or selection cases if misdeclared.",
+      "resolution": "Shared prepare/run guard limits bounded_local_runtime to non-selection WR-H01 and WR-N01 of ss-windows-runtime; unknown modes rejected."
+    },
+    {
+      "id": "C-HARNESS-02",
+      "status": "FIXED",
+      "initial_lines": [97, 99],
+      "defect": "TimeoutExpired or invalid native JSON prevented trace and freeze finalization.",
+      "resolution": "Preserve valid native events, diagnostics, trace and freeze; timeout remains 900 seconds, no retry or cleanup, native exit_code is null on timeout."
+    },
+    {
+      "id": "C-HARNESS-03",
+      "status": "FIXED",
+      "initial_lines": [111, 125, 126],
+      "defect": "Postexecution source or artifact assertions prevented a complete frozen diagnostic.",
+      "resolution": "Record source/request/prompt integrity errors, freeze admissible text artifacts recursively, inventory rejected artifacts, capture copy diagnostics."
+    },
+    {
+      "id": "C-HARNESS-04",
+      "status": "FIXED",
+      "initial_lines": [130, 139],
+      "defect": "The collector could return zero despite missing turn.completed or missing response.",
+      "resolution": "Separate native exit_code and collector_exit_code; require completion, nonempty response and no collection errors; leave qualification_status NOT_REVIEWED."
+    }
+  ],
+  "validation": {
+    "type": "synthetic_pure_or_mocked_checks",
+    "test_script": ".tmp/test_c_harness.py",
+    "test_script_sha256": "62410fea11ea79632e6633c5f81b063ffb59677d2c3369bdff037b3e316c765b",
+    "summary": ".tmp/c-harness-synthetic-results.json",
+    "tests_run": 17,
+    "failures": 0,
+    "errors": 0,
+    "exit_code": 0,
+    "model_calls": 0,
+    "external_process_calls_from_tests": 0,
+    "environment_replaced_with_empty_dictionary": true,
+    "native_candidate_evaluations": 0,
+    "git_diff_check_exit_code": 0,
+    "old_evidence_targeted_git_status": "EMPTY",
+    "artifacts_root": ".tmp/c-harness-synthetic/b72fc2cc-d974-464c-92d2-ef85df3baf8c"
+  },
+  "limitations": [
+    "This review verifies the collector, not candidate business qualification.",
+    "C preparation manifests were still being authored; final source/input allowlists require their own preparation review.",
+    "Exact candidate full-body tool loading and real Windows runtime results must be proved by future native traces.",
+    "Reconstructed catalogue is local discovery evidence, not a model request capture.",
+    "Timeout does not attest process-tree cleanup; inspect the owned attempt state before any separately authorized new attempt."
+  ],
+  "tracked_files_written_by_reviewer": [],
+  "application_tests_run": false,
+  "native_run_authorization_claimed": false,
+  "installation_or_publication_claimed": false
+}

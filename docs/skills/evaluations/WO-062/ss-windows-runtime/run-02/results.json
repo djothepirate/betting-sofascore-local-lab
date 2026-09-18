@@ -1,0 +1,41 @@
+{
+  "schema": "wo062-frozen-skill-results-v1",
+  "skill": "ss-windows-runtime",
+  "run_id": "run-02",
+  "candidate_version": "0.1.0-candidate.1",
+  "candidate_sha256": "b89925d5395238010bb0afe9c1e1a22b0aa5ec4e7d1fb9946c671d241e7976c6",
+  "source_head": "2d62f12c2d2ad4571c630aea0f98128927aa24ff",
+  "reviewed_at_utc": "2026-09-15T22:15:03.403452+00:00",
+  "case_count": 2,
+  "prepared_case_count": 8,
+  "excluded_prepared_cases": [
+    "WR-C01",
+    "WR-C02",
+    "WR-S01",
+    "WR-S02",
+    "WR-S03",
+    "WR-S04"
+  ],
+  "exclusion_reason": "PREPARED_NOT_EXECUTED_NOT_AUTHORIZED_IN_RUN_02",
+  "cases": [
+    {
+      "case_id": "WR-H01",
+      "verdict": "BLOCKED",
+      "source_run": "run-02",
+      "review": "review-WR-H01.json",
+      "response": null,
+      "response_sha256": null
+    },
+    {
+      "case_id": "WR-N01",
+      "verdict": "BLOCKED",
+      "source_run": "run-02",
+      "review": "review-WR-N01.json",
+      "response": "cases/WR-N01/response.md",
+      "response_sha256": "0148ebd3172cab3e9529214ac50db040d12b4709198091e5440c8048290290a3"
+    }
+  ],
+  "pass": 0,
+  "fail": 0,
+  "blocked": 2
+}

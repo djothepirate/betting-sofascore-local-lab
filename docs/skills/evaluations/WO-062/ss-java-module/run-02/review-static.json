@@ -1,0 +1,65 @@
+{
+  "schema": "wo062-candidate-static-review-v1",
+  "reviewer": "/root/jm_counter_review",
+  "reviewed_on": "2026-09-15",
+  "review_type": "STATIC_ONLY",
+  "skill": "ss-java-module",
+  "candidate_version": "0.1.0-candidate.2",
+  "candidate_sha256": "255655544771ae6cf2a71b967aba8efeb7e53e64acc41ca31dc784e16a719118",
+  "baseline_version": "0.1.0-candidate.1",
+  "baseline_sha256": "d20c8b838a9c4b9713e27c576e22272427d3f64fef50a670f5a09364cf849eb4",
+  "yaml_sha256": "ccc4fc2a4707838dd6defdd73ef6f6c7ee0d69e6df86e41689a46884691573ae",
+  "verdict": "PASS",
+  "behavioral_qualification": "NOT_RUN",
+  "chronology": {
+    "baseline_candidate_commit": "d89f9f2f3da136faf00976266202a4ff9b8c8c1f",
+    "baseline_and_run01_publication_commit": "57ebe868d3a096d5eaa139791f0e9fb28a3b8845",
+    "candidate2_promotion_commit": "2d62f12c2d2ad4571c630aea0f98128927aa24ff",
+    "baseline_candidate_sha256": "d20c8b838a9c4b9713e27c576e22272427d3f64fef50a670f5a09364cf849eb4",
+    "candidate2_sha256": "255655544771ae6cf2a71b967aba8efeb7e53e64acc41ca31dc784e16a719118",
+    "note": "Canonique .1 lors de la comparaison initiale, .2 lors du contrôle final ; copies .1 des cas historiques intactes. Aucun candidat modifié par le relecteur."
+  },
+  "criteria": [
+    {
+      "id": "identity",
+      "verdict": "PASS",
+      "evidence": "Version 0.1.0-candidate.2 et SHA-256 255655544771ae6cf2a71b967aba8efeb7e53e64acc41ca31dc784e16a719118 confirmés. Référence .1 vérifiée au début dans le canonique puis à la fin dans les copies historiques JM-C01/C02 : d20c8b838a9c4b9713e27c576e22272427d3f64fef50a670f5a09364cf849eb4. Le canonique a été mis à jour concurremment vers .2 par la coordination ; aucun candidat modifié par le relecteur. YAML identique."
+    },
+    {
+      "id": "domain_distinctions",
+      "verdict": "PASS",
+      "evidence": "Les ajouts demandent d'expliciter déclencheur, provenance par page, date métier et instants d'exécution, puis de consulter les types J3 réels. Ils couvrent les distinctions absentes de JM-N01 N03 sans imposer une réponse de cas."
+    },
+    {
+      "id": "dependency_errors",
+      "verdict": "PASS",
+      "evidence": "Le relevé des types d'erreur propagés et exceptions d'adaptateur complète l'analyse des dépendances ; il répond à JM-N01 N12 sans fournir le nom de l'exception attendue ni une carte corrigée."
+    },
+    {
+      "id": "historical_incidents",
+      "verdict": "PASS",
+      "evidence": "L'ajout distingue les phases de résolution, compilation, exécution et conservation ; il rappelle la portée d'un refus sandbox sur dépendance puis d'une relance. Il couvre JM-H01 H07 sans artifact/version/SHA/totaux/commande propres au cas."
+    },
+    {
+      "id": "specialist_handoffs",
+      "verdict": "PASS",
+      "evidence": "La restitution doit nommer les relais applicables des prochaines actions : ss-verify, ss-data-contract-replay, ss-postgres-change. Cela traite JM-N01 N17 et l'omission SQL de JM-C02, même pour des travaux futurs, sans déclencher ces skills."
+    },
+    {
+      "id": "scope_and_oracle_independence",
+      "verdict": "PASS",
+      "evidence": "Description et YAML inchangés, mission du Lab et garde des allowlists conservés. Aucun ID de cas, verdict attendu, seuil de matrice historique, SHA source ou résultat d'essai ajouté. Les noms des classes J3 sont des références au dépôt et les rappels restent des consignes générales d'analyse."
+    },
+    {
+      "id": "preservation_and_test_boundary",
+      "verdict": "PASS",
+      "evidence": "Monomodule, socle, worker isolé, autorité J3 adoptée, absence de fallback/recréation et distinction preuve/exécution inchangés. La comparaison n'exécute aucune session native ni test applicatif."
+    }
+  ],
+  "findings": [],
+  "limitations": [
+    "La présence de consignes répond aux omissions observées ; elle ne prouve pas leur exécution lors de futurs cas.",
+    "Les huit sessions de requalification n'ont pas été lancées. Leur autorisation relève d'une étape distincte, au-delà des seize sessions actuellement autorisées.",
+    "Aucune réécriture des réponses run-01, aucune modification du candidat .1 ni .2 par le relecteur, aucune installation ou publication effectuée."
+  ]
+}

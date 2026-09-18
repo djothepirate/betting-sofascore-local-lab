@@ -1,0 +1,148 @@
+{
+  "schema_version": 1,
+  "work_order": "WO-062",
+  "status": "OWNER_VALIDATED_PERSONALLY_INSTALLED_AND_VERIFIED",
+  "verified_at_utc": "2026-09-15T20:33:00.029744+00:00",
+  "candidate_version": "0.1.0-candidate.1",
+  "manifest_sha256": "28e5e35941e7125e57d0db98553e94d4b88276e9db72b270a3827e1b1a10e7f2",
+  "source_qualification_commit": "285f4384a4c2fbd4276089fc216c7c74d2cb7495",
+  "owner_decisions": [
+    {
+      "skill": "ss-football-quality",
+      "decision_sha256": "a2556f9852a076dcbaab5499c010e95eb933b4f312767c8babcab5f362c2f678",
+      "qualification_sha256": "692954afbfb96c216036b8fdeef09ea76df9f1833cdab7ae939798b8d24dcfc5"
+    },
+    {
+      "skill": "ss-ci-security",
+      "decision_sha256": "a57d29c835b67e30bfdce2e8c9bda87aacb36a42c3c6308e4f015e8483fff4ac",
+      "qualification_sha256": "3237ed729f18cb407ed46c7778f40bcfdbde45cd9ab6ff26460525af9c8a1b30"
+    }
+  ],
+  "installed_files": [
+    {
+      "path": "C:\\Users\\geoff\\.agents\\skills\\ss-ci-security\\agents\\openai.yaml",
+      "bytes": 293,
+      "sha256": "621ecacc03c3acf895d2bd5c87ed94461512e23a6e16cc321ae1818f0962d959",
+      "mtime_ns": 1789501811128297000
+    },
+    {
+      "path": "C:\\Users\\geoff\\.agents\\skills\\ss-ci-security\\SKILL.md",
+      "bytes": 7522,
+      "sha256": "ca0bba1cf60c0c9965f21b3201e39c3e5dcba3bd73888c2a2ee5d148dbb8c0c5",
+      "mtime_ns": 1789501806420087900
+    },
+    {
+      "path": "C:\\Users\\geoff\\.agents\\skills\\ss-football-quality\\agents\\openai.yaml",
+      "bytes": 305,
+      "sha256": "8d295af442808d3efebbe68e8165ef96efd086b5b84908fc12f04c1c66bf51f2",
+      "mtime_ns": 1789501661103390600
+    },
+    {
+      "path": "C:\\Users\\geoff\\.agents\\skills\\ss-football-quality\\SKILL.md",
+      "bytes": 7330,
+      "sha256": "8489375d22eff31a3248f78a5d3791b549a2f103d061cc6c46647a757d3eec58",
+      "mtime_ns": 1789501318272768100
+    }
+  ],
+  "installation": [
+    {
+      "phase": "install",
+      "arguments": [
+        "-NoProfile",
+        "-ExecutionPolicy",
+        "Bypass",
+        "-File",
+        "C:\\Dev\\BettingProject\\codex\\betting-sofascore-local-lab\\.tmp\\wo062-skills-lot2\\scripts\\Install-LocalLabSkills.ps1",
+        "-Package",
+        "FootballQualityCiSecurity",
+        "-Destination",
+        "C:\\Users\\geoff\\.agents\\skills"
+      ],
+      "child_environment": "PSModulePath omitted in this child only; Windows PowerShell initializes its native module paths. No persistent environment changes.",
+      "exit_code": 0,
+      "files_checked": 4,
+      "files_copied": 4,
+      "duration_seconds": 0.484,
+      "stdout_sha256": "1ad6143cc3a0f68d717b405ae4f3ddb3763296bc599d00c28ce2e5fc32c965e6"
+    },
+    {
+      "phase": "verify",
+      "arguments": [
+        "-NoProfile",
+        "-ExecutionPolicy",
+        "Bypass",
+        "-File",
+        "C:\\Dev\\BettingProject\\codex\\betting-sofascore-local-lab\\.tmp\\wo062-skills-lot2\\scripts\\Install-LocalLabSkills.ps1",
+        "-Package",
+        "FootballQualityCiSecurity",
+        "-Destination",
+        "C:\\Users\\geoff\\.agents\\skills",
+        "-VerifyOnly"
+      ],
+      "child_environment": "PSModulePath omitted in this child only; Windows PowerShell initializes its native module paths. No persistent environment changes.",
+      "exit_code": 0,
+      "files_checked": 4,
+      "files_copied": 0,
+      "duration_seconds": 0.531,
+      "stdout_sha256": "0924b81317ff4af4b6c2b6aeb142aafee2ef1b626b7a45b0233c9e5881b0d305"
+    },
+    {
+      "phase": "idempotence",
+      "arguments": [
+        "-NoProfile",
+        "-ExecutionPolicy",
+        "Bypass",
+        "-File",
+        "C:\\Dev\\BettingProject\\codex\\betting-sofascore-local-lab\\.tmp\\wo062-skills-lot2\\scripts\\Install-LocalLabSkills.ps1",
+        "-Package",
+        "FootballQualityCiSecurity",
+        "-Destination",
+        "C:\\Users\\geoff\\.agents\\skills"
+      ],
+      "child_environment": "PSModulePath omitted in this child only; Windows PowerShell initializes its native module paths. No persistent environment changes.",
+      "exit_code": 0,
+      "files_checked": 4,
+      "files_copied": 0,
+      "duration_seconds": 0.469,
+      "stdout_sha256": "02684a994c4646b9560cc6d25329cf21fefd1c158aedb2dc1081954e5dbe4ccd"
+    }
+  ],
+  "prior_files_preserved": 12,
+  "prior_timestamps_preserved": true,
+  "discovered_personal_skills": 8,
+  "new_discovery_entries": 2,
+  "model_invoked": false,
+  "installer_tests": {
+    "Lot1": 7,
+    "ProviderBenchmark": 11,
+    "FootballQualityCiSecurity": 14,
+    "total": 32,
+    "failures": 0
+  },
+  "initial_failed_installation": "initial-runtime-failure.json",
+  "independent_review": "review.json",
+  "script_sources": [
+    {
+      "path": "C:\\Dev\\BettingProject\\codex\\betting-sofascore-local-lab\\.tmp\\wo062-skills-lot2\\scripts\\Install-LocalLabSkills.ps1",
+      "bytes": 6559,
+      "sha256": "aa65ef1f15643201e8877b5debdc5382fee2068b96ec529346bff7e8cf28d2b2",
+      "mtime_ns": 1789503911908614500
+    },
+    {
+      "path": "C:\\Dev\\BettingProject\\codex\\betting-sofascore-local-lab\\.tmp\\wo062-skills-lot2\\scripts\\Test-LocalLabSkillsInstallation.ps1",
+      "bytes": 11993,
+      "sha256": "a7d0336a4d72f56b0908110b866e038ab97dc2f27968a4a52b8bbc8f2179ba4c",
+      "mtime_ns": 1789503911908614500
+    }
+  ],
+  "scope_limits": [
+    "Exact reviewed candidate files; suffix candidate.1 kept as version identity after human approval.",
+    "Discovery is local catalogue reconstruction, no new model selection test or automatic injection claim.",
+    "Initial Python-hosted PowerShell failure preceded any copy; corrected only child module search environment, no persistent setting changed."
+  ],
+  "qualification_hash_scope": "owner_decisions[].qualification_sha256 identifies the approved pre-installation snapshot observed by the preflight and independent review; current qualifications also record completed installation.",
+  "pre_installation_qualifications": [
+    "ss-football-quality-qualification-before-installation.json",
+    "ss-ci-security-qualification-before-installation.json"
+  ]
+}

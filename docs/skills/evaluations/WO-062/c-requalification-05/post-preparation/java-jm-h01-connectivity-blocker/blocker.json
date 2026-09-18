@@ -1,0 +1,66 @@
+{
+  "schema": "wo062-c5-model-transport-blocker-v1",
+  "status": "BLOCKED_BEFORE_MODEL_COMMAND",
+  "recorded_date": "2026-09-16",
+  "skill": "ss-java-module",
+  "run_id": "run-05",
+  "case_id": "JM-H01",
+  "candidate_version": "0.1.0-candidate.4",
+  "candidate_sha256": "f1f6533f678c5cdb4ae6a5bc9c996c062af419005e4f4cd6104a51c91e442d97",
+  "execution_envelope": {
+    "mode": "native_codex_exec_ephemeral_read-only",
+    "service": "configured Codex service",
+    "oracle_supplied": false,
+    "prior_answers_supplied": false,
+    "automatic_retry": false
+  },
+  "observed": {
+    "started_at_utc": "2026-09-16T00:50:54.802029+00:00",
+    "ended_at_utc": "2026-09-16T01:05:55.074208+00:00",
+    "duration_seconds": 900.266,
+    "thread_started": true,
+    "turn_started": true,
+    "turn_completed": false,
+    "completed_model_commands": 0,
+    "response_present": false,
+    "usage": null,
+    "timed_out": true,
+    "collector_exit_code": 1,
+    "owned_pid": 7812,
+    "owned_pid_absent_after_collection": true
+  },
+  "transport_failure": {
+    "websocket_endpoint": "wss://api.openai.com/v1/responses",
+    "websocket_error": "socket access denied (os error 10013)",
+    "https_fallback": "connection failed while sending request",
+    "model_command_or_source_read_proven": false
+  },
+  "qualification_effect": {
+    "behavioral_execution_count_for_candidate": 0,
+    "candidate_verdict": null,
+    "remaining_java_cases_withheld": [
+      "JM-N01",
+      "JM-C01",
+      "JM-C02",
+      "JM-S01",
+      "JM-S02",
+      "JM-S03",
+      "JM-S04"
+    ],
+    "reason": "The frozen C5 authorization sets max_model_sessions to 10 and automatic_retry to false. This started session is preserved; a fresh JM-H01 requires a new owner decision after connectivity is restored."
+  },
+  "evidence": [
+    "freeze.json",
+    "trace.json",
+    "native-events.json",
+    "native-timing.jsonl",
+    "native-timing-summary.json",
+    "stderr.log",
+    "host-runtime.json"
+  ],
+  "does_not_establish": [
+    "Candidate loading or application",
+    "A behavioral PASS or FAIL for JM-H01",
+    "An application build, test, database operation, provider collection, CI run, human validation or personal installation"
+  ]
+}

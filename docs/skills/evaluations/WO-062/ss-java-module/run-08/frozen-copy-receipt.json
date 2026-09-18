@@ -1,0 +1,55 @@
+{
+  "schema": "wo062-c8-frozen-copy-receipt-v1",
+  "run_id": "run-08",
+  "copied_at_utc": "2026-09-16T13:08:49.288564+00:00",
+  "cases": [
+    {
+      "case_id": "JM-H01",
+      "source_freeze_sha256": "3636c2dfc4c195c92879841a6ff9f25b93cbbbd2400fbbb321dadd5f1a364171",
+      "published_freeze_sha256": "3636c2dfc4c195c92879841a6ff9f25b93cbbbd2400fbbb321dadd5f1a364171",
+      "file_count": 12
+    },
+    {
+      "case_id": "JM-N01",
+      "source_freeze_sha256": "9da9b7e31c3ca3c4d4d461aff0f7767fe090b00662e669e8942de9721d80a109",
+      "published_freeze_sha256": "9da9b7e31c3ca3c4d4d461aff0f7767fe090b00662e669e8942de9721d80a109",
+      "file_count": 12
+    },
+    {
+      "case_id": "JM-C01",
+      "source_freeze_sha256": "e70e25d6c4152a7ff6d689176c5f31da5b41ac9ce29364fefa28235305590ae7",
+      "published_freeze_sha256": "e70e25d6c4152a7ff6d689176c5f31da5b41ac9ce29364fefa28235305590ae7",
+      "file_count": 12
+    },
+    {
+      "case_id": "JM-C02",
+      "source_freeze_sha256": "2f6655a87f9d7bdcb113d1367de2daa0a329b4ac226418dcdec2a26b8edb6517",
+      "published_freeze_sha256": "2f6655a87f9d7bdcb113d1367de2daa0a329b4ac226418dcdec2a26b8edb6517",
+      "file_count": 12
+    },
+    {
+      "case_id": "JM-S01",
+      "source_freeze_sha256": "dd2e7e1b44b9b34d0750f6276bb010ff0bbab9e946973f5a21983e8d44f7c61a",
+      "published_freeze_sha256": "dd2e7e1b44b9b34d0750f6276bb010ff0bbab9e946973f5a21983e8d44f7c61a",
+      "file_count": 11
+    },
+    {
+      "case_id": "JM-S02",
+      "source_freeze_sha256": "d934678e3d2523e637186bf74ebd72a142b16887af6e23aca196f8d0fb055989",
+      "published_freeze_sha256": "d934678e3d2523e637186bf74ebd72a142b16887af6e23aca196f8d0fb055989",
+      "file_count": 11
+    },
+    {
+      "case_id": "JM-S03",
+      "source_freeze_sha256": "d411e7aecc1b413c2d26367985558e5f7c149ab648e41527550d838bb6f2b922",
+      "published_freeze_sha256": "d411e7aecc1b413c2d26367985558e5f7c149ab648e41527550d838bb6f2b922",
+      "file_count": 11
+    },
+    {
+      "case_id": "JM-S04",
+      "source_freeze_sha256": "6c62bd56d81a3cac3c33fb409781b8da4244dcd792941d06584274587a9d3b21",
+      "published_freeze_sha256": "6c62bd56d81a3cac3c33fb409781b8da4244dcd792941d06584274587a9d3b21",
+      "file_count": 11
+    }
+  ]
+}

@@ -1,0 +1,58 @@
+{
+  "schema": "wo062-current-skill-qualification-v1",
+  "skill": "ss-football-quality",
+  "candidate_version": "0.1.0-candidate.1",
+  "status": "QUALIFIED_OWNER_VALIDATED_PERSONALLY_INSTALLED",
+  "source_commit": "57c0614627e628077b0a7775eb66a7c490b422e0",
+  "preparation_manifest_sha256": "ab5cf47000fe47b9fc76541ecf9e29a9a429e17d9947c86004078ae850f49adc",
+  "candidate_files": [
+    {
+      "path": "agents/openai.yaml",
+      "bytes": 305,
+      "sha256": "8d295af442808d3efebbe68e8165ef96efd086b5b84908fc12f04c1c66bf51f2"
+    },
+    {
+      "path": "SKILL.md",
+      "bytes": 7330,
+      "sha256": "8489375d22eff31a3248f78a5d3791b549a2f103d061cc6c46647a757d3eec58"
+    }
+  ],
+  "distinct_cases": 8,
+  "executions": 8,
+  "pass": 8,
+  "fail": 0,
+  "blocked": 0,
+  "human_validation": true,
+  "personal_installation": true,
+  "results": "run-01/results.json",
+  "artifact_manifest_sha256": "ddf6ddf37273a2c7772562eaf2a4f72a42eb6db84c0455c30d03642112804ebd",
+  "limits": [
+    "Qualification limited to the frozen cases; no productivity gain measured.",
+    "Model and reasoning effort use configured defaults, exact values unavailable in observed CLI events.",
+    "Selection and complete tool-mediated loading are instrumented; no automatic body injection claim.",
+    "Each selection catalogue includes the candidate plus existing personal skills, not both uninstalled B candidates together.",
+    "No actual provider collection, CI pipeline, scanner or application test is claimed by these documentary evaluations."
+  ],
+  "metadata_encoding_correction": {
+    "reason": "Official generator used host cp1252. Normalize identical Unicode YAML to UTF-8 before remaining sessions; started sessions retain their original inputs and traces. SKILL.md body unchanged.",
+    "started_original_metadata": [
+      "FQ-H01",
+      "FQ-N01"
+    ],
+    "not_started_corrected_metadata": [
+      "FQ-C01",
+      "FQ-C02",
+      "FQ-S01",
+      "FQ-S02",
+      "FQ-S03",
+      "FQ-S04"
+    ],
+    "original_yaml_sha256": "53585a6b26f9dcc0d249771ed21eece127acd75ec25e4a4ee88f1b72f51e7f13",
+    "corrected_yaml_sha256": "8d295af442808d3efebbe68e8165ef96efd086b5b84908fc12f04c1c66bf51f2"
+  },
+  "candidate_body_commit": "bfbe3fb6e787756544508e1a3e5a92674a678bd7",
+  "candidate_package_commit": "11394e327448827c13ad3006d3afc2d9199c1e15",
+  "owner_decision": "human-validation.json",
+  "installation_result": "../football-quality-ci-security/installation/result.json",
+  "installation_verified_at_utc": "2026-09-15T20:33:00.029744+00:00"
+}

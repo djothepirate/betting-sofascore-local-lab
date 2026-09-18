@@ -1,0 +1,70 @@
+{
+  "schema": "wo062-c5-context-integrity-v1",
+  "status": "PASS",
+  "cases": [
+    {
+      "skill": "ss-java-module",
+      "case_id": "JM-H01",
+      "status": "PASS",
+      "input_files": 14
+    },
+    {
+      "skill": "ss-java-module",
+      "case_id": "JM-N01",
+      "status": "PASS",
+      "input_files": 39
+    },
+    {
+      "skill": "ss-java-module",
+      "case_id": "JM-C01",
+      "status": "PASS",
+      "input_files": 17
+    },
+    {
+      "skill": "ss-java-module",
+      "case_id": "JM-C02",
+      "status": "PASS",
+      "input_files": 27
+    },
+    {
+      "skill": "ss-java-module",
+      "case_id": "JM-S01",
+      "status": "PASS",
+      "input_files": 2
+    },
+    {
+      "skill": "ss-java-module",
+      "case_id": "JM-S02",
+      "status": "PASS",
+      "input_files": 2
+    },
+    {
+      "skill": "ss-java-module",
+      "case_id": "JM-S03",
+      "status": "PASS",
+      "input_files": 2
+    },
+    {
+      "skill": "ss-java-module",
+      "case_id": "JM-S04",
+      "status": "PASS",
+      "input_files": 2
+    },
+    {
+      "skill": "ss-windows-runtime",
+      "case_id": "WR-H01",
+      "status": "PASS",
+      "input_files": 16
+    },
+    {
+      "skill": "ss-windows-runtime",
+      "case_id": "WR-N01",
+      "status": "PASS",
+      "input_files": 14
+    }
+  ],
+  "case_count": 10,
+  "model_calls": 0,
+  "oracle_or_prior_answer_copied": false,
+  "note": "The separate Windows restricted-token access probe is recorded in prepared-access.json and is not overwritten by this byte-integrity check."
+}

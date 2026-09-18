@@ -1,0 +1,25 @@
+{
+  "schema": "wo062-c9-host-prelaunch-receipt-v1",
+  "checked_at_utc": "2026-09-16T14:10:12.565216+00:00",
+  "status": "PASS",
+  "run_id": "run-06",
+  "physical_context_label": "run-06-host-formal-20260916",
+  "candidate_sha256": "b89925d5395238010bb0afe9c1e1a22b0aa5ec4e7d1fb9946c671d241e7976c6",
+  "preflight_sha256": "6c0b45f0cc4df98fc9a93c368f04c50a98e090e9933cc6cf1f694d5d4c1dd7ff",
+  "runner_sha256": "a16fc726b87b256cd36990286f5de480f358ec50e02f0e0f284da333d98b80c7",
+  "host": {
+    "schema": "wo062-c9-host-parent-attestation-v1",
+    "attested_at_utc": "2026-09-16T14:10:12.565216+00:00",
+    "account": "asusggo2025\\geoff",
+    "expected_account": "asusggo2025\\geoff",
+    "runner_pid": 36548,
+    "python_executable": "C:\\Users\\geoff\\.cache\\codex-runtimes\\codex-primary-runtime\\dependencies\\python\\python.exe",
+    "logical_run_id": "run-06",
+    "physical_context_label": "run-06-host-formal-20260916"
+  },
+  "model_session_started": false,
+  "runtime_probe_executed": false,
+  "java_started": false,
+  "network_used": false,
+  "historical_c5_evidence_modified": false
+}

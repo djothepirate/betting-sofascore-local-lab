@@ -1,0 +1,27 @@
+import ast,pathlib,json,hashlib,importlib.util,sys,os,uuid
+r=pathlib.Path(__file__).resolve().parent.parent
+spec=importlib.util.spec_from_file_location('base_pub_test',r/'.tmp/publish_c_run02.py');m=importlib.util.module_from_spec(spec);sys.modules[spec.name]=m;spec.loader.exec_module(m)
+source=(r/'.tmp/publish_c4.py').read_text(encoding='utf-8')
+fn=next(n for n in ast.parse(source).body if isinstance(n,ast.FunctionDef) and n.name=='publish_validated')
+ns={'m':m,'pathlib':pathlib,'os':os,'uuid':uuid};exec(compile(ast.Module(body=[fn],type_ignores=[]),'<isolated-publisher-function>','exec'),ns)
+root=r/'.tmp/c4-publisher-tests'/str(uuid.uuid4());root.mkdir(parents=True);results=[]
+for mode in ['normal','atomic_replace_failure','manifest_mismatch','input_drift']:
+ w=root/mode;w.mkdir();(w/'.tmp').mkdir();(w/'docs').mkdir();qp=w/'docs/qualification.json';old=b'{"status":"OLD"}\n';qp.write_bytes(old)
+ data=b'exact frozen evidence\n';files={'response.txt':data};entry={'path':'response.txt','bytes':len(data),'sha256':m.digest(data)}
+ if mode=='manifest_mismatch':entry['sha256']='0'*64
+ files['artifact-manifest.json']=m.encode({'files':[entry]})
+ reader=m.Reader();reader.blob(qp)
+ if mode=='input_drift':qp.write_bytes(old+b' ')
+ before=qp.read_bytes();dest=w/'docs/run-04';qnew={'status':'NEW'}
+ def denied(src,dst):raise PermissionError('Synthetic atomic replacement failure')
+ failed=None
+ try:ns['publish_validated']([(dest,files,qp,qnew)],reader,w,denied if mode=='atomic_replace_failure' else os.replace)
+ except (PermissionError,m.EvidenceError,AssertionError) as exc:failed=type(exc).__name__
+ if mode=='normal':
+  assert failed is None and (dest/'response.txt').read_bytes()==data and qp.read_bytes()==m.encode(qnew)
+ else:
+  assert failed is not None and not dest.exists() and qp.read_bytes()==before
+ if mode=='atomic_replace_failure':assert len(list((w/'.tmp/c4-publisher-staging').glob('*/response.txt')))==1
+ results.append({'case':mode,'status':'PASS','exception':failed})
+out={'schema':'wo062-c4-publication-atomicity-tests-v1','tests':results,'passed':len(results),'publisher_sha256':m.sha if False else hashlib.sha256((r/'.tmp/publish_c4.py').read_bytes()).hexdigest(),'test_sha256':hashlib.sha256(pathlib.Path(__file__).read_bytes()).hexdigest(),'scope':'Four local synthetic publication fixtures. No model, runtime probe, real qualification mutation or recursive deletion. Atomicity is per skill, not a transaction across both skills.','fixtures':str(root)}
+(r/'.tmp/c4-publication-tests.json').write_bytes(m.encode(out));print(json.dumps(out))

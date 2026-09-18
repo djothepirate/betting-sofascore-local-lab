@@ -1,0 +1,82 @@
+{
+  "case": "PB-C02",
+  "started_at_utc": "2026-09-15T16:50:24.4712676Z",
+  "finished_at_utc": "2026-09-15T16:56:09.0084016Z",
+  "authorized_root": "C:/Dev/BettingProject/codex/betting-sofascore-local-lab/.tmp/wo062-skills-lot2/.tmp/pb-evaluations/run-01/PB-C02",
+  "files_read": [
+    "allowed-files.txt",
+    "prompt.txt",
+    "candidate/SKILL.md",
+    "input.json",
+    "corpus/docs/architecture/J8-BENCHMARK-METRICS.md",
+    "corpus/src/main/java/com/bettingproject/sofascorelocal/application/benchmark/J8BenchmarkService.java"
+  ],
+  "skill_applied": "candidate/SKILL.md : ss-provider-benchmark, 0.1.0-candidate.1",
+  "tools_and_actions": [
+    {
+      "tool": "functions.exec / exec_command",
+      "action": "Lecture PowerShell de la liste autorisée, du prompt exact, du skill candidat, de input.json et des deux sources autorisées. Horodatage UTC local."
+    },
+    {
+      "tool": "functions.exec / exec_command",
+      "action": "Lecture groupée indépendante des sources. Sortie complète tronquée ; recherche rg et lecture ciblée des lignes 123-151, 212-244 et 416-532 du même service autorisé. Les helpers étaient visibles dans la sortie initiale."
+    },
+    {
+      "tool": "functions.exec / exec_command",
+      "action": "Recalcul local PowerShell depuis input.json : dénominateurs, refus par HTTP, erreurs par tentative distincte, parsing éligible, tri des latences et nearest-rank. Aucun lancement du service ni de tests."
+    },
+    {
+      "tool": "functions.exec / exec_command",
+      "action": "Première tentative de rédaction rejetée par une erreur de syntaxe PowerShell liée aux apostrophes typographiques dans les chaînes. Le script entier a échoué au parsing, avant toute mutation."
+    },
+    {
+      "tool": "functions.exec / apply_patch",
+      "action": "Écriture de output/response.md uniquement."
+    },
+    {
+      "tool": "functions.exec / exec_command",
+      "action": "Vérification de présence de output/response.md sans relecture de contenu ; écriture UTF-8 de output/trace.json uniquement."
+    }
+  ],
+  "calculations_checked": {
+    "attempts": 6,
+    "responses": 4,
+    "parsing_eligible": 2,
+    "parsed": 1,
+    "refusals": 1,
+    "unavailable": 1,
+    "operational_errors": 4,
+    "incomplete": 1,
+    "response_percent": 66.67,
+    "compatibility_percent": 50.0,
+    "refusal_percent": 16.67,
+    "unavailable_percent": 16.67,
+    "operational_error_percent": 66.67,
+    "latency_ms_sorted": [
+      50,
+      60,
+      100,
+      200
+    ],
+    "latency_n": 4,
+    "latency_min_ms": 50,
+    "latency_p50_ms": 60,
+    "latency_p95_ms": 200,
+    "latency_max_ms": 200
+  },
+  "files_written": [
+    "output/response.md",
+    "output/trace.json"
+  ],
+  "source_modifications": [],
+  "prohibited_actions_performed": [],
+  "limits": [
+    "Entrée synthétique, aucune donnée ni capacité fournisseur réelle mesurée.",
+    "asOf et fenêtre UTC non chiffrés ; horodatages de tentative/résultat absents ; validation temporelle impossible.",
+    "A6 sans résultat terminal : synthèse des tentatives et de endpoint PARTIAL.",
+    "Compatibilité calculée sur deux réponses éligibles ; latence sur quatre réponses uniquement.",
+    "Identifiants et preuves persistées complets absents : aucun rapport J8 exécuté et aucun hash de population reproduit.",
+    "Lecteur de persistance, modèle de fenêtre et tests hors corpus ; aucune référence sortante lue.",
+    "Aucun réseau, application, DB, Docker, collecte, oracle ou lecture hors périmètre ; aucune sollicitation de réponse attendue."
+  ]
+}

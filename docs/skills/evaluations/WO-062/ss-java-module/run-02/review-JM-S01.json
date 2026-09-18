@@ -1,0 +1,82 @@
+{
+  "schema": "wo062-independent-case-review-v1",
+  "case_id": "JM-S01",
+  "run_id": "run-02",
+  "skill": "ss-java-module",
+  "reviewer": "/root/jm_counter_review",
+  "reviewed_on": "2026-09-15",
+  "verdict": "PASS",
+  "behavioral_verdict": "PASS",
+  "candidate_version": "0.1.0-candidate.2",
+  "candidate_sha256": "255655544771ae6cf2a71b967aba8efeb7e53e64acc41ca31dc784e16a719118",
+  "response_sha256": "dc869ab663cada403bcdec3feb59c28354d35352f321fb560a1cc9e2df990644",
+  "native_events_sha256": "137a2c9947f216996e9e1f64f82647e9bfb9bcb43dcdb7b4e6c17c76a7f9c335",
+  "source_head": "2d62f12c2d2ad4571c630aea0f98128927aa24ff",
+  "oracle_sha256": "d13dc8c5ec833f30dc9025c3c22a22c00e60656eae3a89dc30361861ea390bd1",
+  "frozen_before_review": true,
+  "selected_skills": [
+    "ss-java-module"
+  ],
+  "selected_skill_sha256": "255655544771ae6cf2a71b967aba8efeb7e53e64acc41ca31dc784e16a719118",
+  "required_criteria_missing": [],
+  "criteria": [
+    {
+      "criterion_id": "frozen-identity",
+      "required": true,
+      "result": "PASS",
+      "evidence": "8 fichiers figés et 2 entrées recalculés conformes ; journal brut conforme ; réponse et candidat identifiés par SHA-256.",
+      "limit": "Aucun fichier de preuve du premier essai modifié."
+    },
+    {
+      "criterion_id": "exact-selection-envelope",
+      "required": true,
+      "result": "PASS",
+      "evidence": "Request identique à cases.selection_envelope avec le seul remplacement de {prompt}; préflight et demandes figées conformes.",
+      "limit": "Pas de nom/descriptif de remplacement injecté par le lanceur."
+    },
+    {
+      "criterion_id": "selection-decision",
+      "required": true,
+      "result": "PASS",
+      "evidence": "Sélection explicite de ss-java-module ; chemin local du candidat exact et raison liée aux responsabilités/ports/adaptateurs du Lab restitués.",
+      "limit": "Décision jugée sur son sens, sans exigence de formulation exacte."
+    },
+    {
+      "criterion_id": "actual-skill-read",
+      "required": true,
+      "result": "PASS",
+      "evidence": "item_1 lit le candidat intégralement, code 0 ; aucune autre commande ni analyse métier. Sortie complète comparée au fichier correspondant : identité vraie après normalisation CRLF/LF et blanc final.",
+      "limit": "La lecture est observée dans le journal natif, pas déduite de la déclaration finale."
+    },
+    {
+      "criterion_id": "catalogue-and-discovery-scope",
+      "required": true,
+      "result": "PASS",
+      "evidence": "Le catalogue figé associe le candidat à r6/.agents/skills et ss-postgres-change à r0. Le chemin réellement utilisé et les métadonnées sont établis par la lecture outil ; S03/S04 incluent aussi une énumération native.",
+      "limit": "catalogue.txt est reconstruit après session par debug prompt-input. Il ne prouve ni le catalogue effectivement transmis ni l'injection automatique du corps ; prompt-render intermédiaire ne sert pas de preuve transmise."
+    },
+    {
+      "criterion_id": "routing-only-and-independence",
+      "required": true,
+      "result": "PASS",
+      "evidence": "1 commande(s), uniquement lecture de skill ou énumération des fichiers. Aucun oracle, ancien résultat, plan, source métier, exécution applicative ou mutation.",
+      "limit": "Les skills de relais mentionnés conditionnellement ne sont pas retenus ou exécutés sans besoin."
+    },
+    {
+      "criterion_id": "version-and-hash",
+      "required": true,
+      "result": "PASS",
+      "evidence": "Candidat Java .2 présent à l'empreinte 255655544771ae6cf2a71b967aba8efeb7e53e64acc41ca31dc784e16a719118 ; version visible dans le fichier exact. Skill retenu SHA-256 255655544771ae6cf2a71b967aba8efeb7e53e64acc41ca31dc784e16a719118.",
+      "limit": "Le skill PostgreSQL ne déclare pas la version .2 Java ; ses octets sont identifiés séparément."
+    }
+  ],
+  "observed_read_commands": 1,
+  "limitations": [
+    "Catalogue reconstruit après run, pas une capture de la requête transmise ni preuve d'injection automatique du corps.",
+    "Modèle/effort effectifs non exposés, valeurs configurées par défaut sans override.",
+    "PASS limité au routage et aux lectures observés. Aucun gain global de temps/qualité mesuré."
+  ],
+  "source_or_candidate_modified": false,
+  "application_tests_executed": false,
+  "prior_run_unchanged": true
+}

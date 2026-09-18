@@ -1,0 +1,1 @@
+Utilise $ss-windows-runtime pour diagnostiquer dans le SofaScore Local Lab un lanceur PowerShell 5.1 dont l’enfant Java échoue alors que la commande extérieure rend zéro.

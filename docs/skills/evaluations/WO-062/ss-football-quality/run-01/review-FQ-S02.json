@@ -1,0 +1,54 @@
+{
+  "case_id": "FQ-S02",
+  "verdict": "PASS",
+  "mandatory_criteria": [
+    {
+      "criterion": "P1_FREEZE",
+      "status": "PASS",
+      "evidence": "Les six pièces figées correspondent à leurs hashes et tailles. Réponse SHA-256 3d918d61364bafa9af0f8a4d87a8bdaf9d75a4aba132b06e96e0ecf64f6cfcb5 égale au final natif item_4, hors fin de ligne terminale."
+    },
+    {
+      "criterion": "P2_EXACT_ENVELOPE",
+      "status": "PASS",
+      "evidence": "prompt.txt correspond au prompt du cas dans cases.json ; request.txt correspond exactement à selection_envelope avec remplacement unique du prompt, hors fin de ligne terminale. Aucun attendu ajouté."
+    },
+    {
+      "criterion": "P3_CATALOGUE_PROVENANCE",
+      "status": "PASS",
+      "evidence": "Le catalogue reconstruit et figé inclut ss-football-quality avec la racine r6 propre à FQ-S02, ainsi que ss-verify et les autres skills du lot 1 sous r0. Les décisions et chemins effectivement utilisés sont cohérents avec ces entrées. Sa provenance est déclarée « Local reconstruction after execution, not a capture of the transmitted request »."
+    },
+    {
+      "criterion": "P4_CANDIDATE_BEFORE_AFTER",
+      "status": "PASS",
+      "evidence": "Les deux entrées SKILL/YAML concordent entre préflight, trace et copies relues après exécution. SKILL SHA-256 8489375d22eff31a3248f78a5d3791b549a2f103d061cc6c46647a757d3eec58; YAML UTF-8 SHA-256 8d295af442808d3efebbe68e8165ef96efd086b5b84908fc12f04c1c66bf51f2. Corps inchangé par rapport au préflight original ; les deux fichiers se décodent en UTF-8 strict."
+    },
+    {
+      "criterion": "P5_FULL_CANDIDATE_TOOL_READ",
+      "status": "PASS",
+      "evidence": "item_1 lit le chemin absolu de la copie isolée FQ-S02/.agents/skills/ss-football-quality/SKILL.md avec Get-Content -Raw -LiteralPath. Code de sortie 0 ; sortie complète de 7 142 caractères identique au fichier de 7 140 caractères hors ajout de fin de ligne terminale ; aucune troncature."
+    },
+    {
+      "criterion": "FQ-S02_ROUTING",
+      "status": "PASS",
+      "evidence": "La demande ne nomme aucun skill. Le candidat retient seulement ss-football-quality et relie identité/horaire, HOME/AWAY, séance sans minute et historique J6 aux sections pertinentes du corps lu."
+    },
+    {
+      "criterion": "P6_STOP_AT_ROUTING",
+      "status": "PASS",
+      "evidence": "Le parcours chaîne de preuve → identité/horaires/HOME-AWAY → incidents → J6 sert à expliquer la sélection. Le final précise qu’il ne conclut pas sur la validité des écarts et s’arrête au routage ; aucune tâche métier n’est exécutée."
+    },
+    {
+      "criterion": "P7_NO_UNAUTHORIZED_ACTIONS",
+      "status": "PASS",
+      "evidence": "1 commande(s) réelle(s), limitée(s) à une lecture intégrale du seul skill retenu. Aucun oracle ni fichier hors routage, aucune application, DB/Docker, mutation, build, test, réseau ou collecte."
+    }
+  ],
+  "findings": [],
+  "limits": [
+    "Le catalogue est reconstruit après exécution et déclaré comme tel : la revue ne certifie pas une capture exacte du catalogue transmis ni son intégralité interne. Le PASS porte sur le routage et les lectures outils instrumentées observées, avec cette limite.",
+    "Aucune injection automatique du corps par le CLI n’est établie. Le préflight déclare absence de collage manuel, d’oracle et d’historique de conception ; la requête exacte et les commandes publiées n’en montrent aucun, sans audit complet du contexte interne.",
+    "Le modèle et l’effort exacts ne sont pas exposés. Aucun gain de productivité, qualification applicative/fournisseur, installation personnelle, validation humaine finale ou clôture de WO n’est déduit.",
+    "Une seule demande implicite est testée ; le résultat ne mesure ni taux général de sélection ni qualité d’un audit métier exécuté."
+  ]
+}
+

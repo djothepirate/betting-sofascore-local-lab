@@ -1,0 +1,32 @@
+{
+  "schema": "wo062-c9-windows-fresh-qualification-authorization-v1",
+  "decision_date": "2026-09-16",
+  "basis": "Owner request: Effectuer la nouvelle qualification Windows exigeant une autorisation explicite pour une recette fraîche, de nouveaux contextes host-owned construits depuis les copies réparées, un nouveau conducteur hôte intégrant c5_runtime_root_collector.py, de nouvelles sessions de modèle pour WR-H01 et WR-N01, et une revue postfreeze distincte.",
+  "skill": "ss-windows-runtime",
+  "candidate": {
+    "version": "0.1.0-candidate.1",
+    "sha256": "b89925d5395238010bb0afe9c1e1a22b0aa5ec4e7d1fb9946c671d241e7976c6"
+  },
+  "run_id": "run-06",
+  "physical_context_label": "run-06-host-formal-20260916",
+  "cases": [
+    "WR-H01",
+    "WR-N01"
+  ],
+  "max_model_sessions": 2,
+  "automatic_retry": false,
+  "execution_order": [
+    "WR-H01",
+    "WR-N01"
+  ],
+  "configured_service_scope": "The configured Codex model service may receive exactly the candidate, local skill catalogue and scoped versioned C9 inputs for one fresh session per listed case. No oracle, prior answer, historical review or design history is supplied to either evaluated session.",
+  "host_owned_contexts_required": true,
+  "repaired_copies_required": true,
+  "collector_required": "docs/skills/evaluations/WO-062/c-windows-operational-repair-06/c5_runtime_root_collector.py",
+  "postfreeze_review_required": true,
+  "human_validation": false,
+  "personal_installation": false,
+  "application_changes": false,
+  "network_collection": false,
+  "historical_c4_c5_evidence_preserved": true
+}

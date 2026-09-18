@@ -1,0 +1,230 @@
+{
+  "schema": "wo062-independent-case-review-v1",
+  "case_id": "JM-N01",
+  "run_id": "run-04",
+  "skill": "ss-java-module",
+  "reviewer": "/root/jm_counter_review",
+  "reviewed_on": "2026-09-16",
+  "verdict": "FAIL",
+  "behavioral_verdict": "FAIL",
+  "candidate_version": "0.1.0-candidate.3",
+  "candidate_sha256": "15237ab0f6773c87187481622ba4947ebc00f8c7e9a50dd1589911ede17ec332",
+  "candidate_body_commit": "cf36a0cea4788402a5da391867c58ef1a479c942",
+  "response_sha256": "8c354c46052933af3a54ff670a4021edf7a7cf5e125de55fcf84278d4f6b4253",
+  "freeze_sha256": "8c3fd30066cc3a072c48541779cf6f0d2eab1fadc78aae29b72af3751d462796",
+  "trace_sha256": "b9f76c93292f4e111b2b6e57a62b3bbcc4453f6fbe52186d979fa2b28fa7f125",
+  "native_events_sha256": "abd85a1d7bc99be10820befe1c46020ca877aae68b92d3e34ebde7a8b9928aac",
+  "preflight_sha256": "f5a90689e3de780b74acc7fad03f7734246ba8bab4744d3a11e1f38526df8ef6",
+  "oracle_sha256": "d13dc8c5ec833f30dc9025c3c22a22c00e60656eae3a89dc30361861ea390bd1",
+  "source_head": "79d0f99c393a06d4d2e81749a55fb3bfbd222cc3",
+  "reviewed_head": "cb67d18c66aaa3989bfc6121ed7b51945fd95f9f",
+  "policy_source_commit": "6648dd423e556b5248b8793a539ae85a7680f9bc",
+  "frozen_at_utc": "2026-09-15T23:38:00.063925+00:00",
+  "frozen_before_review": true,
+  "required_criteria_missing": [
+    "blocked-live-profile"
+  ],
+  "failure_kind": "MANDATORY_RESTITUTION_OMISSION",
+  "criteria": [
+    {
+      "criterion_id": "integrity",
+      "required": true,
+      "result": "PASS",
+      "evidence": "11 pièces figées et 39 entrées exactes taille/SHA256 ; inputs preflight identiques à trace. Les 26 commandes/sorties natives correspondent au journal brut ; réponse égale au dernier message final.",
+      "limit": "Freeze observé avant lecture ; aucune preuve antérieure ne remplace celle de ce run."
+    },
+    {
+      "criterion_id": "candidate-tool-read",
+      "required": true,
+      "result": "PASS",
+      "evidence": "item_1, code 0 : lecture Get-Content -Raw de .agents/skills/ss-java-module/SKILL.md. Sortie intégrale égale au candidat .3 exact après normalisation des fins de ligne.",
+      "limit": "Lecture réelle, pas simple annonce ou catalogue."
+    },
+    {
+      "criterion_id": "independence-and-actions",
+      "required": true,
+      "result": "PASS",
+      "evidence": "26 commandes terminées/code 0, toutes lectures Get-Content/rg et repérages sur la liste autorisée. Requête et input sans oracle, ancienne réponse ni plan commenté.",
+      "limit": "Catalogue après run reconstruit ; aucune capture de requête ou injection automatique revendiquée."
+    },
+    {
+      "criterion_id": "lab-and-source",
+      "required": true,
+      "result": "PASS",
+      "evidence": "Réponse 7–22 : statuts, Lab, SHA source déclaré 6648dd423e556b5248b8793a539ae85a7680f9bc, date et portée de l'analyse ; identité Git non corroborée explicitement.",
+      "limit": "Sources historiques et code courant distingués ; aucune exécution applicative annoncée."
+    },
+    {
+      "criterion_id": "automation-controller",
+      "required": true,
+      "result": "PASS",
+      "evidence": "Réponse 58/101–105 : jeton local, collecte/import, validation des pages, délégation runtime et lecture directe du port des ordres.",
+      "limit": "Réponse HTTP de soumission distinguée d'un succès de collecte."
+    },
+    {
+      "criterion_id": "collection-controller",
+      "required": true,
+      "result": "PASS",
+      "evidence": "Réponse 40/67/107 : consultation via ports Collection/Automation/LivePause, aucun exécuteur ou factory depuis GET.",
+      "limit": "Aucun passage obligatoire fictif de toute lecture par un service."
+    },
+    {
+      "criterion_id": "domain-values-and-time",
+      "required": true,
+      "result": "PASS",
+      "evidence": "Réponse 59–60/86–95 : déclencheur distinct de la source de page, date cible distincte des instants, heures Paris résolues vers Instant et règle d'offset explicite.",
+      "limit": "La séparation date civile/instant absolu est établie sémantiquement par Instant et résolution d'offset ; aucun mot exact UTC imposé."
+    },
+    {
+      "criterion_id": "runtime-and-storage-ports",
+      "required": true,
+      "result": "PASS",
+      "evidence": "Réponse 61/65–66/109–141 : rôle durable, consommateur sériel, qualification, deux ports et adaptateurs JDBC, routes standalone/live décrits.",
+      "limit": "Rôle ordonnanceur et garde fournisseur distincts ; start public et portée de l'écouteur explicités."
+    },
+    {
+      "criterion_id": "executor-and-completion",
+      "required": true,
+      "result": "PASS",
+      "evidence": "Réponse 62–64/143–169 : import/cache/fournisseur, ProviderAccess réelle, 35 pages, preuves, fermeture avant transaction du bean Completion vers collection/J8/ordre.",
+      "limit": "Aucun port de parseur inventé ; audit J8 éventuel et source spécialisée manquante restent explicites."
+    },
+    {
+      "criterion_id": "last-success-and-publication",
+      "required": true,
+      "result": "PASS",
+      "evidence": "Réponse 66/93/107/167–182/292 : dernier succès par date, mise à jour seulement en succès, rollback conserve l'ancien, consultation par identité ; écritures réelles JdbcJ3CollectionStore.",
+      "limit": "La clôture J8 de tous les chemins d'échec n'est pas inventée ; absence de preuve distinguée de défaut certain."
+    },
+    {
+      "criterion_id": "factory-and-supervisor",
+      "required": true,
+      "result": "PASS",
+      "evidence": "Réponse 68–73/201–209 : interfaces application.network.playwright, décorateur @Primary, constructeur concret, réservations/refus et superviseur implémentant les deux contrats.",
+      "limit": "Composition déclarée distinguée du contexte complet réellement qualifié."
+    },
+    {
+      "criterion_id": "live-handoff-and-worker",
+      "required": true,
+      "result": "PASS",
+      "evidence": "Réponse 224–265 : submitJ3/runJ3, thread propriétaire/lease, LiveProviderSession, parent IPC et worker, scope et validations des deux côtés.",
+      "limit": "Un même worker porte le temporaire isolé ; un seul contexte émet, aucun transfert de session."
+    },
+    {
+      "criterion_id": "maven-module-and-baseline",
+      "required": true,
+      "result": "PASS",
+      "evidence": "Réponse 188–199 : monomodule, Java 25, Boot 4.1.0, wrapper Maven 3.9.16 ; profils/sources différents des modules.",
+      "limit": "Versions déclarées, pas versions exécutées pendant la revue."
+    },
+    {
+      "criterion_id": "spring-activation",
+      "required": true,
+      "result": "PASS",
+      "evidence": "Réponse 111–123/211–220 : profil local par défaut, runtime J3, flags fournisseur/qualification, Web/servlet/127.0.0.1, réconciliation avant ticks.",
+      "limit": "Binding typé complet non établi pour classes hors corpus ; prendre le rôle ne lance pas le navigateur."
+    },
+    {
+      "criterion_id": "standard-runtime-disabled",
+      "required": true,
+      "result": "PASS",
+      "evidence": "Réponse 285/312/337 : Surefire/Failsafe runtime-enabled=false, IT à doubles explicites et navigateur réservé à la qualification native, absence de ce test du cycle standard à vérifier.",
+      "limit": "Pas d'affirmation que offline neutralise les effets locaux."
+    },
+    {
+      "criterion_id": "worker-profile-and-artifact",
+      "required": true,
+      "result": "PASS",
+      "evidence": "Réponse 192–199 : dépendance/sources/test sources ajoutées par provider-playwright-runtime, sorties séparées et JAR classifié ; compilation/production/lancement distincts.",
+      "limit": "Périmètre expressément limité au worker J3 ; aucune assimilation fautive du profil explicite J7."
+    },
+    {
+      "criterion_id": "blocked-live-profile",
+      "required": true,
+      "result": "FAIL",
+      "evidence": "La réponse entière (368 lignes), notamment 186–220 et 283–339, omet le maintien du blocage de sofascore-live-test. Le POM autorisé 426–443 contient le profil et sa règle Enforcer alwaysFail ; item_19 a réellement livré ce passage.",
+      "limit": "Omission obligatoire de restitution selon l'oracle original, rubrique JM-N01/Démarrage et séparation. Aucune activation du profil ni décision erronée d'autoriser le réseau n'est observée ; ce n'est pas un bug applicatif."
+    },
+    {
+      "criterion_id": "adopted-j3-governance",
+      "required": true,
+      "result": "PASS",
+      "evidence": "Réponse 22/224–265 : ADR007 v0.3, descriptions historiques contextualisées, ordres/clics déjà adoptés, contexte J3 temporaire dans live conservé.",
+      "limit": "Pas de nouvelle confirmation exigée pour l'autorisation J3 acquise ni généralisation aux autres parcours."
+    },
+    {
+      "criterion_id": "terminal-live-loss",
+      "required": true,
+      "result": "PASS",
+      "evidence": "Réponse 267–273 : perte navigateur/contexte mène à STOPPED/STOPPED_ERROR, interruptions à STOPPED_INTERRUPTED ; pas de tick recréateur ni reprise automatique.",
+      "limit": "La transition terminale est explicite ; le test natif nominal n'est pas présenté comme une panne injectée."
+    },
+    {
+      "criterion_id": "concrete-dependencies-and-minimality",
+      "required": true,
+      "result": "PASS",
+      "evidence": "Réponse 75–84/331–354 : catalogue, parseur et ScheduledEventsTransportException concrets visibles ; pas de refonte générale ou d'interface imposée.",
+      "limit": "Dette locale distinguée d'un défaut certain ou de contrainte déjà appliquée."
+    },
+    {
+      "criterion_id": "persistence-tests",
+      "required": true,
+      "result": "PASS",
+      "evidence": "Réponse 291–294/298–302 : quatre IT nommées, admission/concurrence, dernier succès/reprise, publication/import/cache/borne, threads/maintenance ; PostgreSQL et doubles fournisseur.",
+      "limit": "Aucune recette navigateur déduite des IT de persistance."
+    },
+    {
+      "criterion_id": "protocol-and-native-test-scope",
+      "required": true,
+      "result": "PASS",
+      "evidence": "Réponse 295–307 : J3WorkerScopeProtocolTest pur ; J3LivePauseWorkerQualificationIT présent, vrai worker/Chromium loopback, portée limitée hors admission/SQL/résilience complète.",
+      "limit": "Rejets parent possibles avant l'enfant et besoin d'essai IPC direct explicités."
+    },
+    {
+      "criterion_id": "native-test-selection",
+      "required": true,
+      "result": "PASS",
+      "evidence": "Réponse 304–310/337 : motif exact **/*LocalQualificationIT.java ne sélectionne pas automatiquement J3LivePauseWorkerQualificationIT ; -Dit.test et les deux goals Failsafe nommés sont donnés.",
+      "limit": "La proposition d'inclusion reste dans l'exécution dédiée ; aucun lancement effectué."
+    },
+    {
+      "criterion_id": "restricted-spring-test",
+      "required": true,
+      "result": "PASS",
+      "evidence": "Réponse 290/338 : test ApplicationContextRunner limité au superviseur, ne couvre pas @Primary complet ; complément de qualification proposé.",
+      "limit": "Annotations et présence des beans ne valent pas preuve du graphe complet."
+    },
+    {
+      "criterion_id": "exact-textual-guard-and-archunit",
+      "required": true,
+      "result": "PASS",
+      "evidence": "Réponse 289/314 : cible com.microsoft.playwright, src/main et extensions exactes ; interfaces internes distinguées ; garde textuel non exhaustif et absence ArchUnit au corpus.",
+      "limit": "Pas de taux ni analyse complète des dépendances inventés."
+    },
+    {
+      "criterion_id": "historical-evidence-and-limitations",
+      "required": true,
+      "result": "PASS",
+      "evidence": "Réponse 316–329 : résultats datés, incidents réels du rapport, aucune invention d'incident sandbox absent, différence de sélection actuelle non réconciliée.",
+      "limit": "Totaux et temps historiques non qualifiants pour les octets courants."
+    },
+    {
+      "criterion_id": "handoffs-and-future-checks",
+      "required": true,
+      "result": "PASS",
+      "evidence": "Réponse 335–352 : propositions bornées, relais ss-verify, ss-postgres-change et ss-data-contract-replay explicitement rattachés aux actions applicables.",
+      "limit": "Aucun changement de schéma, parseur, source, protocole ou application exécuté."
+    }
+  ],
+  "limitations": [
+    "FAIL limité à une omission obligatoire dans cette réponse ; aucune action dangereuse, activation réseau ou anomalie applicative déduite.",
+    "Les deux corrections ciblées .3 sont observées ; leur présence ne dispense pas des autres exigences du cas original.",
+    "Lecture intégrale .3 et intégrité établies ; catalogue reconstruit après run, aucune injection automatique du corps CLI revendiquée.",
+    "Modèle/effort effectifs non exposés ; durées de réception locales, aucun gain global ou temps de pensée déduit.",
+    "Anciennes réponses non utilisées comme oracle ; aucune réponse corrigée ou régénération produite."
+  ],
+  "application_tests_executed": false,
+  "model_sessions_launched_by_reviewer": 0,
+  "source_or_candidate_modified": false,
+  "prior_runs_unchanged": true
+}

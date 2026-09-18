@@ -1,0 +1,83 @@
+{
+  "schema": "wo062-operational-conditions-independent-review-v1",
+  "case_id": "WR-N01-RESUMPTION-CONDITIONS",
+  "verdict": "PASS",
+  "status": "PASS_STATIC_CONDITIONS_ONLY",
+  "qualification_scope": "STATIC_CONDITIONS_ONLY",
+  "review_role": "independent_reviewer",
+  "reviewer_relationship": "Relecteur des résultats Java/Windows et de la preuve préalable de propriété ; non auteur du document de conditions ni conducteur de la sonde.",
+  "reviewed_document": ".tmp/wrn-resumption-conditions.md",
+  "document_sha256": "b24482a22d8e71d4e6ecd6d3643a7c2ab337d6a6fa25e48cbacb5d99a186b4ec",
+  "document_bytes": 4399,
+  "fixture_sha256": "4e29c5867eba0fb76518de2307391449c83450449bea0393179738505c69bc8b",
+  "fixture_bytes": 1009,
+  "protocol_sha256": "b4748a356b881a8574a78156c0ac00c90f493874efe8303d40a7224c12d91a52",
+  "protocol_bytes": 10630,
+  "ownership_proof_sha256": "70be6ee6153269c440944fdb2b15b21fef065ce5b0e5ad4f5c61f535b18bacef",
+  "summary": "Conditions cohérentes avec la preuve préalable limitée et le protocole original. Identité créée/mesurée distinguée, mesures anciennes non réutilisées, runtime et limites inchangés, arrêt strictement conditionné à la propriété. Ce PASS porte seulement sur le document préparatoire ; WR-N01 complet reste non relancé et non qualifié.",
+  "criteria": [
+    {
+      "id": "P01",
+      "verdict": "PASS",
+      "requirement": "Fixture et protocole inchangés",
+      "evidence": "Lignes 5–8 et 30–35 : NativeProbe originale conservée ; aucune addition de parent/image/heure dans son stdout. Les octets du fichier courant (1009) et le protocole (10630) correspondent exactement au manifeste d'origine.",
+      "limit": "La nouvelle session devra à son tour figer et vérifier ces entrées ; aucune session complète n'est exécutée par ce document."
+    },
+    {
+      "id": "P02",
+      "verdict": "PASS",
+      "requirement": "Découverte directe et preuve de propriété",
+      "evidence": "Lignes 17–29 et 36–43 : découverte de toutes les applications Java, rejet d'un choix implicite de relais, candidat direct unique, version effective ; objet Process et handle retenus, PID/UUID publiés concordants, image observée durant la vie et commande exacte.",
+      "limit": "OriginalFilename et version de fichier seuls ne prouvent pas l'image exécutée. Si le mode court sort avant la lecture de MainModule, l'absence doit rester bloquante, sans reconstruction."
+    },
+    {
+      "id": "P03",
+      "verdict": "PASS",
+      "requirement": "Parent de création distinct d'un parent mesuré",
+      "evidence": "Lignes 30–35 : relation créée par Process.Start explicitement distinguée d'une mesure du parent par la JVM ; aucun champ parent n'est inventé dans NativeProbe.",
+      "limit": "Le parent du nouvel essai n'est pas mesuré par la fixture originale. Le handle du processus créé et la concordance PID/UUID/image doivent être établis dans le contexte concerné."
+    },
+    {
+      "id": "P04",
+      "verdict": "PASS",
+      "requirement": "Bornes originales, arrêt exact et codes séparés",
+      "evidence": "Lignes 12–15 et 36–49 : PS5.1 Desktop, Java25, failure puis sleep, UUID distincts, 10 s, READY 10 s, 1500 ms, sortie après arrêt 5 s, total 45 s. Aucun retry/allongement ; code réel copié immédiatement, issues principale/nettoyage séparées ; aucun arrêt si identité absente.",
+      "limit": "Les bornes valent aussi pour la branche d'identité inconnue : une sortie naturelle ne dispense pas du budget global de 45 s et ne prouve pas le timeout traité. Le protocole original garde ses exigences de chronométrage, Kill() PS5.1 et absence avant Dispose."
+    },
+    {
+      "id": "P05",
+      "verdict": "PASS",
+      "requirement": "Confinement et nettoyage",
+      "evidence": "Lignes 44–49 : ressources neuves UUID sous output/runtime, streams UTF-8, fichiers créés et identifiés seuls supprimés après sortie par handle, puis répertoires vides ; résidu inattendu conservé, postflight séparé et marqueur de retour.",
+      "limit": "Il s'agit d'un complément au protocole, qui conserve ses gardes canoniques/reparse, copie d'environnement enfant et neutralisation des variables d'injection. Aucun ancien résidu à nettoyer."
+    },
+    {
+      "id": "P06",
+      "verdict": "PASS",
+      "requirement": "Séparation des preuves et absence de corrigé",
+      "evidence": "Lignes 53–66 : nouveau préflight et gel avant essai, aucune transmission des mesures préalables, revues, sorties anciennes ou oracle ; aucune mesure copiée. Aucun résultat natif attendu, marqueur de réussite ou verdict du futur essai fourni.",
+      "limit": "Les constantes de délais et les contraintes de conduite proviennent du protocole autorisé. La qualification finale restera indépendante de ce PASS statique."
+    },
+    {
+      "id": "P07",
+      "verdict": "PASS",
+      "requirement": "Format et portée",
+      "evidence": "Document UTF-8 strict sans BOM, NUL ou CR ; 4399 octets. Statut préparatoire explicite et aucun appel exécutable lancé par le relecteur.",
+      "limit": "Ce document ne remplace ni un script instrumenté, ni sa revue, ni une nouvelle preuve native dans le sandbox cible."
+    }
+  ],
+  "blocking_findings": [],
+  "limits": [
+    "La preuve préalable de propriété appartient à un autre contexte ; elle ne démontre pas l'accès MainModule ni la concordance d'identité dans la future session sandboxée.",
+    "Le protocole original reste normatif : le complément n'assouplit aucune borne, aucune preuve de nettoyage ou d'environnement.",
+    "Si l'identité ne peut pas être établie à temps, constater BLOCKED ; ne jamais convertir la sortie naturelle en réussite de traitement de délai.",
+    "Le gel d'une future entrée doit exclure les mesures, revues et anciens résultats ; aucune copie de résultats attendus n'est autorisée par cette revue."
+  ],
+  "new_full_WR_N01_run_executed": false,
+  "full_WR_N01_qualified": false,
+  "reviewer_executed_probe": false,
+  "reviewer_called_model": false,
+  "reviewer_modified_document": false,
+  "reviewer_modified_fixture": false,
+  "reviewer_modified_protocol": false
+}

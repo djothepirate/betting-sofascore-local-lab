@@ -1,0 +1,1 @@
+Dans le dépôt atelier-recettes, projet Python indépendant du SofaScore Local Lab et du Betting Project, diagnostique un lancement PowerShell sous Windows qui ne trouve pas son venv. Utilise uniquement ses fichiers locaux ; aucune règle ou qualification du Lab n’est demandée.

@@ -1,0 +1,261 @@
+{
+  "case_id": "WR-H01",
+  "skill": "ss-windows-runtime",
+  "run_id": "run-02",
+  "started_at_utc": "2026-09-15T21:53:57.899226+00:00",
+  "ended_at_utc": "2026-09-15T22:08:58.490554+00:00",
+  "duration_seconds": 900.594,
+  "mode": "native_codex_exec_ephemeral_workspace-write",
+  "execution_mode": "bounded_local_runtime",
+  "cli_version": "codex-cli 0.154.0-alpha.6.2",
+  "model": null,
+  "reasoning_effort": null,
+  "model_note": "Configured defaults; exact model/effort not exposed, no override.",
+  "launch_arguments": [
+    "exec",
+    "--ephemeral",
+    "--sandbox",
+    "workspace-write",
+    "--cd",
+    "C:\\Dev\\BettingProject\\codex\\betting-sofascore-local-lab\\.tmp\\wo062-skills-lot2\\.tmp\\wo062-evaluations\\ss-windows-runtime\\run-02\\WR-H01",
+    "--json",
+    "--output-last-message",
+    "C:\\Dev\\BettingProject\\codex\\betting-sofascore-local-lab\\.tmp\\wo062-skills-lot2\\.tmp\\wo062-evaluations\\ss-windows-runtime\\run-02\\WR-H01\\output\\response.md",
+    "-"
+  ],
+  "exit_code": null,
+  "turn_completed": false,
+  "candidate_sha256": "b89925d5395238010bb0afe9c1e1a22b0aa5ec4e7d1fb9946c671d241e7976c6",
+  "source_head": "2d62f12c2d2ad4571c630aea0f98128927aa24ff",
+  "input_files": [
+    {
+      "path": "AGENTS.md",
+      "sha256": "6509ac77cd4c87094a91da7e4c750b5991eeb4585a69a609def5289b91cf6ab5",
+      "bytes": 10320
+    },
+    {
+      "path": "docs/validation/J9-WO044-JAVA-JAR-PATH-ARGUMENT-BOUNDARY-QUALIFICATION-20260904.md",
+      "sha256": "02008824316e688b6e42c523aaec45acf7b8edb776f49a9b11a822afd6a125a7",
+      "bytes": 8729
+    },
+    {
+      "path": "docs/validation/J9-WO053-CTRL-BREAK-DIAGNOSTIC-20260905.md",
+      "sha256": "8718125554e239925dcb8a785a4143dd8e9232f9d2cb554e91d0a6d864ff55fa",
+      "bytes": 7335
+    },
+    {
+      "path": "docs/validation/J9-WO053-REVIEW-HARDENING-20260905.md",
+      "sha256": "bacd897e4e4621e687935f9aa09f91469f69942869dbc3a95e8792fcdc8cf34e",
+      "bytes": 4179
+    },
+    {
+      "path": "scripts/wo036/WO036-CampaignTools.psm1",
+      "sha256": "43c7bc8eb242161729f6c18f8b0feb67c46715ce911b27572e4bd13e5956bd74",
+      "bytes": 176724
+    },
+    {
+      "path": "scripts/wo044/Invoke-WO044JavaJarArgumentBoundaryQualification.ps1",
+      "sha256": "59996b14941700523007e1f6b0784b102d65e088569f95e882340250d43565e4",
+      "bytes": 11212
+    },
+    {
+      "path": "scripts/wo044/Capture-WO044NativeArguments.ps1",
+      "sha256": "841428737a500fd9ccb1407d3c0822b56872f40b308568ee59ab48bae88b7818",
+      "bytes": 948
+    },
+    {
+      "path": "scripts/Tests/WO044JavaJarArgumentBoundary.Tests.ps1",
+      "sha256": "e1f661b0380c72b86374331b79419e6a2c8b551ebb0d195775f04aa731f1c29f",
+      "bytes": 4669
+    },
+    {
+      "path": "inputs/runtime-protocol.md",
+      "sha256": "b4748a356b881a8574a78156c0ac00c90f493874efe8303d40a7224c12d91a52",
+      "bytes": 10630
+    },
+    {
+      "path": ".agents/skills/ss-windows-runtime/SKILL.md",
+      "sha256": "b89925d5395238010bb0afe9c1e1a22b0aa5ec4e7d1fb9946c671d241e7976c6",
+      "bytes": 9217
+    },
+    {
+      "path": ".agents/skills/ss-windows-runtime/agents/openai.yaml",
+      "sha256": "3038015980952bc18b21f45f0d4af514b35a8841394e4b80824986b7e30ccd9f",
+      "bytes": 300
+    },
+    {
+      "path": "input.json",
+      "sha256": "d49bea0e90ca263b75840a198dd7abbdf67e2dc45541d5474d9e26b833812a57",
+      "bytes": 1475
+    }
+  ],
+  "prompt_sha256": "fa04ddaebf0c1b1a65645c05aabec1ad62e729aefc168d3862afd201ac88b2ab",
+  "request_sha256": "3da32b78268554b03c1e58c48e4ef32b4abe0d4f9d079dd8074d92810adb6476",
+  "oracle_supplied": false,
+  "design_history_supplied": false,
+  "raw_events_sha256": "cddc05df46d218a3338c567f2af842c52c43b0104b50e50f3905665fd9335ecf",
+  "native_events_sha256": "2895f515191aa47d889dbf436ac17ec74dc94f8018087fb16a41897c0f35c0ae",
+  "commands_completed": 22,
+  "response_sha256": null,
+  "catalogue_sha256": null,
+  "catalogue_note": "Local reconstruction after execution, not a capture of the transmitted request.",
+  "published_events_note": "Internal reasoning omitted; actual command outputs retained.",
+  "usage": null,
+  "selection_instrumented": false,
+  "qualification_limit": "Tool-mediated selection/load with declared envelope; no automatic CLI injection claim.",
+  "timed_out": true,
+  "automatic_retry": false,
+  "diagnostics": [
+    {
+      "stage": "native_execution",
+      "error": "TimeoutExpired",
+      "timeout_seconds": 900,
+      "process_cleanup": "not_verified; examine owned processes before any new attempt"
+    },
+    {
+      "stage": "completion",
+      "error": "MissingTurnCompleted"
+    },
+    {
+      "stage": "completion",
+      "error": "MissingOrEmptyResponse"
+    }
+  ],
+  "qualification_status": "NOT_REVIEWED",
+  "runtime_artifacts": [
+    {
+      "path": "artifact-manifest.json",
+      "frozen": true,
+      "sha256": "c6a37b2d2a24067d406dd9abf1862aad4892ff58ab00b2bc542bda81e458bef9",
+      "bytes": 4263
+    },
+    {
+      "path": "cim-observation-block.json",
+      "frozen": true,
+      "sha256": "09b3bb01c07c9b4f1b6d2914a36125c19b73ba657673916aa6da653ee284ea74",
+      "bytes": 549
+    },
+    {
+      "path": "execution-outer-return.json",
+      "frozen": true,
+      "sha256": "eb6a42d35976b2fff66aed1bb94f1229453da0305fff08aa4dba5d8987731962",
+      "bytes": 505
+    },
+    {
+      "path": "execution-prompt-return.json",
+      "frozen": true,
+      "sha256": "2e4a269740d4facad98d3aedafd6d9b1d62a916da08271547bf3189301f0049f",
+      "bytes": 318
+    },
+    {
+      "path": "execution-transcript.txt",
+      "frozen": true,
+      "sha256": "f33215dff62ee197ec3d937308a5b7dc63e65013e778b7a6ea48e71098360a78",
+      "bytes": 1116
+    },
+    {
+      "path": "execution.json",
+      "frozen": true,
+      "sha256": "382d40b80d2ff45b73ff044dda418eb9b8bce56b35534912eb9103ea787a9666",
+      "bytes": 25158
+    },
+    {
+      "path": "execution.stderr.txt",
+      "frozen": true,
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      "bytes": 0
+    },
+    {
+      "path": "execution.stdout.txt",
+      "frozen": true,
+      "sha256": "2ea5456171ee72aba19170d19f6bd8fb94af6ec7579d49c057b6478804e97d9d",
+      "bytes": 547
+    },
+    {
+      "path": "harness.stderr.txt",
+      "frozen": true,
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      "bytes": 0
+    },
+    {
+      "path": "harness.stdout.txt",
+      "frozen": true,
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      "bytes": 0
+    },
+    {
+      "path": "independent-postflight.json",
+      "frozen": true,
+      "sha256": "dab997775f9c713ced21611f847df12c35b73f298b6710be6c0c32756f4d2c58",
+      "bytes": 4285
+    },
+    {
+      "path": "Invoke-WRH01.ps1",
+      "frozen": true,
+      "sha256": "8a01b76dd72a6702f1ad312905a339d51cc4f44788ce6d1db03458faa47386ac",
+      "bytes": 20496
+    },
+    {
+      "path": "Invoke-WRH01Harness.ps1",
+      "frozen": true,
+      "sha256": "89fc081c70036da058e261d2e37b2a10ad98394e69c1dbe5df97d593536a0655",
+      "bytes": 16118
+    },
+    {
+      "path": "outer-return.json",
+      "frozen": true,
+      "sha256": "8d5eb2e9547641db589a7633cf7ca7a1f87c8a8cb96be34794352998b9e8ea86",
+      "bytes": 645
+    },
+    {
+      "path": "Postflight-WRH01.ps1",
+      "frozen": true,
+      "sha256": "15dd8a177500851bb9dbe717da3f6fbcd6c61099319bfdb5afff95cee3d20bd2",
+      "bytes": 2613
+    },
+    {
+      "path": "prompt-return.json",
+      "frozen": true,
+      "sha256": "471f269618bebd3e8326ee51810c601ee4244c33a867820b852c49bcef907bbc",
+      "bytes": 188
+    },
+    {
+      "path": "README.md",
+      "frozen": true,
+      "sha256": "62730e1b1371a1c39ea7f5555258e4f0ff78fbacc682ad79b3ab856ca4b55707",
+      "bytes": 15376
+    },
+    {
+      "path": "Run-WRH01.ps1",
+      "frozen": true,
+      "sha256": "7b43544e2c565a58abfc7c1bcfefb5b3ae54ada9d7d24e82290241b0990d7d9e",
+      "bytes": 1099
+    },
+    {
+      "path": "Run-WRH01Harness.ps1",
+      "frozen": true,
+      "sha256": "9df2ff4bbeec4ed8c85715d9a4f7c16a24ac1c6e62da95191b4f3f48b88b64a0",
+      "bytes": 838
+    },
+    {
+      "path": "run.json",
+      "frozen": true,
+      "sha256": "a411f3a606afadd6dac2d86b0d8c25dd268029bbd4339f6e66d10d76c415b461",
+      "bytes": 4948
+    },
+    {
+      "path": "tool-events.json",
+      "frozen": true,
+      "sha256": "04846f4de6c14c315a5f37600d8ead4d3980ef805ae32e1d5354ebbdd22ed620",
+      "bytes": 7579
+    },
+    {
+      "path": "transcript.txt",
+      "frozen": true,
+      "sha256": "4a0764850ea92a73cf4940e72f09dbaa246cd82a9a1ac12ba9f761f60cad5fb5",
+      "bytes": 787
+    }
+  ],
+  "collection_completed": false,
+  "collector_exit_code": 1
+}

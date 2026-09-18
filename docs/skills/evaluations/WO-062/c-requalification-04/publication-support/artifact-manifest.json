@@ -1,0 +1,51 @@
+{
+  "schema": "wo062-c4-publication-support-v1",
+  "frozen_at_utc": "2026-09-15T23:50:40.799600+00:00",
+  "files": [
+    {
+      "path": "README.md",
+      "bytes": 1157,
+      "sha256": "995b86e0981693b2cc76a14390ae0ed5c619fd155fc404b7f8db74df471c9ed5"
+    },
+    {
+      "path": "publication-tests.json",
+      "bytes": 1034,
+      "sha256": "336ba5c11cb967e10f0697637b9ef455d36398b838c6386bd299f060968419bd"
+    },
+    {
+      "path": "publication-tests.py.txt",
+      "bytes": 2576,
+      "sha256": "658e5a0c2064d18891a32ad52b32d5827f003150cf334a782e6e7e8b9672d028"
+    },
+    {
+      "path": "publisher-final-review.json",
+      "bytes": 4523,
+      "sha256": "551ee85c413ae5fea39daca523debaa8cd5c3ddf8c80721ec0eebd26dee4f5b2"
+    },
+    {
+      "path": "publisher-final-review.md",
+      "bytes": 6448,
+      "sha256": "4703288877530e8242b5450339bc546c09cb55a248fd44c819aa2b26ceeecedc"
+    },
+    {
+      "path": "publisher-initial-review.json",
+      "bytes": 4054,
+      "sha256": "e1a48fe1f5e7088e1b82417493a40b2a798c68674e1d49ac0ab41bd22e266f19"
+    },
+    {
+      "path": "publisher-initial-review.md",
+      "bytes": 3032,
+      "sha256": "7c62a102cc3e0afd4e0ce13dab77381f5d81e4c2a1712cce71a1a71afe09ce10"
+    },
+    {
+      "path": "publisher.py.txt",
+      "bytes": 10521,
+      "sha256": "702819539f583435082609adf703e87f38a18c40aa7dcd38640bc5e872a49985"
+    },
+    {
+      "path": "reused-publisher.py.txt",
+      "bytes": 30913,
+      "sha256": "e1596d4c0731d1e71a521deb173d532aa6f44c14c9da25164e1e2013a871f5cd"
+    }
+  ]
+}

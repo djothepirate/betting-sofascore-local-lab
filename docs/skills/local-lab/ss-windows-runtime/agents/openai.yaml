@@ -1,0 +1,4 @@
+interface:
+  display_name: "Runtime Windows du Local Lab"
+  short_description: "Reproduire et diagnostiquer les exécutions Windows"
+  default_prompt: "Utilise $ss-windows-runtime pour diagnostiquer une exécution Windows du SofaScore Local Lab avec son environnement exact et des preuves bornées."

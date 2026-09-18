@@ -1,0 +1,196 @@
+"""Verify and publish formal candidate.5 C8 preparation without invoking a model."""
+from pathlib import Path
+import hashlib
+import json
+import shutil
+import subprocess
+from datetime import datetime, timezone
+
+
+ROOT = Path(__file__).resolve().parent.parent
+BASE = ROOT / "docs/skills/evaluations/WO-062/ss-java-module"
+AUTH = ROOT / "docs/skills/evaluations/WO-062/c-requalification-08/authorization.json"
+RUNTIME = ROOT / ".tmp/wo062-evaluations/ss-java-module/run-08"
+RUN = BASE / "run-08"
+PREP = ROOT / "docs/skills/evaluations/WO-062/c-requalification-08/preparation"
+RUNNER = ROOT / ".tmp/wo062_evaluate_c8.py"
+BUILDER = ROOT / ".tmp/build_c8_runner.py"
+CASES = ("JM-H01", "JM-N01", "JM-C01", "JM-C02", "JM-S01", "JM-S02", "JM-S03", "JM-S04")
+CANDIDATE = "d7171f978c2b13c852c2ce5e170d68c1bfc5087552661cfdc6271077a0fe6637"
+
+
+def sha(path: Path) -> str:
+    return hashlib.sha256(path.read_bytes()).hexdigest()
+
+
+def read(path: Path):
+    return json.loads(path.read_text(encoding="utf-8-sig"))
+
+
+def write(path: Path, value) -> None:
+    path.write_text(json.dumps(value, ensure_ascii=False, indent=2) + "\n", encoding="utf-8", newline="\n")
+
+
+assert not PREP.exists(), "Never overwrite C8 preparation"
+assert not RUN.exists(), "Never overwrite C8 public run"
+auth = read(AUTH)
+before = read(RUNTIME / "preflight.json")
+baseline = read(BASE / "run-05/preflight.json")
+assert tuple(auth["cases"]) == CASES
+assert auth["authorized_session_count"] == auth["max_model_sessions"] == len(CASES)
+assert auth["candidate_sha256"] == CANDIDATE
+assert auth["execution"]["workers"] == 1 and auth["execution"]["automatic_retry"] is False
+assert auth["execution"]["sandbox"] == "read-only"
+assert auth["formal_qualification"] is True
+assert auth["observation_08_reusable_as_formal_result"] is False
+assert before["run_id"] == "run-08" and before["candidate_sha256"] == CANDIDATE
+assert tuple(case["case_id"] for case in before["cases"]) == CASES
+assert before["c8_contract"]["allowed_case_ids"] == list(CASES)
+assert before["c8_contract"]["workers_required"] == 1
+assert before["c8_contract"]["automatic_retry"] is False
+assert before["c8_contract"]["oracle_supplied"] is False
+assert before["c8_contract"]["prior_answers_supplied"] is False
+assert sha(ROOT / "docs/skills/local-lab/ss-java-module/SKILL.md") == CANDIDATE
+
+baseline_cases = {case["case_id"]: case for case in baseline["cases"]}
+case_results = []
+for case in before["cases"]:
+    case_id = case["case_id"]
+    base = baseline_cases[case_id]
+    assert case["prompt_sha256"] == base["prompt_sha256"]
+    assert case["request_sha256"] == base["request_sha256"]
+    current_files = {item["path"]: item for item in case["input_files"]}
+    base_files = {item["path"]: item for item in base["input_files"]}
+    assert current_files.keys() == base_files.keys()
+    delta = [path for path in current_files if current_files[path] != base_files[path]]
+    assert delta == [".agents/skills/ss-java-module/SKILL.md"], (case_id, delta)
+    assert current_files[delta[0]]["sha256"] == CANDIDATE
+    case_dir = RUNTIME / case_id
+    assert case_dir.is_dir() and (case_dir / "output").is_dir()
+    assert not any((case_dir / "output").iterdir())
+    assert not (RUNTIME / "frozen" / case_id).exists()
+    for item in case["input_files"]:
+        path = case_dir / item["path"]
+        assert path.is_file() and path.stat().st_size == item["bytes"] and sha(path) == item["sha256"], path
+    assert sha(case_dir / "request.txt") == case["request_sha256"]
+    assert sha(case_dir / "case-prompt.txt") == case["prompt_sha256"]
+    request = (case_dir / "request.txt").read_text(encoding="utf-8")
+    for forbidden in ("oracle.md", "observation-08", "run-06", "run-07", "prior answer", "historical verdict"):
+        assert forbidden not in request, (case_id, forbidden)
+    case_results.append({
+        "case_id": case_id,
+        "input_file_count": len(case["input_files"]),
+        "prompt_matches_c5": True,
+        "request_matches_c5": True,
+        "only_candidate_skill_delta_from_c5": True,
+        "output_present_before_launch": False,
+    })
+
+PREP.mkdir(parents=True)
+RUN.mkdir(parents=True)
+shutil.copyfile(RUNNER, PREP / "evaluator.py.txt")
+shutil.copyfile(BUILDER, PREP / "runner-builder.py.txt")
+shutil.copyfile(Path(__file__), PREP / "preflight.py.txt")
+shutil.copyfile(AUTH, RUN / "authorization.json")
+shutil.copyfile(RUNTIME / "preflight.json", RUN / "preflight.json")
+shutil.copyfile(BASE / "qualification.json", RUN / "previous-qualification.json")
+
+context = {
+    "schema": "wo062-c8-context-integrity-v1",
+    "status": "PASS_PRELAUNCH",
+    "checked_at_utc": datetime.now(timezone.utc).isoformat(),
+    "run_id": "run-08",
+    "skill": "ss-java-module",
+    "candidate_version": "0.1.0-candidate.5",
+    "candidate_sha256": CANDIDATE,
+    "candidate_bytes": (ROOT / "docs/skills/local-lab/ss-java-module/SKILL.md").stat().st_size,
+    "authorization_sha256": sha(AUTH),
+    "baseline_preflight": "docs/skills/evaluations/WO-062/ss-java-module/run-05/preflight.json",
+    "baseline_preflight_sha256": sha(BASE / "run-05/preflight.json"),
+    "cases": case_results,
+    "case_count": len(case_results),
+    "freshness": {
+        "new_runtime_directory": True,
+        "new_case_contexts": True,
+        "all_outputs_empty": True,
+        "all_freeze_directories_absent": True,
+        "observation_08_in_context": False,
+        "oracle_or_previous_answer_in_context": False,
+        "model_invoked": False,
+    },
+    "preparation_head": subprocess.check_output(["git", "rev-parse", "HEAD"], cwd=ROOT, text=True).strip(),
+}
+write(PREP / "context-integrity.json", context)
+
+static = {
+    "schema": "wo062-c8-static-review-v1",
+    "status": "PASS_PRELAUNCH",
+    "scope": {
+        "cases_exact": list(CASES),
+        "authorized_sessions": 8,
+        "workers": 1,
+        "automatic_retry": False,
+        "sandbox": "read-only",
+        "candidate_sha256": CANDIDATE,
+        "observation_not_reusable": True,
+    },
+    "runner": {
+        "path": ".tmp/wo062_evaluate_c8.py",
+        "sha256": sha(RUNNER),
+        "derived_from_c7_without_modifying_c7": True,
+        "guards": [
+            "prepare accepts only run-08 / ss-java-module / eight declared cases / one worker",
+            "run accepts exactly the eight declared cases in order / one worker",
+            "authorization and active candidate SHA must equal candidate.5",
+            "one new output and frozen directory per case; no overwrite",
+            "native Codex exec is ephemeral and read-only",
+        ],
+    },
+    "previous_runner_hashes": {
+        "c6": sha(ROOT / ".tmp/wo062_evaluate_c6.py"),
+        "c7": sha(ROOT / ".tmp/wo062_evaluate_c7.py"),
+    },
+    "model_invoked": False,
+}
+write(PREP / "static-review.json", static)
+(PREP / "static-review.md").write_text(
+    "# Revue statique C8 — campagne formelle candidate.5\n\n"
+    "**Résultat : PASS_PRELAUNCH.** L'autorisation C8 borne huit sessions fraîches, "
+    "séquentielles et lecture seule : JM-H01, JM-N01, JM-C01, JM-C02, JM-S01, JM-S02, "
+    "JM-S03 et JM-S04. Le candidat SHA-256 est verrouillé à candidate.5.\n\n"
+    "Chaque contexte reprend son prompt, sa requête et ses sources figées C5. La seule "
+    "différence admise est le SKILL.md candidate.5. Aucun oracle, réponse, artefact ou "
+    "verdict de C5, C6, C7 ou observation-08 ne rejoint une session évaluée. Le pilote "
+    "refuse tout autre run, skill, liste de cas, nombre de workers ou SHA. Les pilotes "
+    "C6 et C7 restent inchangés.\n\n"
+    "Aucun modèle, build, test applicatif, fournisseur, navigateur, base, Docker, CI ou "
+    "mutation de source n'a été exécuté pendant cette préparation.\n",
+    encoding="utf-8",
+    newline="\n",
+)
+prelaunch = {
+    "schema": "wo062-c8-prelaunch-checks-v1",
+    "status": "PASS",
+    "candidate_sha256_matches_authorization": True,
+    "cases_exact": list(CASES),
+    "workers_exactly_one": True,
+    "all_contexts_output_free": True,
+    "all_contexts_match_c5_except_candidate_skill": True,
+    "observation_08_excluded": True,
+    "oracle_excluded": True,
+    "prior_answers_excluded": True,
+    "model_invoked": False,
+}
+write(PREP / "prelaunch-checks.json", prelaunch)
+manifest_path = PREP / "artifact-manifest.json"
+files = [
+    {"path": path.relative_to(PREP).as_posix(), "bytes": path.stat().st_size, "sha256": sha(path)}
+    for path in sorted(PREP.rglob("*"))
+    if path.is_file() and path != manifest_path
+]
+write(manifest_path, {
+    "schema": "wo062-c8-preparation-artifact-manifest-v1",
+    "scope": "Static preparation only; no model session, response, oracle or human validation.",
+    "files": files,
+})
+print(json.dumps({"status": "PASS", "cases": len(case_results), "preparation_files": len(files)}))

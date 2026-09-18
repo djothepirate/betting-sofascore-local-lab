@@ -1,0 +1,59 @@
+{
+  "provenance": "SYNTHETIC_EVALUATION_INPUT_NOT_PROVIDER_DATA",
+  "input": {
+    "question": "Calculer les taux et la distribution des latences à asOf.",
+    "endpoint": "EVENT_DETAILS",
+    "campaignRule": "Chaque ligne appartient à une campagne J4_EVENT_DETAILS_PHASE2 distincte, maximum_units=1. Les deux premières réponses possèdent les preuves de parsing indiquées. Aucun retry.",
+    "attempts": [
+      {
+        "id": "A1",
+        "campaign": "G1",
+        "outcome": "PARSED",
+        "response": true,
+        "http": 200,
+        "latencyMs": 100,
+        "normalizedProofAtAsOf": true
+      },
+      {
+        "id": "A2",
+        "campaign": "G2",
+        "outcome": "SCHEMA_INCOMPATIBLE",
+        "response": true,
+        "http": 200,
+        "latencyMs": 200
+      },
+      {
+        "id": "A3",
+        "campaign": "G3",
+        "outcome": "ENDPOINT_UNAVAILABLE",
+        "response": true,
+        "http": 404,
+        "latencyMs": 50
+      },
+      {
+        "id": "A4",
+        "campaign": "G4",
+        "outcome": "PERSISTENCE_FAILURE",
+        "response": true,
+        "http": 429,
+        "latencyMs": 60
+      },
+      {
+        "id": "A5",
+        "campaign": "G5",
+        "outcome": "TRANSPORT_FAILURE",
+        "response": false,
+        "http": null,
+        "latencyMs": null
+      },
+      {
+        "id": "A6",
+        "campaign": "G6",
+        "outcome": null,
+        "response": false,
+        "http": null,
+        "latencyMs": null
+      }
+    ]
+  }
+}

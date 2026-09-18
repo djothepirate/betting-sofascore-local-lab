@@ -1,0 +1,11 @@
+{
+  "utc": "2026-09-15T22:00:51.6702316Z",
+  "operation": "Get-CimInstance Win32_Process -Filter ProcessId=<current driver PID>",
+  "pid": 8708,
+  "status": "UNAVAILABLE",
+  "exceptionType": "Microsoft.Management.Infrastructure.CimException",
+  "message": "Accès refusé ",
+  "fullyQualifiedErrorId": "HRESULT 0x80041003,Microsoft.Management.Infrastructure.CimCmdlets.GetCimInstanceCommand",
+  "category": "PermissionDenied",
+  "note": "Read-only observation of current process only; no harness or capture child launched by this check."
+}

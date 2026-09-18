@@ -1,0 +1,10 @@
+{
+  "event": "conductor_started",
+  "utc": "2026-09-15T23:43:43.9224058Z",
+  "pid": 12548,
+  "handle": 2260,
+  "creation_utc": "2026-09-15T23:43:43.9094542Z",
+  "image": "C:\\Windows\\System32\\WindowsPowerShell\\v1.0\\powershell.exe",
+  "command": "\"C:\\Windows\\System32\\WindowsPowerShell\\v1.0\\powershell.exe\" -NoProfile -NonInteractive -ExecutionPolicy Bypass -File \"C:\\Dev\\BettingProject\\codex\\betting-sofascore-local-lab\\.tmp\\wo062-skills-lot2\\.tmp\\wo062-evaluations\\ss-windows-runtime\\run-04\\WR-N01\\output\\runtime-artifacts\\Invoke-WRN01.ps1\"",
+  "cwd": "C:\\Dev\\BettingProject\\codex\\betting-sofascore-local-lab\\.tmp\\wo062-skills-lot2\\.tmp\\wo062-evaluations\\ss-windows-runtime\\run-04\\WR-N01"
+}

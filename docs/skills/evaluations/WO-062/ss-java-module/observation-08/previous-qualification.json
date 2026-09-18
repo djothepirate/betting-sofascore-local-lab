@@ -1,0 +1,117 @@
+{
+  "schema": "wo062-current-skill-qualification-v1",
+  "skill": "ss-java-module",
+  "candidate_version": "0.1.0-candidate.5",
+  "status": "PREPARED_NOT_QUALIFIED",
+  "base_commit": "d5fb8733d3e7326be71c2f4f6c9e0ea4b2e22441",
+  "candidate_files": [
+    {
+      "path": "SKILL.md",
+      "bytes": 11263,
+      "sha256": "d7171f978c2b13c852c2ce5e170d68c1bfc5087552661cfdc6271077a0fe6637"
+    },
+    {
+      "path": "agents/openai.yaml",
+      "bytes": 309,
+      "sha256": "ccc4fc2a4707838dd6defdd73ef6f6c7ee0d69e6df86e41689a46884691573ae"
+    }
+  ],
+  "evaluation_gate": {
+    "status": "NOT_RUN_NEW_CANDIDATE",
+    "meaning": "Candidate.5 is a new SHA. No candidate.5 behavioral case, model session, selection session, application test or human validation has run."
+  },
+  "previous_candidate": {
+    "version": "0.1.0-candidate.4",
+    "skill_sha256": "f1f6533f678c5cdb4ae6a5bc9c996c062af419005e4f4cd6104a51c91e442d97",
+    "skill_artifact": "revision-05/candidate.4-SKILL.md",
+    "metadata_artifact": "revision-05/candidate.4-openai.yaml",
+    "qualification": "revision-05/previous-qualification.json",
+    "qualification_status": "INCOMPLETE_QUALIFICATION",
+    "pass": 7,
+    "fail": 1,
+    "blocked": 0,
+    "sole_blocker": "JM_N01_LIVE_CONTEXT_SESSION_STATE_TRANSFER_OMISSION",
+    "historical_runs": [
+      "run-06",
+      "run-07"
+    ]
+  },
+  "revision": "revision-05/revision.json",
+  "qualification_plan": "revision-05/qualification-plan.md",
+  "static_review": "revision-05/static-review.json",
+  "required_fresh_cases": [
+    "JM-H01",
+    "JM-N01",
+    "JM-C01",
+    "JM-C02",
+    "JM-S01",
+    "JM-S02",
+    "JM-S03",
+    "JM-S04"
+  ],
+  "current_cases": [
+    {
+      "case_id": "JM-H01",
+      "verdict": "NOT_RUN",
+      "source_run": null
+    },
+    {
+      "case_id": "JM-N01",
+      "verdict": "NOT_RUN",
+      "source_run": null
+    },
+    {
+      "case_id": "JM-C01",
+      "verdict": "NOT_RUN",
+      "source_run": null
+    },
+    {
+      "case_id": "JM-C02",
+      "verdict": "NOT_RUN",
+      "source_run": null
+    },
+    {
+      "case_id": "JM-S01",
+      "verdict": "NOT_RUN",
+      "source_run": null
+    },
+    {
+      "case_id": "JM-S02",
+      "verdict": "NOT_RUN",
+      "source_run": null
+    },
+    {
+      "case_id": "JM-S03",
+      "verdict": "NOT_RUN",
+      "source_run": null
+    },
+    {
+      "case_id": "JM-S04",
+      "verdict": "NOT_RUN",
+      "source_run": null
+    }
+  ],
+  "pass": 0,
+  "fail": 0,
+  "blocked": 0,
+  "not_run": 8,
+  "qualification_policy": {
+    "candidate_sha_specific": true,
+    "formal_transfer_of_candidate4_passes": false,
+    "meaning": "The C6/C7 protocol treats the candidate SHA as part of the evaluated artifact. A future JM-N01-only run can be a narrow observation, but it cannot qualify candidate.5 or transfer candidate.4's seven PASS verdicts."
+  },
+  "invariants": {
+    "three_candidate4_JM_N01_corrections_preserved": true,
+    "cases_inputs_oracles_changed": false,
+    "application_code_changed": false,
+    "previous_runs_changed": false,
+    "human_validation": false,
+    "personal_installation": false
+  },
+  "limits": [
+    "Candidate.5 is prepared only; static correctness does not establish behavioral qualification.",
+    "No authorization to launch JM-N01 or any other candidate.5 case is created by this revision.",
+    "Candidate.4 C6/C7 evidence remains historical and preserved, including its 7 PASS / 1 FAIL result.",
+    "This revision establishes no application build, application test, database, provider collection, CI pipeline, human validation or personal installation."
+  ]
+}

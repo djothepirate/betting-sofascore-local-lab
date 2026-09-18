@@ -1,0 +1,54 @@
+{
+  "schema": "wo062-c7-context-integrity-v1",
+  "status": "PASS",
+  "run_id": "run-07",
+  "candidate_sha256": "f1f6533f678c5cdb4ae6a5bc9c996c062af419005e4f4cd6104a51c91e442d97",
+  "case_count": 7,
+  "cases": [
+    {
+      "case_id": "JM-N01",
+      "input_file_count": 39,
+      "matches_c5_frozen_input_envelope": true,
+      "output_present_before_launch": false
+    },
+    {
+      "case_id": "JM-C01",
+      "input_file_count": 17,
+      "matches_c5_frozen_input_envelope": true,
+      "output_present_before_launch": false
+    },
+    {
+      "case_id": "JM-C02",
+      "input_file_count": 27,
+      "matches_c5_frozen_input_envelope": true,
+      "output_present_before_launch": false
+    },
+    {
+      "case_id": "JM-S01",
+      "input_file_count": 2,
+      "matches_c5_frozen_input_envelope": true,
+      "output_present_before_launch": false
+    },
+    {
+      "case_id": "JM-S02",
+      "input_file_count": 2,
+      "matches_c5_frozen_input_envelope": true,
+      "output_present_before_launch": false
+    },
+    {
+      "case_id": "JM-S03",
+      "input_file_count": 2,
+      "matches_c5_frozen_input_envelope": true,
+      "output_present_before_launch": false
+    },
+    {
+      "case_id": "JM-S04",
+      "input_file_count": 2,
+      "matches_c5_frozen_input_envelope": true,
+      "output_present_before_launch": false
+    }
+  ],
+  "matches_c5_frozen_input_envelopes": true,
+  "oracle_or_prior_answer_in_context": false,
+  "output_present_before_launch": false
+}

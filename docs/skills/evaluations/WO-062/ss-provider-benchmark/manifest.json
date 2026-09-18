@@ -1,0 +1,425 @@
+{
+  "schema": "wo062-provider-benchmark-preparation-v1",
+  "status": "PREPARED_NOT_RUN",
+  "purpose": "EVALUATION_PREPARATION_NOT_INSTALLATION",
+  "source_commit": "74d3f38afd64ce587353fbd645cad7a388e9756c",
+  "prepared_on": "2026-09-15",
+  "skill_name": "ss-provider-benchmark",
+  "skill_exists": false,
+  "skill_sha256": null,
+  "hash_contract": "git_blob_oid identifies committed source bytes portably; worktree_sha256 records the local materialization. Evaluation files use exact UTF-8 LF bytes.",
+  "sources": [
+    {
+      "id": "N01",
+      "category": "normative",
+      "path": "AGENTS.md",
+      "use": "Invariants et autorisations du Lab ; exceptions adoptées à relire avec les ADR.",
+      "locator": "Socle, invariants, exception J3 et définition de fini",
+      "git_blob_oid": "32be42cccccdf85f27d8b0e3846dec4a5c740ebf",
+      "bytes": 10320,
+      "worktree_sha256": "6509ac77cd4c87094a91da7e4c750b5991eeb4585a69a609def5289b91cf6ab5"
+    },
+    {
+      "id": "N02",
+      "category": "normative",
+      "path": "ADR-SS-001-experimentation-endpoints-sofascore-depuis-windows.md",
+      "use": "v1.6 : transport Playwright et clic tournoi ; paragraphes plus anciens contextualisés.",
+      "locator": "Compléments WO-060 et Version",
+      "git_blob_oid": "9fa2ede3a218e3d36a5e044bbfbc391940830164",
+      "bytes": 32999,
+      "worktree_sha256": "55ac93119d80772941f5c9d0b20c4331b856924329f6814f9ddbec6a783265db"
+    },
+    {
+      "id": "N03",
+      "category": "normative",
+      "path": "ADR-SS-002-bounded-multi-dossier-provider-robustness.md",
+      "use": "v1.1 historique J9 : aucune transformation automatique des plafonds ni nouveau go.",
+      "locator": "En-tête de portée et enveloppes",
+      "git_blob_oid": "f2073ded1103799da4a1e459437a2047dc9453ee",
+      "bytes": 33710,
+      "worktree_sha256": "43a1e3b44e772907311c5ea44f3de884a4029c36017aa816b592937ae15ae238"
+    },
+    {
+      "id": "N04",
+      "category": "normative",
+      "path": "ADR-SS-005-bounded-local-live-j4-j5-campaigns.md",
+      "use": "v0.12 : live-v11 ; limites internes et qualification locale distinctes du fournisseur.",
+      "locator": "Amendement v0.12",
+      "git_blob_oid": "e929f8516b0cc02b4cdac3214c7acdd29dc17bf6",
+      "bytes": 63765,
+      "worktree_sha256": "82c9942bb80192cac9dae5c06a55539461d0c91c7e98de92ae7f2c5d5dcca36e"
+    },
+    {
+      "id": "N05",
+      "category": "normative",
+      "path": "ADR-SS-006-j3-manual-pagination-cap-35.md",
+      "use": "v0.2 : nouvelles pages J3 à 35 ; anciennes campagnes gardent leurs bornes.",
+      "locator": "Version et amendement WO-060",
+      "git_blob_oid": "a466d6261264a758a88631a5adde81ac29b6449e",
+      "bytes": 6723,
+      "worktree_sha256": "ab77fc33c993a060c7dea0ad26bea7a295fa36daf3a75df9cd363c31a48368b5"
+    },
+    {
+      "id": "N06",
+      "category": "normative",
+      "path": "ADR-SS-007-j3-automation-durable-catalog-and-live-pause.md",
+      "use": "v0.3 : ordres J3 durables, clic tournoi, pause live et moteur Web configuré.",
+      "locator": "Complément tournoi et démarrage",
+      "git_blob_oid": "797b5fdbb1443f08f4c01084321c43c1e514e752",
+      "bytes": 36758,
+      "worktree_sha256": "b819ba63c2fb5cbacf1afca115f6ab0597956b1ff8c9377f3e7beb14fba3eb07"
+    },
+    {
+      "id": "N07",
+      "category": "contract",
+      "path": "docs/architecture/J8-BENCHMARK-METRICS.md",
+      "use": "Strates, population, fenêtre, coûts, percentiles et états ; nuances D01–D03 à traiter.",
+      "locator": "Sections 2–11 et 13",
+      "git_blob_oid": "e623c0c341aa42e59bfd86f22f1ca9ed74e375b6",
+      "bytes": 28699,
+      "worktree_sha256": "2d9d8fc787465ab1d6252148691a524ea481354a03fc7ca8a01c3a1fb538a036"
+    },
+    {
+      "id": "N08",
+      "category": "contract",
+      "path": "docs/architecture/J6-HISTORY-AND-GUARDED-RETENTION.md",
+      "use": "Corrections et reparsing ; ne pas inférer la fraîcheur depuis le seul statut terminal.",
+      "locator": "Projection, diff et classification",
+      "git_blob_oid": "6160c028e1ec93205101ef30de162a8b8101948d",
+      "bytes": 18692,
+      "worktree_sha256": "08b915e4634652524a7388bd18952122979ee27046c0990a2eba058ba16c0693"
+    },
+    {
+      "id": "P01",
+      "category": "procedure",
+      "path": "docs/runbooks/J8-BENCHMARK.md",
+      "use": "Lecture/export J8 ; prérequis V28 et démarrage historiques, go consommés.",
+      "locator": "Sections 1–4, 7–10",
+      "git_blob_oid": "d46a280b986c4eff381246d92e7fd8cbd96b535c",
+      "bytes": 25317,
+      "worktree_sha256": "3eda5c80961793a70f202010e37b896406cb617448908e345e0f8c177728421d"
+    },
+    {
+      "id": "P02",
+      "category": "procedure",
+      "path": "scripts/Export-J8Benchmark.ps1",
+      "use": "Entrées UTC bornées, non-Web, environnement et chemins d'export.",
+      "locator": "Validation From/To/AsOf, garde processus",
+      "git_blob_oid": "0a094bccbba0b5e6344ee4902d81041113041809",
+      "bytes": 6890,
+      "worktree_sha256": "840e40af2d46376d3760ca0352386b102d7999780176053b3eef293c37d3d78f"
+    },
+    {
+      "id": "I01",
+      "category": "implementation",
+      "path": "src/main/java/com/bettingproject/sofascorelocal/cli/J8BenchmarkExportCommand.java",
+      "use": "Entrypoint d'export et propriétés de fermeture des voies réseau.",
+      "locator": "main et run",
+      "git_blob_oid": "bee6ff2bd6348003af4c7f1b4c49c8339f69eaf1",
+      "bytes": 13617,
+      "worktree_sha256": "28b6b9f5d45ad30e0e5b6d6b4d47e79bf0e6881ce5994b25b14c2998ed4c03be"
+    },
+    {
+      "id": "I02",
+      "category": "implementation",
+      "path": "src/main/java/com/bettingproject/sofascorelocal/application/benchmark/J8BenchmarkWindow.java",
+      "use": "Borne brute avant trim, suffixe Z, intersection et fenêtre vide.",
+      "locator": "parse, bounded, boundedAt, between",
+      "git_blob_oid": "079c4932deea16081e4513eab43d51d6cb29483a",
+      "bytes": 4585,
+      "worktree_sha256": "b69f3f63798dba67d8a4fd493a3f45ee469c88c21cf702d4615662ef1a28ec7c"
+    },
+    {
+      "id": "I03",
+      "category": "implementation",
+      "path": "src/main/java/com/bettingproject/sofascorelocal/application/benchmark/J8BenchmarkService.java",
+      "use": "Calculs effectifs et empreinte de population ; dépend uniquement de preuves locales.",
+      "locator": "load, synthèses, percentiles, coût, lateChanges",
+      "git_blob_oid": "d59549929cf5be1dda263c9a250b308a4d96c1b8",
+      "bytes": 87509,
+      "worktree_sha256": "60d4e1eb279425fcc232bd6e5b003d7f92835ae3657f5cb3839fd1beb93dd258"
+    },
+    {
+      "id": "I04",
+      "category": "implementation",
+      "path": "src/main/java/com/bettingproject/sofascorelocal/application/benchmark/J8BenchmarkReport.java",
+      "use": "Types de mesure, distributions, ratios et états.",
+      "locator": "records de métriques",
+      "git_blob_oid": "8c0b8965e12ab625090f76c378b232dec0e5079c",
+      "bytes": 32909,
+      "worktree_sha256": "6bbbf6ff086146f6cf5548aef00e79d7fc037d62d1342443aa455d500d5d9e81"
+    },
+    {
+      "id": "I05",
+      "category": "implementation",
+      "path": "src/main/java/com/bettingproject/sofascorelocal/application/benchmark/J8BenchmarkMarkdownRenderer.java",
+      "use": "Libellés, limites et rendu déterministe ; définition effective du délai tardif.",
+      "locator": "lateChanges et sections de strates",
+      "git_blob_oid": "a8bef413f34f0c2272f99aa87848374b7df4b966",
+      "bytes": 27048,
+      "worktree_sha256": "75e3830848db9ded33d118544c4338ac5a9b77b9cb54582ba9fc0bb03e062e30"
+    },
+    {
+      "id": "I06",
+      "category": "implementation",
+      "path": "src/main/java/com/bettingproject/sofascorelocal/application/benchmark/J8DirectObservationCohorts.java",
+      "use": "Sélections temporelles et composants directs distincts.",
+      "locator": "cohortes et clés",
+      "git_blob_oid": "390e188d80d3d1568d5efc65cd00c83c677f0401",
+      "bytes": 11925,
+      "worktree_sha256": "996e61d858caf177ab1db9572f31b9d2627e4b603e18a43563902a9683272187"
+    },
+    {
+      "id": "I07",
+      "category": "implementation",
+      "path": "src/main/java/com/bettingproject/sofascorelocal/adapter/persistence/JdbcJ8BenchmarkReadStore.java",
+      "use": "Preuves corrélées à asOf ; provenance et population immuable.",
+      "locator": "readEvidence et requêtes SQL",
+      "git_blob_oid": "589cef11e8665785dc0d87e93152a5b39446fa62",
+      "bytes": 73542,
+      "worktree_sha256": "08c65cc6551ff8cbc8f3a03e31ffdf2caa243fd5649ac33e8f8a082032a4f9a4"
+    },
+    {
+      "id": "I08",
+      "category": "implementation",
+      "path": "src/main/java/com/bettingproject/sofascorelocal/application/network/J8BenchmarkAuditService.java",
+      "use": "Tentative inscrite à la frontière ; registre distinct d'un orchestrateur.",
+      "locator": "tentatives et résultats",
+      "git_blob_oid": "d9db483621828b2ac4acb570a63e8d4facacc6df",
+      "bytes": 37840,
+      "worktree_sha256": "7289b7ddfa73b6959192946216eb70d11ddc823d228b601c700823c274232c85"
+    },
+    {
+      "id": "I09",
+      "category": "implementation",
+      "path": "src/main/java/com/bettingproject/sofascorelocal/application/network/J3RuntimeService.java",
+      "use": "Moteur J3 durable sous conditions ; ne pas démarrer le Web pour lire des documents.",
+      "locator": "démarrage et lancement",
+      "git_blob_oid": "22e5234c288dd9724bec7fa61a1c702954c10824",
+      "bytes": 21918,
+      "worktree_sha256": "6541e21a443baea843695e13219508f8c441f4470db2ea4569cd236675ed8b46"
+    },
+    {
+      "id": "I10",
+      "category": "implementation",
+      "path": "src/main/resources/db/migration/V27__j8_benchmark_evidence.sql",
+      "use": "Contrat initial append-only et preuves des tentatives.",
+      "locator": "tables, contraintes, triggers",
+      "git_blob_oid": "6687973b2cb5166d833c1dce40e54d8d4d5527f9",
+      "bytes": 36999,
+      "worktree_sha256": "90352c054c008170b85fa70700436d690d5a93673b0dedbbed8b13629aa3b8d9"
+    },
+    {
+      "id": "I11",
+      "category": "implementation",
+      "path": "src/main/resources/db/migration/V53__j3_scheduled_events_page_cap_35.sql",
+      "use": "Extension append-only des bornes J3, sans réécriture de campagne ancienne.",
+      "locator": "contraintes de maximum_units",
+      "git_blob_oid": "d82d76b4b1335da6a3f0b577d350292c44e626ef",
+      "bytes": 1894,
+      "worktree_sha256": "f6d6bbecb2868a3f53911499dcb9d2342d050cb411a314c5748d386bd28a99d5"
+    },
+    {
+      "id": "T01",
+      "category": "test_source",
+      "path": "src/test/java/com/bettingproject/sofascorelocal/application/benchmark/J8BenchmarkServiceTest.java",
+      "use": "Exemples existants des calculs ; source inspectée, exécution non revendiquée ici.",
+      "locator": "strates, dossiers, erreurs, délais",
+      "git_blob_oid": "415e739d3cf592d22440b4db68a45880377530e5",
+      "bytes": 104633,
+      "worktree_sha256": "f1b96b58392723f7f26e01b032308339ed820f352a982cdc4d9cce7499f231ea"
+    },
+    {
+      "id": "T02",
+      "category": "test_source",
+      "path": "src/test/java/com/bettingproject/sofascorelocal/application/benchmark/J8BenchmarkWindowTest.java",
+      "use": "Contre-exemples UTC, borne brute et fenêtres futures.",
+      "locator": "tests de parse et boundedAt",
+      "git_blob_oid": "c4380183a9a3f58f79b98ba40c7473a47c17cf20",
+      "bytes": 3733,
+      "worktree_sha256": "f3f0ff66e804b930b59146b77e083f4e805237b45c79ace89bf23963ab7c7611"
+    },
+    {
+      "id": "T03",
+      "category": "test_source",
+      "path": "src/test/java/com/bettingproject/sofascorelocal/application/benchmark/J8BenchmarkMarkdownRendererTest.java",
+      "use": "Rendu sûr et déterministe.",
+      "locator": "rendu et données non mesurées",
+      "git_blob_oid": "47068ea22282e6776101ad192a1439e4c06c7973",
+      "bytes": 11114,
+      "worktree_sha256": "36e7127189863331d7c093bde82df3dbff39d2a65e326ab5af4763fa387da23c"
+    },
+    {
+      "id": "T04",
+      "category": "test_source",
+      "path": "src/test/java/com/bettingproject/sofascorelocal/adapter/persistence/JdbcJ8BenchmarkReadStoreTest.java",
+      "use": "Sélection temporelle et corrélations de preuves.",
+      "locator": "lecture des preuves",
+      "git_blob_oid": "cbf06909309870d99ab912c3acc260c9a8c1698a",
+      "bytes": 17029,
+      "worktree_sha256": "1b6cdcfcb0c8b993b3eb0072071d8405f4027ef39f155b63a4aeef098f99ebd5"
+    },
+    {
+      "id": "H01",
+      "category": "historical",
+      "path": "docs/benchmark/J8-BENCHMARK-REPORT-20260830.md",
+      "use": "Rapport gelé : 20 tentatives, coût effectif 20/1, contrôle externe absent.",
+      "locator": "bloc automatique et revue humaine",
+      "git_blob_oid": "0cab32b38518789e9c86174ab2e44e7fcc0b26df",
+      "bytes": 20008,
+      "worktree_sha256": "6d9a46b4391beffe9c1c54591089f0b035a5ed81f9522c03998a0feff18e7e52"
+    },
+    {
+      "id": "H02",
+      "category": "historical",
+      "path": "docs/validation/J8-SECOND-BOUNDED-CAMPAIGN-20260830.md",
+      "use": "Campagne retenue ; go consommé et bornes de l'époque.",
+      "locator": "fenêtre et campagne",
+      "git_blob_oid": "12853e4bd0a7634b01b4cf806eea1441504ab124",
+      "bytes": 9271,
+      "worktree_sha256": "6b800011eb05cea1a3177f53cc05717b228db3656e5d02f986f0977597ab9e05"
+    },
+    {
+      "id": "H03",
+      "category": "historical",
+      "path": "docs/validation/J8-FINAL-VALIDATION-20260830.md",
+      "use": "Clôture J8 historique, hash du bloc, aucune décision J9.",
+      "locator": "résultats et portée",
+      "git_blob_oid": "d2c9c0f67e6625f7a616195bddd5e943389e847b",
+      "bytes": 6600,
+      "worktree_sha256": "d1670002c5fcc1d5e50a4291f5a438760805ae1a3e5b435f665205601357bc9c"
+    },
+    {
+      "id": "H04",
+      "category": "historical",
+      "path": "docs/work_orders/completed/WO-SS-20260829-016-benchmark-j8.md",
+      "use": "Objectif initial et clôture du benchmark.",
+      "locator": "périmètre et qualification",
+      "git_blob_oid": "cba89b2f35b9b1e54fd8637f0503d6ad572d2b4d",
+      "bytes": 36916,
+      "worktree_sha256": "467fb190e12cb8b00957d49c38db9f47dbebd4176d2c0fd099de99f71cad6abc"
+    },
+    {
+      "id": "H05",
+      "category": "historical",
+      "path": "docs/validation/WO058-PREMATCH-TEMPORAL-20260907.md",
+      "use": "Définitions temporelles ; observations historiques V2 distinctes du changement source V3.",
+      "locator": "unité match/famille et âge",
+      "git_blob_oid": "a785d6ca0de3df3d534f0de8b2a2804a90023814",
+      "bytes": 27217,
+      "worktree_sha256": "f01f53c585436c68d27346225bb66de6e69cb0613a31f30b08e48efd9c1c97b5"
+    },
+    {
+      "id": "H06",
+      "category": "historical",
+      "path": "docs/validation/WO058-REAL-LIVE-V8-403-OBSERVATIONS-20260910.md",
+      "use": "Trois campagnes réelles historiques, départ REQUEST_SENT distinct de réservation.",
+      "locator": "méthode de comptage et limites",
+      "git_blob_oid": "0f4e2bcec20298feeb8a898abbb75b0f27c3cc1b",
+      "bytes": 5169,
+      "worktree_sha256": "399ea38dfc5c09a861958cc951e0faa8d6ec5da4207c24b6afe6139e68271f1a"
+    },
+    {
+      "id": "H07",
+      "category": "local_qualification",
+      "path": "docs/validation/WO060-LIVE-V11-PROFILE-20260914.json",
+      "use": "Qualification replay/loopback à huit rencontres, zéro appel fournisseur.",
+      "locator": "status, qualification, limits",
+      "git_blob_oid": "3fbe7e7f4832995d99b1f5e6726543fc906bc74e",
+      "bytes": 2725,
+      "worktree_sha256": "80490d1bb1b781006277234a3337ca9fab3e72bda32bc8ec1da699055e2f326d"
+    },
+    {
+      "id": "N09",
+      "category": "contract",
+      "path": "docs/architecture/LIVE-J4-J5-CAMPAIGNS.md",
+      "use": "Amendement live-v11 et générations historiques, sans homogénéiser leurs cohortes.",
+      "locator": "Amendement WO-060 et politiques",
+      "git_blob_oid": "ffedeed4b8d05029a57f78234343058d85ab50c1",
+      "bytes": 67068,
+      "worktree_sha256": "472754969ae9696ed6c748073757fe027a6103b86415f24fb3091ee0b7b8e771"
+    },
+    {
+      "id": "P03",
+      "category": "procedure",
+      "path": "docs/runbooks/J3-AUTOMATION-AND-DURABLE-CATALOG.md",
+      "use": "Conditions d'activation du moteur Web et maintenance non-Web.",
+      "locator": "runtime et tests",
+      "git_blob_oid": "092c3c916e9889a4deeb675bca1ee45e14bd5ec7",
+      "bytes": 18555,
+      "worktree_sha256": "2ce9e97781fd0b70fa1931e005526ae0e44ed42a8e66301cca590b5f0d90af8d"
+    },
+    {
+      "id": "I12",
+      "category": "implementation",
+      "path": "src/main/java/com/bettingproject/sofascorelocal/adapter/persistence/live/JdbcLiveCampaignPressureReadStore.java",
+      "use": "Départs et pression live distincts des tentatives exactes J8.",
+      "locator": "lecteur de pression",
+      "git_blob_oid": "340a7b6b53f36d7bc8493ba18664714d9ab9aa18",
+      "bytes": 6413,
+      "worktree_sha256": "7e8bba1f7fb8f21db9df9903173c699e43a9762b72b15acc3c9a8732ff6735cc"
+    },
+    {
+      "id": "H08",
+      "category": "historical",
+      "path": "docs/validation/WO058-TEMPORAL-SUMMARY-20260907.json",
+      "use": "Résumé versionné des checkpoints ; les 937 tentatives privées ne sont pas disponibles dans ce corpus.",
+      "locator": "provenance, checkpoints, métriques",
+      "git_blob_oid": "b4a8d441d9812ad893b34f61964ff8e50232a0a1",
+      "bytes": 35839,
+      "worktree_sha256": "d50ea2da6f1a90877622af440bfb37307978782a4ea52c64d63ac83e85296700"
+    },
+    {
+      "id": "H09",
+      "category": "local_qualification",
+      "path": "docs/validation/WO060-J3-LIVE-WORKER-20260914.json",
+      "use": "Preuve native locale d'isolation J4/J3/J4, sans mesure fournisseur.",
+      "locator": "statut, appels réels, cleanup",
+      "git_blob_oid": "a0f3d2d5f086aee700fa2679df4fd24cb53f0202",
+      "bytes": 892,
+      "worktree_sha256": "c48ea964bc3f7af883e95e0e9808f5eda5279bbfb4c504e58540b58b1c3346fe"
+    },
+    {
+      "id": "H10",
+      "category": "historical",
+      "path": "docs/validation/WO060-J3-IMPLEMENTATION-20260914.md",
+      "use": "Réalisation J3 durable et qualification locale ; pas une mesure de qualité fournisseur.",
+      "locator": "qualification et périmètre",
+      "git_blob_oid": "1243f8fb010fbebf6ee237ef399a546c035cfe48",
+      "bytes": 13996,
+      "worktree_sha256": "7607d35276e1074ac734ca0e624c62c7df9b3482258526ccc6ece32bec3f5ac2"
+    }
+  ],
+  "evaluation_files": [
+    {
+      "path": "source-inventory.md",
+      "role": "SUPERVISOR_ONLY",
+      "bytes": 15727,
+      "sha256": "f9b58deef8ee223ef59bc32117844fd21b99674ae00e161eb6caa233f7c84cbb"
+    },
+    {
+      "path": "evaluation-plan.md",
+      "role": "SUPERVISOR_ONLY",
+      "bytes": 8278,
+      "sha256": "70b92442ed93e540710202ba27bef2717df09997982dbe7cd146480a201aad0f"
+    },
+    {
+      "path": "oracle.md",
+      "role": "REVIEWER_ONLY",
+      "bytes": 10379,
+      "sha256": "848bb0ef88ac6ba9a1130e1ef3c023f0a6a72bf1f7c1b92a549d512377557c9b"
+    },
+    {
+      "path": "cases.json",
+      "role": "EXTRACT_SELECTED_CASE_ONLY",
+      "bytes": 6740,
+      "sha256": "7493422b0a8429703db4e87f55dd077fc62afe7ff75bc76adb9428906eeb76cd"
+    },
+    {
+      "path": "inputs.json",
+      "role": "EXTRACT_SELECTED_CASE_ONLY",
+      "bytes": 10219,
+      "sha256": "2f8a285f4ae0aef3dd43d3212115c0935226a5c61259c154b349da60e536e4ea"
+    }
+  ]
+}

@@ -1,0 +1,23 @@
+{
+  "schema": "wo062-candidate-revision-v1",
+  "prepared_at_utc": "2026-09-15T21:34:01.667281+00:00",
+  "previous_run": "../run-01/results.json",
+  "previous_candidate": "0.1.0-candidate.1",
+  "candidate_version": "0.1.0-candidate.2",
+  "candidate_sha256": "255655544771ae6cf2a71b967aba8efeb7e53e64acc41ca31dc784e16a719118",
+  "candidate_commit": "2d62f12c2d2ad4571c630aea0f98128927aa24ff",
+  "changes": [
+    "Restituer les distinctions déclencheur/provenance et date métier/instants.",
+    "Cartographier aussi les erreurs propagées et exceptions d’adaptateur.",
+    "Conserver les incidents historiques en distinguant environnement, tests et suites attestées.",
+    "Nommer les relais spécialisés pour chaque prochaine action pertinente, même future."
+  ],
+  "preparation_cases_inputs_oracle_changed": false,
+  "description_yaml_changed": false,
+  "historical_answers_or_verdicts_changed": false,
+  "static_review": "PASS",
+  "behavioral_qualification": "NOT_RUN",
+  "additional_sessions_requested": 8,
+  "human_validation": false,
+  "personal_installation": false
+}

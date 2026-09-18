@@ -1,0 +1,547 @@
+{
+  "schema": "wo062-java-module-preparation-v1",
+  "status": "PREPARED_NOT_RUN",
+  "purpose": "EVALUATION_PREPARATION_NOT_INSTALLATION",
+  "source_commit": "6648dd423e556b5248b8793a539ae85a7680f9bc",
+  "prepared_on": "2026-09-15",
+  "skill_name": "ss-java-module",
+  "skill_exists": false,
+  "skill_sha256": null,
+  "case_count": 8,
+  "source_count": 48,
+  "source_worktree": "C:/Dev/BettingProject/codex/betting-sofascore-local-lab/.tmp/wo062-skills-lot2",
+  "hash_contract": "git_blob_oid identifies committed source bytes at source_commit; worktree_sha256 hashes exact local materialization, potentially CRLF. Preparation files hash exact UTF-8 LF bytes. The manifest does not hash itself. Every evaluation must freeze its actual source/candidate bytes separately.",
+  "scoping_source_note": "JM-N02 is fixed at its source_commit/blob and is absent from every case source_ids; later WO updates do not update test inputs.",
+  "evaluation_isolation": "Only allowlisted source files and the corresponding input_case plus its common provenance and exact candidate may reach business sessions. Oracle, inventory, evaluation plan, prior results and design history are excluded. Read large files through methods relevant to the bounded J3 review; no exhaustive audit is required.",
+  "selection_method": "Four native ephemeral sessions, candidate isolated in .agents/skills, metadata discovery and full selected SKILL.md tool reads recorded. Exact generic selection_envelope in cases.json; no manual body injection. No claim of automatic CLI body injection.",
+  "sources": [
+    {
+      "id": "JM-N01",
+      "category": "normative",
+      "path": "AGENTS.md",
+      "use": "Statuts, frontières fournisseur et exception J3.",
+      "locator": "Invariants 3, 11, 12 et exception J3",
+      "git_blob_oid": "32be42cccccdf85f27d8b0e3846dec4a5c740ebf",
+      "bytes": 10320,
+      "worktree_sha256": "6509ac77cd4c87094a91da7e4c750b5991eeb4585a69a609def5289b91cf6ab5"
+    },
+    {
+      "id": "JM-N02",
+      "category": "scoping",
+      "path": "docs/work_orders/active/WO-SS-20260915-062-skills-lot2.md",
+      "use": "Cadrage seulement, exclu de toute entrée métier.",
+      "locator": "4.C1, 5, 6",
+      "git_blob_oid": "28a5786b81e553ea815245ad0918cdb7a526df1d",
+      "bytes": 30672,
+      "worktree_sha256": "c7fd49cc7c7c2dcbe0adf362266864d5867af3b7b94c6ad5b09d0cda4b3c5cbf"
+    },
+    {
+      "id": "JM-N03",
+      "category": "normative",
+      "path": "ADR-SS-007-j3-automation-durable-catalog-and-live-pause.md",
+      "use": "Autorité courante J3 durable et contexte temporaire dans le worker live.",
+      "locator": "v0.3 ; sections 2 à 5",
+      "git_blob_oid": "797b5fdbb1443f08f4c01084321c43c1e514e752",
+      "bytes": 36758,
+      "worktree_sha256": "b819ba63c2fb5cbacf1afca115f6ab0597956b1ff8c9377f3e7beb14fba3eb07"
+    },
+    {
+      "id": "JM-N04",
+      "category": "architecture",
+      "path": "docs/architecture/ARCHITECTURE.md",
+      "use": "Couches actuelles et déclarations historiques à contextualiser.",
+      "locator": "Encart WO-060 ; section 3",
+      "git_blob_oid": "4e5cb4b6f6020fdfbb2527247caee815c00c3e83",
+      "bytes": 41164,
+      "worktree_sha256": "518fc0ff0d0991c9e9765d01899526c536806e952ce5ea2a10cda2cf500ba8ce"
+    },
+    {
+      "id": "JM-P01",
+      "category": "procedure_implementation",
+      "path": "scripts/Verify-Local.ps1",
+      "use": "Gardes textuels réels et commandes effectives ; pas une analyse globale des dépendances.",
+      "locator": "forbiddenPatterns ; commandes Maven",
+      "git_blob_oid": "d4a9c0ac85e0dda730d6466cd8bcbe4b412af98e",
+      "bytes": 6256,
+      "worktree_sha256": "068bf5a3826fe77c9bb8fe5984b0cd80fef44d04aee17008b4d8e021369ba3ff"
+    },
+    {
+      "id": "JM-P02",
+      "category": "procedure",
+      "path": "docs/runbooks/J3-AUTOMATION-AND-DURABLE-CATALOG.md",
+      "use": "Modes opérateur, consultation durable et absence de reprise du live.",
+      "locator": "Parcours et limites",
+      "git_blob_oid": "092c3c916e9889a4deeb675bca1ee45e14bd5ec7",
+      "bytes": 18555,
+      "worktree_sha256": "2ce9e97781fd0b70fa1931e005526ae0e44ed42a8e66301cca590b5f0d90af8d"
+    },
+    {
+      "id": "JM-H01",
+      "category": "historical",
+      "path": "docs/validation/J9-WO030-PROVIDER-PLAYWRIGHT-PORT-BOUNDARY-QUALIFICATION-20260901.md",
+      "use": "Qualification TCP réelle et bornée, pas une revue exhaustive des ports d’architecture.",
+      "locator": "Sections 1 à 8",
+      "git_blob_oid": "6c9402b8d02837eeb580aa0f86bd949978e55082",
+      "bytes": 8020,
+      "worktree_sha256": "9bd030f4cc92f32bdeee977089d3f4c5c709278fec4c24cc66ed8fb6d258be5f"
+    },
+    {
+      "id": "JM-H02",
+      "category": "historical",
+      "path": "docs/work_orders/completed/WO-SS-20260901-030-j9-provider-playwright-port-boundary-hardening.md",
+      "use": "Décision propriétaire postérieure au rapport autonome.",
+      "locator": "Sections 2, 5, 7 à 9",
+      "git_blob_oid": "2cd3dd7102f2e835e5922c3cfcd6040b73bb6509",
+      "bytes": 10433,
+      "worktree_sha256": "359dc1fa3c7f79b9b498369b170fb848472578bd0166248dc16862c765006c26"
+    },
+    {
+      "id": "JM-H03",
+      "category": "historical",
+      "path": "docs/validation/WO060-J3-IMPLEMENTATION-20260914.md",
+      "use": "Commande explicite de qualification worker et limites de la preuve datée.",
+      "locator": "Qualification Maven ; recette worker",
+      "git_blob_oid": "1243f8fb010fbebf6ee237ef399a546c035cfe48",
+      "bytes": 13996,
+      "worktree_sha256": "7607d35276e1074ac734ca0e624c62c7df9b3482258526ccc6ece32bec3f5ac2"
+    },
+    {
+      "id": "JM-I01",
+      "category": "implementation",
+      "path": "pom.xml",
+      "use": "Monomodule, Java/Spring, profils standard/intégration/runtime/qualification.",
+      "locator": "parent ; properties ; build ; profiles",
+      "git_blob_oid": "b6746484877941bc9b5fed47b9878ba3426b28ac",
+      "bytes": 16856,
+      "worktree_sha256": "e01e011e360fa847842d826a5bcf2960c34eae91da037e2a6f002e71a3513a46"
+    },
+    {
+      "id": "JM-I02",
+      "category": "implementation",
+      "path": "src/main/resources/application.yml",
+      "use": "Profil local par défaut, adresse loopback, runtime J3 et activation fournisseur distincts.",
+      "locator": "spring.profiles ; server.address ; sofascore",
+      "git_blob_oid": "b70bc55684e069bb123c53a57163ff3f950f717e",
+      "bytes": 12048,
+      "worktree_sha256": "9036e582ba1fe78fb934669853a91b7277511d099558352c97f28792f1821e28"
+    },
+    {
+      "id": "JM-I03",
+      "category": "implementation",
+      "path": "src/main/resources/application-local.yml",
+      "use": "Surcharge Spring locale, aucun ajout de source Maven.",
+      "locator": "spring.config.activate ; request-timeout",
+      "git_blob_oid": "209f9629782b7eed048d44f9a990f9017ed46869",
+      "bytes": 247,
+      "worktree_sha256": "2545c2c8cb1fa4a5add52dbe58e7c4b0f61f8030033f915c2881f54cff2872f4"
+    },
+    {
+      "id": "JM-I04",
+      "category": "implementation",
+      "path": ".mvn/wrapper/maven-wrapper.properties",
+      "use": "Version réellement distribuée par le wrapper.",
+      "locator": "distributionUrl",
+      "git_blob_oid": "a3c407ffc277c729e4bd22dcd7aeda4862a44d02",
+      "bytes": 259,
+      "worktree_sha256": "51b221ede4e074d19bb44d6d485bb7b298e77874572a09697aba0a9e234e0745"
+    },
+    {
+      "id": "JM-I05",
+      "category": "implementation",
+      "path": "src/main/java/com/bettingproject/sofascorelocal/config/ProviderPlaywrightProperties.java",
+      "use": "Validation parente de l’origine et des bornes.",
+      "locator": "isSafeConfiguration",
+      "git_blob_oid": "78b11c580a4e4e75a217d46d28bc2227e2f6a34f",
+      "bytes": 3975,
+      "worktree_sha256": "5e6adc1e415086a8762b982a6df05446f9081022c08938b01cbd477b1d5b89ca"
+    },
+    {
+      "id": "JM-I06",
+      "category": "implementation",
+      "path": "src/provider-playwright/java/com/bettingproject/sofascorelocal/provider/playwright/worker/ProviderPlaywrightWorkerConfiguration.java",
+      "use": "Validation indépendante enfant et URI allowlistées.",
+      "locator": "fromEnvironment ; parseOrigin ; parsePort ; uriFor",
+      "git_blob_oid": "f32d22cdcc8910230cbcf6897486b51a19e17b43",
+      "bytes": 4720,
+      "worktree_sha256": "c294e517133dde24d05b52b4206fff921d4279d6034b6bf247b9bce4199d9616"
+    },
+    {
+      "id": "JM-I07",
+      "category": "implementation",
+      "path": "src/main/java/com/bettingproject/sofascorelocal/domain/provider/ScheduledEventsTransportRequest.java",
+      "use": "Frontière loopback distincte déjà bornée avant WO-030.",
+      "locator": "constructeur",
+      "git_blob_oid": "99c09a5a58427d004ca0a243b59358e748b30772",
+      "bytes": 2030,
+      "worktree_sha256": "4fe53c2d6187283c1b79078ff132ca7f5a8f37d32903cb0e8b7099df0587b04d"
+    },
+    {
+      "id": "JM-I08",
+      "category": "implementation",
+      "path": "src/main/java/com/bettingproject/sofascorelocal/application/network/J3RuntimeService.java",
+      "use": "Admission durable, démarrage Web, consommateur et ressources standalone/live.",
+      "locator": "onApplicationReady ; start ; reserveNetwork ; Standalone",
+      "git_blob_oid": "22e5234c288dd9724bec7fa61a1c702954c10824",
+      "bytes": 21918,
+      "worktree_sha256": "6541e21a443baea843695e13219508f8c441f4470db2ea4569cd236675ed8b46"
+    },
+    {
+      "id": "JM-I09",
+      "category": "implementation",
+      "path": "src/main/java/com/bettingproject/sofascorelocal/application/network/J3CollectionExecutor.java",
+      "use": "Cas d’usage borné, ProviderAccess, cache/import et dépendances concrètes existantes.",
+      "locator": "imports ; ProviderAccess ; execute",
+      "git_blob_oid": "17ae8077252ec062d6df73894e3c67b83c46c35a",
+      "bytes": 12229,
+      "worktree_sha256": "17c66c6a576f9427948103367f5b453d25c1f796558368f987646e381becf872"
+    },
+    {
+      "id": "JM-I10",
+      "category": "implementation",
+      "path": "src/main/java/com/bettingproject/sofascorelocal/application/network/J3CollectionCompletionService.java",
+      "use": "Transaction commune publication, terminal J8 et ordre.",
+      "locator": "publish ; committedProof ; interrupt",
+      "git_blob_oid": "2f2b60df8e285451898b31d3af3708eee2aaf5e5",
+      "bytes": 2228,
+      "worktree_sha256": "4f24526a7ca0488b2f21bf5ffd6f667c2160ee90f96d3b5eddcfc0860a91a9fa"
+    },
+    {
+      "id": "JM-I11",
+      "category": "implementation",
+      "path": "src/main/java/com/bettingproject/sofascorelocal/domain/scheduledevents/J3AutomationData.java",
+      "use": "Types, identités, dates civiles/UTC et échéance.",
+      "locator": "Settings ; Owner ; Order ; resolveOneShot",
+      "git_blob_oid": "3331572e86673ea17799b6a37fe289192520a8d1",
+      "bytes": 3878,
+      "worktree_sha256": "f2ef950b87570a0922b905f3b928b0c1fa8dd15af09a0f1635e13e8f3d238aa6"
+    },
+    {
+      "id": "JM-I12",
+      "category": "implementation",
+      "path": "src/main/java/com/bettingproject/sofascorelocal/domain/scheduledevents/J3CollectionData.java",
+      "use": "Résultats/provenance et catalogue par date.",
+      "locator": "Trigger ; Proof ; Entry ; Collection",
+      "git_blob_oid": "58e9cae787827a7ea6d2a3652933bfd2e61b75ce",
+      "bytes": 6301,
+      "worktree_sha256": "f815c6647d39f9aebaf0dc8a77a00cf38aadb14519f8df3f4f701437eef05d08"
+    },
+    {
+      "id": "JM-I13",
+      "category": "implementation",
+      "path": "src/main/java/com/bettingproject/sofascorelocal/port/J3AutomationStore.java",
+      "use": "Port de persistance des ordres, ticks et prises en charge.",
+      "locator": "lead ; tick ; claim ; finish",
+      "git_blob_oid": "12fdc2475fb2fb64770702cbf616ac09fcef8e1e",
+      "bytes": 1240,
+      "worktree_sha256": "bc8c357f37eddf5cd9e42398443a29582ee65202351368725f0abd3efeb29b45"
+    },
+    {
+      "id": "JM-I14",
+      "category": "implementation",
+      "path": "src/main/java/com/bettingproject/sofascorelocal/port/J3CollectionStore.java",
+      "use": "Port des collections, publication, lecture et reconstruction.",
+      "locator": "publish ; latest ; hasSuccess ; legacyCandidates",
+      "git_blob_oid": "b43a0bd3ced8c11457b5f7d4ba1034e0c7808888",
+      "bytes": 1269,
+      "worktree_sha256": "a4c3344dd3e9a668a9f6c4ef0730d2145c6761a3c8f35dcc6c9d02f4c7ad04d8"
+    },
+    {
+      "id": "JM-I15",
+      "category": "implementation",
+      "path": "src/main/java/com/bettingproject/sofascorelocal/adapter/persistence/JdbcJ3AutomationStore.java",
+      "use": "Adaptateur SQL et sérialisation admission/configuration.",
+      "locator": "readSettings ; tick ; claim",
+      "git_blob_oid": "2503536a2c492ad73ddbafa96b2790acb64d772c",
+      "bytes": 15922,
+      "worktree_sha256": "78cd826a422ad992c80102acf45a055d235b9756560721da6eb857cea9abd000"
+    },
+    {
+      "id": "JM-I16",
+      "category": "implementation",
+      "path": "src/main/java/com/bettingproject/sofascorelocal/adapter/persistence/JdbcJ3CollectionStore.java",
+      "use": "Adaptateur de publication et dernier succès.",
+      "locator": "publish ; j3_last_success",
+      "git_blob_oid": "f7d251554d05eaf4a96a29b9380a66e24429a0a1",
+      "bytes": 16635,
+      "worktree_sha256": "66622d3b94f99d9b77cd8075f11ab648b52d018032747ed1c1f518a542aef555"
+    },
+    {
+      "id": "JM-I17",
+      "category": "implementation",
+      "path": "src/main/java/com/bettingproject/sofascorelocal/adapter/web/J3AutomationController.java",
+      "use": "Entrées HTTP vers cas d’usage et port, jeton local.",
+      "locator": "collect ; importPages ; settings ; plan",
+      "git_blob_oid": "113061bcf051e07265c08734bda3e51e3d8ea7c6",
+      "bytes": 9823,
+      "worktree_sha256": "947c760c33bf04e989da3a7a386e2fcdd8a9722bd340329b67b1e566c787cea1"
+    },
+    {
+      "id": "JM-I18",
+      "category": "implementation",
+      "path": "src/main/java/com/bettingproject/sofascorelocal/adapter/web/J3CollectionController.java",
+      "use": "Consultation sans acquisition ; accès direct au port de lecture.",
+      "locator": "latest ; page ; evidence",
+      "git_blob_oid": "a4299c263e3d30b2917d8ce4972fdb36d9629e38",
+      "bytes": 6513,
+      "worktree_sha256": "ef656ac3daf0b07af0a86388c17cc74cb1b4505184a85d7774be89f57331d6f4"
+    },
+    {
+      "id": "JM-I19",
+      "category": "implementation",
+      "path": "src/main/java/com/bettingproject/sofascorelocal/application/network/playwright/PlaywrightProviderCampaignFactory.java",
+      "use": "Interface d’ouverture de campagne ; méthodes V11 explicites.",
+      "locator": "open ; openLiveGroupedV11",
+      "git_blob_oid": "5c13560c97ce1d5758fecd1244e4c3b8649b46d7",
+      "bytes": 3540,
+      "worktree_sha256": "7edddaf1747cce3a53f8f77353e53506126cd51123ede089a5d4418ba6b081bf"
+    },
+    {
+      "id": "JM-I20",
+      "category": "implementation",
+      "path": "src/main/java/com/bettingproject/sofascorelocal/application/network/playwright/PlaywrightProviderSupervisor.java",
+      "use": "Interface de supervision indépendante de la bibliothèque Playwright.",
+      "locator": "stopCampaign ; activeCampaignId",
+      "git_blob_oid": "fec58452e02dcab1320792fc094a0c848752fe4d",
+      "bytes": 455,
+      "worktree_sha256": "d6508cae251175e0de0dddd266448c081441aaa19d6019e4c51fe3ba8ba1064e"
+    },
+    {
+      "id": "JM-I21",
+      "category": "implementation",
+      "path": "src/main/java/com/bettingproject/sofascorelocal/application/network/playwright/ResilientPlaywrightProviderCampaignFactory.java",
+      "use": "Composition Spring réelle et refus/départs durables.",
+      "locator": "@Primary ; constructeur ; openJ3SubOperation",
+      "git_blob_oid": "e4a3dcd5611593969b8a0aa8a7222479580b93c7",
+      "bytes": 15275,
+      "worktree_sha256": "8836c0d3ba70c05415c629a72727dbc6b255920832a303fc0a52a78a26e3da91"
+    },
+    {
+      "id": "JM-I22",
+      "category": "implementation",
+      "path": "src/main/java/com/bettingproject/sofascorelocal/application/network/playwright/ChildJvmPlaywrightProviderSupervisor.java",
+      "use": "Implémentation parent IPC et JVM enfant ; aucune bibliothèque navigateur dans src/main.",
+      "locator": "implements ; openLiveGroupedV11 ; openJ3Scope ; startWorker ; Campaign",
+      "git_blob_oid": "47bb54dcf01b1fba73133cafcb098f6515116fe0",
+      "bytes": 98186,
+      "worktree_sha256": "1cc6dd4fb35c730972578cd49e62e12410eae74bbae143ca0e88f778abec0d5b"
+    },
+    {
+      "id": "JM-I23",
+      "category": "implementation",
+      "path": "src/provider-playwright/java/com/bettingproject/sofascorelocal/provider/playwright/worker/ProviderPlaywrightWorkerMain.java",
+      "use": "Bibliothèque navigateur isolée ; deux contextes distincts lors de pause J3.",
+      "locator": "imports ; WorkerRuntime ; openJ3 ; closeJ3 ; open",
+      "git_blob_oid": "ca630f2dfb3972740ba35a52be9bb79ad1eda79d",
+      "bytes": 47929,
+      "worktree_sha256": "cd530db0edebef8d8379e9e81f28472a30d577b1c14f719a11f33ead5c25c4c7"
+    },
+    {
+      "id": "JM-I24",
+      "category": "implementation",
+      "path": "src/provider-playwright/java/com/bettingproject/sofascorelocal/provider/playwright/worker/ProviderPlaywrightWorkerProtocol.java",
+      "use": "Protocole enfant v10, portée et validation des commandes.",
+      "locator": "VERSION ; START_WITH_J3_PAUSE ; readJ3Scope",
+      "git_blob_oid": "046f7a251bb4d12fe8f08b44cf998e0d6b778999",
+      "bytes": 23460,
+      "worktree_sha256": "69503a3710afe68d67b4c58ba7a4939ba6cc32fbcf454fef50aabef8e5a0c65b"
+    },
+    {
+      "id": "JM-I25",
+      "category": "implementation",
+      "path": "src/main/java/com/bettingproject/sofascorelocal/application/live/LiveCampaignService.java",
+      "use": "Transfert au propriétaire live conservant sa lease et transitions persistantes.",
+      "locator": "submitJ3 ; runJ3 ; j3Transition",
+      "git_blob_oid": "798f6f0e02e7f91209eb6a8c6a55fd7a7a6a66f2",
+      "bytes": 86925,
+      "worktree_sha256": "d5040046c4cfe7bc946efe8336624679d25c1eba6964add24e1d2afb3507257a"
+    },
+    {
+      "id": "JM-I26",
+      "category": "implementation",
+      "path": "src/main/java/com/bettingproject/sofascorelocal/application/live/LiveProviderSession.java",
+      "use": "Façade de session live vers sous-opération J3.",
+      "locator": "openJ3SubOperation",
+      "git_blob_oid": "7f27f17ac51b5a760d480bd7c3d8301f7767d691",
+      "bytes": 9246,
+      "worktree_sha256": "fc32fe5ad8ae5a1ee5cf7a80f8d7555fcc8b42fe1760bb2e459dba984d3c4a10"
+    },
+    {
+      "id": "JM-T01",
+      "category": "test",
+      "path": "src/test/java/com/bettingproject/sofascorelocal/config/ProviderPlaywrightPropertiesTest.java",
+      "use": "Matrice parente, validation directe et Bean Validation.",
+      "locator": "acceptsOnlyTheClosedTcpPortRangeBoundaries",
+      "git_blob_oid": "1b9af3817fc64f7d0d560e2e6bf31cef328ecaa2",
+      "bytes": 4080,
+      "worktree_sha256": "c0f4348d52c78c73e1bce72a2c0f4fa075a0c8314fc4852cdddb51d4318b554b"
+    },
+    {
+      "id": "JM-T02",
+      "category": "test",
+      "path": "src/test/java/com/bettingproject/sofascorelocal/application/network/J3ProviderQualificationPolicyTest.java",
+      "use": "Refus effectif de claim pour port hors plage.",
+      "locator": "rejectsAnOutOfRangeLoopbackPortBeforeAProviderClaim",
+      "git_blob_oid": "a9bdb12532b950a1967c189a7c86fb349dec8785",
+      "bytes": 12723,
+      "worktree_sha256": "df1782ce36c77cb0104b6ad67b3eec81bcdeca0e053f189bffac6fedb150aca1"
+    },
+    {
+      "id": "JM-T03",
+      "category": "test",
+      "path": "src/provider-playwright-test/java/com/bettingproject/sofascorelocal/provider/playwright/worker/ProviderPlaywrightWorkerProtocolTest.java",
+      "use": "Matrice enfant et protocole sans Chromium.",
+      "locator": "acceptsOnlyTheClosedLoopbackOriginTcpPortRange",
+      "git_blob_oid": "a91bbb39360ab1ff4e5a67ee8acc86e78c5459ba",
+      "bytes": 26671,
+      "worktree_sha256": "ff3dd101dd05a303493fd275f7e46a0adb9e3ba613816728019345ff259ea1db"
+    },
+    {
+      "id": "JM-T04",
+      "category": "test",
+      "path": "src/test/java/com/bettingproject/sofascorelocal/integration/J3RuntimeIT.java",
+      "use": "Threads réels, PostgreSQL et fournisseur simulé ; maintenance et délai admission.",
+      "locator": "maintenanceContextCannotTakeLeadership ; admissionDeadlineCancels",
+      "git_blob_oid": "db5c71b6280e6bf1db2f2277e846cdc70debd814",
+      "bytes": 13676,
+      "worktree_sha256": "ab7510105d50acdf5df1c4257cdd1532599b4eadfc5eff4f903375b0c58acec8"
+    },
+    {
+      "id": "JM-T05",
+      "category": "test",
+      "path": "src/test/java/com/bettingproject/sofascorelocal/integration/J3AutomationPersistenceIT.java",
+      "use": "Concurrence, occurrences, horaires manqués et préférence.",
+      "locator": "concurrentClaimsCannotAdmitTwoJ3Runs ; scheduledTimesDuringStop",
+      "git_blob_oid": "3f81f0060f50ea22cadb740a44754c3114b15f5f",
+      "bytes": 8737,
+      "worktree_sha256": "a14741f16d95894fc45ee8b9be8a964121e83ca75aecc0273b7db5a88e47db55"
+    },
+    {
+      "id": "JM-T06",
+      "category": "test",
+      "path": "src/test/java/com/bettingproject/sofascorelocal/integration/J3CollectionExecutionIT.java",
+      "use": "Exécution import/cache, borne page35 et publication atomique.",
+      "locator": "directImport ; cacheOnlySuccess ; terminalPublicationFailure",
+      "git_blob_oid": "b683480d0cee59d4aa0dae09acedf0a938b2441c",
+      "bytes": 12431,
+      "worktree_sha256": "de039f13fd3a0a1cc814758118d24c2315b1dc725432d174ef8a043a679efda8"
+    },
+    {
+      "id": "JM-T07",
+      "category": "test",
+      "path": "src/test/java/com/bettingproject/sofascorelocal/integration/J3CollectionPersistenceIT.java",
+      "use": "Persistance par date, reprise, rétention et rollback.",
+      "locator": "failedAndRolledBackPublication ; historicalSuccess",
+      "git_blob_oid": "dd01564cccf011928d8e96853476245ca6702181",
+      "bytes": 17807,
+      "worktree_sha256": "18f2afbe3aa5e7b8f4e9993638019286579777986e3c23f3ea1e23e444263e54"
+    },
+    {
+      "id": "JM-T08",
+      "category": "test",
+      "path": "src/provider-playwright-test/java/com/bettingproject/sofascorelocal/provider/playwright/worker/J3WorkerScopeProtocolTest.java",
+      "use": "Capacité START distincte et identité/date/échéance sans navigateur.",
+      "locator": "trois tests",
+      "git_blob_oid": "f046d0357649894be68a18c2a46b63e32cc6a68c",
+      "bytes": 2464,
+      "worktree_sha256": "6ac1909d9da573d391f8c70f4956f8e3eb817f9ef65c33fee50434bcfa1888d9"
+    },
+    {
+      "id": "JM-T09",
+      "category": "test",
+      "path": "src/provider-playwright-qualification-test/java/com/bettingproject/sofascorelocal/application/network/playwright/J3LivePauseWorkerQualificationIT.java",
+      "use": "Recette native loopback à sélection explicite ; pas incluse par motif générique.",
+      "locator": "oneWorkerIsolatesJ3ThenRestoresLiveAuthorityAndItsOriginalContext",
+      "git_blob_oid": "fe713602cdf13e2c8747ca66343ec005eb9261c4",
+      "bytes": 8180,
+      "worktree_sha256": "4c037634719139918167abf2ceead502aec8b73fe9c9ad37d6901ffed7f5ce74"
+    },
+    {
+      "id": "JM-T10",
+      "category": "test",
+      "path": "src/test/java/com/bettingproject/sofascorelocal/application/network/playwright/ChildJvmPlaywrightProviderSupervisorSpringContextTest.java",
+      "use": "Contexte Spring restreint au superviseur, pas au décorateur @Primary complet.",
+      "locator": "SupervisorConfiguration",
+      "git_blob_oid": "d64a3e9ef44fc34b96f9259133364950373eceee",
+      "bytes": 1940,
+      "worktree_sha256": "da5788666d9b9a32789e8eedf0e5743e8ee991e6b18d07e628fe2a0d020a2560"
+    },
+    {
+      "id": "JM-R01",
+      "category": "routing",
+      "path": "docs/skills/local-lab/ss-data-contract-replay/SKILL.md",
+      "use": "Frontière contrats, parseurs et replay.",
+      "locator": "Déclenchement et procédure",
+      "git_blob_oid": "2074ae6a9965e856788b4373da2ac4648423bd6e",
+      "bytes": 2558,
+      "worktree_sha256": "ecaffcae31979a735d2ce240b9583da0d75fa296152fc4a5fca1c211affa7ef1"
+    },
+    {
+      "id": "JM-R02",
+      "category": "routing",
+      "path": "docs/skills/local-lab/ss-postgres-change/SKILL.md",
+      "use": "Frontière migrations, transactions et reprise.",
+      "locator": "Déclenchement et procédure",
+      "git_blob_oid": "f80920e34977d311db08837b98aa6e4a2ecedbcd",
+      "bytes": 2673,
+      "worktree_sha256": "8a89922f8cc1dd5144e054f0586d6d24f92d2a1c82264d37e00642d8376d9e2c"
+    },
+    {
+      "id": "JM-R03",
+      "category": "routing",
+      "path": "docs/skills/local-lab/ss-verify/SKILL.md",
+      "use": "Frontière exécution standard et rapports.",
+      "locator": "Choisir l’exécution",
+      "git_blob_oid": "1ace7771fe147a3ac53e7f5a1e874b50bedb8353",
+      "bytes": 3044,
+      "worktree_sha256": "9eccf7b71f664a7d74c543b53b09fb7e58b5b2d96efe304925884c80e353b4ca"
+    }
+  ],
+  "files": [
+    {
+      "path": "source-inventory.md",
+      "bytes": 22227,
+      "sha256": "5a374ccbbbb25e39f87b17909c28083d9bd0567f03d184162c302719c8ddd4ca"
+    },
+    {
+      "path": "cases.json",
+      "bytes": 7191,
+      "sha256": "c3e76e6b92ea2ac3ec3ef03684512b41b70be90355ac1be87bbf3fffc3d228aa"
+    },
+    {
+      "path": "inputs.json",
+      "bytes": 5532,
+      "sha256": "302410617523c10bd12015ad72d0f9869ca455715528e12008e5a0e3cdf4440f"
+    },
+    {
+      "path": "oracle.md",
+      "bytes": 13217,
+      "sha256": "d13dc8c5ec833f30dc9025c3c22a22c00e60656eae3a89dc30361861ea390bd1"
+    },
+    {
+      "path": "evaluation-plan.md",
+      "bytes": 5430,
+      "sha256": "d015760826da4c55dadff09cea6b91d3e4aea9cf44dff3cfbda02bbfbaab86e7"
+    }
+  ],
+  "case_ids": [
+    "JM-H01",
+    "JM-N01",
+    "JM-C01",
+    "JM-C02",
+    "JM-S01",
+    "JM-S02",
+    "JM-S03",
+    "JM-S04"
+  ],
+  "not_executed": [
+    "candidate authoring",
+    "behavioral evaluation",
+    "native selection sessions",
+    "application tests",
+    "browser or worker launch",
+    "database access",
+    "CI pipelines",
+    "publication",
+    "personal installation"
+  ]
+}

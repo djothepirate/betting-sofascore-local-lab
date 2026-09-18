@@ -1,0 +1,33 @@
+{
+  "schema": "wo062-run02-publication-provenance-v1",
+  "publisher_source_head": "1bf14ddadd38ee4cbba34ee09bf2c729fb0ab890",
+  "candidate_body_commit": "2d62f12c2d2ad4571c630aea0f98128927aa24ff",
+  "candidate_package_commit": "2d62f12c2d2ad4571c630aea0f98128927aa24ff",
+  "evaluation_source_head": "2d62f12c2d2ad4571c630aea0f98128927aa24ff",
+  "authorization_sha256": "c1efa9d1222b96df3e3848b803ac006fafe816ce1b2b050c8759cf3ad8c080cf",
+  "authorized_additional_sessions": 10,
+  "published_cases": [
+    "JM-H01",
+    "JM-N01",
+    "JM-C01",
+    "JM-C02",
+    "JM-S01",
+    "JM-S02",
+    "JM-S03",
+    "JM-S04"
+  ],
+  "excluded_prepared_cases": [],
+  "static_review_source": ".tmp/wo062-evaluations/ss-java-module/run-02",
+  "publisher_sha256": "e1596d4c0731d1e71a521deb173d532aa6f44c14c9da25164e1e2013a871f5cd",
+  "model": null,
+  "reasoning_effort": null,
+  "human_validation": false,
+  "personal_installation": false,
+  "limits": [
+    "Qualification limited to the frozen cases; no general productivity gain measured.",
+    "Model and reasoning effort use configured defaults; exact values unavailable. No model override is made by this publisher.",
+    "Complete tool-mediated skill loading is reviewed separately; no automatic CLI body-injection claim.",
+    "Catalogue reconstruction occurs after execution and is not a capture of the transmitted model request.",
+    "These evaluations establish no application build, application test, database, provider collection, scanner or CI pipeline."
+  ]
+}

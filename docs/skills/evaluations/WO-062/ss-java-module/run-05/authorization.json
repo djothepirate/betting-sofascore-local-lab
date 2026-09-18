@@ -1,0 +1,41 @@
+{
+  "schema": "wo062-c-requalification-05-authorization-v1",
+  "decision_date": "2026-09-16",
+  "basis": "Current owner request: make the doubled JM-N01 correction for the omitted blocked sofascore-live-test profile; correct WR-H01's full and repeated large-module reads; separate runtime registration from hashing and verify conductor dependencies in the actual process before a new WR-N01 execution of failure and sleep.",
+  "configured_service_scope": "The same configured service and the internal candidate, local skill catalogue, scoped versioned sources and bounded local Windows probes previously authorized for C remain authorized for this fresh recipe. The request itself authorizes the new executions within that unchanged scope.",
+  "java": {
+    "candidate_version": "0.1.0-candidate.4",
+    "candidate_sha256": "f1f6533f678c5cdb4ae6a5bc9c996c062af419005e4f4cd6104a51c91e442d97",
+    "run_id": "run-05",
+    "cases": [
+      "JM-H01",
+      "JM-N01",
+      "JM-C01",
+      "JM-C02",
+      "JM-S01",
+      "JM-S02",
+      "JM-S03",
+      "JM-S04"
+    ],
+    "reason": "The frozen qualification policy requires all eight cases for an exact revised candidate. No PASS from candidate.3 transfers to candidate.4."
+  },
+  "windows": {
+    "candidate_version": "0.1.0-candidate.1",
+    "candidate_sha256": "b89925d5395238010bb0afe9c1e1a22b0aa5ec4e7d1fb9946c671d241e7976c6",
+    "run_id": "run-05",
+    "cases": [
+      "WR-H01",
+      "WR-N01"
+    ],
+    "wr_h01": "One fresh bounded harness session with the C5 reading protocol. The immutable large module remains available only as a runtime dependency of the original harness; its curated excerpt is the sole manual source for that implementation boundary.",
+    "wr_n01": "A no-Java dependency preflight runs under the same Windows PowerShell 5.1 process form before the fresh full driver. The full driver repeats its checks and must establish evidence for its own failure and sleep JVMs."
+  },
+  "max_model_sessions": 10,
+  "automatic_retry": false,
+  "oracle_supplied_to_evaluated_sessions": false,
+  "prior_answers_supplied_to_evaluated_sessions": false,
+  "historical_c4_evidence_preserved": true,
+  "human_validation": false,
+  "personal_installation": false,
+  "application_changes": false
+}

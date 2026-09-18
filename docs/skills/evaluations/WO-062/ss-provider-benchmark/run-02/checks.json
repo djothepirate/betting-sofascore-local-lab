@@ -1,0 +1,22 @@
+{
+  "checked_at_utc": "2026-09-15T18:21:59.744154+00:00",
+  "result": "PASS",
+  "files_checked": 22,
+  "json_files": 9,
+  "local_links": 369,
+  "sensitive_patterns": 11,
+  "sensitive_signals": 0,
+  "source_files_preserved": 38,
+  "a1_locked_files_preserved": 5,
+  "a1_manifest_preserved": true,
+  "run01_manifest_preserved": true,
+  "run01_artifacts_preserved": 68,
+  "candidate_files_preserved": 2,
+  "lot1_files_preserved": 10,
+  "new_frozen_files_verified": 8,
+  "complete_read_match": true,
+  "qualified_cases": 12,
+  "historical_run01_blocked_preserved": true,
+  "exact_git_bytes": true,
+  "runtime_changes": false
+}

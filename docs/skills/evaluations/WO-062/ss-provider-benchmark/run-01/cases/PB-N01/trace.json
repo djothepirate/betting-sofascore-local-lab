@@ -1,0 +1,107 @@
+{
+  "case_id": "PB-N01",
+  "started_at_utc": "2026-09-15T16:46:34.6445788Z",
+  "finished_at_utc": "2026-09-15T16:55:12.9042352Z",
+  "timestamp_scope": "Début de la première lecture ; fin de la rédaction et des vérifications en mémoire avant écriture de cette trace.",
+  "language": "fr",
+  "authorized_root": "C:/Dev/BettingProject/codex/betting-sofascore-local-lab/.tmp/wo062-skills-lot2/.tmp/pb-evaluations/run-01/PB-N01",
+  "task_source": "prompt.txt",
+  "skill_applied": "candidate/SKILL.md",
+  "files_effectively_read": [
+    "allowed-files.txt",
+    "prompt.txt",
+    "candidate/SKILL.md",
+    "corpus/AGENTS.md",
+    "corpus/ADR-SS-001-experimentation-endpoints-sofascore-depuis-windows.md",
+    "corpus/ADR-SS-002-bounded-multi-dossier-provider-robustness.md",
+    "corpus/docs/architecture/J8-BENCHMARK-METRICS.md",
+    "corpus/docs/runbooks/J8-BENCHMARK.md",
+    "corpus/docs/benchmark/J8-BENCHMARK-REPORT-20260830.md",
+    "corpus/docs/validation/WO058-PREMATCH-TEMPORAL-20260907.md",
+    "corpus/docs/validation/WO058-REAL-LIVE-V8-403-OBSERVATIONS-20260910.md",
+    "corpus/ADR-SS-005-bounded-local-live-j4-j5-campaigns.md",
+    "corpus/ADR-SS-006-j3-manual-pagination-cap-35.md",
+    "corpus/ADR-SS-007-j3-automation-durable-catalog-and-live-pause.md",
+    "corpus/docs/architecture/LIVE-J4-J5-CAMPAIGNS.md",
+    "corpus/docs/runbooks/J3-AUTOMATION-AND-DURABLE-CATALOG.md",
+    "corpus/docs/validation/WO060-J3-IMPLEMENTATION-20260914.md",
+    "corpus/docs/validation/WO058-TEMPORAL-SUMMARY-20260907.json",
+    "corpus/docs/validation/WO060-LIVE-V11-PROFILE-20260914.json",
+    "corpus/docs/validation/WO060-J3-LIVE-WORKER-20260914.json",
+    "corpus/src/main/java/com/bettingproject/sofascorelocal/adapter/persistence/JdbcJ8BenchmarkReadStore.java",
+    "corpus/src/main/java/com/bettingproject/sofascorelocal/adapter/persistence/live/JdbcLiveCampaignPressureReadStore.java"
+  ],
+  "files_not_read": [
+    "candidate/agents/openai.yaml"
+  ],
+  "actions": [
+    {
+      "tool": "functions.exec / exec_command",
+      "action": "Lecture de l'horloge UTC et de allowed-files.txt."
+    },
+    {
+      "tool": "functions.exec / exec_command",
+      "action": "Lecture du prompt exact et du skill candidat."
+    },
+    {
+      "tool": "functions.exec / exec_command",
+      "action": "Lectures locales Get-Content et recherches rg limitées aux chemins nommés dans allowed-files.txt ; lots indépendants et extraits ciblés."
+    },
+    {
+      "tool": "functions.exec / exec_command",
+      "action": "Lecture des JSON autorisés avec ConvertFrom-Json ; sélection en mémoire des checkpoints et métadonnées ; aucune exécution d'un analyseur du dépôt."
+    },
+    {
+      "tool": "functions.exec / exec_command",
+      "action": "Calculs locaux : 180/181, 755/756, 935/937, 147+180+263, 8*4. Relecture des heures originales avec DateKind String pour conserver leurs décalages."
+    },
+    {
+      "tool": "functions.exec / apply_patch",
+      "action": "Création de output/response.md en UTF-8."
+    },
+    {
+      "tool": "functions.exec",
+      "action": "Vérification en mémoire des sections et de tous les liens : chacun cible un fichier du corpus effectivement consulté."
+    },
+    {
+      "tool": "functions.exec / exec_command",
+      "action": "Lecture finale de l'horloge UTC."
+    },
+    {
+      "tool": "functions.exec / apply_patch",
+      "action": "Création de output/trace.json."
+    }
+  ],
+  "outputs_written": [
+    "output/response.md",
+    "output/trace.json"
+  ],
+  "source_mutations": 0,
+  "network_calls": 0,
+  "application_starts": 0,
+  "browser_actions": 0,
+  "database_accesses": 0,
+  "docker_actions": 0,
+  "provider_collections": 0,
+  "application_tests_executed": 0,
+  "external_references_followed": 0,
+  "supervisors_queried_for_expected_answer": 0,
+  "delegated_subtasks": 0,
+  "validation": {
+    "sourceFilesRead": 22,
+    "linksOutsideReadCorpus": [],
+    "expectedSectionsPresent": true,
+    "outputContentCheckedInMemory": true,
+    "outputFilesReread": false
+  },
+  "limitations": [
+    "Analyse documentaire indépendante ; aucune vérification de l'état Git, de l'application installée ou de la base opérateur.",
+    "Certaines sorties de lecture en lot ont été tronquées ; des passages utiles ont été relus par extraits ciblés. Aucune affirmation de lecture exhaustive de chaque ligne du corpus.",
+    "Les rapports de tests et qualifications sont cités comme preuves historiques déclarées, sans réexécution.",
+    "Le ledger détaillé T07, les sources privées liées, les services de calcul/sérialisation J8 et les sources externes n'ont pas été ouverts.",
+    "Reproduction des ratios et des exemples publiés uniquement ; reproduction complète du hash de population et des distributions impossible avec les seuls résumés.",
+    "Aucune preuve de capacité fournisseur V11 soutenue, d'horloge source fiable, de contrôle sportif indépendant ou de comparaison fournisseur appariée.",
+    "Modèle et effort non exposés : aucune valeur observée dans le protocole local de cette exécution.",
+    "Les sorties ont été contrôlées en mémoire et leurs écritures ont été confirmées par l'outil ; elles n'ont pas été relues depuis le système de fichiers."
+  ]
+}

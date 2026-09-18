@@ -1,0 +1,39 @@
+{
+  "schema": "wo062-c8-static-review-v1",
+  "status": "PASS_PRELAUNCH",
+  "scope": {
+    "cases_exact": [
+      "JM-H01",
+      "JM-N01",
+      "JM-C01",
+      "JM-C02",
+      "JM-S01",
+      "JM-S02",
+      "JM-S03",
+      "JM-S04"
+    ],
+    "authorized_sessions": 8,
+    "workers": 1,
+    "automatic_retry": false,
+    "sandbox": "read-only",
+    "candidate_sha256": "d7171f978c2b13c852c2ce5e170d68c1bfc5087552661cfdc6271077a0fe6637",
+    "observation_not_reusable": true
+  },
+  "runner": {
+    "path": ".tmp/wo062_evaluate_c8.py",
+    "sha256": "af9a0def5caa7c9784d5ca10a42beeb94fe5d228ced0f1fd0ace6bbcf4e8f411",
+    "derived_from_c7_without_modifying_c7": true,
+    "guards": [
+      "prepare accepts only run-08 / ss-java-module / eight declared cases / one worker",
+      "run accepts exactly the eight declared cases in order / one worker",
+      "authorization and active candidate SHA must equal candidate.5",
+      "one new output and frozen directory per case; no overwrite",
+      "native Codex exec is ephemeral and read-only"
+    ]
+  },
+  "previous_runner_hashes": {
+    "c6": "a54eef3f91fcfbe66160e53512a439d2ce06e2c258d318f686473cd0b8c714c3",
+    "c7": "27cee327e523b88cfcb0ea5cb629bfe2c78ee7f5016cc439b6035f7a2c591b8d"
+  },
+  "model_invoked": false
+}

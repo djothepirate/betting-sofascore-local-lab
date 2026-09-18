@@ -1,0 +1,101 @@
+[
+  {
+    "type": "thread.started",
+    "thread_id": "01a0a7b1-fe86-7b81-836c-443148bd9bdb"
+  },
+  {
+    "type": "turn.started"
+  },
+  {
+    "type": "error",
+    "message": "Reconnecting... 2/5 (stream disconnected before completion: Une tentative d’accès à un socket de manière interdite par ses autorisations d’accès a été tentée. (os error 10013))"
+  },
+  {
+    "type": "error",
+    "message": "Reconnecting... 3/5 (stream disconnected before completion: Une tentative d’accès à un socket de manière interdite par ses autorisations d’accès a été tentée. (os error 10013))"
+  },
+  {
+    "type": "error",
+    "message": "Reconnecting... 4/5 (stream disconnected before completion: Une tentative d’accès à un socket de manière interdite par ses autorisations d’accès a été tentée. (os error 10013))"
+  },
+  {
+    "type": "error",
+    "message": "Reconnecting... 5/5 (stream disconnected before completion: Une tentative d’accès à un socket de manière interdite par ses autorisations d’accès a été tentée. (os error 10013))"
+  },
+  {
+    "type": "item.completed",
+    "item": {
+      "id": "item_0",
+      "type": "error",
+      "message": "Falling back from WebSockets to HTTPS transport. stream disconnected before completion: Une tentative d’accès à un socket de manière interdite par ses autorisations d’accès a été tentée. (os error 10013)"
+    }
+  },
+  {
+    "type": "error",
+    "message": "Reconnecting... waiting for network (Connection failed: error sending request)"
+  },
+  {
+    "type": "error",
+    "message": "Reconnecting... waiting for network (Connection failed: error sending request)"
+  },
+  {
+    "type": "error",
+    "message": "Reconnecting... waiting for network (Connection failed: error sending request)"
+  },
+  {
+    "type": "error",
+    "message": "Reconnecting... waiting for network (Connection failed: error sending request)"
+  },
+  {
+    "type": "error",
+    "message": "Reconnecting... waiting for network (Connection failed: error sending request)"
+  },
+  {
+    "type": "error",
+    "message": "Reconnecting... waiting for network (Connection failed: error sending request)"
+  },
+  {
+    "type": "error",
+    "message": "Reconnecting... waiting for network (Connection failed: error sending request)"
+  },
+  {
+    "type": "error",
+    "message": "Reconnecting... waiting for network (Connection failed: error sending request)"
+  },
+  {
+    "type": "error",
+    "message": "Reconnecting... waiting for network (Connection failed: error sending request)"
+  },
+  {
+    "type": "error",
+    "message": "Reconnecting... waiting for network (Connection failed: error sending request)"
+  },
+  {
+    "type": "error",
+    "message": "Reconnecting... waiting for network (Connection failed: error sending request)"
+  },
+  {
+    "type": "error",
+    "message": "Reconnecting... waiting for network (Connection failed: error sending request)"
+  },
+  {
+    "type": "error",
+    "message": "Reconnecting... waiting for network (Connection failed: error sending request)"
+  },
+  {
+    "type": "error",
+    "message": "Reconnecting... waiting for network (Connection failed: error sending request)"
+  },
+  {
+    "type": "error",
+    "message": "Reconnecting... waiting for network (Connection failed: error sending request)"
+  },
+  {
+    "type": "error",
+    "message": "Reconnecting... waiting for network (Connection failed: error sending request)"
+  },
+  {
+    "type": "error",
+    "message": "Reconnecting... waiting for network (Connection failed: error sending request)"
+  }
+]

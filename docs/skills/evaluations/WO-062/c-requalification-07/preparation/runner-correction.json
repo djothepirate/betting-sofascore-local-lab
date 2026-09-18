@@ -1,0 +1,32 @@
+{
+  "schema": "wo062-c7-pre-model-launcher-correction-v1",
+  "run_id": "run-07",
+  "status": "CORRECTED_BEFORE_MODEL_SESSION",
+  "buggy_runner_sha256": "af08b25703eb6fc04971e28ec10fce4d3fc0a66a5010f23c7bb2390c2375728c",
+  "corrected_runner_sha256": "27cee327e523b88cfcb0ea5cb629bfe2c78ee7f5016cc439b6035f7a2c591b8d",
+  "local_failure": {
+    "exit_code": 1,
+    "stage": "run_case pre-codex-exec assertion",
+    "cause": "The copied C5 assertion required run-05 and rejected run-07.",
+    "model_session_started": false,
+    "codex_exec_started": false
+  },
+  "post_failure_context_check": {
+    "all_seven_output_directories_empty": true,
+    "frozen_directories_absent": true,
+    "candidate_and_input_hashes_unchanged": true
+  },
+  "correction_scope": {
+    "removed_only": "The inherited C5 run_id assertion inside the distinct C7 runner.",
+    "retained": [
+      "run-07 / ss-java-module assertion",
+      "exact ordered seven-case assertion",
+      "workers=1 assertion",
+      "no overwrite of events or frozen evidence",
+      "ephemeral read-only Codex invocation"
+    ],
+    "c5_runner_unchanged": true,
+    "c6_runner_unchanged": true,
+    "automatic_retry": false
+  }
+}

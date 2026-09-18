@@ -1,0 +1,44 @@
+{
+  "schema": "wo062-frozen-skill-results-v1",
+  "skill": "ss-java-module",
+  "run_id": "run-05",
+  "candidate_version": "0.1.0-candidate.4",
+  "candidate_sha256": "f1f6533f678c5cdb4ae6a5bc9c996c062af419005e4f4cd6104a51c91e442d97",
+  "source_head": "d0021090d9cf718d5b338bbf8d06109586e4518a",
+  "reviewed_on": "2026-09-16",
+  "case_count": 1,
+  "prepared_case_count": 8,
+  "executions": 1,
+  "behavioral_executions": 0,
+  "cases": [
+    {
+      "case_id": "JM-H01",
+      "verdict": "BLOCKED",
+      "technical_execution_verdict": "BLOCKED_BEFORE_MODEL_COMMAND",
+      "source_run": "run-05",
+      "review": "review-JM-H01.json",
+      "response": null,
+      "response_sha256": null,
+      "trace": "cases/JM-H01/trace.json",
+      "candidate_behavior_assessed": false
+    }
+  ],
+  "unstarted_case_ids": [
+    "JM-N01",
+    "JM-C01",
+    "JM-C02",
+    "JM-S01",
+    "JM-S02",
+    "JM-S03",
+    "JM-S04"
+  ],
+  "pass": 0,
+  "fail": 0,
+  "blocked": 1,
+  "not_run": 7,
+  "limits": [
+    "The single C5 launcher attempt began a client thread and turn, but no model tool command, candidate tool-read, final response or usage was observed.",
+    "This partial run cannot qualify candidate.4; candidate.3 results remain historical and do not transfer.",
+    "The remaining seven Java cases are deliberately unstarted while the configured-model transport is unavailable and automatic_retry=false."
+  ]
+}

@@ -1,0 +1,98 @@
+{
+  "schema": "wo062-wrh-readonly-preflight-diagnostic-v1",
+  "records": [
+    {
+      "value": [
+        {
+          "reparse": false,
+          "path": "C:\\Dev\\BettingProject\\codex\\betting-sofascore-local-lab\\.tmp\\wo062-skills-lot2\\.tmp\\wo062-evaluations\\ss-windows-runtime\\run-03\\WR-H01\\output\\runtime"
+        },
+        {
+          "reparse": false,
+          "path": "C:\\Dev\\BettingProject\\codex\\betting-sofascore-local-lab\\.tmp\\wo062-skills-lot2\\.tmp\\wo062-evaluations\\ss-windows-runtime\\run-03\\WR-H01\\output"
+        },
+        {
+          "reparse": false,
+          "path": "C:\\Dev\\BettingProject\\codex\\betting-sofascore-local-lab\\.tmp\\wo062-skills-lot2\\.tmp\\wo062-evaluations\\ss-windows-runtime\\run-03\\WR-H01"
+        },
+        {
+          "reparse": false,
+          "path": "C:\\Dev\\BettingProject\\codex\\betting-sofascore-local-lab\\.tmp\\wo062-skills-lot2\\.tmp\\wo062-evaluations\\ss-windows-runtime\\run-03"
+        },
+        {
+          "reparse": false,
+          "path": "C:\\Dev\\BettingProject\\codex\\betting-sofascore-local-lab\\.tmp\\wo062-skills-lot2\\.tmp\\wo062-evaluations\\ss-windows-runtime"
+        },
+        {
+          "reparse": false,
+          "path": "C:\\Dev\\BettingProject\\codex\\betting-sofascore-local-lab\\.tmp\\wo062-skills-lot2\\.tmp\\wo062-evaluations"
+        },
+        {
+          "reparse": false,
+          "path": "C:\\Dev\\BettingProject\\codex\\betting-sofascore-local-lab\\.tmp\\wo062-skills-lot2\\.tmp"
+        },
+        {
+          "reparse": false,
+          "path": "C:\\Dev\\BettingProject\\codex\\betting-sofascore-local-lab\\.tmp\\wo062-skills-lot2"
+        },
+        {
+          "reparse": false,
+          "path": "C:\\Dev\\BettingProject\\codex\\betting-sofascore-local-lab\\.tmp"
+        },
+        {
+          "reparse": false,
+          "path": "C:\\Dev\\BettingProject\\codex\\betting-sofascore-local-lab"
+        },
+        {
+          "reparse": false,
+          "path": "C:\\Dev\\BettingProject\\codex"
+        },
+        {
+          "reparse": false,
+          "path": "C:\\Dev\\BettingProject"
+        },
+        {
+          "reparse": false,
+          "path": "C:\\Dev"
+        },
+        {
+          "reparse": false,
+          "path": "C:\\"
+        }
+      ],
+      "status": "PASS",
+      "step": "path_ancestors",
+      "durationMs": 47.3156
+    },
+    {
+      "value": {
+        "entries": 0
+      },
+      "status": "PASS",
+      "step": "runtime_directory_read",
+      "durationMs": 15.592
+    },
+    {
+      "value": {
+        "psVersion": "7.6.6",
+        "pid": 24724,
+        "image": "C:\\Program Files\\PowerShell\\7\\pwsh.exe"
+      },
+      "status": "PASS",
+      "step": "self_image",
+      "durationMs": 14.0788
+    },
+    {
+      "durationMs": 46.8976,
+      "scriptStackTrace": "sur <ScriptBlock>, C:\\Dev\\BettingProject\\codex\\betting-sofascore-local-lab\\.tmp\\wo062-skills-lot2\\.tmp\\diagnose_wrh_preflight.ps1 : ligne 16\r\nsur <ScriptBlock>, C:\\Dev\\BettingProject\\codex\\betting-sofascore-local-lab\\.tmp\\wo062-skills-lot2\\.tmp\\diagnose_wrh_preflight.ps1 : ligne 20\r\nsur <ScriptBlock>, <No file> : ligne 2",
+      "message": "Accès refusé ",
+      "position": "À C:\\Dev\\BettingProject\\codex\\betting-sofascore-local-lab\\.tmp\\wo062-skills-lot2\\.tmp\\diagnose_wrh_preflight.ps1:16 car :30\r\n+ … ent' = { $p=Get-CimInstance Win32_Process -Filter ('ProcessId={0}' -f …\r\n+               ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~",
+      "status": "BLOCKED",
+      "fullyQualifiedErrorId": "HRESULT 0x80041003,Microsoft.Management.Infrastructure.CimCmdlets.GetCimInstanceCommand",
+      "exceptionType": "Microsoft.Management.Infrastructure.CimException",
+      "step": "self_cim_parent"
+    }
+  ],
+  "atUtc": "2026-09-15T22:52:51.7420203Z",
+  "scope": "Read-only diagnostic in the parent task sandbox, not the evaluated session; no harness, JVM, deletion, ACL change or retry."
+}

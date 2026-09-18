@@ -1,0 +1,138 @@
+{
+  "schema": "wo062-c5-preparation-artifact-manifest-v1",
+  "created_at_utc": "2026-09-16T00:49:56.500360+00:00",
+  "source_head": "d0021090d9cf718d5b338bbf8d06109586e4518a",
+  "files": [
+    {
+      "path": "build-manifest.py.txt",
+      "bytes": 1300,
+      "sha256": "64c977a0f3d065fad1cfe4a81d49f41a79a393e7d8f6761ff763bd2c7b7177a4"
+    },
+    {
+      "path": "check-context-integrity.py.txt",
+      "bytes": 2848,
+      "sha256": "6eedcbd4df9f1d65e42d9b775cffd98a576d3b80c6d2226c7dd9be8e70409e07"
+    },
+    {
+      "path": "check-host-prepared-runtime.py.txt",
+      "bytes": 3315,
+      "sha256": "0fd0b8056d42a6991c4063b499e53551f353ae96a202bb7cdc9bc6bd3eba8f0d"
+    },
+    {
+      "path": "check-prepared-runtime.py.txt",
+      "bytes": 3310,
+      "sha256": "3b026668b5f73eceb12cc35290b4f487352eddf2abfa38f1c85d85f5495e8cde"
+    },
+    {
+      "path": "check-static.py.txt",
+      "bytes": 5097,
+      "sha256": "226a3d5290fe10ff24a64109c50642c44a6f1b733984ba0be27c26f9af5f516a"
+    },
+    {
+      "path": "context-integrity.json",
+      "bytes": 1534,
+      "sha256": "401ebb0a6ec5978cc3b10eedb1e1ade162d23d5dacf0dbc03ccc01765f91daab"
+    },
+    {
+      "path": "context-preparation.json",
+      "bytes": 2532,
+      "sha256": "49eef48e68b19bc6e567de6df8ddd2f747f6c942880eb0c0d5ed9128761e7059"
+    },
+    {
+      "path": "evaluator.py.txt",
+      "bytes": 22534,
+      "sha256": "7adbc893b502f4ca71bb7f5196562ea292c8a8ea5916923ee41c2d37fd92f2c2"
+    },
+    {
+      "path": "host-prepared-access.json",
+      "bytes": 3278,
+      "sha256": "dd730ea3d1421e60752374ae5804b285bcdc8a2dd2c41162d422ed6ffdc671d3"
+    },
+    {
+      "path": "java-context-preflight.json",
+      "bytes": 27898,
+      "sha256": "a975e1b4cfa71ea0a6ae0f1c5ad275baf40d259401ed8cd236204d496e452fa4"
+    },
+    {
+      "path": "java-independent-static-review.json",
+      "bytes": 3552,
+      "sha256": "6842ad55501e3ce1612a837fa516eb14a86a694cb5eef9a863df09858d7e88dc"
+    },
+    {
+      "path": "java-independent-static-review.md",
+      "bytes": 4690,
+      "sha256": "6637e1dd6c78a3a6852f7e0f2f545f2e12e70e8e2adf859e66e07fd4d13d0262"
+    },
+    {
+      "path": "prepare-contexts.py.txt",
+      "bytes": 7061,
+      "sha256": "b9b8ec1b7b80ae75161ee846fac15650b2b840064d35ba5f7d080eecf9de33f0"
+    },
+    {
+      "path": "prepared-access.json",
+      "bytes": 3264,
+      "sha256": "a917744fc3422ff32101f954e44bbfb488f9b565ad673be35996b93162e3ad6f"
+    },
+    {
+      "path": "read-policy-tests.json",
+      "bytes": 501,
+      "sha256": "8eef6ce6ff3cef13ab6c8e1605b080c30a23247c238ba2f683aea5f6eaa6402c"
+    },
+    {
+      "path": "sandbox-diagnosis.md",
+      "bytes": 6216,
+      "sha256": "aa0c65fab11308a4841978d58c1ab1ee2e2b776dba6b03a9cfda76f2f5ab6618"
+    },
+    {
+      "path": "static-review.json",
+      "bytes": 2909,
+      "sha256": "63b6d39d776276486c784b70c765880e620790c9215a9dd24a712d085b7e4675"
+    },
+    {
+      "path": "static-review.md",
+      "bytes": 1137,
+      "sha256": "67171600c7a6d92d2688d3276990e8d49770869a54f8bb879f500b6700a2cbd0"
+    },
+    {
+      "path": "test-read-policy.py.txt",
+      "bytes": 1874,
+      "sha256": "e297d63b6eeef7048bcf22e1201c81531d996a038061b0757e72eb1d67a6a9c6"
+    },
+    {
+      "path": "test-timing.py.txt",
+      "bytes": 2537,
+      "sha256": "398f16a5c803146c85465c572d55ca90de672d3da18b7f113bd0e6c62cc384e8"
+    },
+    {
+      "path": "timing-tests.json",
+      "bytes": 867,
+      "sha256": "55c75b4c88f23d7dd6417155d3000c26fa7468ff4d6293c50457dcee803fbb91"
+    },
+    {
+      "path": "windows-context-preflight.json",
+      "bytes": 11033,
+      "sha256": "269ba6e1ce7e5f540a79e788035c2323442b410f389dc13a2921aaa8519b988b"
+    },
+    {
+      "path": "wrn-dependency-preflight-observation.json",
+      "bytes": 4663,
+      "sha256": "6269118750e278c752fcaa0b5310241f1facb0d60a6e44fcaf210f96083dbf44"
+    },
+    {
+      "path": "wrn-preflight-provenance.json",
+      "bytes": 2194,
+      "sha256": "4528285dcd7d38e30ba1f9e9b5682cc039d31c39a7a96f98a497869dd1f34cf7"
+    },
+    {
+      "path": "wrn-template-preflight-evidence-available.json",
+      "bytes": 162,
+      "sha256": "ee84470f79a12ade14e2a3bacb0fc246574221119c06ff3f736f2a5cc0bcd4ff"
+    },
+    {
+      "path": "wrn-template-preflight-observation.json",
+      "bytes": 10108,
+      "sha256": "0288f3a60f2f7e6017d6d244420a271d54e7578c1e9363fa1cc4d0c40b68345e"
+    }
+  ],
+  "note": "The manifest does not hash itself. It is created before the model sessions and records only C5 preparation, not their results."
+}

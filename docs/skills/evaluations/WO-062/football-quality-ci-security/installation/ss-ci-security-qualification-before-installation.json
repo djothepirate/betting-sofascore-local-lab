@@ -1,0 +1,39 @@
+{
+  "schema": "wo062-current-skill-qualification-v1",
+  "skill": "ss-ci-security",
+  "candidate_version": "0.1.0-candidate.1",
+  "status": "QUALIFIED_OWNER_VALIDATED_PENDING_PERSONAL_INSTALLATION",
+  "source_commit": "57c0614627e628077b0a7775eb66a7c490b422e0",
+  "preparation_manifest_sha256": "6691b5a6be971320b35b62e7da93fb0d28cff7c56afb91f94e111cfad66ee570",
+  "candidate_files": [
+    {
+      "path": "agents/openai.yaml",
+      "bytes": 293,
+      "sha256": "621ecacc03c3acf895d2bd5c87ed94461512e23a6e16cc321ae1818f0962d959"
+    },
+    {
+      "path": "SKILL.md",
+      "bytes": 7522,
+      "sha256": "ca0bba1cf60c0c9965f21b3201e39c3e5dcba3bd73888c2a2ee5d148dbb8c0c5"
+    }
+  ],
+  "distinct_cases": 8,
+  "executions": 8,
+  "pass": 8,
+  "fail": 0,
+  "blocked": 0,
+  "human_validation": true,
+  "personal_installation": false,
+  "results": "run-01/results.json",
+  "artifact_manifest_sha256": "a07eeb8f13992d39aac9ad5aeb245a6686e72fe7b46da0427c98f5698049edb2",
+  "limits": [
+    "Qualification limited to the frozen cases; no productivity gain measured.",
+    "Model and reasoning effort use configured defaults, exact values unavailable in observed CLI events.",
+    "Selection and complete tool-mediated loading are instrumented; no automatic body injection claim.",
+    "Each selection catalogue includes the candidate plus existing personal skills, not both uninstalled B candidates together.",
+    "No actual provider collection, CI pipeline, scanner or application test is claimed by these documentary evaluations."
+  ],
+  "candidate_body_commit": "658309c0e8d9d18e7d96396d8768ac90d8d16cca",
+  "candidate_package_commit": "658309c0e8d9d18e7d96396d8768ac90d8d16cca",
+  "owner_decision": "human-validation.json"
+}

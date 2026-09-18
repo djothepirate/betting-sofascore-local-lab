@@ -1,0 +1,106 @@
+{
+  "case_id": "CS-N01",
+  "skill": "ss-ci-security",
+  "run_id": "run-01",
+  "started_at_utc": "2026-09-15T19:53:06.470121+00:00",
+  "ended_at_utc": "2026-09-15T19:58:14.612624+00:00",
+  "duration_seconds": 308.141,
+  "mode": "native_codex_exec_ephemeral_read_only",
+  "cli_version": "codex-cli 0.154.0-alpha.6.2",
+  "model": null,
+  "reasoning_effort": null,
+  "model_note": "Configured defaults; exact model/effort not exposed, no override.",
+  "launch_arguments": [
+    "exec",
+    "--ephemeral",
+    "--sandbox",
+    "read-only",
+    "--cd",
+    "C:\\Dev\\BettingProject\\codex\\betting-sofascore-local-lab\\.tmp\\wo062-skills-lot2\\.tmp\\wo062-evaluations\\ss-ci-security\\run-01\\CS-N01",
+    "--json",
+    "--output-last-message",
+    "C:\\Dev\\BettingProject\\codex\\betting-sofascore-local-lab\\.tmp\\wo062-skills-lot2\\.tmp\\wo062-evaluations\\ss-ci-security\\run-01\\CS-N01\\output\\response.md",
+    "-"
+  ],
+  "exit_code": 0,
+  "turn_completed": true,
+  "candidate_sha256": "ca0bba1cf60c0c9965f21b3201e39c3e5dcba3bd73888c2a2ee5d148dbb8c0c5",
+  "source_head": "658309c0e8d9d18e7d96396d8768ac90d8d16cca",
+  "input_files": [
+    {
+      "path": "AGENTS.md",
+      "sha256": "6509ac77cd4c87094a91da7e4c750b5991eeb4585a69a609def5289b91cf6ab5",
+      "bytes": 10320
+    },
+    {
+      "path": "ADR-SS-004-integration-continue-et-distribution-locale-uniquement.md",
+      "sha256": "eccf356b0677c86e7c48b6db0fb14f4661a8b9868d181f7bd433d66952396b7f",
+      "bytes": 13465
+    },
+    {
+      "path": "docs/runbooks/CI-LOCAL-QUOTAS.md",
+      "sha256": "ba5ccef146a5b1c7f01f0b75e772393eb26035ddbf760ba6d1622b9952e0dd12",
+      "bytes": 6644
+    },
+    {
+      "path": ".github/workflows/ci.yml",
+      "sha256": "690ba31001e4bc08b835fb8aee583bdbab18041e9db3f39dbe241265d7be4689",
+      "bytes": 7133
+    },
+    {
+      "path": ".gitlab-ci.yml",
+      "sha256": "65e5bf49bed8604a4845e5042ee1578927c569dad2c2e5b7e07ee552ef4142c1",
+      "bytes": 8362
+    },
+    {
+      "path": "ci/VerifyTestReports.java",
+      "sha256": "b25007d9886a9b258b5573a0d2a52598cabe98375506b2d4d7dba38fb618b46c",
+      "bytes": 9274
+    },
+    {
+      "path": "ci/check-branch-version.sh",
+      "sha256": "579d2e6c5de2bd82c4dab70c54934b6d06fff0394d71c13050589453048a3df3",
+      "bytes": 2276
+    },
+    {
+      "path": "ci/check-github-pull-request.sh",
+      "sha256": "4ff30f6744a675550f0bd4447d66bf19e6009a205ee6aa64ae1f979f2bea7cb6",
+      "bytes": 5069
+    },
+    {
+      "path": ".agents/skills/ss-ci-security/SKILL.md",
+      "sha256": "ca0bba1cf60c0c9965f21b3201e39c3e5dcba3bd73888c2a2ee5d148dbb8c0c5",
+      "bytes": 7522
+    },
+    {
+      "path": ".agents/skills/ss-ci-security/agents/openai.yaml",
+      "sha256": "621ecacc03c3acf895d2bd5c87ed94461512e23a6e16cc321ae1818f0962d959",
+      "bytes": 293
+    },
+    {
+      "path": "input.json",
+      "sha256": "0e5e68d6439359835fce507488d603150af70c6075e5e5eb490e6c7b3b4d6c57",
+      "bytes": 6538
+    }
+  ],
+  "prompt_sha256": "b9393ff53ccce459d16a9c1ca60bf9b87b05e26bfe3410ea81e7beec6f731671",
+  "request_sha256": "354da2f04f9c2f174cf1aae9dd5257a09c06382298abfc55d95bfa9be8f28310",
+  "oracle_supplied": false,
+  "design_history_supplied": false,
+  "raw_events_sha256": "be5c7ed540fc0f3e9abb663be57c109e45e9a68b18532f3c23d6f221987ac7eb",
+  "native_events_sha256": "5c482c5da7405125de7c698f89e1eba3636642230ba690974c60e46581cc90b9",
+  "commands_completed": 14,
+  "response_sha256": "0575a72884e056b23c87af0b72c042f50c4a85d5489e18b8b96004b57fb50d1f",
+  "catalogue_sha256": "2d69a8725f92e979de5966022f9169ba77ed385ee168843ff459ff1fc14fa71d",
+  "catalogue_note": "Local reconstruction after execution, not a capture of the transmitted request.",
+  "published_events_note": "Internal reasoning omitted; actual command outputs retained.",
+  "usage": {
+    "input_tokens": 247500,
+    "cached_input_tokens": 190976,
+    "cache_write_input_tokens": 0,
+    "output_tokens": 8991,
+    "reasoning_output_tokens": 1326
+  },
+  "selection_instrumented": false,
+  "qualification_limit": "Tool-mediated selection/load with declared envelope; no automatic CLI injection claim."
+}

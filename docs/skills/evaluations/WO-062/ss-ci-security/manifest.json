@@ -1,0 +1,317 @@
+{
+  "schema": "wo062-ci-security-preparation-v1",
+  "status": "PREPARED_NOT_RUN",
+  "purpose": "EVALUATION_PREPARATION_NOT_INSTALLATION",
+  "source_commit": "57c0614627e628077b0a7775eb66a7c490b422e0",
+  "prepared_on": "2026-09-15",
+  "skill_name": "ss-ci-security",
+  "skill_exists": false,
+  "skill_sha256": null,
+  "case_count": 8,
+  "source_count": 25,
+  "source_worktree": "C:/Dev/BettingProject/codex/betting-sofascore-local-lab/.tmp/wo062-skills-lot2",
+  "hash_contract": "git_blob_oid identifies committed source bytes at source_commit; worktree_sha256 hashes exact local materialization, potentially CRLF. Preparation files hash exact UTF-8 LF bytes. The manifest does not hash itself. Every evaluation must freeze its actual source/candidate bytes separately.",
+  "scoping_source_note": "CS-N02 is fixed at its source_commit/blob and is absent from every case source_ids; later WO updates do not update test inputs.",
+  "evaluation_isolation": "Only allowlisted source files and the corresponding input_case plus its common provenance and exact candidate may reach business sessions. Oracle, inventory, evaluation plan, prior results and design history are excluded.",
+  "selection_method": "Four native ephemeral sessions, candidate isolated in .agents/skills, metadata discovery and full selected SKILL.md tool reads recorded. Exact generic selection_envelope in cases.json; no manual body injection. No claim of automatic CLI body injection.",
+  "sources": [
+    {
+      "id": "CS-N01",
+      "category": "normative",
+      "path": "AGENTS.md",
+      "use": "Statuts, localité, réseau CI, Git et définition de fini.",
+      "locator": "Invariants ; Workflow Git",
+      "git_blob_oid": "32be42cccccdf85f27d8b0e3846dec4a5c740ebf",
+      "bytes": 10320,
+      "worktree_sha256": "6509ac77cd4c87094a91da7e4c750b5991eeb4585a69a609def5289b91cf6ab5"
+    },
+    {
+      "id": "CS-N02",
+      "category": "scoping",
+      "path": "docs/work_orders/active/WO-SS-20260915-062-skills-lot2.md",
+      "use": "Contrat B2, huit cas et séparation préparation/évaluation ; source de cadrage seulement.",
+      "locator": "Sections 4.B2 et 6",
+      "git_blob_oid": "3e97ea512bb76063d42e732d6413c4f4c1cfb4c7",
+      "bytes": 27906,
+      "worktree_sha256": "acb62635bdd5030ea6b2c15d4dba35f2c8f1906760a510e64b7c75c39099f6b9"
+    },
+    {
+      "id": "CS-N03",
+      "category": "normative",
+      "path": "ADR-SS-004-integration-continue-et-distribution-locale-uniquement.md",
+      "use": "Décision courante amendée WO-061 ; tests, scans, distribution et promotion.",
+      "locator": "Décision et critères de conformité",
+      "git_blob_oid": "528227a7f3613ef8c3f2492db75c76c7ecfa2f02",
+      "bytes": 13465,
+      "worktree_sha256": "eccf356b0677c86e7c48b6db0fb14f4661a8b9868d181f7bd433d66952396b7f"
+    },
+    {
+      "id": "CS-P01",
+      "category": "procedure",
+      "path": "docs/runbooks/CI-LOCAL-QUOTAS.md",
+      "use": "Applicabilité des événements, preuves bloquantes, documentation et rétention.",
+      "locator": "Déclenchements ; Ce qui reste bloquant ; Conservation",
+      "git_blob_oid": "ad871a9c864714aa3c03f773424b8d68e9cc4961",
+      "bytes": 6644,
+      "worktree_sha256": "ba5ccef146a5b1c7f01f0b75e772393eb26035ddbf760ba6d1622b9952e0dd12"
+    },
+    {
+      "id": "CS-H01",
+      "category": "historical",
+      "path": "docs/validation/WO061-CI-LOCAL-QUOTAS-20260915.md",
+      "use": "Incident réel quota et qualification datée, jamais verdict du candidat courant.",
+      "locator": "État distant observé ; Qualification locale ; Revue indépendante",
+      "git_blob_oid": "35eafebea4867234807987f5f759809a15f800f2",
+      "bytes": 8620,
+      "worktree_sha256": "ae9f3868073a0699541351cc2b3767017045e2fd84e787ed4eef9f9c84f64ed7"
+    },
+    {
+      "id": "CS-I01",
+      "category": "implementation",
+      "path": ".github/workflows/ci.yml",
+      "use": "Jobs GitHub, SHA PR/source/extrait, upload obligatoire et absence de bundle/cache.",
+      "locator": "on ; linux ; windows ; always ; upload-artifact",
+      "git_blob_oid": "2de89e95b4394ee65d8b4011d458976fa3214dd7",
+      "bytes": 7133,
+      "worktree_sha256": "690ba31001e4bc08b835fb8aee583bdbab18041e9db3f39dbe241265d7be4689"
+    },
+    {
+      "id": "CS-I02",
+      "category": "implementation",
+      "path": ".gitlab-ci.yml",
+      "use": "Règles MR/tag/Web, Secret Detection, Javadoc manuelle et package tagué.",
+      "locator": "workflow ; .maven-java25 ; secret_detection ; package:release-local-only",
+      "git_blob_oid": "be03663d313a02d911f01c36fe86be9b37781bb3",
+      "bytes": 8362,
+      "worktree_sha256": "65e5bf49bed8604a4845e5042ee1578927c569dad2c2e5b7e07ee552ef4142c1"
+    },
+    {
+      "id": "CS-I03",
+      "category": "implementation",
+      "path": "ci/VerifyTestReports.java",
+      "use": "Rapports XML obligatoires, compteurs/testcase, intégration et sécurité XML.",
+      "locator": "reports ; summary ; xml",
+      "git_blob_oid": "5fbd149da090ce19dad2e87eceaad3397a27d7d1",
+      "bytes": 9274,
+      "worktree_sha256": "b25007d9886a9b258b5573a0d2a52598cabe98375506b2d4d7dba38fb618b46c"
+    },
+    {
+      "id": "CS-T01",
+      "category": "test",
+      "path": "ci/TestVerifyTestReports.java",
+      "use": "26 fixtures locales du garde de preuves ; preuve du comportement prévu sans les exécuter.",
+      "locator": "check ; fixtures de rapports absents, zéro, incohérents et DOCTYPE",
+      "git_blob_oid": "4623faf027877133430f2ef660f0e05203660542",
+      "bytes": 7936,
+      "worktree_sha256": "a134d2b7917cf096fbfa0a99581a659971740b400c8ae8fa79288d5a537993e8"
+    },
+    {
+      "id": "CS-I04",
+      "category": "implementation",
+      "path": "ci/check-branch-version.sh",
+      "use": "Mapping Maven manuel sans exception seed.",
+      "locator": "context ; expected_version",
+      "git_blob_oid": "e21d73f29c85a4a3665d0be77db442febcf7cc92",
+      "bytes": 2276,
+      "worktree_sha256": "579d2e6c5de2bd82c4dab70c54934b6d06fff0394d71c13050589453048a3df3"
+    },
+    {
+      "id": "CS-I05",
+      "category": "implementation",
+      "path": "ci/check-github-pull-request.sh",
+      "use": "WO vers même train, train vers main, bootstrap borné.",
+      "locator": "train_maven_version ; route WO ; bootstrap",
+      "git_blob_oid": "2134cba3f5583c84021404bd0138ca06b6ed570d",
+      "bytes": 5069,
+      "worktree_sha256": "4ff30f6744a675550f0bd4447d66bf19e6009a205ee6aa64ae1f979f2bea7cb6"
+    },
+    {
+      "id": "CS-I06",
+      "category": "implementation",
+      "path": "ci/check-gitlab-merge-request.sh",
+      "use": "Même projet, protection, version, graphe complet et SHA canonique exact.",
+      "locator": "source_sha ; shallow ; source_commit ; main_commit ; ancestry",
+      "git_blob_oid": "48bd00ffc5d8fa344d3a7f974bf78848342c9258",
+      "bytes": 5914,
+      "worktree_sha256": "ee4e9726bca89cf7e40715712fdddcbc7d97a26330bb98a93f27709cb66a1e1a"
+    },
+    {
+      "id": "CS-I07",
+      "category": "implementation",
+      "path": "ci/check-gitlab-pipeline-ref.sh",
+      "use": "Contexte exclusif tag/MR/branche et références déterminées.",
+      "locator": "pipeline_source ; tag_name ; merge_request_source",
+      "git_blob_oid": "16c67dbff5b29bf9539f6bf4533b8efdcdfc7237",
+      "bytes": 1720,
+      "worktree_sha256": "446ed4d6080e26f532b48cbceeae71acaaa50c43fd9638ccc58561ad5e994109"
+    },
+    {
+      "id": "CS-I08",
+      "category": "implementation",
+      "path": "ci/check-durable-snapshot-source.sh",
+      "use": "Garde autonome conservé : ne prouve pas l’existence de bundles automatiques.",
+      "locator": "feature exacte",
+      "git_blob_oid": "64cdd9c32d08c46cc633371cd898d9ac080b2a8c",
+      "bytes": 439,
+      "worktree_sha256": "aef6bd1e1f02b360e33bd93f9307dd476e7d517980f91d3527ca439998a93d0e"
+    },
+    {
+      "id": "CS-I09",
+      "category": "implementation",
+      "path": "ci/package-local-only.sh",
+      "use": "SHA extrait, seed borné, tag/ref/version, SBOM et provenance locale.",
+      "locator": "accept_train_seed ; PROMOTION_TAG_PROOF ; generate_sbom ; SHA256SUMS",
+      "git_blob_oid": "f111df03a258b501b4229f14c50f6671a684ca71",
+      "bytes": 20724,
+      "worktree_sha256": "62feb20b260bde46f3c9c6192d41ff1fc8878b412186c9df975379ab53127815"
+    },
+    {
+      "id": "CS-I10",
+      "category": "implementation",
+      "path": "ci/check-no-secrets.sh",
+      "use": "Scan HEAD et historique, exceptions par blobs, sorties sans valeur secrète.",
+      "locator": "is_vetted_synthetic_fixture ; scan_blob ; revision_range",
+      "git_blob_oid": "0f002a00cb7c7dab9f85f799d541450ed412aaf9",
+      "bytes": 5940,
+      "worktree_sha256": "e678431871b0aa3ca266802e0dbc859276985bc01fab81dc5df39912e21822ca"
+    },
+    {
+      "id": "CS-I11",
+      "category": "implementation",
+      "path": "ci/assert-local-only.sh",
+      "use": "Localité, profils fournisseur désactivés et refus déploiement.",
+      "locator": "assert_false ; application_config ; ci_files",
+      "git_blob_oid": "e59634d95b63f7e1d9b44dd306020efe4f9ff15a",
+      "bytes": 4472,
+      "worktree_sha256": "8d65883afa01ccd0ca7765b065cb0c36b9025c23e0681289137142678beb9313"
+    },
+    {
+      "id": "CS-P02",
+      "category": "procedure_implementation",
+      "path": "ci/run-dependency-check.sh",
+      "use": "Analyse OWASP explicite, datafeed public, erreurs bloquantes et seuil 11 d’observation.",
+      "locator": "data_directory ; failOnError ; failBuildOnCVSS ; exec",
+      "git_blob_oid": "680e559207a89ca27335da50e0c6d6f2d42b69e1",
+      "bytes": 871,
+      "worktree_sha256": "27e3ddad6ff4626a4e540fdf7dd3a482aa0886b6408ab55368bbed777469b55f"
+    },
+    {
+      "id": "CS-T02",
+      "category": "test",
+      "path": "ci/test-dependency-check.sh",
+      "use": "Fixture arguments/clé/cache/code Maven ; aucun scan réel.",
+      "locator": "assert_argument ; assert_no_key ; failure_status",
+      "git_blob_oid": "ec1c166d682b4506bfcbd173863e3fb8926b4879",
+      "bytes": 3165,
+      "worktree_sha256": "e214d82a875f4146711fe49adeff2c89792871b40e788923c6d8f649e83c5888"
+    },
+    {
+      "id": "CS-I12",
+      "category": "implementation",
+      "path": "pom.xml",
+      "use": "Versions, source Java et profils effectifs ; ne pas supposer des outils installés.",
+      "locator": "parent ; properties ; build ; profiles",
+      "git_blob_oid": "b6746484877941bc9b5fed47b9878ba3426b28ac",
+      "bytes": 16856,
+      "worktree_sha256": "e01e011e360fa847842d826a5bcf2960c34eae91da037e2a6f002e71a3513a46"
+    },
+    {
+      "id": "CS-T03",
+      "category": "test",
+      "path": "ci/test-release-reproducibility.sh",
+      "use": "Reproductibilité testée par fixtures avec Maven stub ; portée bornée.",
+      "locator": "FIXTURE_SBOM_MODE ; seed ; rc ; release ; byte comparison",
+      "git_blob_oid": "1f6b8ab0d4f322302ec8c84403acc5a9b6fb5339",
+      "bytes": 29766,
+      "worktree_sha256": "d9b7232e77157d134ce00ac71272dc450132b0c5518d535d4b996155d080e5a1"
+    },
+    {
+      "id": "CS-T04",
+      "category": "test",
+      "path": "ci/test-package-guards.sh",
+      "use": "Garde actuel d’événements, packaging, secret, rapports, documentation.",
+      "locator": "workflow checks ; mandatory jobs ; dependency-check fixtures",
+      "git_blob_oid": "ce92b3974eb5552cdd849e0707d87306976e5d95",
+      "bytes": 19921,
+      "worktree_sha256": "33676642a2eab148c6365286d723f39bf2c857187e11cfce56a02a4e86c22e01"
+    },
+    {
+      "id": "CS-P03",
+      "category": "routing",
+      "path": "docs/skills/local-lab/ss-verify/SKILL.md",
+      "use": "Frontière avec l’exécution de vérification du lot 1.",
+      "locator": "Choisir l’exécution ; Diagnostic et résultats",
+      "git_blob_oid": "1ace7771fe147a3ac53e7f5a1e874b50bedb8353",
+      "bytes": 3044,
+      "worktree_sha256": "9eccf7b71f664a7d74c543b53b09fb7e58b5b2d96efe304925884c80e353b4ca"
+    },
+    {
+      "id": "CS-I13",
+      "category": "implementation",
+      "path": "ci/check-branch-name.sh",
+      "use": "Syntaxe et contexte GitHub versus GitLab.",
+      "locator": "train_version ; accept_branch",
+      "git_blob_oid": "bccb15532410249a36556fe0ca1ba919876911af",
+      "bytes": 1901,
+      "worktree_sha256": "125bba2b222bbe3c0553ec72e221031c6266dc0c58e1e2ef7577639dbc4c50bf"
+    },
+    {
+      "id": "CS-P04",
+      "category": "procedure_implementation",
+      "path": "scripts/Verify-Local.ps1",
+      "use": "Commande Windows standard effective et code natif ; pas de supposition sur intégration.",
+      "locator": "Push-Location ; mvnw.cmd ; WithIntegrationTests",
+      "git_blob_oid": "d4a9c0ac85e0dda730d6466cd8bcbe4b412af98e",
+      "bytes": 6256,
+      "worktree_sha256": "068bf5a3826fe77c9bb8fe5984b0cd80fef44d04aee17008b4d8e021369ba3ff"
+    }
+  ],
+  "files": [
+    {
+      "path": "source-inventory.md",
+      "bytes": 13774,
+      "sha256": "a25025575f2092a57949254d048ce9f16166f77ae33b537a6b2c1da7d2583ec4"
+    },
+    {
+      "path": "cases.json",
+      "bytes": 5982,
+      "sha256": "f3bd8816542150595d5154ad8fd73ec5ab788e3191bde101048a9cbf7827371c"
+    },
+    {
+      "path": "inputs.json",
+      "bytes": 18594,
+      "sha256": "56bdf94e33effadec8b5d2a916d32ddb9f3c195c54858150f9fe59c2b8111e94"
+    },
+    {
+      "path": "oracle.md",
+      "bytes": 12995,
+      "sha256": "028c00ba707635f555bcc0217292642d1ee99f034e3841984aaf49def7a9350b"
+    },
+    {
+      "path": "evaluation-plan.md",
+      "bytes": 6995,
+      "sha256": "56f9cb3845e931b7e6bbd487fc9f30a9feb62fc23a32fe137cc87b939af15319"
+    }
+  ],
+  "case_ids": [
+    "CS-H01",
+    "CS-N01",
+    "CS-C01",
+    "CS-C02",
+    "CS-S01",
+    "CS-S02",
+    "CS-S03",
+    "CS-S04"
+  ],
+  "not_executed": [
+    "candidate authoring",
+    "behavioral evaluation",
+    "native selection sessions",
+    "application tests",
+    "real scanners",
+    "CI pipelines",
+    "publication",
+    "personal installation"
+  ]
+}
+

@@ -1,0 +1,166 @@
+{
+  "prepared_at_utc": "2026-09-15T23:24:57.333224+00:00",
+  "skill": "ss-windows-runtime",
+  "run_id": "run-04",
+  "candidate_version": "0.1.0-candidate.1",
+  "candidate_sha256": "b89925d5395238010bb0afe9c1e1a22b0aa5ec4e7d1fb9946c671d241e7976c6",
+  "source_head": "79d0f99c393a06d4d2e81749a55fb3bfbd222cc3",
+  "preparation_manifest_sha256": "d62271db051e64edc261f4812f4969511993e314fb07cb8f6d3115ae446e29f7",
+  "case_count": 2,
+  "cases": [
+    {
+      "case_id": "WR-H01",
+      "kind": "historical",
+      "execution_mode": "bounded_local_runtime",
+      "input_files": [
+        {
+          "path": "AGENTS.md",
+          "sha256": "6509ac77cd4c87094a91da7e4c750b5991eeb4585a69a609def5289b91cf6ab5",
+          "bytes": 10320
+        },
+        {
+          "path": "docs/validation/J9-WO044-JAVA-JAR-PATH-ARGUMENT-BOUNDARY-QUALIFICATION-20260904.md",
+          "sha256": "02008824316e688b6e42c523aaec45acf7b8edb776f49a9b11a822afd6a125a7",
+          "bytes": 8729
+        },
+        {
+          "path": "docs/validation/J9-WO053-CTRL-BREAK-DIAGNOSTIC-20260905.md",
+          "sha256": "8718125554e239925dcb8a785a4143dd8e9232f9d2cb554e91d0a6d864ff55fa",
+          "bytes": 7335
+        },
+        {
+          "path": "docs/validation/J9-WO053-REVIEW-HARDENING-20260905.md",
+          "sha256": "bacd897e4e4621e687935f9aa09f91469f69942869dbc3a95e8792fcdc8cf34e",
+          "bytes": 4179
+        },
+        {
+          "path": "scripts/wo036/WO036-CampaignTools.psm1",
+          "sha256": "43c7bc8eb242161729f6c18f8b0feb67c46715ce911b27572e4bd13e5956bd74",
+          "bytes": 176724
+        },
+        {
+          "path": "scripts/wo044/Invoke-WO044JavaJarArgumentBoundaryQualification.ps1",
+          "sha256": "59996b14941700523007e1f6b0784b102d65e088569f95e882340250d43565e4",
+          "bytes": 11212
+        },
+        {
+          "path": "scripts/wo044/Capture-WO044NativeArguments.ps1",
+          "sha256": "841428737a500fd9ccb1407d3c0822b56872f40b308568ee59ab48bae88b7818",
+          "bytes": 948
+        },
+        {
+          "path": "scripts/Tests/WO044JavaJarArgumentBoundary.Tests.ps1",
+          "sha256": "e1f661b0380c72b86374331b79419e6a2c8b551ebb0d195775f04aa731f1c29f",
+          "bytes": 4669
+        },
+        {
+          "path": "inputs/runtime-protocol.md",
+          "sha256": "b4748a356b881a8574a78156c0ac00c90f493874efe8303d40a7224c12d91a52",
+          "bytes": 10630
+        },
+        {
+          "path": ".agents/skills/ss-windows-runtime/SKILL.md",
+          "sha256": "b89925d5395238010bb0afe9c1e1a22b0aa5ec4e7d1fb9946c671d241e7976c6",
+          "bytes": 9217
+        },
+        {
+          "path": ".agents/skills/ss-windows-runtime/agents/openai.yaml",
+          "sha256": "3038015980952bc18b21f45f0d4af514b35a8841394e4b80824986b7e30ccd9f",
+          "bytes": 300
+        },
+        {
+          "path": "input.json",
+          "sha256": "d49bea0e90ca263b75840a198dd7abbdf67e2dc45541d5474d9e26b833812a57",
+          "bytes": 1475
+        },
+        {
+          "path": "inputs/windows-session-protocol.md",
+          "bytes": 6479,
+          "sha256": "3658c70cd4a00d2902ecac2e99e79a2daa0fb500ac2f59d8d861b744b97a6c73"
+        }
+      ],
+      "prompt_sha256": "fa04ddaebf0c1b1a65645c05aabec1ad62e729aefc168d3862afd201ac88b2ab",
+      "request_sha256": "5dbf0a9ae579add35c7430b9c86156fe4222154a91c0ad36986fd16600888287",
+      "oracle_supplied": false,
+      "design_history_supplied": false,
+      "candidate_body_manually_pasted": false
+    },
+    {
+      "case_id": "WR-N01",
+      "kind": "new_task",
+      "execution_mode": "bounded_local_runtime",
+      "input_files": [
+        {
+          "path": "AGENTS.md",
+          "sha256": "6509ac77cd4c87094a91da7e4c750b5991eeb4585a69a609def5289b91cf6ab5",
+          "bytes": 10320
+        },
+        {
+          "path": "scripts/Preflight-Local.ps1",
+          "sha256": "2c8480640262a3e7faa80d7ac194867666f520f0b9048730d493e3b80fa1e318",
+          "bytes": 1940
+        },
+        {
+          "path": "scripts/Verify-Local.ps1",
+          "sha256": "068bf5a3826fe77c9bb8fe5984b0cd80fef44d04aee17008b4d8e021369ba3ff",
+          "bytes": 6256
+        },
+        {
+          "path": "pom.xml",
+          "sha256": "e01e011e360fa847842d826a5bcf2960c34eae91da037e2a6f002e71a3513a46",
+          "bytes": 16856
+        },
+        {
+          "path": "mvnw.cmd",
+          "sha256": "d1c7f9e92c2ea256572d33996318bc550726ef2c987a88fb4d783e736ea068ce",
+          "bytes": 172
+        },
+        {
+          "path": ".mvn/wrapper/maven-wrapper.properties",
+          "sha256": "51b221ede4e074d19bb44d6d485bb7b298e77874572a09697aba0a9e234e0745",
+          "bytes": 259
+        },
+        {
+          "path": "src/main/resources/application.yml",
+          "sha256": "9036e582ba1fe78fb934669853a91b7277511d099558352c97f28792f1821e28",
+          "bytes": 12048
+        },
+        {
+          "path": "inputs/runtime-protocol.md",
+          "sha256": "b4748a356b881a8574a78156c0ac00c90f493874efe8303d40a7224c12d91a52",
+          "bytes": 10630
+        },
+        {
+          "path": "inputs/fixtures/NativeProbe.java",
+          "sha256": "4e29c5867eba0fb76518de2307391449c83450449bea0393179738505c69bc8b",
+          "bytes": 1009
+        },
+        {
+          "path": ".agents/skills/ss-windows-runtime/SKILL.md",
+          "sha256": "b89925d5395238010bb0afe9c1e1a22b0aa5ec4e7d1fb9946c671d241e7976c6",
+          "bytes": 9217
+        },
+        {
+          "path": ".agents/skills/ss-windows-runtime/agents/openai.yaml",
+          "sha256": "3038015980952bc18b21f45f0d4af514b35a8841394e4b80824986b7e30ccd9f",
+          "bytes": 300
+        },
+        {
+          "path": "input.json",
+          "sha256": "76687203add1b1059600052f0f8809cd915224628738a937733b7f69e18374b7",
+          "bytes": 1643
+        },
+        {
+          "path": "inputs/windows-session-protocol.md",
+          "bytes": 6479,
+          "sha256": "3658c70cd4a00d2902ecac2e99e79a2daa0fb500ac2f59d8d861b744b97a6c73"
+        }
+      ],
+      "prompt_sha256": "526d0d877ac644775f25742231f5f870bbe3bfacfb729e66a59a933082c10c5b",
+      "request_sha256": "9a8ae7919086b621572be081ccad12740d586fb5dbf586fe86614300fdae30ec",
+      "oracle_supplied": false,
+      "design_history_supplied": false,
+      "candidate_body_manually_pasted": false
+    }
+  ]
+}

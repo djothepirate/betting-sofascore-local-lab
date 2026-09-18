@@ -1,0 +1,350 @@
+{
+  "prepared_at_utc": "2026-09-15T19:50:35.727072+00:00",
+  "skill": "ss-ci-security",
+  "run_id": "run-01",
+  "candidate_version": "0.1.0-candidate.1",
+  "candidate_sha256": "ca0bba1cf60c0c9965f21b3201e39c3e5dcba3bd73888c2a2ee5d148dbb8c0c5",
+  "source_head": "658309c0e8d9d18e7d96396d8768ac90d8d16cca",
+  "preparation_manifest_sha256": "6691b5a6be971320b35b62e7da93fb0d28cff7c56afb91f94e111cfad66ee570",
+  "case_count": 8,
+  "cases": [
+    {
+      "case_id": "CS-H01",
+      "kind": "historical",
+      "input_files": [
+        {
+          "path": "ADR-SS-004-integration-continue-et-distribution-locale-uniquement.md",
+          "sha256": "eccf356b0677c86e7c48b6db0fb14f4661a8b9868d181f7bd433d66952396b7f",
+          "bytes": 13465
+        },
+        {
+          "path": "docs/runbooks/CI-LOCAL-QUOTAS.md",
+          "sha256": "ba5ccef146a5b1c7f01f0b75e772393eb26035ddbf760ba6d1622b9952e0dd12",
+          "bytes": 6644
+        },
+        {
+          "path": "docs/validation/WO061-CI-LOCAL-QUOTAS-20260915.md",
+          "sha256": "ae9f3868073a0699541351cc2b3767017045e2fd84e787ed4eef9f9c84f64ed7",
+          "bytes": 8620
+        },
+        {
+          "path": ".github/workflows/ci.yml",
+          "sha256": "690ba31001e4bc08b835fb8aee583bdbab18041e9db3f39dbe241265d7be4689",
+          "bytes": 7133
+        },
+        {
+          "path": ".gitlab-ci.yml",
+          "sha256": "65e5bf49bed8604a4845e5042ee1578927c569dad2c2e5b7e07ee552ef4142c1",
+          "bytes": 8362
+        },
+        {
+          "path": ".agents/skills/ss-ci-security/SKILL.md",
+          "sha256": "ca0bba1cf60c0c9965f21b3201e39c3e5dcba3bd73888c2a2ee5d148dbb8c0c5",
+          "bytes": 7522
+        },
+        {
+          "path": ".agents/skills/ss-ci-security/agents/openai.yaml",
+          "sha256": "621ecacc03c3acf895d2bd5c87ed94461512e23a6e16cc321ae1818f0962d959",
+          "bytes": 293
+        },
+        {
+          "path": "input.json",
+          "sha256": "01d9f4273164727c1a132576c937b7c930df8176c16ba00265368260dbd0007c",
+          "bytes": 681
+        }
+      ],
+      "prompt_sha256": "ccec12f76a6439f6e85628445b0dc99ec2970121a2ef935aa7289f946d32d837",
+      "request_sha256": "86d85e349bfc34feeb964225445076b7372bd6d1b99ef0d650aace849ffefa2f",
+      "oracle_supplied": false,
+      "design_history_supplied": false,
+      "candidate_body_manually_pasted": false
+    },
+    {
+      "case_id": "CS-N01",
+      "kind": "new_task",
+      "input_files": [
+        {
+          "path": "AGENTS.md",
+          "sha256": "6509ac77cd4c87094a91da7e4c750b5991eeb4585a69a609def5289b91cf6ab5",
+          "bytes": 10320
+        },
+        {
+          "path": "ADR-SS-004-integration-continue-et-distribution-locale-uniquement.md",
+          "sha256": "eccf356b0677c86e7c48b6db0fb14f4661a8b9868d181f7bd433d66952396b7f",
+          "bytes": 13465
+        },
+        {
+          "path": "docs/runbooks/CI-LOCAL-QUOTAS.md",
+          "sha256": "ba5ccef146a5b1c7f01f0b75e772393eb26035ddbf760ba6d1622b9952e0dd12",
+          "bytes": 6644
+        },
+        {
+          "path": ".github/workflows/ci.yml",
+          "sha256": "690ba31001e4bc08b835fb8aee583bdbab18041e9db3f39dbe241265d7be4689",
+          "bytes": 7133
+        },
+        {
+          "path": ".gitlab-ci.yml",
+          "sha256": "65e5bf49bed8604a4845e5042ee1578927c569dad2c2e5b7e07ee552ef4142c1",
+          "bytes": 8362
+        },
+        {
+          "path": "ci/VerifyTestReports.java",
+          "sha256": "b25007d9886a9b258b5573a0d2a52598cabe98375506b2d4d7dba38fb618b46c",
+          "bytes": 9274
+        },
+        {
+          "path": "ci/check-branch-version.sh",
+          "sha256": "579d2e6c5de2bd82c4dab70c54934b6d06fff0394d71c13050589453048a3df3",
+          "bytes": 2276
+        },
+        {
+          "path": "ci/check-github-pull-request.sh",
+          "sha256": "4ff30f6744a675550f0bd4447d66bf19e6009a205ee6aa64ae1f979f2bea7cb6",
+          "bytes": 5069
+        },
+        {
+          "path": ".agents/skills/ss-ci-security/SKILL.md",
+          "sha256": "ca0bba1cf60c0c9965f21b3201e39c3e5dcba3bd73888c2a2ee5d148dbb8c0c5",
+          "bytes": 7522
+        },
+        {
+          "path": ".agents/skills/ss-ci-security/agents/openai.yaml",
+          "sha256": "621ecacc03c3acf895d2bd5c87ed94461512e23a6e16cc321ae1818f0962d959",
+          "bytes": 293
+        },
+        {
+          "path": "input.json",
+          "sha256": "0e5e68d6439359835fce507488d603150af70c6075e5e5eb490e6c7b3b4d6c57",
+          "bytes": 6538
+        }
+      ],
+      "prompt_sha256": "b9393ff53ccce459d16a9c1ca60bf9b87b05e26bfe3410ea81e7beec6f731671",
+      "request_sha256": "354da2f04f9c2f174cf1aae9dd5257a09c06382298abfc55d95bfa9be8f28310",
+      "oracle_supplied": false,
+      "design_history_supplied": false,
+      "candidate_body_manually_pasted": false
+    },
+    {
+      "case_id": "CS-C01",
+      "kind": "counterexample",
+      "input_files": [
+        {
+          "path": "AGENTS.md",
+          "sha256": "6509ac77cd4c87094a91da7e4c750b5991eeb4585a69a609def5289b91cf6ab5",
+          "bytes": 10320
+        },
+        {
+          "path": "ADR-SS-004-integration-continue-et-distribution-locale-uniquement.md",
+          "sha256": "eccf356b0677c86e7c48b6db0fb14f4661a8b9868d181f7bd433d66952396b7f",
+          "bytes": 13465
+        },
+        {
+          "path": "docs/runbooks/CI-LOCAL-QUOTAS.md",
+          "sha256": "ba5ccef146a5b1c7f01f0b75e772393eb26035ddbf760ba6d1622b9952e0dd12",
+          "bytes": 6644
+        },
+        {
+          "path": ".github/workflows/ci.yml",
+          "sha256": "690ba31001e4bc08b835fb8aee583bdbab18041e9db3f39dbe241265d7be4689",
+          "bytes": 7133
+        },
+        {
+          "path": ".gitlab-ci.yml",
+          "sha256": "65e5bf49bed8604a4845e5042ee1578927c569dad2c2e5b7e07ee552ef4142c1",
+          "bytes": 8362
+        },
+        {
+          "path": "ci/VerifyTestReports.java",
+          "sha256": "b25007d9886a9b258b5573a0d2a52598cabe98375506b2d4d7dba38fb618b46c",
+          "bytes": 9274
+        },
+        {
+          "path": "ci/TestVerifyTestReports.java",
+          "sha256": "a134d2b7917cf096fbfa0a99581a659971740b400c8ae8fa79288d5a537993e8",
+          "bytes": 7936
+        },
+        {
+          "path": "docs/validation/WO061-CI-LOCAL-QUOTAS-20260915.md",
+          "sha256": "ae9f3868073a0699541351cc2b3767017045e2fd84e787ed4eef9f9c84f64ed7",
+          "bytes": 8620
+        },
+        {
+          "path": ".agents/skills/ss-ci-security/SKILL.md",
+          "sha256": "ca0bba1cf60c0c9965f21b3201e39c3e5dcba3bd73888c2a2ee5d148dbb8c0c5",
+          "bytes": 7522
+        },
+        {
+          "path": ".agents/skills/ss-ci-security/agents/openai.yaml",
+          "sha256": "621ecacc03c3acf895d2bd5c87ed94461512e23a6e16cc321ae1818f0962d959",
+          "bytes": 293
+        },
+        {
+          "path": "input.json",
+          "sha256": "baa0c8d274167fc3ce837c6fa25a4fbf7dcff46cfc9d0b73db864a7050e8e6c6",
+          "bytes": 4934
+        }
+      ],
+      "prompt_sha256": "293e450eceea10343ff569bb79ac0d4149df9ddf2714d80a64b13929575381d0",
+      "request_sha256": "48556947741910d5aa1a856d25be09172c27a36914e00221ffb53a3c3d3904a6",
+      "oracle_supplied": false,
+      "design_history_supplied": false,
+      "candidate_body_manually_pasted": false
+    },
+    {
+      "case_id": "CS-C02",
+      "kind": "counterexample",
+      "input_files": [
+        {
+          "path": "ADR-SS-004-integration-continue-et-distribution-locale-uniquement.md",
+          "sha256": "eccf356b0677c86e7c48b6db0fb14f4661a8b9868d181f7bd433d66952396b7f",
+          "bytes": 13465
+        },
+        {
+          "path": ".gitlab-ci.yml",
+          "sha256": "65e5bf49bed8604a4845e5042ee1578927c569dad2c2e5b7e07ee552ef4142c1",
+          "bytes": 8362
+        },
+        {
+          "path": "ci/check-gitlab-merge-request.sh",
+          "sha256": "ee4e9726bca89cf7e40715712fdddcbc7d97a26330bb98a93f27709cb66a1e1a",
+          "bytes": 5914
+        },
+        {
+          "path": "ci/check-gitlab-pipeline-ref.sh",
+          "sha256": "446ed4d6080e26f532b48cbceeae71acaaa50c43fd9638ccc58561ad5e994109",
+          "bytes": 1720
+        },
+        {
+          "path": "ci/package-local-only.sh",
+          "sha256": "62feb20b260bde46f3c9c6192d41ff1fc8878b412186c9df975379ab53127815",
+          "bytes": 20724
+        },
+        {
+          "path": "ci/check-no-secrets.sh",
+          "sha256": "e678431871b0aa3ca266802e0dbc859276985bc01fab81dc5df39912e21822ca",
+          "bytes": 5940
+        },
+        {
+          "path": "ci/run-dependency-check.sh",
+          "sha256": "27e3ddad6ff4626a4e540fdf7dd3a482aa0886b6408ab55368bbed777469b55f",
+          "bytes": 871
+        },
+        {
+          "path": "ci/test-dependency-check.sh",
+          "sha256": "e214d82a875f4146711fe49adeff2c89792871b40e788923c6d8f649e83c5888",
+          "bytes": 3165
+        },
+        {
+          "path": "ci/test-release-reproducibility.sh",
+          "sha256": "d9b7232e77157d134ce00ac71272dc450132b0c5518d535d4b996155d080e5a1",
+          "bytes": 29766
+        },
+        {
+          "path": ".agents/skills/ss-ci-security/SKILL.md",
+          "sha256": "ca0bba1cf60c0c9965f21b3201e39c3e5dcba3bd73888c2a2ee5d148dbb8c0c5",
+          "bytes": 7522
+        },
+        {
+          "path": ".agents/skills/ss-ci-security/agents/openai.yaml",
+          "sha256": "621ecacc03c3acf895d2bd5c87ed94461512e23a6e16cc321ae1818f0962d959",
+          "bytes": 293
+        },
+        {
+          "path": "input.json",
+          "sha256": "655b8b0b1b999dd01eda1f30162fa1010f585c0ab92c3157128e559b2e80e6ba",
+          "bytes": 5869
+        }
+      ],
+      "prompt_sha256": "6e4256dfce39a3a6537c5743b63098b733516523f98f2946650f3f60f1f1c433",
+      "request_sha256": "77b7034e5bf603ea03f0080dc229eee44f9d044eb01339092cc869c4f8a06d3b",
+      "oracle_supplied": false,
+      "design_history_supplied": false,
+      "candidate_body_manually_pasted": false
+    },
+    {
+      "case_id": "CS-S01",
+      "kind": "selection_explicit",
+      "input_files": [
+        {
+          "path": ".agents/skills/ss-ci-security/SKILL.md",
+          "sha256": "ca0bba1cf60c0c9965f21b3201e39c3e5dcba3bd73888c2a2ee5d148dbb8c0c5",
+          "bytes": 7522
+        },
+        {
+          "path": ".agents/skills/ss-ci-security/agents/openai.yaml",
+          "sha256": "621ecacc03c3acf895d2bd5c87ed94461512e23a6e16cc321ae1818f0962d959",
+          "bytes": 293
+        }
+      ],
+      "prompt_sha256": "106dd1d2354eeb7e70eb0385ea83272b444b909519ea083f32e5ab543d6004f1",
+      "request_sha256": "ff8e901077b06b1871091d6150a7690d3d07dea92370c76768a5072a836949af",
+      "oracle_supplied": false,
+      "design_history_supplied": false,
+      "candidate_body_manually_pasted": false
+    },
+    {
+      "case_id": "CS-S02",
+      "kind": "selection_implicit",
+      "input_files": [
+        {
+          "path": ".agents/skills/ss-ci-security/SKILL.md",
+          "sha256": "ca0bba1cf60c0c9965f21b3201e39c3e5dcba3bd73888c2a2ee5d148dbb8c0c5",
+          "bytes": 7522
+        },
+        {
+          "path": ".agents/skills/ss-ci-security/agents/openai.yaml",
+          "sha256": "621ecacc03c3acf895d2bd5c87ed94461512e23a6e16cc321ae1818f0962d959",
+          "bytes": 293
+        }
+      ],
+      "prompt_sha256": "98ad9c4b0ea278cb51b9971ce4aee19cfe6036d6d0720902ce0742acbe0d4dd4",
+      "request_sha256": "9617d896891f454f1191501daa48674a83028f1cb2fadd7b373b2ebf293238a0",
+      "oracle_supplied": false,
+      "design_history_supplied": false,
+      "candidate_body_manually_pasted": false
+    },
+    {
+      "case_id": "CS-S03",
+      "kind": "selection_lot1",
+      "input_files": [
+        {
+          "path": ".agents/skills/ss-ci-security/SKILL.md",
+          "sha256": "ca0bba1cf60c0c9965f21b3201e39c3e5dcba3bd73888c2a2ee5d148dbb8c0c5",
+          "bytes": 7522
+        },
+        {
+          "path": ".agents/skills/ss-ci-security/agents/openai.yaml",
+          "sha256": "621ecacc03c3acf895d2bd5c87ed94461512e23a6e16cc321ae1818f0962d959",
+          "bytes": 293
+        }
+      ],
+      "prompt_sha256": "fbd1ea2069345865249737d2af9afc1cc6633811069c70ca1ae0966d2adeda49",
+      "request_sha256": "5914f1794506078e93d87f0ce1c39bb88671d0a15b5bab822fcd6ca3f99a5a6a",
+      "oracle_supplied": false,
+      "design_history_supplied": false,
+      "candidate_body_manually_pasted": false
+    },
+    {
+      "case_id": "CS-S04",
+      "kind": "selection_other_repository",
+      "input_files": [
+        {
+          "path": ".agents/skills/ss-ci-security/SKILL.md",
+          "sha256": "ca0bba1cf60c0c9965f21b3201e39c3e5dcba3bd73888c2a2ee5d148dbb8c0c5",
+          "bytes": 7522
+        },
+        {
+          "path": ".agents/skills/ss-ci-security/agents/openai.yaml",
+          "sha256": "621ecacc03c3acf895d2bd5c87ed94461512e23a6e16cc321ae1818f0962d959",
+          "bytes": 293
+        }
+      ],
+      "prompt_sha256": "4c33ac53a26150892d5ece9e4a3f4549c4a605523b3261821c4e125e592a9dcf",
+      "request_sha256": "6a202b1a42eee7d318036933b3bff801d9cf4f36e4e59de0d4c834207ad9c2b3",
+      "oracle_supplied": false,
+      "design_history_supplied": false,
+      "candidate_body_manually_pasted": false
+    }
+  ]
+}

@@ -1,0 +1,90 @@
+{
+  "schema": "wo062-independent-case-review-v1",
+  "case_id": "JM-H01",
+  "run_id": "run-05",
+  "skill": "ss-java-module",
+  "reviewer": "/root/c5_blocked_reporting",
+  "reviewed_on": "2026-09-16",
+  "verdict": "BLOCKED",
+  "behavioral_verdict": "NOT_ASSESSED",
+  "technical_execution_verdict": "BLOCKED_BEFORE_MODEL_COMMAND",
+  "candidate_version": "0.1.0-candidate.4",
+  "candidate_sha256": "f1f6533f678c5cdb4ae6a5bc9c996c062af419005e4f4cd6104a51c91e442d97",
+  "candidate_body_commit": "966062d677c30e7ce67b61454bd54695497064f5",
+  "response_sha256": null,
+  "freeze_sha256": "7ec0d8ea7632ed43d202f2d7807ce75c9a335d28653b36de0167e94f9d2a419d",
+  "native_events_sha256": "e6096f9352bcf1daa6fbf3248777a3825282dd538d34db809c8562665d59478b",
+  "trace_sha256": "f1cf6851f4c85b45d6a02f65e0068a284d9fa95c8b985970c5bace82f50e6aec",
+  "preflight_sha256": "a975e1b4cfa71ea0a6ae0f1c5ad275baf40d259401ed8cd236204d496e452fa4",
+  "source_head": "d0021090d9cf718d5b338bbf8d06109586e4518a",
+  "policy_source_commit": "6648dd423e556b5248b8793a539ae85a7680f9bc",
+  "frozen_at_utc": "2026-09-16T01:05:55.400441+00:00",
+  "frozen_before_review": true,
+  "turn_started_observed": true,
+  "turn_completed_observed": false,
+  "model_tool_command_count": 0,
+  "model_usage_observed": false,
+  "final_response_observed": false,
+  "candidate_behavior_assessed": false,
+  "oracle_supplied_to_session": false,
+  "prior_answers_supplied_to_session": false,
+  "automatic_retry": false,
+  "criteria": [
+    {
+      "criterion_id": "integrity",
+      "required": true,
+      "result": "PASS",
+      "evidence": "Les 11 pièces présentes correspondent exactement au freeze du 2026-09-16T01:05:55.400441Z : mêmes tailles et SHA-256. Aucun response.md ni catalogue.txt n'est fabriqué.",
+      "limit": "Le freeze atteste les artefacts produits par le collecteur ; il ne transforme pas une absence de réponse en contenu évalué."
+    },
+    {
+      "criterion_id": "configured-service-transport",
+      "required": true,
+      "result": "BLOCKED",
+      "evidence": "native-events.json enregistre thread.started et turn.started, puis les refus WebSocket os error 10013 et les reprises HTTP. stderr.log confirme le même enchaînement. trace.json marque TimeoutExpired, turn_completed=false et collector_exit_code=1 après 900.266 s.",
+      "limit": "Ces événements client ne permettent pas d'attribuer la panne au candidat, aux sources de cas ou à un traitement distant non observable."
+    },
+    {
+      "criterion_id": "candidate-tool-read",
+      "required": true,
+      "result": "BLOCKED",
+      "evidence": "trace.json indique commands_completed=0 et native-events.json ne contient aucun command_execution. Aucune lecture outillée du SKILL.md exact n'est observée.",
+      "limit": "Le candidat présent dans l'entrée gelée conserve son SHA, mais sa présence ne vaut pas chargement par le modèle."
+    },
+    {
+      "criterion_id": "independence-and-scope",
+      "required": true,
+      "result": "PASS",
+      "evidence": "request.txt liste le candidat et les seules sources autorisées ; trace.json porte oracle_supplied=false et design_history_supplied=false. Aucun outil, mutation, build, réseau fournisseur ou navigateur n'est observé.",
+      "limit": "L'absence de commande empêche toute vérification comportementale de la sélection ou de l'usage du skill."
+    },
+    {
+      "criterion_id": "JM-H01-semantic-criteria",
+      "required": true,
+      "result": "BLOCKED",
+      "evidence": "Aucune réponse finale, aucune métrique d'usage et aucune commande du modèle n'ont été collectées.",
+      "limit": "Les critères de frontière Playwright de JM-H01 ne peuvent être marqués ni PASS ni FAIL ; les PASS .3 restent strictement historiques."
+    },
+    {
+      "criterion_id": "retry-bound",
+      "required": true,
+      "result": "PASS",
+      "evidence": "La trace, le freeze et l'incident C5 conservent une seule tentative ; aucun nouveau lancement n'a suivi l'expiration. L'autorisation C5 fixe automatic_retry=false et max_model_sessions=10.",
+      "limit": "Une recette fraîche nécessite une décision propriétaire distincte après rétablissement observé du transport."
+    }
+  ],
+  "transport_evidence": {
+    "websocket_error": "socket access denied (os error 10013)",
+    "https_fallback": "Connection failed: error sending request"
+  },
+  "limitations": [
+    "Aucun comportement de ss-java-module 0.1.0-candidate.4 n'est évalué par cette tentative.",
+    "Aucun oracle ni réponse antérieure n'a été donné à la session, mais l'absence de réponse interdit un verdict de qualité du skill.",
+    "Le timeout externe ne démontre ni une régression applicative ni une indisponibilité des sources locales.",
+    "Cette revue ne qualifie ni build, ni test applicatif, ni base, ni collecte fournisseur, ni validation humaine ou installation personnelle."
+  ],
+  "application_tests_executed": false,
+  "model_sessions_launched_by_reviewer": 0,
+  "source_or_candidate_modified": false,
+  "prior_runs_unchanged": true
+}

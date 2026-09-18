@@ -1,0 +1,3 @@
+Test de sélection uniquement. Pour la demande suivante, indique le skill à utiliser et pourquoi, ou aucun. Tu peux lire le catalogue et le SKILL.md choisi. Arrête-toi à la décision de routage, sans exécuter la tâche métier ni lancer réseau, application, build, DB ou Docker.
+
+Dans le Local Lab, vérifie la cohérence des XML Surefire/Failsafe de ce build et explique pourquoi Maven semble vert. Je ne demande aucune mesure fournisseur.

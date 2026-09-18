@@ -1,0 +1,57 @@
+{
+  "schema": "wo062-c4-publisher-static-review-v1",
+  "reviewer": "/root/jm_selection_review",
+  "reviewed_at_utc": "2026-09-15T23:42:47.384827+00:00",
+  "source_head": "cb67d18c66aaa3989bfc6121ed7b51945fd95f9f",
+  "verdict": "FAIL",
+  "scope": "Revue statique du publisher C4, pas verdict des skills ni validation des preuves encore en cours.",
+  "publisher": {
+    "path": ".tmp/publish_c4.py",
+    "bytes": 8292,
+    "sha256": "4e31efd63d9f0164e425dc5983454c30e3bb47ad9457511bb30582f389e490a8"
+  },
+  "reused_publisher": {
+    "path": ".tmp/publish_c_run02.py",
+    "sha256": "e1596d4c0731d1e71a521deb173d532aa6f44c14c9da25164e1e2013a871f5cd"
+  },
+  "positive_checks": [
+    "Entrées et préflight comparés taille/SHA ; gel vérifié par inventaire exact et hashes ; trace liée à cas/skill/run/candidat/source/entrées ; prompt/requête/événements/réponse rapprochés.",
+    "Journal brut vérifié, un thread par cas, export natif identique après seul retrait reasoning, compte de commandes et dernier message final contrôlés ; PASS refusé si collecte incomplète.",
+    "Java courant copié uniquement depuis les huit cas run-04, aucun transfert des PASS .2 vers .3 ; anciens runs01-03 lus sans écriture.",
+    "Aucun lancement de modèle : import local, adaptation de fonction Python et vérifications Git en lecture seule ; --publish est requis pour les écritures finales ; validation humaine/installation toujours false."
+  ],
+  "findings": [
+    {
+      "id": "P2-review-freeze-run-binding",
+      "priority": "P2",
+      "file": ".tmp/publish_c4.py",
+      "line": 45,
+      "reused_file": ".tmp/publish_c_run02.py",
+      "reused_line": 213,
+      "problem": "La revue est liée au case_id, candidat et hash de réponse, mais pas à run_id ; freeze_sha256 est optionnel. Une ancienne revue Windows .1 BLOCKED sans réponse peut être acceptée pour un nouveau gel sans réponse du même cas.",
+      "requested_change": "Exiger run_id=run-04 et un rattachement exact au gel courant, ou un ensemble obligatoire de hashes de traces équivalent ; refuser une revue qui ne permet pas ce rattachement."
+    },
+    {
+      "id": "P2-windows-carry-and-count-contract",
+      "priority": "P2",
+      "file": ".tmp/publish_c4.py",
+      "line": 51,
+      "problem": "Les six lignes reprises sont celles de current-results run-03 sans exiger les six identités C01/C02/S01-S04, source_run run-01, verdict PASS, même candidat ni concordance avec les résultats/revues sources. La seule assertion finale porte sur huit identités distinctes. Les totaux25Java/13Windows ne sont pas imposés.",
+      "requested_change": "Valider la liste exacte des six reprises et leurs bindings vers run-01 ; imposer les identités/provenances/compteurs historiques et les totaux attendus25/13, avec huit exécutions courantes Java .3."
+    },
+    {
+      "id": "P2-partial-publication",
+      "priority": "P2",
+      "file": ".tmp/publish_c4.py",
+      "line": 70,
+      "problem": "Le répertoire final est créé avant copie complète ; qualification.json est écrite directement par write_bytes. Une interruption/erreur laisse run-04 incomplet refusé à la reprise, et peut tronquer la qualification existante.",
+      "requested_change": "Écrire/valider en staging, revérifier les empreintes avant promotion et remplacer qualification.json atomiquement ; restaurer seulement le nouveau répertoire en staging si la promotion finale échoue."
+    }
+  ],
+  "counter_scope": "total=len(allold)+len(cases) ; arithmétique25/13 seulement si ancien historique17Java/11Windows cohérent. Le script ne rend pas ces valeurs obligatoires.",
+  "limitations": [
+    "Script non exécuté ni importé ; aucun test simulé ou résultat réel publié.",
+    "Seuls le script et les fonctions réutilisées nécessaires sont lus ; aucun audit des preuves de cas en cours.",
+    "Aucun fichier suivi, candidat, source, revue de cas ou script modifié ; seuls les présents rapports .tmp sont écrits."
+  ]
+}

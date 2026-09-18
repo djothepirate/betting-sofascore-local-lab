@@ -1,0 +1,7 @@
+2026-09-15T23:28:49.597518Z  WARN codex_skills::interface: ignoring interface.icon_small: icon path with '..' must resolve under plugin assets/
+2026-09-15T23:28:49.597659Z  WARN codex_skills::interface: ignoring interface.icon_large: icon path with '..' must resolve under plugin assets/
+2026-09-15T23:28:49.655226Z  WARN codex_core::shell_snapshot: Failed to create shell snapshot for powershell: Shell snapshot not supported yet for PowerShell
+2026-09-15T23:28:50.525333Z  WARN codex_skills::interface: ignoring interface.icon_small: icon path with '..' must resolve under plugin assets/
+2026-09-15T23:28:50.525419Z  WARN codex_skills::interface: ignoring interface.icon_large: icon path with '..' must resolve under plugin assets/
+2026-09-15T23:29:12.817307Z ERROR codex_core::tools::router: error=collab spawn failed: no thread with id: 01a0a766-d4d6-7e21-8c04-1b6beffd8dfc
+2026-09-15T23:37:57.434500Z  WARN codex_core::hook_runtime: after_agent hook failed; continuing turn_id=01a0a766-d69e-7af3-b796-509e4614c175 hook_name=legacy_notify error=Nom de fichier ou extension trop long. (os error 206)

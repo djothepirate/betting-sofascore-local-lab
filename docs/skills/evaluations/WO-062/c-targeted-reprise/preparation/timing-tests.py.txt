@@ -1,0 +1,30 @@
+import pathlib,importlib.util,json,sys,uuid,hashlib,subprocess
+r=pathlib.Path(__file__).resolve().parent.parent
+spec=importlib.util.spec_from_file_location('timed',r/'.tmp/wo062_evaluate_c3.py');m=importlib.util.module_from_spec(spec);spec.loader.exec_module(m)
+base=r/'.tmp/c3-timing-tests'/str(uuid.uuid4());base.mkdir(parents=True)
+results=[]
+for name,source,code,timeout in [
+ ('complete',"import json,time; print(json.dumps({'type':'turn.started'}),flush=True); time.sleep(.04); print(json.dumps({'type':'turn.completed'}),flush=True)",0,5),
+ ('native_failure',"import sys; print('{}',flush=True); sys.exit(7)",7,5),
+ ('timeout',"import time; print('{}',flush=True); time.sleep(10)",None,.2),
+ ('malformed',"print('not json',flush=True)",0,5)]:
+ d=base/name;d.mkdir();script=d/'fake_cli.py';script.write_text(source,encoding='utf-8');(d/'request.txt').write_text('',encoding='utf-8')
+ expired=False
+ with (d/'request.txt').open('rb') as stdin,(d/'events.jsonl').open('xb') as stdout,(d/'stderr.log').open('xb') as stderr:
+  try:result=m.run_timed_capture([sys.executable,str(script)],stdin,stdout,stderr,timeout,d)
+  except subprocess.TimeoutExpired:expired=True
+ summary=m.read(d/'native-timing-summary.json');raw=(d/'events.jsonl').read_bytes().splitlines(keepends=True);timing=[json.loads(x) for x in (d/'native-timing.jsonl').read_text().splitlines()]
+ assert summary['reader_finished'] and not summary['reader_errors']
+ assert len(raw)==len(timing)==summary['event_count']
+ assert all(hashlib.sha256(a).hexdigest()==b['raw_line_sha256'] for a,b in zip(raw,timing))
+ assert [x['elapsed_seconds'] for x in timing]==sorted(x['elapsed_seconds'] for x in timing)
+ assert summary['timed_out']==expired==(name=='timeout')
+ if not expired:assert result.returncode==code
+ else:assert summary['exit_code'] is not None and summary['duration_seconds']<6
+ if name=='malformed':assert timing[0]['parse_error']
+ results.append({'case':name,'status':'PASS'})
+try:m.run_case('ss-windows-runtime','run-03','WR-N01')
+except AssertionError:results.append({'case':'WR-N01_unapproved_repeat_refused','status':'PASS'})
+else:raise AssertionError('Scope guard missing')
+report={'schema':'wo062-c3-timing-tests-v1','tests':results,'passed':len(results),'model_calls':0,'external_processes':'Four local synthetic Python children only, no probes/application','runner_sha256':m.sha(r/'.tmp/wo062_evaluate_c3.py'),'test_sha256':m.sha(pathlib.Path(__file__)),'fixture_root':str(base)}
+m.write(r/'.tmp/c3-timing-tests.json',report);print(json.dumps(report))

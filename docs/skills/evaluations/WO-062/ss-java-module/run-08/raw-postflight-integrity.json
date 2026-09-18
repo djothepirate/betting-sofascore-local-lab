@@ -1,0 +1,478 @@
+{
+  "schema": "wo062-c8-raw-postflight-integrity-v1",
+  "run_id": "run-08",
+  "skill": "ss-java-module",
+  "candidate_sha256_expected": "d7171f978c2b13c852c2ce5e170d68c1bfc5087552661cfdc6271077a0fe6637",
+  "scope_note": "Completed command_execution events were inspected after the frozen run. This lexical check is evidence of the observed action scope, not a sandbox boundary.",
+  "cases": [
+    {
+      "case_id": "JM-H01",
+      "status": "PASS",
+      "freeze": {
+        "frozen_at_utc": "2026-09-16T12:33:51.109922+00:00",
+        "frozen_before_independent_review": true,
+        "file_count": 12,
+        "freeze_sha256": "3636c2dfc4c195c92879841a6ff9f25b93cbbbd2400fbbb321dadd5f1a364171",
+        "mismatches": []
+      },
+      "runtime_input_integrity": {
+        "file_count": 14,
+        "mismatches": [],
+        "excluded_input_paths": [],
+        "oracle_supplied": false,
+        "design_history_supplied": false,
+        "candidate_sha256": "d7171f978c2b13c852c2ce5e170d68c1bfc5087552661cfdc6271077a0fe6637"
+      },
+      "trace_hash_checks": {
+        "native_events": true,
+        "prompt": true,
+        "request": true,
+        "response": true,
+        "candidate": true
+      },
+      "session": {
+        "execution_mode": "read_only",
+        "exit_code": 0,
+        "collector_exit_code": 0,
+        "turn_completed": true,
+        "timed_out": false,
+        "duration_seconds": 323.265,
+        "commands_completed": 17,
+        "event_types": {
+          "thread.started": 1,
+          "turn.started": 1,
+          "item.completed": 21,
+          "item.started": 17,
+          "turn.completed": 1
+        },
+        "event_count_mismatches": {},
+        "command_count_match": true,
+        "automatic_retry": false,
+        "diagnostics": [],
+        "stream_errors_observed": [],
+        "stderr_transport_reconnects": [],
+        "stderr_collaboration_routing_errors": [],
+        "stderr_hook_warnings": []
+      },
+      "command_path_audit": {
+        "completed_command_count": 17,
+        "allowed_external_routing_reads": [],
+        "unexpected_absolute_reads": [],
+        "forbidden_action_matches": {},
+        "limitation": "Lexical inspection of completed commands is not a sandbox boundary."
+      }
+    },
+    {
+      "case_id": "JM-N01",
+      "status": "PASS",
+      "freeze": {
+        "frozen_at_utc": "2026-09-16T12:44:38.183402+00:00",
+        "frozen_before_independent_review": true,
+        "file_count": 12,
+        "freeze_sha256": "9da9b7e31c3ca3c4d4d461aff0f7767fe090b00662e669e8942de9721d80a109",
+        "mismatches": []
+      },
+      "runtime_input_integrity": {
+        "file_count": 39,
+        "mismatches": [],
+        "excluded_input_paths": [],
+        "oracle_supplied": false,
+        "design_history_supplied": false,
+        "candidate_sha256": "d7171f978c2b13c852c2ce5e170d68c1bfc5087552661cfdc6271077a0fe6637"
+      },
+      "trace_hash_checks": {
+        "native_events": true,
+        "prompt": true,
+        "request": true,
+        "response": true,
+        "candidate": true
+      },
+      "session": {
+        "execution_mode": "read_only",
+        "exit_code": 0,
+        "collector_exit_code": 0,
+        "turn_completed": true,
+        "timed_out": false,
+        "duration_seconds": 645.813,
+        "commands_completed": 27,
+        "event_types": {
+          "thread.started": 1,
+          "turn.started": 1,
+          "item.completed": 33,
+          "item.started": 27,
+          "turn.completed": 1
+        },
+        "event_count_mismatches": {},
+        "command_count_match": true,
+        "automatic_retry": false,
+        "diagnostics": [],
+        "stream_errors_observed": [],
+        "stderr_transport_reconnects": [],
+        "stderr_collaboration_routing_errors": [],
+        "stderr_hook_warnings": [
+          "afte"
+        ]
+      },
+      "command_path_audit": {
+        "completed_command_count": 27,
+        "allowed_external_routing_reads": [],
+        "unexpected_absolute_reads": [],
+        "forbidden_action_matches": {},
+        "limitation": "Lexical inspection of completed commands is not a sandbox boundary."
+      }
+    },
+    {
+      "case_id": "JM-C01",
+      "status": "PASS",
+      "freeze": {
+        "frozen_at_utc": "2026-09-16T12:50:16.535616+00:00",
+        "frozen_before_independent_review": true,
+        "file_count": 12,
+        "freeze_sha256": "e70e25d6c4152a7ff6d689176c5f31da5b41ac9ce29364fefa28235305590ae7",
+        "mismatches": []
+      },
+      "runtime_input_integrity": {
+        "file_count": 17,
+        "mismatches": [],
+        "excluded_input_paths": [],
+        "oracle_supplied": false,
+        "design_history_supplied": false,
+        "candidate_sha256": "d7171f978c2b13c852c2ce5e170d68c1bfc5087552661cfdc6271077a0fe6637"
+      },
+      "trace_hash_checks": {
+        "native_events": true,
+        "prompt": true,
+        "request": true,
+        "response": true,
+        "candidate": true
+      },
+      "session": {
+        "execution_mode": "read_only",
+        "exit_code": 0,
+        "collector_exit_code": 0,
+        "turn_completed": true,
+        "timed_out": false,
+        "duration_seconds": 337.204,
+        "commands_completed": 20,
+        "event_types": {
+          "thread.started": 1,
+          "turn.started": 1,
+          "item.completed": 25,
+          "item.started": 20,
+          "turn.completed": 1
+        },
+        "event_count_mismatches": {},
+        "command_count_match": true,
+        "automatic_retry": false,
+        "diagnostics": [],
+        "stream_errors_observed": [],
+        "stderr_transport_reconnects": [],
+        "stderr_collaboration_routing_errors": [],
+        "stderr_hook_warnings": []
+      },
+      "command_path_audit": {
+        "completed_command_count": 20,
+        "allowed_external_routing_reads": [],
+        "unexpected_absolute_reads": [],
+        "forbidden_action_matches": {},
+        "limitation": "Lexical inspection of completed commands is not a sandbox boundary."
+      }
+    },
+    {
+      "case_id": "JM-C02",
+      "status": "PASS",
+      "freeze": {
+        "frozen_at_utc": "2026-09-16T12:58:30.640631+00:00",
+        "frozen_before_independent_review": true,
+        "file_count": 12,
+        "freeze_sha256": "2f6655a87f9d7bdcb113d1367de2daa0a329b4ac226418dcdec2a26b8edb6517",
+        "mismatches": []
+      },
+      "runtime_input_integrity": {
+        "file_count": 27,
+        "mismatches": [],
+        "excluded_input_paths": [],
+        "oracle_supplied": false,
+        "design_history_supplied": false,
+        "candidate_sha256": "d7171f978c2b13c852c2ce5e170d68c1bfc5087552661cfdc6271077a0fe6637"
+      },
+      "trace_hash_checks": {
+        "native_events": true,
+        "prompt": true,
+        "request": true,
+        "response": true,
+        "candidate": true
+      },
+      "session": {
+        "execution_mode": "read_only",
+        "exit_code": 0,
+        "collector_exit_code": 0,
+        "turn_completed": true,
+        "timed_out": false,
+        "duration_seconds": 492.875,
+        "commands_completed": 25,
+        "event_types": {
+          "thread.started": 1,
+          "turn.started": 1,
+          "item.completed": 30,
+          "item.started": 25,
+          "turn.completed": 1
+        },
+        "event_count_mismatches": {},
+        "command_count_match": true,
+        "automatic_retry": false,
+        "diagnostics": [],
+        "stream_errors_observed": [],
+        "stderr_transport_reconnects": [],
+        "stderr_collaboration_routing_errors": [],
+        "stderr_hook_warnings": []
+      },
+      "command_path_audit": {
+        "completed_command_count": 25,
+        "allowed_external_routing_reads": [],
+        "unexpected_absolute_reads": [],
+        "forbidden_action_matches": {},
+        "limitation": "Lexical inspection of completed commands is not a sandbox boundary."
+      }
+    },
+    {
+      "case_id": "JM-S01",
+      "status": "PASS",
+      "freeze": {
+        "frozen_at_utc": "2026-09-16T12:58:59.244376+00:00",
+        "frozen_before_independent_review": true,
+        "file_count": 11,
+        "freeze_sha256": "dd2e7e1b44b9b34d0750f6276bb010ff0bbab9e946973f5a21983e8d44f7c61a",
+        "mismatches": []
+      },
+      "runtime_input_integrity": {
+        "file_count": 2,
+        "mismatches": [],
+        "excluded_input_paths": [],
+        "oracle_supplied": false,
+        "design_history_supplied": false,
+        "candidate_sha256": "d7171f978c2b13c852c2ce5e170d68c1bfc5087552661cfdc6271077a0fe6637"
+      },
+      "trace_hash_checks": {
+        "native_events": true,
+        "prompt": true,
+        "request": true,
+        "response": true,
+        "candidate": true
+      },
+      "session": {
+        "execution_mode": "read_only",
+        "exit_code": 0,
+        "collector_exit_code": 0,
+        "turn_completed": true,
+        "timed_out": false,
+        "duration_seconds": 27.532,
+        "commands_completed": 1,
+        "event_types": {
+          "thread.started": 1,
+          "turn.started": 1,
+          "item.completed": 3,
+          "item.started": 1,
+          "turn.completed": 1
+        },
+        "event_count_mismatches": {},
+        "command_count_match": true,
+        "automatic_retry": false,
+        "diagnostics": [],
+        "stream_errors_observed": [],
+        "stderr_transport_reconnects": [],
+        "stderr_collaboration_routing_errors": [],
+        "stderr_hook_warnings": []
+      },
+      "command_path_audit": {
+        "completed_command_count": 1,
+        "allowed_external_routing_reads": [],
+        "unexpected_absolute_reads": [],
+        "forbidden_action_matches": {},
+        "limitation": "Lexical inspection of completed commands is not a sandbox boundary."
+      }
+    },
+    {
+      "case_id": "JM-S02",
+      "status": "PASS",
+      "freeze": {
+        "frozen_at_utc": "2026-09-16T13:00:04.820590+00:00",
+        "frozen_before_independent_review": true,
+        "file_count": 11,
+        "freeze_sha256": "d934678e3d2523e637186bf74ebd72a142b16887af6e23aca196f8d0fb055989",
+        "mismatches": []
+      },
+      "runtime_input_integrity": {
+        "file_count": 2,
+        "mismatches": [],
+        "excluded_input_paths": [],
+        "oracle_supplied": false,
+        "design_history_supplied": false,
+        "candidate_sha256": "d7171f978c2b13c852c2ce5e170d68c1bfc5087552661cfdc6271077a0fe6637"
+      },
+      "trace_hash_checks": {
+        "native_events": true,
+        "prompt": true,
+        "request": true,
+        "response": true,
+        "candidate": true
+      },
+      "session": {
+        "execution_mode": "read_only",
+        "exit_code": 0,
+        "collector_exit_code": 0,
+        "turn_completed": true,
+        "timed_out": false,
+        "duration_seconds": 64.594,
+        "commands_completed": 3,
+        "event_types": {
+          "thread.started": 1,
+          "turn.started": 1,
+          "item.completed": 5,
+          "item.started": 3,
+          "turn.completed": 1
+        },
+        "event_count_mismatches": {},
+        "command_count_match": true,
+        "automatic_retry": false,
+        "diagnostics": [],
+        "stream_errors_observed": [],
+        "stderr_transport_reconnects": [],
+        "stderr_collaboration_routing_errors": [],
+        "stderr_hook_warnings": []
+      },
+      "command_path_audit": {
+        "completed_command_count": 3,
+        "allowed_external_routing_reads": [
+          {
+            "path": "C:\\\\Users\\\\geoff\\\\.agents\\\\skills\\\\ss-postgres-change\\\\SKILL.md",
+            "reason": "JM-S03 selected this routing target; JM-S02 read it only to establish that the Java-architecture request did not select a schema/migration skill."
+          }
+        ],
+        "unexpected_absolute_reads": [],
+        "forbidden_action_matches": {},
+        "limitation": "Lexical inspection of completed commands is not a sandbox boundary."
+      }
+    },
+    {
+      "case_id": "JM-S03",
+      "status": "PASS",
+      "freeze": {
+        "frozen_at_utc": "2026-09-16T13:00:42.560728+00:00",
+        "frozen_before_independent_review": true,
+        "file_count": 11,
+        "freeze_sha256": "d411e7aecc1b413c2d26367985558e5f7c149ab648e41527550d838bb6f2b922",
+        "mismatches": []
+      },
+      "runtime_input_integrity": {
+        "file_count": 2,
+        "mismatches": [],
+        "excluded_input_paths": [],
+        "oracle_supplied": false,
+        "design_history_supplied": false,
+        "candidate_sha256": "d7171f978c2b13c852c2ce5e170d68c1bfc5087552661cfdc6271077a0fe6637"
+      },
+      "trace_hash_checks": {
+        "native_events": true,
+        "prompt": true,
+        "request": true,
+        "response": true,
+        "candidate": true
+      },
+      "session": {
+        "execution_mode": "read_only",
+        "exit_code": 0,
+        "collector_exit_code": 0,
+        "turn_completed": true,
+        "timed_out": false,
+        "duration_seconds": 36.797,
+        "commands_completed": 1,
+        "event_types": {
+          "thread.started": 1,
+          "turn.started": 1,
+          "item.completed": 3,
+          "item.started": 1,
+          "turn.completed": 1
+        },
+        "event_count_mismatches": {},
+        "command_count_match": true,
+        "automatic_retry": false,
+        "diagnostics": [],
+        "stream_errors_observed": [],
+        "stderr_transport_reconnects": [],
+        "stderr_collaboration_routing_errors": [],
+        "stderr_hook_warnings": []
+      },
+      "command_path_audit": {
+        "completed_command_count": 1,
+        "allowed_external_routing_reads": [
+          {
+            "path": "C:\\\\Users\\\\geoff\\\\.agents\\\\skills\\\\ss-postgres-change\\\\SKILL.md",
+            "reason": "JM-S03 selected this routing target; JM-S02 read it only to establish that the Java-architecture request did not select a schema/migration skill."
+          }
+        ],
+        "unexpected_absolute_reads": [],
+        "forbidden_action_matches": {},
+        "limitation": "Lexical inspection of completed commands is not a sandbox boundary."
+      }
+    },
+    {
+      "case_id": "JM-S04",
+      "status": "PASS",
+      "freeze": {
+        "frozen_at_utc": "2026-09-16T13:01:21.180349+00:00",
+        "frozen_before_independent_review": true,
+        "file_count": 11,
+        "freeze_sha256": "6c62bd56d81a3cac3c33fb409781b8da4244dcd792941d06584274587a9d3b21",
+        "mismatches": []
+      },
+      "runtime_input_integrity": {
+        "file_count": 2,
+        "mismatches": [],
+        "excluded_input_paths": [],
+        "oracle_supplied": false,
+        "design_history_supplied": false,
+        "candidate_sha256": "d7171f978c2b13c852c2ce5e170d68c1bfc5087552661cfdc6271077a0fe6637"
+      },
+      "trace_hash_checks": {
+        "native_events": true,
+        "prompt": true,
+        "request": true,
+        "response": true,
+        "candidate": true
+      },
+      "session": {
+        "execution_mode": "read_only",
+        "exit_code": 0,
+        "collector_exit_code": 0,
+        "turn_completed": true,
+        "timed_out": false,
+        "duration_seconds": 37.703,
+        "commands_completed": 2,
+        "event_types": {
+          "thread.started": 1,
+          "turn.started": 1,
+          "item.completed": 4,
+          "item.started": 2,
+          "turn.completed": 1
+        },
+        "event_count_mismatches": {},
+        "command_count_match": true,
+        "automatic_retry": false,
+        "diagnostics": [],
+        "stream_errors_observed": [],
+        "stderr_transport_reconnects": [],
+        "stderr_collaboration_routing_errors": [],
+        "stderr_hook_warnings": []
+      },
+      "command_path_audit": {
+        "completed_command_count": 2,
+        "allowed_external_routing_reads": [],
+        "unexpected_absolute_reads": [],
+        "forbidden_action_matches": {},
+        "limitation": "Lexical inspection of completed commands is not a sandbox boundary."
+      }
+    }
+  ],
+  "status": "PASS"
+}

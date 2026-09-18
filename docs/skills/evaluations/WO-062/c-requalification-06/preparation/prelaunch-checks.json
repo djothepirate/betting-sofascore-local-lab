@@ -1,0 +1,16 @@
+{
+  "schema": "wo062-c6-prelaunch-checks-v1",
+  "checked_at_utc": "2026-09-16T07:02:22.601655+00:00",
+  "status": "PASS",
+  "run_id": "run-06",
+  "case_id": "JM-H01",
+  "source_delta_from_content_baseline": "NONE",
+  "content_baseline_source_head": "d0021090d9cf718d5b338bbf8d06109586e4518a",
+  "actual_preparation_head": "91fccf1f29e2c27f95ddfb65c4a5019ff2c4c65f",
+  "c5_evaluator_unchanged": true,
+  "c6_evaluator_sha256": "a54eef3f91fcfbe66160e53512a439d2ce06e2c258d318f686473cd0b8c714c3",
+  "single_case_guard": true,
+  "single_worker_guard": true,
+  "output_absent_before_launch": true,
+  "model_invoked": false
+}

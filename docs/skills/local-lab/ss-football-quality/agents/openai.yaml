@@ -1,0 +1,4 @@
+interface:
+  display_name: "Qualité football du Local Lab"
+  short_description: "Contrôler identité, incidents, complétude et historique"
+  default_prompt: "Utilise $ss-football-quality pour examiner la cohérence des données football du SofaScore Local Lab et relier chaque constat à ses preuves."

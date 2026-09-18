@@ -1,0 +1,95 @@
+{
+  "schema": "wo062-independent-case-review-v1",
+  "case_id": "JM-S03",
+  "run_id": "run-04",
+  "skill": "ss-java-module",
+  "reviewer": "/root/jm_selection_review",
+  "candidate_version": "0.1.0-candidate.3",
+  "candidate_sha256": "15237ab0f6773c87187481622ba4947ebc00f8c7e9a50dd1589911ede17ec332",
+  "candidate_yaml_sha256": "ccc4fc2a4707838dd6defdd73ef6f6c7ee0d69e6df86e41689a46884691573ae",
+  "response_sha256": "111675ac6ee317715b3f208c847f31051b2aa5f95b95d730436811e221b6f3be",
+  "freeze_sha256": "7cc3504d2b7e273b8279bdea783384adb89ac5e5e9f4a49fbed5c07db67e3bd2",
+  "native_events_sha256": "01cdc42a3bb2edd861051803924522d6b6e66aa56a1409a376f3e5bc0de66e10",
+  "trace_sha256": "d51b61dec67c4c470551a5a8cd4c76251b72cb60f26673c6cdf35dd94b43710a",
+  "preflight_sha256": "f5a90689e3de780b74acc7fad03f7734246ba8bab4744d3a11e1f38526df8ef6",
+  "oracle_sha256": "d13dc8c5ec833f30dc9025c3c22a22c00e60656eae3a89dc30361861ea390bd1",
+  "source_head": "79d0f99c393a06d4d2e81749a55fb3bfbd222cc3",
+  "source_commit": "6648dd423e556b5248b8793a539ae85a7680f9bc",
+  "frozen_at_utc": "2026-09-15T23:41:07.791020+00:00",
+  "reviewed_at_utc": "2026-09-15T23:47:40.918245+00:00",
+  "first_review_read_after_freeze": true,
+  "observed_commands": 1,
+  "frozen_files": 10,
+  "prepared_inputs": 2,
+  "manifest_sources_checked": 0,
+  "tool_reads": [
+    {
+      "skill": "ss-postgres-change",
+      "sha256": "8a89922f8cc1dd5144e054f0586d6d24f92d2a1c82264d37e00642d8376d9e2c",
+      "bytes": 2673,
+      "item_id": "item_1",
+      "command": "\"C:\\\\Program Files\\\\PowerShell\\\\7\\\\pwsh.exe\" -Command \"Get-Content -LiteralPath 'C:\\\\Users\\\\geoff\\\\.agents\\\\skills\\\\ss-postgres-change\\\\SKILL.md' -Raw\"",
+      "comparison": "Exact body plus console CRLF"
+    }
+  ],
+  "catalogue_entries": 24,
+  "catalogue_unique_names_and_paths": true,
+  "duration_seconds": 25.875,
+  "model": null,
+  "reasoning_effort": null,
+  "application_tests_executed_by_reviewer": false,
+  "reviewer_reran_case": false,
+  "candidate_or_source_modified": false,
+  "prior_results_used": false,
+  "human_validation": false,
+  "personal_installation": false,
+  "criteria": [
+    {
+      "id": "I01",
+      "verdict": "PASS",
+      "evidence": "10 pièces figées et 2 entrées conformes taille/SHA ; 0 sources reliées au manifeste. Trace, requête, réponse et journal brut concordent.",
+      "limit": "Le SHA métier et le SHA préparatoire sont distincts ; aucun état applicatif qualifié."
+    },
+    {
+      "id": "I02",
+      "verdict": "PASS",
+      "evidence": "Export natif exactement égal au journal brut après retrait des seuls événements reasoning ; réponse exacte du dernier agent_message ; collecte complète et codes0.",
+      "limit": "Les horaires d’événements sont des réceptions locales, pas des temps de pensée."
+    },
+    {
+      "id": "I03",
+      "verdict": "PASS",
+      "evidence": "1 commandes réellement terminées relues ; uniquement lectures/recherches autorisées, sans oracle, ancienne réponse, effet métier ou mutation.",
+      "limit": "Les textes et propositions restent des données ; le contrôle de périmètre est distinct de la décision comportementale."
+    },
+    {
+      "id": "selection",
+      "verdict": "PASS",
+      "evidence": "ss-postgres-change seul retenu ; migration, upgrade prérempli et sauvegarde/reprise correctement motivés, fichier personnel exact lu item_1. Java explicitement exclu.",
+      "limit": "Le candidat Java présent dans le catalogue n’est pas retenu ; sa lecture n’est pas exigée."
+    },
+    {
+      "id": "routing-only",
+      "verdict": "PASS",
+      "evidence": "Une lecture du skill PostgreSQL et arrêt au routage ; aucune revue ou mutation métier.",
+      "limit": "La version Java .3 n’est pas attribuée au skill personnel."
+    },
+    {
+      "id": "envelope-and-discovery",
+      "verdict": "PASS",
+      "evidence": "Requête exactement égale à selection_envelope avec le seul prompt original ; catalogue24 noms/chemins uniques, candidat local et huit ss personnels.",
+      "limit": "Reconstruction après exécution ; aucune capture de requête ni injection automatique revendiquée."
+    }
+  ],
+  "limits": [
+    "Catalogue reconstruit après exécution : pas capture de requête transmise ni preuve d’injection automatique du corps par le CLI.",
+    "Modèle et effort effectifs non exposés ; réglages par défaut.",
+    "Gain général de temps/qualité non mesuré.",
+    "Aucune qualification applicative, collecte fournisseur, installation ou validation humaine déduite."
+  ],
+  "selected_skills": [
+    "ss-postgres-change"
+  ],
+  "verdict": "PASS",
+  "blocking_findings": []
+}

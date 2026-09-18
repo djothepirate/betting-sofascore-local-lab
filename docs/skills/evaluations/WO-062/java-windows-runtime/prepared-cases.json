@@ -1,0 +1,56 @@
+{
+  "schema": "wo062-prepared-runtime-preflight-v1",
+  "purpose": "Non-model check of prepared run-02 case access; not WR-H01/N01 execution or skill qualification. Built-in :workspace policy, sandbox retained.",
+  "created_and_launched_by": "asusggo2025\\geoff",
+  "model_invoked": false,
+  "runtime_probe_executed": false,
+  "configuration_changed": false,
+  "cases": [
+    {
+      "case_id": "WR-H01",
+      "started_at_utc": "2026-09-15T21:33:16.692197+00:00",
+      "ended_at_utc": "2026-09-15T21:33:17.450766+00:00",
+      "command": [
+        "C:/Users/geoff/AppData/Local/OpenAI/Codex/bin/12219cbfbcbddde7/codex.exe",
+        "sandbox",
+        "--permission-profile",
+        ":workspace",
+        "-C",
+        "C:\\Dev\\BettingProject\\codex\\betting-sofascore-local-lab\\.tmp\\wo062-skills-lot2\\.tmp\\wo062-evaluations\\ss-windows-runtime\\run-02\\WR-H01",
+        "powershell.exe",
+        "-NoProfile",
+        "-NonInteractive",
+        "-Command",
+        "$ErrorActionPreference='Stop'; $s=[IO.File]::ReadAllText('.agents/skills/ss-windows-runtime/SKILL.md',[Text.Encoding]::UTF8); if($s.Length -lt 100){throw 'Read failed'}; $p=[IO.Path]::GetFullPath('output/launcher-preflight.txt'); if(Test-Path -LiteralPath $p){throw 'Preexisting target'}; [IO.File]::WriteAllText($p,'PREFLIGHT',[Text.UTF8Encoding]::new($false)); if([IO.File]::ReadAllText($p) -cne 'PREFLIGHT'){throw 'Bytes differ'}; Remove-Item -LiteralPath $p; if(Test-Path -LiteralPath $p){throw 'Residue'}; Write-Output 'C_PREPARED_SANDBOX_READ_WRITE_CLEANUP=PASS'"
+      ],
+      "exit_code": 0,
+      "stdout": "C_PREPARED_SANDBOX_READ_WRITE_CLEANUP=PASS\r\n",
+      "stderr": "",
+      "candidate_unchanged": true,
+      "residue_exists": false
+    },
+    {
+      "case_id": "WR-N01",
+      "started_at_utc": "2026-09-15T21:33:17.451766+00:00",
+      "ended_at_utc": "2026-09-15T21:33:18.119894+00:00",
+      "command": [
+        "C:/Users/geoff/AppData/Local/OpenAI/Codex/bin/12219cbfbcbddde7/codex.exe",
+        "sandbox",
+        "--permission-profile",
+        ":workspace",
+        "-C",
+        "C:\\Dev\\BettingProject\\codex\\betting-sofascore-local-lab\\.tmp\\wo062-skills-lot2\\.tmp\\wo062-evaluations\\ss-windows-runtime\\run-02\\WR-N01",
+        "powershell.exe",
+        "-NoProfile",
+        "-NonInteractive",
+        "-Command",
+        "$ErrorActionPreference='Stop'; $s=[IO.File]::ReadAllText('.agents/skills/ss-windows-runtime/SKILL.md',[Text.Encoding]::UTF8); if($s.Length -lt 100){throw 'Read failed'}; $p=[IO.Path]::GetFullPath('output/launcher-preflight.txt'); if(Test-Path -LiteralPath $p){throw 'Preexisting target'}; [IO.File]::WriteAllText($p,'PREFLIGHT',[Text.UTF8Encoding]::new($false)); if([IO.File]::ReadAllText($p) -cne 'PREFLIGHT'){throw 'Bytes differ'}; Remove-Item -LiteralPath $p; if(Test-Path -LiteralPath $p){throw 'Residue'}; Write-Output 'C_PREPARED_SANDBOX_READ_WRITE_CLEANUP=PASS'"
+      ],
+      "exit_code": 0,
+      "stdout": "C_PREPARED_SANDBOX_READ_WRITE_CLEANUP=PASS\r\n",
+      "stderr": "",
+      "candidate_unchanged": true,
+      "residue_exists": false
+    }
+  ]
+}

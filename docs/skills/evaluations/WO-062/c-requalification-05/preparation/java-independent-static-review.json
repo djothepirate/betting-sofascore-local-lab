@@ -1,0 +1,77 @@
+{
+  "schema": "wo062-java-c5-static-review-v1",
+  "reviewed_at_utc": "2026-09-16T00:45:53Z",
+  "reviewer": "/root/java_c5_static_review",
+  "scope": "Static review of ss-java-module candidate.4 and C5 revision inputs for the JM-N01 blocked-profile omission.",
+  "static_verdict": "PASS",
+  "behavioral_verdict": "NOT_RUN",
+  "candidate": {
+    "path": "docs/skills/local-lab/ss-java-module/SKILL.md",
+    "version": "0.1.0-candidate.4",
+    "bytes": 10901,
+    "sha256": "f1f6533f678c5cdb4ae6a5bc9c996c062af419005e4f4cd6104a51c91e442d97"
+  },
+  "revision": {
+    "path": "docs/skills/evaluations/WO-062/ss-java-module/revision-04/revision.json",
+    "base_commit": "e24d0b0da54096c3172d510788bcb8f4cb00e296",
+    "candidate_sha_matches_file": true,
+    "candidate_bytes_match_file": true,
+    "cases_inputs_oracle_changed": false,
+    "planned_cases": 8
+  },
+  "jm_n01": {
+    "case_source_count": 36,
+    "activation_maven_requested": true,
+    "pom_source_id": "JM-I01",
+    "pom_allowed": true,
+    "pom_unchanged_from_reviewed_commit": true,
+    "pom_manifest": {
+      "git_blob_oid": "b6746484877941bc9b5fed47b9878ba3426b28ac",
+      "bytes": 16856,
+      "worktree_sha256": "e01e011e360fa847842d826a5bcf2960c34eae91da037e2a6f002e71a3513a46"
+    }
+  },
+  "criteria": [
+    {
+      "id": "C5-JM-STATIC-01",
+      "verdict": "PASS",
+      "evidence": "SKILL.md lines 52-56 require explicit reporting that the current POM deliberately keeps Maven profile sofascore-live-test blocked by its guard; they also forbid treating it as collection activation or as the J7 test profile."
+    },
+    {
+      "id": "C5-JM-STATIC-02",
+      "verdict": "PASS",
+      "evidence": "SKILL.md lines 145-149 independently require the final synthesis to retain the status of examined J3 profiles, expressly including the blocked sofascore-live-test profile."
+    },
+    {
+      "id": "C5-JM-STATIC-03",
+      "verdict": "PASS",
+      "evidence": "pom.xml lines 426-443 contain profile sofascore-live-test, Enforcer execution block-live-tests-before-j3, and alwaysFail stating that it remains voluntarily blocked at J1."
+    },
+    {
+      "id": "C5-JM-STATIC-04",
+      "verdict": "PASS",
+      "evidence": "JM-N01 requests Spring/Maven activation review and allows pom.xml as JM-I01; the case therefore reaches the candidate's J3/test-profile instruction without adding a source."
+    },
+    {
+      "id": "C5-JM-STATIC-05",
+      "verdict": "PASS",
+      "evidence": "cases.json, inputs.json, manifest.json, and oracle.md are byte-identical to e24d0b0, while revision-04 explicitly records cases_inputs_oracle_changed=false."
+    },
+    {
+      "id": "C5-JM-STATIC-06",
+      "verdict": "PASS",
+      "evidence": "C5 authorization matches candidate version and SHA, specifies run-05 and all eight cases, and declares no oracle or previous answer supplied to evaluated sessions."
+    }
+  ],
+  "residual_risk": "The doubled instruction is static evidence only. JM-N01's requested Maven activation review and allowed POM make the condition applicable, but a fresh response must still prove that the instruction was read and retained in delivery.",
+  "independence": {
+    "model_session_launched": false,
+    "application_or_test_launched": false,
+    "oracle_provided_to_evaluated_session": false,
+    "prior_answer_provided_to_evaluated_session": false,
+    "oracle_use": "Static requirement cross-check only; no oracle content was used in an evaluated session."
+  },
+  "tracked_files_modified": false,
+  "human_validation": false,
+  "personal_installation": false
+}

@@ -1,0 +1,24 @@
+{
+  "files": [
+    {
+      "sha256": "b89925d5395238010bb0afe9c1e1a22b0aa5ec4e7d1fb9946c671d241e7976c6",
+      "bytes": 9217,
+      "path": "docs/skills/local-lab/ss-windows-runtime/SKILL.md"
+    },
+    {
+      "sha256": "3038015980952bc18b21f45f0d4af514b35a8841394e4b80824986b7e30ccd9f",
+      "bytes": 300,
+      "path": "docs/skills/local-lab/ss-windows-runtime/agents/openai.yaml"
+    }
+  ],
+  "personal_installation_authorized": true,
+  "candidate_version": "0.1.0-candidate.1",
+  "package": "WindowsRuntime",
+  "qualification_path": "docs/skills/evaluations/WO-062/ss-windows-runtime/final-qualification.json",
+  "skill_count": 1,
+  "schema_version": 1,
+  "qualification_sha256": "780185497850e270f3a8c2f7b4598b129aed487a21435cabd38f069d8f613006",
+  "owner_validated": true,
+  "owner_decision": "human-validation.json",
+  "work_order": "WO-062"
+}

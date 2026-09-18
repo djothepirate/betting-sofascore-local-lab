@@ -1,0 +1,115 @@
+{
+  "schema": "wo062-football-quality-cases-v1",
+  "status": "PREPARED_NOT_RUN",
+  "case_count": 8,
+  "selection_envelope": "Ce cas évalue seulement le routage. À partir du catalogue réellement découvert et de la demande ci-dessous, choisis le ou les skills pertinents. Pour chaque skill retenu, lis intégralement son SKILL.md avec un outil avant de répondre, même si un extrait ou une description est déjà visible. N'exécute pas la tâche métier. Arrête-toi après la décision de routage et indique les skills retenus, les fichiers effectivement lus et les raisons de la sélection ou de la non-sélection. Ne cherche pas de skill absent du catalogue. Aucun réseau, démarrage d'application, accès DB/Docker ni modification n'est autorisé.\n\nDemande :\n{prompt}",
+  "cases": [
+    {
+      "id": "FQ-H01",
+      "kind": "historical",
+      "prompt": "Réexamine WO-017 : explique pourquoi le snapshot 717 a échoué sous V14, la portée exacte de V15 et ce que sa qualification a réellement établi. Produis une matrice d'anomalies avec observation, règle, provenance, gravité et décision. Relie la fixture de test au cas réel sans les confondre, et précise ce qui reste inconnu. Lire seulement les sources autorisées. Aucun réseau, démarrage d'application, accès DB/Docker, collecte, exécution des parseurs ou modification des sources. Rendre la réponse finale ; le lanceur la sauvegardera.",
+      "source_ids": [
+        "N01",
+        "N04",
+        "I01",
+        "T01",
+        "H01",
+        "F01"
+      ],
+      "input_case": null,
+      "status": "NOT_RUN"
+    },
+    {
+      "id": "FQ-N01",
+      "kind": "new_task",
+      "prompt": "Produis un nouvel audit de qualité du dossier local versionné WO-058 : diagnostic du snapshot incidents 2340, évolution des parseurs actifs, et restitution J6 des officiels et pays V4. Croise les preuves du 7 et du 13 septembre avec les contrats, le code et les tests fournis. Livre une matrice vérifiable des anomalies corrigées, des garanties actuelles et des preuves encore manquantes pour conclure sur un dossier fournisseur courant. Indique les prochains contrôles locaux proportionnés, sans les exécuter. Lire seulement les sources autorisées. Aucun réseau, démarrage d'application, accès DB/Docker, collecte, exécution des parseurs ou modification des sources. Rendre la réponse finale ; le lanceur la sauvegardera.",
+      "source_ids": [
+        "N01",
+        "N03",
+        "N05",
+        "N06",
+        "N07",
+        "N08",
+        "P01",
+        "I02",
+        "I03",
+        "I05",
+        "I06",
+        "I07",
+        "T05",
+        "H02",
+        "H03"
+      ],
+      "input_case": null,
+      "status": "NOT_RUN"
+    },
+    {
+      "id": "FQ-C01",
+      "kind": "counterexample",
+      "prompt": "Audite le dossier pédagogique d'identité, d'horaire et de familles fourni. Établis les valeurs conservables, les anomalies, leurs gravités et les décisions justifiées, avec une matrice de provenance. Calcule la fenêtre UTC et les distinctions mesurables. Toute information non résolue doit rester visible. Lire seulement les sources autorisées. Aucun réseau, démarrage d'application, accès DB/Docker, collecte, exécution des parseurs ou modification des sources. Rendre la réponse finale ; le lanceur la sauvegardera.",
+      "source_ids": [
+        "N01",
+        "N03",
+        "N05",
+        "N06",
+        "N08",
+        "I08"
+      ],
+      "input_case": "FQ-C01",
+      "status": "NOT_RUN"
+    },
+    {
+      "id": "FQ-C02",
+      "kind": "counterexample",
+      "prompt": "Audite les incidents et les transitions J6 du dossier pédagogique fourni. Établis leur compatibilité, les valeurs et inconnus à conserver, les appariements défendables et les classifications justifiées. Produis une matrice d'anomalies et une table des transitions avec leurs preuves. Lire seulement les sources autorisées. Aucun réseau, démarrage d'application, accès DB/Docker, collecte, exécution des parseurs ou modification des sources. Rendre la réponse finale ; le lanceur la sauvegardera.",
+      "source_ids": [
+        "N01",
+        "N04",
+        "N07",
+        "I01",
+        "I02",
+        "I03",
+        "I04",
+        "I05",
+        "T01",
+        "T02",
+        "T04",
+        "F01"
+      ],
+      "input_case": "FQ-C02",
+      "status": "NOT_RUN"
+    },
+    {
+      "id": "FQ-S01",
+      "kind": "selection_explicit",
+      "prompt": "Utilise $ss-football-quality pour relire les rôles domicile/extérieur et les corrections d'incidents du dossier J4/J5/J6 de ce SofaScore Local Lab.",
+      "source_ids": [],
+      "input_case": null,
+      "status": "NOT_RUN"
+    },
+    {
+      "id": "FQ-S02",
+      "kind": "selection_implicit",
+      "prompt": "Dans le SofaScore Local Lab, la rencontre conserve le même identifiant mais son horaire a changé ; la composition inverse domicile et extérieur et des tirs au but n'ont pas de minute. Quel parcours permet de qualifier ces écarts avant d'interpréter l'historique ?",
+      "source_ids": [],
+      "input_case": null,
+      "status": "NOT_RUN"
+    },
+    {
+      "id": "FQ-S03",
+      "kind": "selection_negative_lot1",
+      "prompt": "Vérifie uniquement le build Windows de ce SofaScore Local Lab avec le wrapper Maven et lis les rapports effectifs. Aucun audit des données football, de parseur ou de campagne n'est demandé.",
+      "source_ids": [],
+      "input_case": null,
+      "status": "NOT_RUN"
+    },
+    {
+      "id": "FQ-S04",
+      "kind": "selection_negative_other_repo",
+      "prompt": "Dans le dépôt Betting Project principal uniquement, prépare la comparaison des garanties de composition de trois fournisseurs. Ce travail ne concerne pas le SofaScore Local Lab ni son code.",
+      "source_ids": [],
+      "input_case": null,
+      "status": "NOT_RUN"
+    }
+  ]
+}

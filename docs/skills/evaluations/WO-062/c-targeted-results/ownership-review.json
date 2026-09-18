@@ -1,0 +1,76 @@
+{
+  "schema": "wo062-targeted-ownership-independent-review-v1",
+  "case_id": "C-TARGETED-OWNERSHIP",
+  "verdict": "PASS",
+  "qualification_scope": "OWNERSHIP_ONLY",
+  "reviewer_role": "independent_reviewer",
+  "reviewed_head": "380d9ed5e548fb2fbc398aaeccfca516395c6e82",
+  "reviewed_sources": [
+    "docs/skills/evaluations/WO-062/c-targeted-reprise/OwnershipProbe.java",
+    "docs/skills/evaluations/WO-062/c-targeted-reprise/Probe-JavaOwnership.ps1",
+    "docs/skills/evaluations/WO-062/c-targeted-reprise/ownership-proof.json"
+  ],
+  "hashes": {
+    "java_fixture_sha256": "8f1aa2734f9ba19040145ab52b6668832a47c8bcbace98de368e18e53ca14863",
+    "driver_sha256": "d88c87a13518c03ea32233ab43acfebcd5cbc06d31494e6d0ea0c12fad58cc48",
+    "proof_sha256": "70be6ee6153269c440944fdb2b15b21fef065ce5b0e5ad4f5c61f535b18bacef"
+  },
+  "summary": "La preuve ciblée établit une JVM Java25 directe reliée au handle détenu, à son PID, à son parent et à son image durant sa vie ; libération naturelle RELEASE puis sortie0 et racine absente. Les trois fichiers correspondent au manifeste. Ce PASS ne qualifie aucun mode failure/sleep, délai1500ms, arrêt forcé ou reprise complète WR-N01.",
+  "criteria": [
+    {
+      "id": "O01",
+      "verdict": "PASS",
+      "requirement": "Provenance et portée ciblée",
+      "evidence": "Les trois SHA et tailles correspondent au preparation-manifest. Authorization décrit explicitement un prérequis d'identité sans réexécution immédiate WR-N01. Le code Java ne contient que la publication d'identité et l'attente RELEASE.",
+      "limit": "Le relecteur contrôle le dossier fourni ; il ne relance aucun programme et n'attribue pas une nouvelle mesure à cette revue."
+    },
+    {
+      "id": "O02",
+      "verdict": "PASS",
+      "requirement": "Découverte Java directe sans chemin inventé",
+      "evidence": "Get-Command java.exe -All distingue javapath/originalFilename shimconsole.exe du JDK originalFilename java.exe. Un seul candidat direct25 est accepté. Chemin demandé, MainModule et ProcessHandle.info.command concordent sur C:\\Program Files\\Java\\jdk-25.0.4\\bin\\java.exe ; version effective25.0.4+7-LTS-189.",
+      "limit": "Le seul nom original de fichier n'est pas la preuve d'identité ; la concordance en exécution est ce qui l'établit ici. Pas de généralisation à tout hôte ou lancement futur."
+    },
+    {
+      "id": "O03",
+      "verdict": "PASS",
+      "requirement": "PID, parent, image, UUID et handle vivant",
+      "evidence": "Handle2520/PID4808 ; fixture PID4808, parent35688 égal conducteur35688, UUID db7b5bbe-362a-4873-9f98-6b7cf1cd2d38, même image et aliveDuringCheck=true. Les tests du script refusent les divergences avant RELEASE.",
+      "limit": "Le script enregistre les deux heures de création sans les comparer. Leur différence observée0.8359ms est compatible avec la précision milliseconde de la valeur Java, et n'est pas une égalité textuelle inventée."
+    },
+    {
+      "id": "O04",
+      "verdict": "PASS",
+      "requirement": "Bornes et sortie naturelle observées",
+      "evidence": "Readiness bornée à5s, auto-sortie de secours Java après8s sans entrée, attente5s après RELEASE, attente finale limitée par reste20s. Preuve OWNER_RELEASED, exitCode0 immédiatement après sortie, durationMs959.1857.",
+      "limit": "Les valeurs20s ne constituent pas un superviseur global indépendant de tous les appels de préflight/Process.Start ; seul ce parcours réussi sous1s est démontré. Aucun timeout ni Kill n'est qualifié."
+    },
+    {
+      "id": "O05",
+      "verdict": "PASS",
+      "requirement": "Confinement enfant et nettoyage des ressources exactes",
+      "evidence": "RacineUUID neuve sous .tmp/wrn-ownership-preflight-01 dans le worktree, ancêtres sans reparse, cwd/temp/home confinés, UseShellExecute=false/CreateNoWindow=true, variables d'injection retirées du seul ProcessStartInfo. Handle sorti avant Dispose ; seuls deux répertoires vides supprimés, rootAbsent=true.",
+      "limit": "La suppression est non récursive et tout fichier inattendu bloque. Pas de scan/arrêt tiers ni nettoyage de l'ancien JavaLauncher.log. Le postflight est interne à la conduite, pas une observation indépendante après coup."
+    },
+    {
+      "id": "O06",
+      "verdict": "PASS",
+      "requirement": "Absence de qualification complète ou de faux vert",
+      "evidence": "result PASS_OWNERSHIP_ONLY, scope explicite, processesStopped0, oldWRN01ResidueTouched=false ; absence de branches failure/sleep, sockets, fichiers Java ou descendants dans la fixture.",
+      "limit": "La courte attente de libération de l'identité n'est pas le mode sleep de NativeProbe. Aucun code23, UTF8 accentué, expiration1500ms, arrêt5s ou réussite des deux modes WR-N01 n'est démontré."
+    }
+  ],
+  "blocking_findings": [],
+  "limits": [
+    "Les gardes du script sont adaptés à ce scénario d'identité. Ils ne prouvent pas une conduite universelle : garde PS Major5/Desktop sans test Minor1 explicite, création des répertoires avant try, quote helper non général. Le runtime observé est néanmoins bien5.1 et les chemins de cet essai sont contrôlés.",
+    "Le JSON fournit une observation produite par le conducteur ; ce dossier ne comprend pas les événements natifs du lanceur extérieur. La revue ne remplace ni cette provenance ni une nouvelle qualification native complète.",
+    "Aucune autorisation de réexécution complète n'est déduite de ce PASS ; l'entrée opératoire bornée doit être revue selon la porte de reprise."
+  ],
+  "full_WR_N01_qualified": false,
+  "failure_mode_executed": false,
+  "sleep_mode_executed": false,
+  "forced_termination_qualified": false,
+  "reviewer_executed_probe": false,
+  "reviewer_called_model": false,
+  "reviewer_modified_sources": false
+}

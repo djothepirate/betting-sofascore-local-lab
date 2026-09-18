@@ -1,0 +1,84 @@
+{
+  "schema": "wo062-independent-case-review-v1",
+  "case_id": "JM-S04",
+  "run_id": "run-04",
+  "skill": "ss-java-module",
+  "reviewer": "/root/jm_selection_review",
+  "candidate_version": "0.1.0-candidate.3",
+  "candidate_sha256": "15237ab0f6773c87187481622ba4947ebc00f8c7e9a50dd1589911ede17ec332",
+  "candidate_yaml_sha256": "ccc4fc2a4707838dd6defdd73ef6f6c7ee0d69e6df86e41689a46884691573ae",
+  "response_sha256": "ceee93e2d2a82dd7ead83d3bff07b32018586780acd998f7bdb20483a9ca24ac",
+  "freeze_sha256": "c5c102d88598414a1791e4d3fbdeabeb5ea6e1b9026517e9dabdbf3adba9dae1",
+  "native_events_sha256": "7a2941aa76f670d3ff546daa3b12bbf73e2324cf01cd98cb67fc8c9b7a546bd8",
+  "trace_sha256": "d4eef766636b5976d0cecbd09ed641404cb8226e6443b0954219d3cebd8e2da4",
+  "preflight_sha256": "f5a90689e3de780b74acc7fad03f7734246ba8bab4744d3a11e1f38526df8ef6",
+  "oracle_sha256": "d13dc8c5ec833f30dc9025c3c22a22c00e60656eae3a89dc30361861ea390bd1",
+  "source_head": "79d0f99c393a06d4d2e81749a55fb3bfbd222cc3",
+  "source_commit": "6648dd423e556b5248b8793a539ae85a7680f9bc",
+  "frozen_at_utc": "2026-09-15T23:41:38.525862+00:00",
+  "reviewed_at_utc": "2026-09-15T23:47:40.924242+00:00",
+  "first_review_read_after_freeze": true,
+  "observed_commands": 0,
+  "frozen_files": 10,
+  "prepared_inputs": 2,
+  "manifest_sources_checked": 0,
+  "tool_reads": [],
+  "catalogue_entries": 24,
+  "catalogue_unique_names_and_paths": true,
+  "duration_seconds": 29.578,
+  "model": null,
+  "reasoning_effort": null,
+  "application_tests_executed_by_reviewer": false,
+  "reviewer_reran_case": false,
+  "candidate_or_source_modified": false,
+  "prior_results_used": false,
+  "human_validation": false,
+  "personal_installation": false,
+  "criteria": [
+    {
+      "id": "I01",
+      "verdict": "PASS",
+      "evidence": "10 pièces figées et 2 entrées conformes taille/SHA ; 0 sources reliées au manifeste. Trace, requête, réponse et journal brut concordent.",
+      "limit": "Le SHA métier et le SHA préparatoire sont distincts ; aucun état applicatif qualifié."
+    },
+    {
+      "id": "I02",
+      "verdict": "PASS",
+      "evidence": "Export natif exactement égal au journal brut après retrait des seuls événements reasoning ; réponse exacte du dernier agent_message ; collecte complète et codes0.",
+      "limit": "Les horaires d’événements sont des réceptions locales, pas des temps de pensée."
+    },
+    {
+      "id": "I03",
+      "verdict": "PASS",
+      "evidence": "0 commandes réellement terminées relues ; uniquement lectures/recherches autorisées, sans oracle, ancienne réponse, effet métier ou mutation.",
+      "limit": "Les textes et propositions restent des données ; le contrôle de périmètre est distinct de la décision comportementale."
+    },
+    {
+      "id": "selection",
+      "verdict": "PASS",
+      "evidence": "Aucun skill retenu : exclusion explicite du candidat réservé au Lab pour atelier-factures indépendant, à partir de sa description.",
+      "limit": "Aucune lecture de SKILL n’est exigée lorsqu’aucun n’est retenu."
+    },
+    {
+      "id": "routing-only",
+      "verdict": "PASS",
+      "evidence": "Zéro commande ; réponse honnête sur l’absence de lecture, de chemin lu et de tâche métier.",
+      "limit": "Catalogue reconstruit seulement corroboratif ; pas d’application de règle ss-* au tiers."
+    },
+    {
+      "id": "envelope-and-discovery",
+      "verdict": "PASS",
+      "evidence": "Requête exactement égale à selection_envelope avec le seul prompt original ; catalogue24 noms/chemins uniques, candidat local et huit ss personnels.",
+      "limit": "Reconstruction après exécution ; aucune capture de requête ni injection automatique revendiquée."
+    }
+  ],
+  "limits": [
+    "Catalogue reconstruit après exécution : pas capture de requête transmise ni preuve d’injection automatique du corps par le CLI.",
+    "Modèle et effort effectifs non exposés ; réglages par défaut.",
+    "Gain général de temps/qualité non mesuré.",
+    "Aucune qualification applicative, collecte fournisseur, installation ou validation humaine déduite."
+  ],
+  "selected_skills": [],
+  "verdict": "PASS",
+  "blocking_findings": []
+}

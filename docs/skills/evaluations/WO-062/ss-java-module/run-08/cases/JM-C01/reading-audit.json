@@ -1,0 +1,9 @@
+{
+  "schema": "wo062-c5-read-policy-audit-v1",
+  "case_id": "JM-C01",
+  "scope": "Completed command_execution events only; an aid to independent review, not a sandbox barrier.",
+  "runtime_dependency_direct_access": [],
+  "repeated_readable_access": [],
+  "readable_commands": [],
+  "status": "NOT_APPLICABLE"
+}

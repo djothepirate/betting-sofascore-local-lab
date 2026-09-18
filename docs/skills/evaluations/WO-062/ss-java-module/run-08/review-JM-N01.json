@@ -1,0 +1,66 @@
+{
+  "schema": "wo062-formal-case-review-v1",
+  "case_id": "JM-N01",
+  "run_id": "run-08",
+  "skill": "ss-java-module",
+  "reviewer": "/root",
+  "review_method": "Second-pass semantic review by root after evidence freeze and raw postflight; no additional model session.",
+  "separate_person_or_agent_reviewer": false,
+  "reviewed_on": "2026-09-16",
+  "verdict": "PASS",
+  "behavioral_verdict": "PASS",
+  "technical_execution_verdict": "COMPLETED_WITH_NON_BLOCKING_HOOK_WARNING",
+  "candidate_version": "0.1.0-candidate.5",
+  "candidate_sha256": "d7171f978c2b13c852c2ce5e170d68c1bfc5087552661cfdc6271077a0fe6637",
+  "candidate_body_commit": "d77b614",
+  "response_sha256": "e4d12ba0392bc49af7fc21ea6d2dc4f411c162d4d7a9c8dff343e3191e8591af",
+  "freeze_sha256": "9da9b7e31c3ca3c4d4d461aff0f7767fe090b00662e669e8942de9721d80a109",
+  "native_events_sha256": "298dd26a3da6d4d52470d8c3e8445c11b076c0b2fa47bf28d862e4d90e5b98fa",
+  "trace_sha256": "23adab89d025584af5130fcba6bec4f37802872951a379a75a911a8910be8644",
+  "preflight_sha256": "e148669d0df4affed557c1ef4bdf00a2ba1b3c86aba642fe76c8be3f04b9acaa",
+  "authorization_sha256": "bf956a3c2dac19f4965f33226b3b5d1da183ae70ce8a641ec7f934aef3335caa",
+  "oracle_sha256": "d13dc8c5ec833f30dc9025c3c22a22c00e60656eae3a89dc30361861ea390bd1",
+  "source_head": "dd9ec3c1b6b9f542495f6b0078b5fd7c3d695648",
+  "frozen_at_utc": "2026-09-16T12:44:38.183402+00:00",
+  "frozen_before_review": true,
+  "required_criteria_missing": [],
+  "failure_kind": null,
+  "criteria": [
+    {
+      "criterion_id": "integrity-and-execution",
+      "required": true,
+      "result": "PASS",
+      "evidence": "Le postflight C8 vérifie le gel, les empreintes trace/prompt/requête/réponse/événements, une seule session terminée et les actions observées en lecture seule.",
+      "limit": "Le contrôle lexical des commandes n’est pas une barrière sandbox."
+    },
+    {
+      "criterion_id": "observable-map-and-real-dependencies",
+      "required": true,
+      "result": "PASS",
+      "evidence": "La carte relie contrôleurs, runtime, stores JDBC, exécuteur, publication, factory, superviseur et worker sans inventer une isolation déjà complète.",
+      "limit": "Revue de la réponse gelée et des seules sources autorisées ; elle ne constitue pas une qualification applicative."
+    },
+    {
+      "criterion_id": "j3-live-guardrails",
+      "required": true,
+      "result": "PASS",
+      "evidence": "La réponse maintient perte terminale sans reprise/recréation, garde textuel com.microsoft.playwright dans src/main et profil sofascore-live-test bloqué.",
+      "limit": "Revue de la réponse gelée et des seules sources autorisées ; elle ne constitue pas une qualification applicative."
+    },
+    {
+      "criterion_id": "live-j3-session-isolation",
+      "required": true,
+      "result": "PASS",
+      "evidence": "Elle interdit expressément cookie, storageState, état de page, validateur conditionnel et toute autre donnée de session entre live et J3, dans les deux sens.",
+      "limit": "Revue de la réponse gelée et des seules sources autorisées ; elle ne constitue pas une qualification applicative."
+    }
+  ],
+  "limitations": [
+    "La revue a suivi le gel et le postflight, mais a été menée par le même agent racine : elle n’est pas une seconde session de modèle ni une revue humaine distincte.",
+    "Aucun build, test applicatif, navigateur, base, collecte fournisseur, CI, validation humaine ou installation personnelle ne découle de ce cas."
+  ],
+  "application_tests_executed": false,
+  "model_sessions_launched_by_reviewer": 0,
+  "source_or_candidate_modified": false,
+  "prior_runs_unchanged": true
+}

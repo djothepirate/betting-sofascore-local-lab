@@ -1,0 +1,13 @@
+PASS nominal installation and post-copy hashes
+PASS Windows destination prefix case variation
+PASS idempotence without rewriting files
+PASS verification-only existing and missing destinations
+PASS late local conflict refused before any copy
+PASS case-only local file variant refused before any copy
+PASS additional local file preserved and reported
+PASS source hash mismatch refused before any copy
+PASS coexistence with lot 1 without rewriting its files
+PASS resuming a partial installation without rewriting the existing file
+PASS unapproved package refused before any copy
+PASS manifest path outside the selected package refused
+LOCAL_LAB_SKILLS_INSTALLER_TESTS=PASS; PACKAGE=ProviderBenchmark; CASES=11; USER_INSTALLATION_TOUCHED=NO

@@ -1,0 +1,113 @@
+{
+  "prepared_at_utc": "2026-09-16T06:57:09.969114+00:00",
+  "skill": "ss-java-module",
+  "run_id": "run-06",
+  "candidate_version": "0.1.0-candidate.4",
+  "candidate_sha256": "f1f6533f678c5cdb4ae6a5bc9c996c062af419005e4f4cd6104a51c91e442d97",
+  "source_head": "91fccf1f29e2c27f95ddfb65c4a5019ff2c4c65f",
+  "preparation_manifest_sha256": "a0907baba5a15606b6a735873a3e8ab9cc4043dfe8d852f3b843e1ec61b68290",
+  "case_count": 1,
+  "cases": [
+    {
+      "case_id": "JM-H01",
+      "kind": "historical",
+      "execution_mode": "read_only",
+      "input_files": [
+        {
+          "path": "AGENTS.md",
+          "sha256": "6509ac77cd4c87094a91da7e4c750b5991eeb4585a69a609def5289b91cf6ab5",
+          "bytes": 10320
+        },
+        {
+          "path": "ADR-SS-007-j3-automation-durable-catalog-and-live-pause.md",
+          "sha256": "b819ba63c2fb5cbacf1afca115f6ab0597956b1ff8c9377f3e7beb14fba3eb07",
+          "bytes": 36758
+        },
+        {
+          "path": "docs/validation/J9-WO030-PROVIDER-PLAYWRIGHT-PORT-BOUNDARY-QUALIFICATION-20260901.md",
+          "sha256": "9bd030f4cc92f32bdeee977089d3f4c5c709278fec4c24cc66ed8fb6d258be5f",
+          "bytes": 8020
+        },
+        {
+          "path": "docs/work_orders/completed/WO-SS-20260901-030-j9-provider-playwright-port-boundary-hardening.md",
+          "sha256": "359dc1fa3c7f79b9b498369b170fb848472578bd0166248dc16862c765006c26",
+          "bytes": 10433
+        },
+        {
+          "path": "pom.xml",
+          "sha256": "e01e011e360fa847842d826a5bcf2960c34eae91da037e2a6f002e71a3513a46",
+          "bytes": 16856
+        },
+        {
+          "path": "src/main/java/com/bettingproject/sofascorelocal/config/ProviderPlaywrightProperties.java",
+          "sha256": "5e6adc1e415086a8762b982a6df05446f9081022c08938b01cbd477b1d5b89ca",
+          "bytes": 3975
+        },
+        {
+          "path": "src/provider-playwright/java/com/bettingproject/sofascorelocal/provider/playwright/worker/ProviderPlaywrightWorkerConfiguration.java",
+          "sha256": "c294e517133dde24d05b52b4206fff921d4279d6034b6bf247b9bce4199d9616",
+          "bytes": 4720
+        },
+        {
+          "path": "src/main/java/com/bettingproject/sofascorelocal/domain/provider/ScheduledEventsTransportRequest.java",
+          "sha256": "4fe53c2d6187283c1b79078ff132ca7f5a8f37d32903cb0e8b7099df0587b04d",
+          "bytes": 2030
+        },
+        {
+          "path": "src/test/java/com/bettingproject/sofascorelocal/config/ProviderPlaywrightPropertiesTest.java",
+          "sha256": "c0f4348d52c78c73e1bce72a2c0f4fa075a0c8314fc4852cdddb51d4318b554b",
+          "bytes": 4080
+        },
+        {
+          "path": "src/test/java/com/bettingproject/sofascorelocal/application/network/J3ProviderQualificationPolicyTest.java",
+          "sha256": "df1782ce36c77cb0104b6ad67b3eec81bcdeca0e053f189bffac6fedb150aca1",
+          "bytes": 12723
+        },
+        {
+          "path": "src/provider-playwright-test/java/com/bettingproject/sofascorelocal/provider/playwright/worker/ProviderPlaywrightWorkerProtocolTest.java",
+          "sha256": "ff3dd101dd05a303493fd275f7e46a0adb9e3ba613816728019345ff259ea1db",
+          "bytes": 26671
+        },
+        {
+          "path": ".agents/skills/ss-java-module/SKILL.md",
+          "sha256": "f1f6533f678c5cdb4ae6a5bc9c996c062af419005e4f4cd6104a51c91e442d97",
+          "bytes": 10901
+        },
+        {
+          "path": ".agents/skills/ss-java-module/agents/openai.yaml",
+          "sha256": "ccc4fc2a4707838dd6defdd73ef6f6c7ee0d69e6df86e41689a46884691573ae",
+          "bytes": 309
+        },
+        {
+          "path": "input.json",
+          "sha256": "bc36cc69daad9b42c547b0a863e88fea59c8921563d8f3740b98bb579184698d",
+          "bytes": 772
+        }
+      ],
+      "prompt_sha256": "3eab6b461bd8b2964ba5aebb98baaeaa34ba408d7e7f1f47081e6b73395739d9",
+      "request_sha256": "7e5ce27f03c8c8a8207eaf56775a70d5298131d46fe0a6a14b240ca5f330752b",
+      "oracle_supplied": false,
+      "design_history_supplied": false,
+      "candidate_body_manually_pasted": false
+    }
+  ],
+  "authorization": {
+    "path": "docs/skills/evaluations/WO-062/c-requalification-06/authorization.json",
+    "sha256": "762317c8b744b827ef78b8dbd197b161b030630fa5b832b9d490e6d25e41b7e1",
+    "authorized_session_count": 1,
+    "max_model_sessions": 1,
+    "owner_authorized_case_id": "JM-H01"
+  },
+  "freshness_contract": {
+    "new_run_id": "run-06",
+    "new_ephemeral_session_required": true,
+    "parent": "host non imbriqué",
+    "oracle_supplied": false,
+    "prior_c5_response_or_events_supplied": false,
+    "previous_case_context_copied": false,
+    "candidate_bytes_match_authorization": true,
+    "content_baseline_source_head": "d0021090d9cf718d5b338bbf8d06109586e4518a",
+    "content_baseline_preflight_sha256": "a975e1b4cfa71ea0a6ae0f1c5ad275baf40d259401ed8cd236204d496e452fa4",
+    "actual_c6_preparation_head": "91fccf1f29e2c27f95ddfb65c4a5019ff2c4c65f"
+  }
+}

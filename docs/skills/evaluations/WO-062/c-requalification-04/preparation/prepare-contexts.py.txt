@@ -1,0 +1,22 @@
+import importlib.util, pathlib,sys,copy,json
+r=pathlib.Path(__file__).resolve().parent.parent
+spec=importlib.util.spec_from_file_location('c4',r/'.tmp/wo062_evaluate_c4.py');m=importlib.util.module_from_spec(spec);spec.loader.exec_module(m)
+skill=sys.argv[1];assert skill in ['ss-java-module','ss-windows-runtime']
+orig=m.read
+def subset(p):
+    value=orig(p)
+    if pathlib.Path(p).name=='cases.json' and skill=='ss-windows-runtime':
+        value=copy.deepcopy(value);value['cases']=[c for c in value['cases'] if c['id'] in ['WR-H01','WR-N01']];value['case_count']=2
+    return value
+m.read=subset;m.prepare(skill,'run-04')
+runtime=r/'.tmp/wo062-evaluations'/skill/'run-04'
+if skill=='ss-windows-runtime':
+    pre=orig(runtime/'preflight.json');source=r/'docs/skills/evaluations/WO-062/c-requalification-04/windows-session-protocol.md'
+    for case in pre['cases']:
+        d=runtime/case['case_id'];dest=d/'inputs/windows-session-protocol.md';dest.write_bytes(source.read_bytes())
+        case['input_files'].append({'path':'inputs/windows-session-protocol.md','bytes':dest.stat().st_size,'sha256':m.sha(dest)})
+        request=d/'request.txt';text=request.read_text(encoding='utf-8')
+        text+='\nEntrée opératoire additionnelle autorisée : inputs/windows-session-protocol.md. Lire son organisation commune et le fragment du cas courant ; elle précise la conduite et ne remplace pas la demande.\n'
+        request.write_text(text,encoding='utf-8',newline='\n');case['request_sha256']=m.sha(request)
+    m.write(runtime/'preflight.json',pre)
+print(json.dumps({'prepared':skill,'run':'run-04','preflight_sha256':m.sha(runtime/'preflight.json')}))

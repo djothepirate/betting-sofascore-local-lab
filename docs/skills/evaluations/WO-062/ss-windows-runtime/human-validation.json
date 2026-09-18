@@ -1,0 +1,30 @@
+{
+  "files": [
+    {
+      "sha256": "b89925d5395238010bb0afe9c1e1a22b0aa5ec4e7d1fb9946c671d241e7976c6",
+      "bytes": 9217,
+      "path": "docs/skills/local-lab/ss-windows-runtime/SKILL.md"
+    },
+    {
+      "sha256": "3038015980952bc18b21f45f0d4af514b35a8841394e4b80824986b7e30ccd9f",
+      "bytes": 300,
+      "path": "docs/skills/local-lab/ss-windows-runtime/agents/openai.yaml"
+    }
+  ],
+  "prepared_manifest_sha256": "11949507a72a914e6b69366997904236f5b463de37bad7135103fbc4981462e7",
+  "installation_authority": "Goal objective section2 H and section8 conditional installation/post-installation authorization; condition satisfied by current explicit owner validation.",
+  "schema_version": 1,
+  "skill": "ss-windows-runtime",
+  "candidate_version": "0.1.0-candidate.1",
+  "personal_installation_authorized": true,
+  "human_validation": true,
+  "scope": "Exact two-file candidate package; no version bump, no change to evaluated instructions; personal installation and bounded discovery/explicit read-only smoke test; no other skill modified.",
+  "qualification_path": "docs/skills/evaluations/WO-062/ss-windows-runtime/final-qualification.json",
+  "recorded_at_utc": "2026-09-18T00:17:03.8714200Z",
+  "goal_objective_path": "C:\\Users\\geoff\\.codex\\attachments\\d6075f6e-9a33-4fd8-b8b0-e5020d58989e\\goal-objective.md",
+  "authority": "Explicit owner message in current Codex task",
+  "work_order": "WO-062",
+  "goal_objective_sha256": "d9660bd5af4c558a2b0f2026ac85e4de072a8862a0a129f202095ad02c15495f",
+  "owner_statement": "J'accepte le contenu, le périmètre et les limites documentées de ss-windows-runtime 0.1.0-candidate.1, lié aux SHA-256 du manifeste préparé. Je valide humainement ce candidat exact.",
+  "qualification_sha256": "780185497850e270f3a8c2f7b4598b129aed487a21435cabd38f069d8f613006"
+}

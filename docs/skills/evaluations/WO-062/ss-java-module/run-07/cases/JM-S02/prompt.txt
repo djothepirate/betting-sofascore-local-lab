@@ -1,0 +1,1 @@
+Dans le SofaScore Local Lab, je veux revoir qui porte l’admission J3 durable, la persistance et l’appel au worker. Cartographie les classes existantes, les dépendances et l’effet des profils sur le démarrage, puis propose le plus petit ajustement utile.

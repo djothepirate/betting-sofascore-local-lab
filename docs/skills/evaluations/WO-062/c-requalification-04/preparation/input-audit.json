@@ -1,0 +1,104 @@
+{
+  "at_utc": "2026-09-15T23:28:26.634156+00:00",
+  "source_head": "79d0f99c393a06d4d2e81749a55fb3bfbd222cc3",
+  "case_count": 10,
+  "status": "PASS_BEFORE_MODEL_EXECUTION",
+  "cases": [
+    {
+      "skill": "ss-java-module",
+      "case_id": "JM-H01",
+      "request_sha256": "7e5ce27f03c8c8a8207eaf56775a70d5298131d46fe0a6a14b240ca5f330752b",
+      "input_count": 14,
+      "candidate_sha256": "15237ab0f6773c87187481622ba4947ebc00f8c7e9a50dd1589911ede17ec332",
+      "oracle_supplied": false,
+      "previous_results_supplied": false
+    },
+    {
+      "skill": "ss-java-module",
+      "case_id": "JM-N01",
+      "request_sha256": "88764e319124b951f7b9b7a580cc145789e4b9883e7bde86e17038af2f79868e",
+      "input_count": 39,
+      "candidate_sha256": "15237ab0f6773c87187481622ba4947ebc00f8c7e9a50dd1589911ede17ec332",
+      "oracle_supplied": false,
+      "previous_results_supplied": false
+    },
+    {
+      "skill": "ss-java-module",
+      "case_id": "JM-C01",
+      "request_sha256": "77a742cb2b6330c9a541e513b01a4986e612a1d077c84f04dc685aed6daaa7f3",
+      "input_count": 17,
+      "candidate_sha256": "15237ab0f6773c87187481622ba4947ebc00f8c7e9a50dd1589911ede17ec332",
+      "oracle_supplied": false,
+      "previous_results_supplied": false
+    },
+    {
+      "skill": "ss-java-module",
+      "case_id": "JM-C02",
+      "request_sha256": "92b39bc3fcdb1f50c4ffebe2515c1a254de959eb4dbc42980a1d043c2ac3f4cc",
+      "input_count": 27,
+      "candidate_sha256": "15237ab0f6773c87187481622ba4947ebc00f8c7e9a50dd1589911ede17ec332",
+      "oracle_supplied": false,
+      "previous_results_supplied": false
+    },
+    {
+      "skill": "ss-java-module",
+      "case_id": "JM-S01",
+      "request_sha256": "decb08034fe5c380fb928a833acbce29a315870d134ea9b4cd2e1d7f746be672",
+      "input_count": 2,
+      "candidate_sha256": "15237ab0f6773c87187481622ba4947ebc00f8c7e9a50dd1589911ede17ec332",
+      "oracle_supplied": false,
+      "previous_results_supplied": false
+    },
+    {
+      "skill": "ss-java-module",
+      "case_id": "JM-S02",
+      "request_sha256": "2c18704eb2fe22496f694c5a1fcfcdcd5f8f2af3fe39ba4a3bde0feb20b4968c",
+      "input_count": 2,
+      "candidate_sha256": "15237ab0f6773c87187481622ba4947ebc00f8c7e9a50dd1589911ede17ec332",
+      "oracle_supplied": false,
+      "previous_results_supplied": false
+    },
+    {
+      "skill": "ss-java-module",
+      "case_id": "JM-S03",
+      "request_sha256": "cc6d707f087eb83bd89e8d74dd0bb94174fc62f75659eba80c9fa3fc7c319045",
+      "input_count": 2,
+      "candidate_sha256": "15237ab0f6773c87187481622ba4947ebc00f8c7e9a50dd1589911ede17ec332",
+      "oracle_supplied": false,
+      "previous_results_supplied": false
+    },
+    {
+      "skill": "ss-java-module",
+      "case_id": "JM-S04",
+      "request_sha256": "d1133c87cdf33018b1fc8e366a52f2a7a78ad5cb69a1f97315e3f25db02a4641",
+      "input_count": 2,
+      "candidate_sha256": "15237ab0f6773c87187481622ba4947ebc00f8c7e9a50dd1589911ede17ec332",
+      "oracle_supplied": false,
+      "previous_results_supplied": false
+    },
+    {
+      "skill": "ss-windows-runtime",
+      "case_id": "WR-H01",
+      "request_sha256": "5dbf0a9ae579add35c7430b9c86156fe4222154a91c0ad36986fd16600888287",
+      "input_count": 13,
+      "candidate_sha256": "b89925d5395238010bb0afe9c1e1a22b0aa5ec4e7d1fb9946c671d241e7976c6",
+      "oracle_supplied": false,
+      "previous_results_supplied": false
+    },
+    {
+      "skill": "ss-windows-runtime",
+      "case_id": "WR-N01",
+      "request_sha256": "9a8ae7919086b621572be081ccad12740d586fb5dbf586fe86614300fdae30ec",
+      "input_count": 13,
+      "candidate_sha256": "b89925d5395238010bb0afe9c1e1a22b0aa5ec4e7d1fb9946c671d241e7976c6",
+      "oracle_supplied": false,
+      "previous_results_supplied": false
+    }
+  ],
+  "format_validator": {
+    "initial": "ModuleNotFoundError: yaml",
+    "subsequent": "Skill is valid!",
+    "local_dependency": ".tmp/pb-python-deps",
+    "no_installation": true
+  }
+}

@@ -1,0 +1,69 @@
+{
+  "schema": "wo062-frozen-skill-results-v1",
+  "skill": "ss-football-quality",
+  "run_id": "run-01",
+  "candidate_sha256": "8489375d22eff31a3248f78a5d3791b549a2f103d061cc6c46647a757d3eec58",
+  "reviewed_at_utc": "2026-09-15T20:09:05.643563+00:00",
+  "case_count": 8,
+  "pass": 8,
+  "fail": 0,
+  "blocked": 0,
+  "cases": [
+    {
+      "case_id": "FQ-H01",
+      "verdict": "PASS",
+      "review": "review-FQ-H01.json",
+      "response": "cases/FQ-H01/response.md",
+      "response_sha256": "3b73b308dd89b45666d6266044ada558dfef273fe49a97e20be8569fb27ceb70"
+    },
+    {
+      "case_id": "FQ-N01",
+      "verdict": "PASS",
+      "review": "review-FQ-N01.json",
+      "response": "cases/FQ-N01/response.md",
+      "response_sha256": "024b7f60bd96aaf0294b344da38f40caf3b8ea249f829f9ec5351a96e1f17ba6"
+    },
+    {
+      "case_id": "FQ-C01",
+      "verdict": "PASS",
+      "review": "review-FQ-C01.json",
+      "response": "cases/FQ-C01/response.md",
+      "response_sha256": "ad800a2c08d50e9dcccd9d140c72bf63e407ee94005ea238b2ef4779b039c542"
+    },
+    {
+      "case_id": "FQ-C02",
+      "verdict": "PASS",
+      "review": "review-FQ-C02.json",
+      "response": "cases/FQ-C02/response.md",
+      "response_sha256": "469849e2c9727cc03f0f3c5ad74e41787d1452c7bde82c81791939a2910076ba"
+    },
+    {
+      "case_id": "FQ-S01",
+      "verdict": "PASS",
+      "review": "review-FQ-S01.json",
+      "response": "cases/FQ-S01/response.md",
+      "response_sha256": "4e17f1eb19310476bee6e4106092e713f935ea40b3f7b1d035065dbdbbef0e5b"
+    },
+    {
+      "case_id": "FQ-S02",
+      "verdict": "PASS",
+      "review": "review-FQ-S02.json",
+      "response": "cases/FQ-S02/response.md",
+      "response_sha256": "3d918d61364bafa9af0f8a4d87a8bdaf9d75a4aba132b06e96e0ecf64f6cfcb5"
+    },
+    {
+      "case_id": "FQ-S03",
+      "verdict": "PASS",
+      "review": "review-FQ-S03.json",
+      "response": "cases/FQ-S03/response.md",
+      "response_sha256": "5e244a78e70c4ab84499b521313555cf215ca9dc0db167690ef8e294413db8b9"
+    },
+    {
+      "case_id": "FQ-S04",
+      "verdict": "PASS",
+      "review": "review-FQ-S04.json",
+      "response": "cases/FQ-S04/response.md",
+      "response_sha256": "152c3e1d5cf3ca70df4071c349ed6becac353a2af35069fa0df8f3dfb1a99239"
+    }
+  ]
+}

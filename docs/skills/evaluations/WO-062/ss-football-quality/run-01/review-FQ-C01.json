@@ -1,0 +1,32 @@
+{
+  "case_id": "FQ-C01",
+  "verdict": "PASS",
+  "mandatory_criteria": [
+    {"criterion":"INTEGRITY_FREEZE","status":"PASS","evidence":"7/7 tailles et SHA-256 de freeze.json recalculés concordants. response.md SHA-256 ad800a2c08d50e9dcccd9d140c72bf63e407ee94005ea238b2ef4779b039c542 ; dernier événement item_20 identique à la réponse hors terminaison de ligne."},
+    {"criterion":"INPUT_AND_CANDIDATE_IDENTITY","status":"PASS","evidence":"9/9 copies d’entrée conformes à trace.input_files ; 6/6 sources conformes au manifeste et à l’allowlist C01. Corps 7330 octets / 8489375d22eff31a3248f78a5d3791b549a2f103d061cc6c46647a757d3eec58 ; YAML 305 octets / 8d295af442808d3efebbe68e8165ef96efd086b5b84908fc12f04c1c66bf51f2, identiques aux candidats docs/skills/local-lab. input.json identique à inputs.json.cases.FQ-C01 hors marqueur _corpus_provenance redondant."},
+    {"criterion":"FULL_SKILL_TOOL_READ","status":"PASS","evidence":"native-events.json item_1 : lecture intégrale avant les sources métier, 7140 caractères du corps identiques au texte outil de 7142 caractères après retrait de sa terminaison CRLF. Aucun marqueur de troncature."},
+    {"criterion":"EXECUTION_SCOPE","status":"PASS","evidence":"8 commandes achevées code 0 : item_1, item_2, item_3, item_6, item_7, item_11, item_10, item_13. Lectures/recherches uniquement sur les huit chemins autorisés de request.txt ; aucun oracle, recherche récursive, code exécuté, réseau, app, build, test, DB/Docker ou mutation. Tour terminé ; essai documentaire effectif distinct de la préparation statique."},
+    {"criterion":"G1","status":"PASS","evidence":"response.md:39 et :233 : matrice de provenance des 11 fragments reliée à preuve/règle/gravité/décision ; hashes et IDs non fournis restent absents."},
+    {"criterion":"G2","status":"PASS","evidence":"response.md:144, :164, :204 : absent, null, zéro, chaîne zéro, false, bloc vide, EMPTY_VALID, PARTIAL et UNAVAILABLE distincts ; pas d’exactitude ou complétude globale inférée."},
+    {"criterion":"G3","status":"PASS","evidence":"response.md:14, :18, :37, :41 et :198 : quatre statuts Lab, portée documentaire et synthétique, contrats/versions distingués des résultats exécutés ; note PRIMARY/CONTROL écartée."},
+    {"criterion":"G4","status":"PASS","evidence":"Huit commandes strictement en lecture et dans l’allowlist. Les limites et preuves nécessaires sont exposées sans collecte ni exécution ; aucune source modifiée."},
+    {"criterion":"C1.1","status":"PASS","evidence":"response.md:68 et :91 : SOFASCORE/90006201, 11/22, 77, 2026 conservés ; une identité malgré renommage/horaire ; inversion L1 non résolue et non corrigée par terrain neutre ; instruction source ignorée."},
+    {"criterion":"C1.2","status":"PASS","evidence":"response.md:99 et :142 : fenêtre UTC 2026-10-24T22:00Z à 2026-10-25T23:00Z exclusive, 25 heures ; 02:30 +02/+01 et 60 minutes réelles ; E3 dernière version hors fenêtre après sélection."},
+    {"criterion":"C1.3","status":"PASS","evidence":"response.md:150-151 : D1 HOME 0 / AWAY absent, current=2 non utilisé, paire — et tapis vert sans vainqueur ; D2 false / AWAY 0 / HOME absent. Aucune assimilation à un penalty ni score de tir inféré."},
+    {"criterion":"C1.4","status":"PASS","evidence":"response.md:166-185 : deux métriques période/groupe/code ; HOME ALL 0 et AWAY 1ST chaîne 0 présents ; 2/4 PARTIAL 50 %, deux absences maintenues et aucune somme des périodes."},
+    {"criterion":"C1.5","status":"PASS","evidence":"response.md:192-200 : ST2 EMPTY_VALID avec branche emptyValid() reconnue, sans données inventées ; ST3 SCHEMA_INCOMPATIBLE sans objet normalisé ; ST4 UNAVAILABLE / N/A / HTTP 404 déclaré. Libellé PARSED omis sans modification de décision."},
+    {"criterion":"C1.6","status":"PASS","evidence":"response.md:210-229 : 101 titulaire false/0 explicites et pays/passes inconnus ; 102 remplaçant bloc statistiques vide, entrée inconnue ; 103 indisponible séparé sans motif/retour ; blocs AWAY absents non changés en listes vides."},
+    {"criterion":"C1.7","status":"PASS","evidence":"response.md:41-64 : signatures explicitement pédagogiques malgré PROVIDER_SNAPSHOT ; matrice complète des IDs, snapshots, hashes et réceptions simulés ; aucune lecture fournisseur réelle revendiquée."}
+  ],
+  "findings": [
+    {"id":"FQ-C01-M01","severity":"MINOR","material":false,"criterion":"C1.5","evidence":"response.md:192 et :196","description":"Le libellé PARSED n’est pas écrit pour ST2, mais EMPTY_VALID et la branche emptyValid() acceptée rendent la décision explicite. I08 retourne J5ParseResult.parsed. L’omission ne masque ni ne change la qualification ; amélioration facultative : PARSED / EMPTY_VALID."},
+    {"id":"FQ-C01-M02","severity":"MINOR","material":false,"criterion":"C1.3","evidence":"response.md:144-162","description":"La distinction avec inGamePenalty/awarded n’est pas formulée littéralement, mais aucun raisonnement ne confond les deux : règle J4 correcte, aucun vainqueur/score/résultat de tir inféré. Amélioration pédagogique facultative uniquement."}
+  ],
+  "limits": [
+    "Verdict limité à FQ-C01 et au candidat figé ; pas d’exécution de parseur, test, build, DB, application, Docker ou fournisseur dans cette revue.",
+    "catalogue.txt est une reconstruction après exécution, pas une capture de catalogue transmis. Aucune injection automatique CLI ou sélection native n’est certifiée par C01 ; seule la lecture outil entière est directement démontrée.",
+    "Les copies d’entrée hors frozen sont vérifiées contre la trace figée et le manifeste dans leur état disponible ; aucun dispositif d’immutabilité physique n’est présumé.",
+    "Les conversions UTC sont correctes, mais aucune commande de moteur horaire n’apparaît. Calculées en mémoire décrit le raisonnement, pas une preuve d’exécution IANA.",
+    "Les statuts PREPARED_NOT_RUN des documents de préparation ne sont pas requalifiés rétroactivement en essais ; le présent verdict porte sur l’exécution native achevée de run-01/FQ-C01."
+  ]
+}

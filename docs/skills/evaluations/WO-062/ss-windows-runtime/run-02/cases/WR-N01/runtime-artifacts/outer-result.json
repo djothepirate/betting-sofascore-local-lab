@@ -1,0 +1,16 @@
+{
+  "startedUtc": "2026-09-15T21:59:25.7445937Z",
+  "launcherPid": 37520,
+  "launcherCreationUtc": "2026-09-15T21:59:25.3361485Z",
+  "launcherExecutable": "C:\\Program Files\\PowerShell\\7\\pwsh.exe",
+  "launcherPSEdition": "Core",
+  "launcherPSVersion": "7.6.6",
+  "workingDirectory": "C:\\Dev\\BettingProject\\codex\\betting-sofascore-local-lab\\.tmp\\wo062-skills-lot2\\.tmp\\wo062-evaluations\\ss-windows-runtime\\run-02\\WR-N01",
+  "conductorExecutable": "C:\\Windows\\System32\\WindowsPowerShell\\v1.0\\powershell.exe",
+  "command": "\"C:\\Windows\\System32\\WindowsPowerShell\\v1.0\\powershell.exe\" -NoProfile -NonInteractive -ExecutionPolicy Bypass -File \"C:\\Dev\\BettingProject\\codex\\betting-sofascore-local-lab\\.tmp\\wo062-skills-lot2\\.tmp\\wo062-evaluations\\ss-windows-runtime\\run-02\\WR-N01\\output\\runtime-artifacts\\Invoke-WRN01.ps1\"",
+  "environmentPolicy": "inherited; parent environment unmodified; Java environment isolation inside conductor",
+  "nativeExitCaptureUtc": "2026-09-15T21:59:28.0011682Z",
+  "nativeExitCode": 2,
+  "elapsedMs": 2171.9922,
+  "captureRule": "$LASTEXITCODE copied as the first statement after native invocation"
+}

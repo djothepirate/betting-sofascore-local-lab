@@ -1,0 +1,106 @@
+"""Verify the C7 Java context before the seven owner-authorized model sessions."""
+import hashlib
+import json
+import pathlib
+import sys
+
+ROOT = pathlib.Path(__file__).resolve().parent.parent
+CASES = (
+    "JM-N01",
+    "JM-C01",
+    "JM-C02",
+    "JM-S01",
+    "JM-S02",
+    "JM-S03",
+    "JM-S04",
+)
+CANDIDATE_SHA = "f1f6533f678c5cdb4ae6a5bc9c996c062af419005e4f4cd6104a51c91e442d97"
+
+
+def sha(path: pathlib.Path) -> str:
+    return hashlib.sha256(path.read_bytes()).hexdigest()
+
+
+def read(path: pathlib.Path):
+    return json.loads(path.read_text(encoding="utf-8-sig"))
+
+
+auth_path = ROOT / "docs/skills/evaluations/WO-062/c-requalification-07/authorization.json"
+runtime = ROOT / ".tmp/wo062-evaluations/ss-java-module/run-07"
+auth = read(auth_path)
+before = read(runtime / "preflight.json")
+c5_path = ROOT / "docs/skills/evaluations/WO-062/ss-java-module/run-05/preflight.json"
+c5 = read(c5_path)
+
+assert auth["run_id"] == "run-07"
+assert auth["skill"] == "ss-java-module"
+assert tuple(auth["cases"]) == CASES
+assert auth["authorized_session_count"] == 7
+assert auth["max_model_sessions"] == 7
+assert auth["execution"]["workers"] == 1
+assert auth["execution"]["automatic_retry"] is False
+assert auth["execution"]["sandbox"] == "read-only"
+assert auth["oracle_supplied_to_evaluated_sessions"] is False
+assert auth["prior_answers_supplied_to_evaluated_sessions"] is False
+assert auth["candidate_sha256"] == CANDIDATE_SHA
+assert sha(ROOT / "docs/skills/local-lab/ss-java-module/SKILL.md") == CANDIDATE_SHA
+
+assert before["run_id"] == "run-07"
+assert before["skill"] == "ss-java-module"
+assert before["candidate_sha256"] == CANDIDATE_SHA
+assert tuple(case["case_id"] for case in before["cases"]) == CASES
+assert before["case_count"] == 7
+assert before["c7_contract"]["allowed_case_ids"] == list(CASES)
+assert before["c7_contract"]["workers_required"] == 1
+assert before["c7_contract"]["automatic_retry"] is False
+assert before["c7_contract"]["oracle_supplied"] is False
+assert before["c7_contract"]["prior_answers_supplied"] is False
+assert before["c7_contract"]["c5_baseline_preflight_sha256"] == sha(c5_path)
+
+c5_cases = {case["case_id"]: case for case in c5["cases"]}
+case_results = []
+for case in before["cases"]:
+    case_id = case["case_id"]
+    assert case_id in c5_cases
+    c5_case = c5_cases[case_id]
+    assert case["input_files"] == c5_case["input_files"]
+    assert case["prompt_sha256"] == c5_case["prompt_sha256"]
+    assert case["request_sha256"] == c5_case["request_sha256"]
+    case_dir = runtime / case_id
+    assert case_dir.is_dir()
+    assert not (runtime / "frozen" / case_id).exists()
+    output = case_dir / "output"
+    assert output.is_dir() and not any(output.iterdir())
+    assert not (output / "events.jsonl").exists()
+    assert not (output / "response.md").exists()
+    for entry in case["input_files"]:
+        path = case_dir / entry["path"]
+        assert path.is_file(), path
+        assert path.stat().st_size == entry["bytes"], path
+        assert sha(path) == entry["sha256"], path
+    request = (case_dir / "request.txt").read_text(encoding="utf-8")
+    assert "C5 run-05 execution artifacts" not in request
+    assert "C6" not in request
+    assert "oracle.md" not in request
+    assert "name: ss-java-module" not in request
+    case_results.append(
+        {
+            "case_id": case_id,
+            "input_file_count": len(case["input_files"]),
+            "matches_c5_frozen_input_envelope": True,
+            "output_present_before_launch": False,
+        }
+    )
+
+result = {
+    "schema": "wo062-c7-context-integrity-v1",
+    "status": "PASS",
+    "run_id": "run-07",
+    "candidate_sha256": CANDIDATE_SHA,
+    "case_count": len(case_results),
+    "cases": case_results,
+    "matches_c5_frozen_input_envelopes": True,
+    "oracle_or_prior_answer_in_context": False,
+    "output_present_before_launch": False,
+}
+print(json.dumps(result, ensure_ascii=False, indent=2))

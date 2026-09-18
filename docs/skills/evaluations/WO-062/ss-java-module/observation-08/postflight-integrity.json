@@ -1,0 +1,294 @@
+{
+  "schema": "wo062-targeted-observation-postflight-v1",
+  "checked_at_utc": "2026-09-16T11:47:59.205990+00:00",
+  "run_id": "observation-08",
+  "case_id": "JM-N01",
+  "formal_qualification": false,
+  "integrity_status": "PASS",
+  "freeze_sha256": "ec4228a7adfc3899b6d1c5a136bbf9f389d65aacbac58d0f23fa93e5842d0bd0",
+  "frozen_at_utc": "2026-09-16T11:47:47.004031+00:00",
+  "frozen_before_review": true,
+  "input_file_count": 39,
+  "input_hashes_unchanged": true,
+  "candidate_sha256": "d7171f978c2b13c852c2ce5e170d68c1bfc5087552661cfdc6271077a0fe6637",
+  "response_sha256": "887f63a16d33031cb91692d0d786d94ff9a8de36b89daad612a22f452d9c07c3",
+  "oracle_sha256": "d13dc8c5ec833f30dc9025c3c22a22c00e60656eae3a89dc30361861ea390bd1",
+  "preflight_sha256": "466f89c2a5d5175ffc88c97e9d76e563aea230ab538fd0048a977f30228da635",
+  "authorization_sha256": "ff4efe981df0161a0efcc36bdbbdeb44aa22d84f1ac993864d339fcc7f91946f",
+  "execution_head": "766d735f4e43f66c29268dbdc5b3a0f6b62f1d17",
+  "session": {
+    "event_counts": {
+      "thread.started": 1,
+      "turn.started": 1,
+      "item.completed": 44,
+      "item.started": 38,
+      "turn.completed": 1
+    },
+    "exit_code": 0,
+    "collector_exit_code": 0,
+    "timed_out": false,
+    "duration_seconds": 617.25,
+    "diagnostics": [],
+    "automatic_retry": false,
+    "internal_transport_retries": [],
+    "collaboration_routing_errors": [
+      "no thread with id: 01a0aa01-f980-7cd2-bcd5-d8e850a948f7",
+      "no thread with id: 01a0aa01-f980-7cd2-bcd5-d8e850a948f7"
+    ],
+    "stream_errors": [],
+    "other_nonreasoning_item_types": []
+  },
+  "timing_receipts_verified": true,
+  "command_audit_status": "PASS_AFTER_REVIEW_OF_ACTUAL_COMMANDS",
+  "commands": [
+    {
+      "index": 1,
+      "command": "\"C:\\\\Program Files\\\\PowerShell\\\\7\\\\pwsh.exe\" -Command \"Get-Content -LiteralPath '.agents/skills/ss-java-module/SKILL.md' -Raw\"",
+      "exit_code": 0,
+      "output_chars": 11001
+    },
+    {
+      "index": 2,
+      "command": "\"C:\\\\Program Files\\\\PowerShell\\\\7\\\\pwsh.exe\" -Command \"Get-Content -LiteralPath 'input.json' -Raw\"",
+      "exit_code": 0,
+      "output_chars": 1185
+    },
+    {
+      "index": 3,
+      "command": "\"C:\\\\Program Files\\\\PowerShell\\\\7\\\\pwsh.exe\" -Command \"Get-Content -LiteralPath 'AGENTS.md' -Raw\"",
+      "exit_code": 0,
+      "output_chars": 10105
+    },
+    {
+      "index": 4,
+      "command": "\"C:\\\\Program Files\\\\PowerShell\\\\7\\\\pwsh.exe\" -Command \"rg -n 'J3|Playwright|playwright|@|public |private |protected |Transaction|Executor|Clock|Scheduled' docs/architecture/ARCHITECTURE.md scripts/Verify-Local.ps1 src/main/java/com/bettingproject/sofascorelocal/application/network/J3RuntimeService.java src/main/java/com/bettingproject/sofascorelocal/application/network/J3CollectionExecutor.java src/main/java/com/bettingproject/sofascorelocal/application/network/J3CollectionCompletionService.java\"",
+      "exit_code": 0,
+      "output_chars": 36812
+    },
+    {
+      "index": 5,
+      "command": "\"C:\\\\Program Files\\\\PowerShell\\\\7\\\\pwsh.exe\" -Command '$files = @('\"'pom.xml','src/main/resources/application.yml','src/main/resources/application-local.yml','.mvn/wrapper/maven-wrapper.properties'); foreach (\"'$f in $files) { Write-Output \"FILE $f\"; $i=0; Get-Content -LiteralPath $f | ForEach-Object { $i++; '\"'{0,4}: {1}' -f \"'$i,$_ } }'",
+      "exit_code": 0,
+      "output_chars": 34758
+    },
+    {
+      "index": 6,
+      "command": "\"C:\\\\Program Files\\\\PowerShell\\\\7\\\\pwsh.exe\" -Command '$files = @('\"'ADR-SS-007-j3-automation-durable-catalog-and-live-pause.md','docs/runbooks/J3-AUTOMATION-AND-DURABLE-CATALOG.md','docs/validation/WO060-J3-IMPLEMENTATION-20260914.md'); foreach (\"'$f in $files) { Write-Output \"FILE $f\"; $i=0; Get-Content -LiteralPath $f | ForEach-Object { $i++; '\"'{0,4}: {1}' -f \"'$i,$_ } }'",
+      "exit_code": 0,
+      "output_chars": 73316
+    },
+    {
+      "index": 7,
+      "command": "\"C:\\\\Program Files\\\\PowerShell\\\\7\\\\pwsh.exe\" -Command '$f='\"'src/main/java/com/bettingproject/sofascorelocal/application/network/J3RuntimeService.java'; \"'$i=0; Get-Content -LiteralPath $f | ForEach-Object { $i++; '\"'{0,4}: {1}' -f \"'$i,$_ }'",
+      "exit_code": 0,
+      "output_chars": 24627
+    },
+    {
+      "index": 8,
+      "command": "\"C:\\\\Program Files\\\\PowerShell\\\\7\\\\pwsh.exe\" -Command '$files=@('\"'src/main/java/com/bettingproject/sofascorelocal/domain/scheduledevents/J3AutomationData.java','src/main/java/com/bettingproject/sofascorelocal/domain/scheduledevents/J3CollectionData.java','src/main/java/com/bettingproject/sofascorelocal/port/J3AutomationStore.java','src/main/java/com/bettingproject/sofascorelocal/port/J3CollectionStore.java'); foreach(\"'$f in $files){Write-Output \"FILE $f\"; $i=0; Get-Content -LiteralPath $f | ForEach-Object {$i++; '\"'{0,4}: {1}' -f \"'$i,$_}}'",
+      "exit_code": 0,
+      "output_chars": 14534
+    },
+    {
+      "index": 9,
+      "command": "\"C:\\\\Program Files\\\\PowerShell\\\\7\\\\pwsh.exe\" -Command '$files=@('\"'src/main/java/com/bettingproject/sofascorelocal/application/network/J3CollectionExecutor.java','src/main/java/com/bettingproject/sofascorelocal/application/network/J3CollectionCompletionService.java'); foreach(\"'$f in $files){Write-Output \"FILE $f\"; $i=0; Get-Content -LiteralPath $f | ForEach-Object {$i++; '\"'{0,4}: {1}' -f \"'$i,$_}}'",
+      "exit_code": 0,
+      "output_chars": 16010
+    },
+    {
+      "index": 10,
+      "command": "\"C:\\\\Program Files\\\\PowerShell\\\\7\\\\pwsh.exe\" -Command '$files=@('\"'src/main/java/com/bettingproject/sofascorelocal/adapter/web/J3AutomationController.java','src/main/java/com/bettingproject/sofascorelocal/adapter/web/J3CollectionController.java'); foreach(\"'$f in $files){Write-Output \"FILE $f\"; $i=0; Get-Content -LiteralPath $f | ForEach-Object {$i++; '\"'{0,4}: {1}' -f \"'$i,$_}}'",
+      "exit_code": 0,
+      "output_chars": 18158
+    },
+    {
+      "index": 11,
+      "command": "\"C:\\\\Program Files\\\\PowerShell\\\\7\\\\pwsh.exe\" -Command \"rg -n '\"'^import|@|public |private |protected |transaction|FOR UPDATE|advisory|j3_|benchmark'\"' src/main/java/com/bettingproject/sofascorelocal/adapter/persistence/JdbcJ3AutomationStore.java src/main/java/com/bettingproject/sofascorelocal/adapter/persistence/JdbcJ3CollectionStore.java\"",
+      "exit_code": 0,
+      "output_chars": 28000
+    },
+    {
+      "index": 12,
+      "command": "\"C:\\\\Program Files\\\\PowerShell\\\\7\\\\pwsh.exe\" -Command '$f='\"'src/main/java/com/bettingproject/sofascorelocal/adapter/persistence/JdbcJ3AutomationStore.java'; \"'$i=0; Get-Content -LiteralPath $f | ForEach-Object {$i++; '\"'{0,4}: {1}' -f \"'$i,$_}'",
+      "exit_code": 0,
+      "output_chars": 17539
+    },
+    {
+      "index": 13,
+      "command": "\"C:\\\\Program Files\\\\PowerShell\\\\7\\\\pwsh.exe\" -Command '$f='\"'src/main/java/com/bettingproject/sofascorelocal/adapter/persistence/JdbcJ3CollectionStore.java'; \"'$i=0; Get-Content -LiteralPath $f | ForEach-Object {$i++; if($i -le 182 -or ($i -ge 212 -and $i -le 226)) {'\"'{0,4}: {1}' -f \"'$i,$_}}'",
+      "exit_code": 0,
+      "output_chars": 14435
+    },
+    {
+      "index": 14,
+      "command": "\"C:\\\\Program Files\\\\PowerShell\\\\7\\\\pwsh.exe\" -Command '$f='\"'pom.xml'; \"'$i=0; Get-Content -LiteralPath $f | ForEach-Object {$i++; '\"'{0,4}: {1}' -f \"'$i,$_}'",
+      "exit_code": 0,
+      "output_chars": 20018
+    },
+    {
+      "index": 15,
+      "command": "\"C:\\\\Program Files\\\\PowerShell\\\\7\\\\pwsh.exe\" -Command '$files=@('\"'src/main/resources/application.yml','src/main/resources/application-local.yml','.mvn/wrapper/maven-wrapper.properties'); foreach(\"'$f in $files){Write-Output \"FILE $f\"; $i=0; Get-Content -LiteralPath $f | ForEach-Object {$i++; '\"'{0,4}: {1}' -f \"'$i,$_}}'",
+      "exit_code": 0,
+      "output_chars": 14726
+    },
+    {
+      "index": 16,
+      "command": "\"C:\\\\Program Files\\\\PowerShell\\\\7\\\\pwsh.exe\" -Command '$f='\"'scripts/Verify-Local.ps1'; \"'$i=0; Get-Content -LiteralPath $f | ForEach-Object {$i++; '\"'{0,4}: {1}' -f \"'$i,$_}'",
+      "exit_code": 0,
+      "output_chars": 7240
+    },
+    {
+      "index": 17,
+      "command": "\"C:\\\\Program Files\\\\PowerShell\\\\7\\\\pwsh.exe\" -Command '$files=@('\"'ADR-SS-007-j3-automation-durable-catalog-and-live-pause.md','docs/architecture/ARCHITECTURE.md','docs/runbooks/J3-AUTOMATION-AND-DURABLE-CATALOG.md'); foreach(\"'$f in $files){Write-Output \"FILE $f\"; rg -n '\"'\"'^#|sandbox|jar|JAR|refus|accès|échec|J3|durable|worker|transaction'\"' -- \"'$f}'",
+      "exit_code": 0,
+      "output_chars": 24803
+    },
+    {
+      "index": 18,
+      "command": "\"C:\\\\Program Files\\\\PowerShell\\\\7\\\\pwsh.exe\" -Command '$f='\"'ADR-SS-007-j3-automation-durable-catalog-and-live-pause.md'; \"'$i=0; Get-Content -LiteralPath $f | ForEach-Object {$i++; if($i -le 45 -or ($i -ge 62 -and $i -le 206) -or ($i -ge 254 -and $i -le 277) -or ($i -ge 313 -and $i -le 385)) {'\"'{0,4}: {1}' -f \"'$i,$_}}'",
+      "exit_code": 0,
+      "output_chars": 26261
+    },
+    {
+      "index": 19,
+      "command": "\"C:\\\\Program Files\\\\PowerShell\\\\7\\\\pwsh.exe\" -Command \"rg -n '\"'^import|@|public |private |protected |J3|j3|origin|Origin|Port|CONTEXT_LOST'\"' src/main/java/com/bettingproject/sofascorelocal/application/network/playwright/PlaywrightProviderCampaignFactory.java src/main/java/com/bettingproject/sofascorelocal/application/network/playwright/PlaywrightProviderSupervisor.java src/main/java/com/bettingproject/sofascorelocal/application/network/playwright/ResilientPlaywrightProviderCampaignFactory.java src/main/java/com/bettingproject/sofascorelocal/application/network/playwright/ChildJvmPlaywrightProviderSupervisor.java\"",
+      "exit_code": 0,
+      "output_chars": 62551
+    },
+    {
+      "index": 20,
+      "command": "\"C:\\\\Program Files\\\\PowerShell\\\\7\\\\pwsh.exe\" -Command '$f='\"'docs/architecture/ARCHITECTURE.md'; \"'$i=0; Get-Content -LiteralPath $f | ForEach-Object {$i++; if($i -le 14 -or ($i -ge 77 -and $i -le 130)) {'\"'{0,4}: {1}' -f \"'$i,$_}}; $f='\"'docs/runbooks/J3-AUTOMATION-AND-DURABLE-CATALOG.md'; Write-Output \"'$f; $i=0; Get-Content -LiteralPath $f | ForEach-Object {$i++; if($i -le 51 -or ($i -ge 117 -and $i -le 159) -or ($i -ge 162 -and $i -le 217)) {'\"'{0,4}: {1}' -f \"'$i,$_}}'",
+      "exit_code": 0,
+      "output_chars": 17893
+    },
+    {
+      "index": 21,
+      "command": "\"C:\\\\Program Files\\\\PowerShell\\\\7\\\\pwsh.exe\" -Command '$files=@('\"'src/main/java/com/bettingproject/sofascorelocal/application/network/playwright/PlaywrightProviderCampaignFactory.java','src/main/java/com/bettingproject/sofascorelocal/application/network/playwright/PlaywrightProviderSupervisor.java','src/main/java/com/bettingproject/sofascorelocal/application/network/playwright/ResilientPlaywrightProviderCampaignFactory.java'); foreach(\"'$f in $files){Write-Output \"FILE $f\"; $i=0; Get-Content -LiteralPath $f | ForEach-Object {$i++; '\"'{0,4}: {1}' -f \"'$i,$_}}'",
+      "exit_code": 0,
+      "output_chars": 21858
+    },
+    {
+      "index": 22,
+      "command": "\"C:\\\\Program Files\\\\PowerShell\\\\7\\\\pwsh.exe\" -Command \"rg -n 'J3|j3|validateLoopback|loopbackOrigin|ChildJvmPlaywrightProviderSupervisor\\\\(|@Autowired|@Component|startWorker|launchWorker|buildCommand|PROTOCOL_VERSION' src/main/java/com/bettingproject/sofascorelocal/application/network/playwright/ChildJvmPlaywrightProviderSupervisor.java\"",
+      "exit_code": 0,
+      "output_chars": 3731
+    },
+    {
+      "index": 23,
+      "command": "\"C:\\\\Program Files\\\\PowerShell\\\\7\\\\pwsh.exe\" -Command \"rg -n 'J3|j3|origin|Origin|getPort|VERSION|main\\\\(|newContext|browser.isConnected|isClosed' src/provider-playwright/java/com/bettingproject/sofascorelocal/provider/playwright/worker/ProviderPlaywrightWorkerMain.java src/provider-playwright/java/com/bettingproject/sofascorelocal/provider/playwright/worker/ProviderPlaywrightWorkerProtocol.java\"",
+      "exit_code": 0,
+      "output_chars": 11529
+    },
+    {
+      "index": 24,
+      "command": "\"C:\\\\Program Files\\\\PowerShell\\\\7\\\\pwsh.exe\" -Command '$f='\"'src/main/java/com/bettingproject/sofascorelocal/application/network/playwright/ChildJvmPlaywrightProviderSupervisor.java'; \"'$i=0; Get-Content -LiteralPath $f | ForEach-Object {$i++; if(($i -ge 1 -and $i -le 185) -or ($i -ge 261 -and $i -le 345) -or ($i -ge 768 -and $i -le 830) -or ($i -ge 1243 -and $i -le 1335)) {'\"'{0,4}: {1}' -f \"'$i,$_}}'",
+      "exit_code": 0,
+      "output_chars": 23891
+    },
+    {
+      "index": 25,
+      "command": "\"C:\\\\Program Files\\\\PowerShell\\\\7\\\\pwsh.exe\" -Command \"rg -n 'Configuration|URI|loopback|origin|port|parse|readGet|GetCommand|validate|enum' src/provider-playwright/java/com/bettingproject/sofascorelocal/provider/playwright/worker/ProviderPlaywrightWorkerMain.java src/provider-playwright/java/com/bettingproject/sofascorelocal/provider/playwright/worker/ProviderPlaywrightWorkerProtocol.java; rg -n 'J3|j3|CONTEXT|context|@|LiveCampaignService\\\\(|LiveProviderSession\\\\(' src/main/java/com/bettingproject/sofascorelocal/application/live/LiveCampaignService.java src/main/java/com/bettingproject/sofascorelocal/application/live/LiveProviderSession.java\"",
+      "exit_code": 0,
+      "output_chars": 27302
+    },
+    {
+      "index": 26,
+      "command": "\"C:\\\\Program Files\\\\PowerShell\\\\7\\\\pwsh.exe\" -Command '$f='\"'src/main/java/com/bettingproject/sofascorelocal/application/live/LiveCampaignService.java'; \"'$i=0; Get-Content -LiteralPath $f | ForEach-Object {$i++; if($i -le 183 -or ($i -ge 749 -and $i -le 864) -or ($i -ge 979 -and $i -le 1015) -or ($i -ge 1274 -and $i -le 1315)) {'\"'{0,4}: {1}' -f \"'$i,$_}}'",
+      "exit_code": 0,
+      "output_chars": 26192
+    },
+    {
+      "index": 27,
+      "command": "\"C:\\\\Program Files\\\\PowerShell\\\\7\\\\pwsh.exe\" -Command '$f='\"'src/main/java/com/bettingproject/sofascorelocal/application/live/LiveProviderSession.java'; \"'$i=0; Get-Content -LiteralPath $f | ForEach-Object {$i++; if($i -le 55 -or $i -ge 137) {'\"'{0,4}: {1}' -f \"'$i,$_}}'",
+      "exit_code": 0,
+      "output_chars": 5842
+    },
+    {
+      "index": 28,
+      "command": "\"C:\\\\Program Files\\\\PowerShell\\\\7\\\\pwsh.exe\" -Command '$f='\"'src/provider-playwright/java/com/bettingproject/sofascorelocal/provider/playwright/worker/ProviderPlaywrightWorkerMain.java'; \"'$i=0; Get-Content -LiteralPath $f | ForEach-Object {$i++; if(($i -ge 36 -and $i -le 213) -or ($i -ge 240 -and $i -le 374) -or ($i -ge 594 -and $i -le 634) -or ($i -ge 680 -and $i -le 735)) {'\"'{0,4}: {1}' -f \"'$i,$_}}'",
+      "exit_code": 0,
+      "output_chars": 23576
+    },
+    {
+      "index": 29,
+      "command": "\"C:\\\\Program Files\\\\PowerShell\\\\7\\\\pwsh.exe\" -Command '$f='\"'src/provider-playwright/java/com/bettingproject/sofascorelocal/provider/playwright/worker/ProviderPlaywrightWorkerProtocol.java'; \"'$i=0; Get-Content -LiteralPath $f | ForEach-Object {$i++; if(($i -ge 48 -and $i -le 170) -or ($i -ge 284 -and $i -le 375)) {'\"'{0,4}: {1}' -f \"'$i,$_}}; rg -n '\"'handleRoute|close\\\\(|closeQuietly' src/provider-playwright/java/com/bettingproject/sofascorelocal/provider/playwright/worker/ProviderPlaywrightWorkerMain.java\"",
+      "exit_code": 0,
+      "output_chars": 11683
+    },
+    {
+      "index": 30,
+      "command": "\"C:\\\\Program Files\\\\PowerShell\\\\7\\\\pwsh.exe\" -Command '$files=@('\"'src/test/java/com/bettingproject/sofascorelocal/integration/J3RuntimeIT.java','src/test/java/com/bettingproject/sofascorelocal/integration/J3AutomationPersistenceIT.java','src/test/java/com/bettingproject/sofascorelocal/integration/J3CollectionExecutionIT.java','src/test/java/com/bettingproject/sofascorelocal/integration/J3CollectionPersistenceIT.java','src/provider-playwright-test/java/com/bettingproject/sofascorelocal/provider/playwright/worker/J3WorkerScopeProtocolTest.java','src/provider-playwright-qualification-test/java/com/bettingproject/sofascorelocal/application/network/playwright/J3LivePauseWorkerQualificationIT.java','src/test/java/com/bettingproject/sofascorelocal/application/network/playwright/ChildJvmPlaywrightProviderSupervisorSpringContextTest.java'); foreach(\"'$f in $files){Write-Output \"FILE $f\"; rg -n '\"'@|void |class |extends |new .*Store|new J3|new DataSource|Transaction|failsafe|surefire|assert|fromEnvironment|getPort|port|URI.create' -- \"'$f}'",
+      "exit_code": 0,
+      "output_chars": 35415
+    },
+    {
+      "index": 31,
+      "command": "\"C:\\\\Program Files\\\\PowerShell\\\\7\\\\pwsh.exe\" -Command '$files=@('\"'src/test/java/com/bettingproject/sofascorelocal/application/network/playwright/ChildJvmPlaywrightProviderSupervisorSpringContextTest.java','src/provider-playwright-test/java/com/bettingproject/sofascorelocal/provider/playwright/worker/J3WorkerScopeProtocolTest.java','src/provider-playwright-qualification-test/java/com/bettingproject/sofascorelocal/application/network/playwright/J3LivePauseWorkerQualificationIT.java'); foreach(\"'$f in $files){Write-Output \"FILE $f\"; $i=0; Get-Content -LiteralPath $f | ForEach-Object {$i++; '\"'{0,4}: {1}' -f \"'$i,$_}}'",
+      "exit_code": 0,
+      "output_chars": 14333
+    },
+    {
+      "index": 32,
+      "command": "\"C:\\\\Program Files\\\\PowerShell\\\\7\\\\pwsh.exe\" -Command '$f='\"'src/test/java/com/bettingproject/sofascorelocal/integration/J3RuntimeIT.java'; \"'$i=0; Get-Content -LiteralPath $f | ForEach-Object {$i++; if($i -ge 91) {'\"'{0,4}: {1}' -f \"'$i,$_}}'",
+      "exit_code": 0,
+      "output_chars": 9341
+    },
+    {
+      "index": 33,
+      "command": "\"C:\\\\Program Files\\\\PowerShell\\\\7\\\\pwsh.exe\" -Command '$f='\"'src/test/java/com/bettingproject/sofascorelocal/integration/J3CollectionExecutionIT.java'; \"'$i=0; Get-Content -LiteralPath $f | ForEach-Object {$i++; '\"'{0,4}: {1}' -f \"'$i,$_}}'",
+      "exit_code": 1,
+      "output_chars": 251
+    },
+    {
+      "index": 34,
+      "command": "\"C:\\\\Program Files\\\\PowerShell\\\\7\\\\pwsh.exe\" -Command '$f='\"'src/test/java/com/bettingproject/sofascorelocal/integration/J3AutomationPersistenceIT.java'; \"'$i=0; Get-Content -LiteralPath $f | ForEach-Object {$i++; if($i -ge 20) {'\"'{0,4}: {1}' -f \"'$i,$_}}'",
+      "exit_code": 0,
+      "output_chars": 8482
+    },
+    {
+      "index": 35,
+      "command": "\"C:\\\\Program Files\\\\PowerShell\\\\7\\\\pwsh.exe\" -Command '$f='\"'src/test/java/com/bettingproject/sofascorelocal/integration/J3CollectionExecutionIT.java'; \"'$i=0; Get-Content -LiteralPath $f | ForEach-Object {$i++; if($i -ge 27) {'\"'{0,4}: {1}' -f \"'$i,$_}}'",
+      "exit_code": 0,
+      "output_chars": 11985
+    },
+    {
+      "index": 36,
+      "command": "\"C:\\\\Program Files\\\\PowerShell\\\\7\\\\pwsh.exe\" -Command '$f='\"'src/test/java/com/bettingproject/sofascorelocal/integration/J3CollectionPersistenceIT.java'; \"'$i=0; Get-Content -LiteralPath $f | ForEach-Object {$i++; if(($i -ge 28 -and $i -le 192) -or ($i -ge 200 -and $i -le 238)) {'\"'{0,4}: {1}' -f \"'$i,$_}}'",
+      "exit_code": 0,
+      "output_chars": 16704
+    },
+    {
+      "index": 37,
+      "command": "\"C:\\\\Program Files\\\\PowerShell\\\\7\\\\pwsh.exe\" -Command '$f='\"'src/main/java/com/bettingproject/sofascorelocal/application/network/playwright/ChildJvmPlaywrightProviderSupervisor.java'; \"'$i=0; Get-Content -LiteralPath $f | ForEach-Object {$i++; if(($i -ge 494 -and $i -le 584) -or ($i -ge 686 -and $i -le 768)) {'\"'{0,4}: {1}' -f \"'$i,$_}}; $f='\"'src/provider-playwright/java/com/bettingproject/sofascorelocal/provider/playwright/worker/ProviderPlaywrightWorkerMain.java'; Write-Output \"'$f; $i=0; Get-Content -LiteralPath $f | ForEach-Object {$i++; if(($i -ge 773 -and $i -le 835) -or ($i -ge 932 -and $i -le 967)) {'\"'{0,4}: {1}' -f \"'$i,$_}}'",
+      "exit_code": 0,
+      "output_chars": 16073
+    },
+    {
+      "index": 38,
+      "command": "\"C:\\\\Program Files\\\\PowerShell\\\\7\\\\pwsh.exe\" -Command '$f='\"'src/test/java/com/bettingproject/sofascorelocal/integration/J3RuntimeIT.java'; \"'$i=0; Get-Content -LiteralPath $f | ForEach-Object {$i++; if($i -ge 34 -and $i -le 90) {'\"'{0,4}: {1}' -f \"'$i,$_}}; $f='\"'src/main/java/com/bettingproject/sofascorelocal/application/live/LiveCampaignService.java'; Write-Output \"'$f; rg -n '\"'startWatchdog|watchdog|STOPPED_INTERRUPTED|lease =|ownerThread|ofPlatform|newSingle' -- \"'$f; $f='\"'docs/validation/WO060-J3-IMPLEMENTATION-20260914.md'; Write-Output \"'$f; rg -n '\"'sandbox|refus|accès|dépendance|JAR|jar|premi|échec|compil|PASS|Base|Date' -- \"'$f'",
+      "exit_code": 0,
+      "output_chars": 6601
+    }
+  ],
+  "reasoning_text_published": false,
+  "limitations": [
+    "The catalogue is reconstructed locally after execution, not a capture of the transmitted request.",
+    "Command scope requires semantic review of actual commands; no lexical pattern is treated as a sandbox boundary."
+  ],
+  "published_copy_matches_freeze": true,
+  "command_audit": {
+    "reviewer": "/root, separate from the evaluated ephemeral session",
+    "reviewed_commands": 38,
+    "finding": "All commands are local Get-Content/rg reads with formatting over allowlisted files. No application, build, test, Java, database, Docker, browser, network call or source mutation was executed.",
+    "candidate_full_tool_read_verified": true,
+    "outside_allowed_file_read_observed": false,
+    "oracle_or_previous_response_read_observed": false,
+    "read_failure": {
+      "command_index": 33,
+      "kind": "PowerShell ParserError from an extra closing brace",
+      "resolved_by_command_index": 35,
+      "scope": "Local file read retried inside the same model turn, not a new model session."
+    },
+    "diagnostic_limit": "Two collaboration routing failures are preserved. The native trace has one thread and one completed turn, and no successful delegated result. No launcher retry or transport reconnect was observed."
+  }
+}

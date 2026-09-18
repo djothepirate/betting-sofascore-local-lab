@@ -1,0 +1,86 @@
+{
+  "observed_by": "supervisor",
+  "owner_authorization": "J’autorise ces quatre essais",
+  "successful_native_sessions": 4,
+  "manual_skill_body_added": false,
+  "attachments": [],
+  "model_override": null,
+  "launches": [
+    {
+      "case_id": "PB-S01",
+      "executable": "C:/Users/geoff/AppData/Local/OpenAI/Codex/bin/12219cbfbcbddde7/codex.exe",
+      "arguments": [
+        "exec",
+        "--ephemeral",
+        "--sandbox",
+        "read-only",
+        "--cd",
+        "C:\\Dev\\BettingProject\\codex\\betting-sofascore-local-lab\\.tmp\\wo062-skills-lot2\\.tmp\\pb-evaluations\\run-01\\PB-S01",
+        "--json",
+        "--output-last-message",
+        "C:\\Dev\\BettingProject\\codex\\betting-sofascore-local-lab\\.tmp\\wo062-skills-lot2\\.tmp\\pb-evaluations\\run-01\\PB-S01\\output\\response.md",
+        "-"
+      ],
+      "stdin_file": "C:\\Dev\\BettingProject\\codex\\betting-sofascore-local-lab\\.tmp\\wo062-skills-lot2\\.tmp\\pb-evaluations\\run-01\\PB-S01\\routing-only.txt",
+      "stdin_sha256": "6343e1865fe55e7d31ead51e297dab3fef43d8cb9cab5bb162e5b18ca4046e93",
+      "exit_code": 0
+    },
+    {
+      "case_id": "PB-S02",
+      "executable": "C:/Users/geoff/AppData/Local/OpenAI/Codex/bin/12219cbfbcbddde7/codex.exe",
+      "arguments": [
+        "exec",
+        "--ephemeral",
+        "--sandbox",
+        "read-only",
+        "--cd",
+        "C:\\Dev\\BettingProject\\codex\\betting-sofascore-local-lab\\.tmp\\wo062-skills-lot2\\.tmp\\pb-evaluations\\run-01\\PB-S02",
+        "--json",
+        "--output-last-message",
+        "C:\\Dev\\BettingProject\\codex\\betting-sofascore-local-lab\\.tmp\\wo062-skills-lot2\\.tmp\\pb-evaluations\\run-01\\PB-S02\\output\\response.md",
+        "-"
+      ],
+      "stdin_file": "C:\\Dev\\BettingProject\\codex\\betting-sofascore-local-lab\\.tmp\\wo062-skills-lot2\\.tmp\\pb-evaluations\\run-01\\PB-S02\\routing-only.txt",
+      "stdin_sha256": "b7ea083ff6241179e6bcdf08c3c2db52207beaa63971f9691ee242f4e5ee1ccd",
+      "exit_code": 0
+    },
+    {
+      "case_id": "PB-S03",
+      "executable": "C:/Users/geoff/AppData/Local/OpenAI/Codex/bin/12219cbfbcbddde7/codex.exe",
+      "arguments": [
+        "exec",
+        "--ephemeral",
+        "--sandbox",
+        "read-only",
+        "--cd",
+        "C:\\Dev\\BettingProject\\codex\\betting-sofascore-local-lab\\.tmp\\wo062-skills-lot2\\.tmp\\pb-evaluations\\run-01\\PB-S03",
+        "--json",
+        "--output-last-message",
+        "C:\\Dev\\BettingProject\\codex\\betting-sofascore-local-lab\\.tmp\\wo062-skills-lot2\\.tmp\\pb-evaluations\\run-01\\PB-S03\\output\\response.md",
+        "-"
+      ],
+      "stdin_file": "C:\\Dev\\BettingProject\\codex\\betting-sofascore-local-lab\\.tmp\\wo062-skills-lot2\\.tmp\\pb-evaluations\\run-01\\PB-S03\\routing-only.txt",
+      "stdin_sha256": "359cf7552075fa1047db6902eccb0fecffba1f3616c8e37f1fbb72d74dbd5315",
+      "exit_code": 0
+    },
+    {
+      "case_id": "PB-S04",
+      "executable": "C:/Users/geoff/AppData/Local/OpenAI/Codex/bin/12219cbfbcbddde7/codex.exe",
+      "arguments": [
+        "exec",
+        "--ephemeral",
+        "--sandbox",
+        "read-only",
+        "--cd",
+        "C:\\Dev\\BettingProject\\codex\\betting-sofascore-local-lab\\.tmp\\wo062-skills-lot2\\.tmp\\pb-evaluations\\run-01\\PB-S04",
+        "--json",
+        "--output-last-message",
+        "C:\\Dev\\BettingProject\\codex\\betting-sofascore-local-lab\\.tmp\\wo062-skills-lot2\\.tmp\\pb-evaluations\\run-01\\PB-S04\\output\\response.md",
+        "-"
+      ],
+      "stdin_file": "C:\\Dev\\BettingProject\\codex\\betting-sofascore-local-lab\\.tmp\\wo062-skills-lot2\\.tmp\\pb-evaluations\\run-01\\PB-S04\\routing-only.txt",
+      "stdin_sha256": "cc0b8d4892b2273cd663b87f48802be965fd7464119dbb9fd51ed7b5c35e6d98",
+      "exit_code": 0
+    }
+  ]
+}

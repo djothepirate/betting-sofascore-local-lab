@@ -1,0 +1,17 @@
+{
+  "schema": "wo062-pb-s01-complement-result-v1",
+  "case_id": "PB-S01",
+  "run_id": "run-02",
+  "verdict": "PASS",
+  "finding_closed": "SEL-01_MISSING_EXACT_BODY_LOAD_EVIDENCE",
+  "candidate_sha256": "4bcecee4dbe75ec74530a7bda63acc8cbc84cc15dcd7c07e2ab9e6f80cc7be94",
+  "candidate_changed": false,
+  "case_prompt_changed": false,
+  "instrumentation_changed": true,
+  "instrumentation": "Generic mandatory full tool read of selected SKILL.md; no expected selection or body supplied.",
+  "historical_run01_verdict": "BLOCKED",
+  "historical_run01_unchanged": true,
+  "qualification_scope": "Explicit routing and complete local tool loading in this instrumented attempt. Automatic CLI pre-injection not assessed.",
+  "human_validation": false,
+  "personal_installation": false
+}

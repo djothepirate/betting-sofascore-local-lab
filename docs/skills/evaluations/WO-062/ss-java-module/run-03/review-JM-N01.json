@@ -1,0 +1,176 @@
+{
+  "schema": "wo062-independent-review-v1",
+  "case_id": "JM-N01",
+  "verdict": "FAIL",
+  "review_role": "independent_reviewer",
+  "run_id": "run-03",
+  "candidate_version": "0.1.0-candidate.2",
+  "candidate_commit": "2d62f12c2d2ad4571c630aea0f98128927aa24ff",
+  "candidate_sha256": "255655544771ae6cf2a71b967aba8efeb7e53e64acc41ca31dc784e16a719118",
+  "candidate_yaml_sha256": "ccc4fc2a4707838dd6defdd73ef6f6c7ee0d69e6df86e41689a46884691573ae",
+  "response_sha256": "0a343748b9b74f51739363af7b79e458e24fdacf0cce89d694e5d1747f5b04c5",
+  "native_events_sha256": "f70d7b6e89bc4bb30497eaf824b841b2112ccce9c63b00cc8ee659cbb316272d",
+  "trace_sha256": "085bc0cf1ec7968f67324b50c8d3a2cf0e4e95f01e50b5d503be67e91e033648",
+  "oracle_sha256": "d13dc8c5ec833f30dc9025c3c22a22c00e60656eae3a89dc30361861ea390bd1",
+  "source_commit": "6648dd423e556b5248b8793a539ae85a7680f9bc",
+  "preparation_source_head": "4a83e121d8c28833b7617313ab277bc4341f078e",
+  "freeze_path": "frozen/JM-N01/freeze.json",
+  "response_path": "frozen/JM-N01/response.md",
+  "native_events_path": "frozen/JM-N01/native-events.json",
+  "frozen_at_utc": "2026-09-15T22:44:15.745797+00:00",
+  "first_review_read_after_freeze": true,
+  "summary": "Analyse substantielle mais incomplète sur deux exigences obligatoires : arrêt sans reprise après perte du contexte live et interdiction com.microsoft.playwright dans src/main par Verify-Local. La distinction Instant/date civile est maintenant explicitée. Omissions de contenu, aucune décision technique inverse ni faux vert observés.",
+  "criteria": [
+    {
+      "id": "I01",
+      "verdict": "PASS",
+      "requirement": "Gel, candidat exact et provenance des entrées",
+      "evidence": "Neuf pièces figées conformes en taille et SHA-256 ; 39 entrées du préflight conformes, dont 36 sources autorisées. Candidat .2, YAML et oracle inchangés.",
+      "limit": "Le corpus métier 6648dd4, le commit candidat 2d62f12 et le HEAD de préparation 4a83e12 sont distincts. Aucune qualification applicative déduite."
+    },
+    {
+      "id": "I02",
+      "verdict": "PASS",
+      "requirement": "Lecture intégrale native du candidat",
+      "evidence": "item_1 terminé, code 0 : lecture Get-Content -Raw du SKILL.md. La sortie native contient exactement l'intégralité du texte du candidat .2.",
+      "limit": "Lecture réelle prouvée ; injection automatique du corps par le CLI non attestée."
+    },
+    {
+      "id": "I03",
+      "verdict": "PASS",
+      "requirement": "Respect du corpus et de l'analyse seule",
+      "evidence": "Les 30 commandes terminées sont des lectures Get-Content, rg ou sélections de lignes dans les chemins autorisés, toutes code 0. Aucun oracle, ancienne réponse, test, mutation ni runtime métier exécuté. Réponse 15–31 : portée et statuts explicites.",
+      "limit": "Deux tentatives de sous-agents CLI sont refusées ; aucune délégation effectivement exécutée ni résultat externe observé."
+    },
+    {
+      "id": "N01",
+      "verdict": "PASS",
+      "requirement": "Contrôleurs, commandes et consultation sans acquisition",
+      "evidence": "Réponse 82–96 et 115–125 : jeton local, imports validés, commandes au runtime, suivi via J3AutomationStore, lecture et preuves via ports. Consultation GET distinguée de l'acquisition.",
+      "limit": "Aucun service intermédiaire universel inventé."
+    },
+    {
+      "id": "N02",
+      "verdict": "PASS",
+      "requirement": "Valeurs, identités, déclencheur/source et date cible/instants UTC",
+      "evidence": "Réponse 127–143 : déclencheur distinct de source des pages, identités UUID, LocalDate cible distincte des valeurs Instant, horaires Europe/Paris et DST explicites.",
+      "limit": "La formulation Instant restitue la distinction avec le temps civil ; le mot UTC n'est pas exigé littéralement par l'oracle."
+    },
+    {
+      "id": "N03",
+      "verdict": "PASS",
+      "requirement": "Runtime, ports et adaptateurs réels",
+      "evidence": "Réponse 82–96 et 147–159 : ordres durables, leadership, réconciliation, consommateur sériel, admission et imports volatils. J3AutomationStore/J3CollectionStore et adaptateurs Jdbc reliés. Standalone et transfert au propriétaire live distingués.",
+      "limit": "Aucune politique hors corpus inventée."
+    },
+    {
+      "id": "N04",
+      "verdict": "PASS",
+      "requirement": "Exécuteur partagé, capacité et nettoyage",
+      "evidence": "Réponse 163–177 : import/cache/fournisseur, ProviderAccess imbriquée, pages plafonnées à 35, preuves et parsing, nettoyage avant publication.",
+      "limit": "Aucune transaction englobant le réseau ni exécution actuelle de tests revendiquée."
+    },
+    {
+      "id": "N05",
+      "verdict": "PASS",
+      "requirement": "Publication transactionnelle et dernier succès par date",
+      "evidence": "Réponse 163–177 et 254–287 : frontière inter-beans @Transactional, écritures JDBC collection/catalogue/latest par date/J8/ordre, survie du dernier succès après échec et entre dates. Chemins J8 incomplets distingués du nominal.",
+      "limit": "Pas d'audit général des migrations ni de toute la composition Spring."
+    },
+    {
+      "id": "N06",
+      "verdict": "PASS",
+      "requirement": "Factory, superviseur, IPC et propriétaire live",
+      "evidence": "Réponse 82–96, 214–225 et 295–357 : interfaces dans application.network.playwright, Resilient @Primary avec constructeur concret, refus/départs durables, ChildJvm implémentant les deux interfaces, IPC/processus/WorkerMain/Protocol, submitJ3/runJ3 et lease du propriétaire live.",
+      "limit": "Pas de cycle d'injection affirmé sans preuve."
+    },
+    {
+      "id": "N07",
+      "verdict": "PASS",
+      "requirement": "Socle, profils et séparation du worker",
+      "evidence": "Réponse 185–208 et 229–248 : Java 25, Boot 4.1, wrapper Maven 3.9.16, monomodule ; Web/Servlet/loopback, local/runtime-enabled distincts des flags fournisseur, réconciliation avant ticks. Surefire/Failsafe désactivent le runtime ; profil worker, dépendance, sources/tests/artefact et sorties séparés. Compilation, empaquetage et lancement distingués ; live-test bloqué.",
+      "limit": "Les liaisons de configuration absentes du corpus restent inconnues. Pas de confusion avec J7."
+    },
+    {
+      "id": "N08",
+      "verdict": "FAIL",
+      "requirement": "Autorité J3 adoptée et cycle de vie après perte du contexte",
+      "evidence": "Réponse 15–31 : ADR007 v0.3 actuel et historique contextualisé. Réponse 295–357 : pause live, contexte J3 neuf dans le même worker, un seul contexte émet, absence de transfert de cookies/état et retour nominal au contexte live initial. Aucun passage ne restitue la terminaison sans reprise/recréation après perte du navigateur ou du contexte live.",
+      "limit": "Omission de la règle de panne ; aucune recommandation inverse observée. Les gardes de retour nominal ne remplacent pas cette règle obligatoire."
+    },
+    {
+      "id": "N09",
+      "verdict": "PASS",
+      "requirement": "Dépendances concrètes et proposition minimale",
+      "evidence": "Réponse 102–105 nomme SofascoreEndpointCatalog, ScheduledEventsV1Parser et ScheduledEventsTransportException. Réponse 13 et 377–415 conserve le monomodule et propose des corrections futures bornées.",
+      "limit": "Aucun port de parsing existant inventé, aucune extraction générale ni correction appliquée."
+    },
+    {
+      "id": "N10",
+      "verdict": "PASS",
+      "requirement": "IT de persistance, exécution et runtime correctement situées",
+      "evidence": "Réponse 423–431 : les quatre IT distinguent admission/concurrence, persistance, publication/import/cache/page35 et vrai runtime/threads avec PostgreSQL et fournisseurs simulés. Commandes de sélection explicitent integration-tests.",
+      "limit": "Ces tests ne sont pas annoncés exécutés et ne qualifient pas un navigateur."
+    },
+    {
+      "id": "N11",
+      "verdict": "PASS",
+      "requirement": "Protocole pur, qualification native et sélection effective",
+      "evidence": "Réponse 423–471 : J3WorkerScopeProtocolTest en mémoire ; J3LivePauseWorkerQualificationIT vrai worker/loopback et autorité/contextes. Motif **/*LocalQualificationIT.java ne sélectionnant pas cette classe, -Dit.test et goals Failsafe nommés expliqués. La matrice distingue les preuves SQL/admission des preuves natives.",
+      "limit": "Rapports et commandes natifs restent historiques ; aucun succès actuel déduit."
+    },
+    {
+      "id": "N12",
+      "verdict": "PASS",
+      "requirement": "Portée du test Spring et absence d'ArchUnit inventé",
+      "evidence": "Réponse 214–225 et 435 : SpringContextTest réduit au superviseur/propriétés, graphe @Primary complet non qualifié, absence de contrôle ArchUnit établi dans le corpus.",
+      "limit": "Aucune couverture générale imaginée."
+    },
+    {
+      "id": "N13",
+      "verdict": "FAIL",
+      "requirement": "Portée exacte du garde textuel Verify-Local",
+      "evidence": "Réponse 430 et 471 décrit une recherche textuelle de transports/imports interdits, sa limite non exhaustive et le marqueur déclaratif. Aucun passage ne précise l'interdiction com.microsoft.playwright dans src/main.",
+      "limit": "Omission de la cible et du périmètre du garde obligatoire ; la réponse ne l'assimile pas à ArchUnit."
+    },
+    {
+      "id": "N14",
+      "verdict": "PASS",
+      "requirement": "Constats supplémentaires fondés et inconnues correctement limitées",
+      "evidence": "Réponse 254–287 et 377–405 : le défaut d'import est une déduction statique de put avant refus puis remove, privant un ordre en attente de ses octets ; le chemin FAILED conserve l'ancien catalogue sans terminal J8 selon les assertions de l'IT. Ces constats concordent avec les sources immuables déjà contrôlées.",
+      "limit": "Pas de reproduction ni de test exécuté ; réconciliation ultérieure et composition hors corpus restent inconnues."
+    },
+    {
+      "id": "N15",
+      "verdict": "PASS",
+      "requirement": "Risques, prochaines vérifications et relais spécialisés",
+      "evidence": "Réponse 289, 377–415 et 473–495 : scénarios ciblés et travaux futurs distincts. Relais ss-data-contract-replay, ss-postgres-change et ss-verify présents ; résultats historiques et inconnues explicitement limités.",
+      "limit": "Aucune commande future présentée comme exécutée ni gain général mesuré."
+    }
+  ],
+  "blocking_findings": [
+    {
+      "criterion_id": "N08",
+      "kind": "mandatory_content_omission",
+      "detail": "La règle de terminaison sans reprise/recréation après perte du navigateur/contexte live est omise."
+    },
+    {
+      "criterion_id": "N13",
+      "kind": "mandatory_content_omission",
+      "detail": "L'interdiction com.microsoft.playwright dans src/main n'est pas explicitée."
+    }
+  ],
+  "incorrect_technical_decision_observed": false,
+  "false_green_observed": false,
+  "out_of_scope_action_observed": false,
+  "collector_incident_observed": false,
+  "incidental_tool_errors": "Deux tentatives de sous-agent CLI refusées et erreur 206 du hook legacy_notify après la réponse ; traces conservées, aucune délégation exécutée ni fin normale empêchée. Ces incidents ne fondent pas le verdict.",
+  "model_and_effort_limit": "model=null et reasoning_effort=null dans la trace ; valeurs effectives non exposées.",
+  "catalogue_limit": "Catalogue déclaré reconstruit après exécution ; ne prouve pas le catalogue transmis automatiquement.",
+  "timestamp_note": "Champs bruts started_at_utc=2026-09-15T22:34:10.557332+00:00, ended_at_utc=2026-09-15T22:44:14.594882+00:00. Durée 604.047 s ; natif 0, collecteur 0, turn_completed et collection_completed vrais.",
+  "qualification_scope": "FAIL de complétude de la réponse documentaire .2, sans qualification runtime ni régression applicative déduite.",
+  "old_run_modified": false,
+  "corrections_applied": false,
+  "application_tests_executed_by_reviewer": false,
+  "gain_time_quality": "NOT_MEASURED"
+}

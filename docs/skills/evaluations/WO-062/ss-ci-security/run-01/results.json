@@ -1,0 +1,69 @@
+{
+  "schema": "wo062-frozen-skill-results-v1",
+  "skill": "ss-ci-security",
+  "run_id": "run-01",
+  "candidate_sha256": "ca0bba1cf60c0c9965f21b3201e39c3e5dcba3bd73888c2a2ee5d148dbb8c0c5",
+  "reviewed_at_utc": "2026-09-15T20:12:42.210418+00:00",
+  "case_count": 8,
+  "pass": 8,
+  "fail": 0,
+  "blocked": 0,
+  "cases": [
+    {
+      "case_id": "CS-H01",
+      "verdict": "PASS",
+      "review": "review-CS-H01.json",
+      "response": "cases/CS-H01/response.md",
+      "response_sha256": "23a9872aa367a20196cf30661d8fb0d2ba37bb38838eb289d4786cc2ea7493bb"
+    },
+    {
+      "case_id": "CS-N01",
+      "verdict": "PASS",
+      "review": "review-CS-N01.json",
+      "response": "cases/CS-N01/response.md",
+      "response_sha256": "0575a72884e056b23c87af0b72c042f50c4a85d5489e18b8b96004b57fb50d1f"
+    },
+    {
+      "case_id": "CS-C01",
+      "verdict": "PASS",
+      "review": "review-CS-C01.json",
+      "response": "cases/CS-C01/response.md",
+      "response_sha256": "259787baa414a2daa87e493a762b6a58aa3f56c059c5bda3a5070731ff737e15"
+    },
+    {
+      "case_id": "CS-C02",
+      "verdict": "PASS",
+      "review": "review-CS-C02.json",
+      "response": "cases/CS-C02/response.md",
+      "response_sha256": "985d27e0bc4f8010bffd78c4c7ef78831583cf518b6c8ff093851d3f2d3daa8d"
+    },
+    {
+      "case_id": "CS-S01",
+      "verdict": "PASS",
+      "review": "review-CS-S01.json",
+      "response": "cases/CS-S01/response.md",
+      "response_sha256": "7bac200222e497f64f83881a5153131346ca058f1e613084cbe81e53b90887c2"
+    },
+    {
+      "case_id": "CS-S02",
+      "verdict": "PASS",
+      "review": "review-CS-S02.json",
+      "response": "cases/CS-S02/response.md",
+      "response_sha256": "6e88b0f852976b8bf58daf94cb6e936e96c10fb582570b52a19f8d592ceedfac"
+    },
+    {
+      "case_id": "CS-S03",
+      "verdict": "PASS",
+      "review": "review-CS-S03.json",
+      "response": "cases/CS-S03/response.md",
+      "response_sha256": "5eaa9c3be370b05107c9f49350a91399f435606bcd24a32ff065ea6404d7d1aa"
+    },
+    {
+      "case_id": "CS-S04",
+      "verdict": "PASS",
+      "review": "review-CS-S04.json",
+      "response": "cases/CS-S04/response.md",
+      "response_sha256": "046b3b2414df0644cbf9c3522a33b78cebae18a59369956f3bb7a037b36a657d"
+    }
+  ]
+}

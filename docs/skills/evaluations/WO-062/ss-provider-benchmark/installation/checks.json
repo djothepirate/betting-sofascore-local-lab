@@ -1,0 +1,17 @@
+{
+  "checked_at_utc": "2026-09-15T19:21:18.787395+00:00",
+  "result": "PASS",
+  "files_checked": 20,
+  "json_files": 9,
+  "local_links": 364,
+  "sensitive_patterns": 11,
+  "sensitive_signals": 0,
+  "source_files_preserved": 38,
+  "a1_locked_files_preserved": 5,
+  "run01_run02_artifacts_preserved": 81,
+  "candidate_files_preserved": 2,
+  "lot1_personal_files_and_timestamps_preserved": 10,
+  "installer_test_cases": 18,
+  "application_runtime_changed": false,
+  "personal_discovery_entries": 1
+}

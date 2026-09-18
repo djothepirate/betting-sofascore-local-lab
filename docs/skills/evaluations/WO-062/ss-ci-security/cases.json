@@ -1,0 +1,106 @@
+{
+  "schema": "wo062-ci-security-cases-v1",
+  "status": "PREPARED_NOT_RUN",
+  "case_count": 8,
+  "selection_envelope": "À partir de la demande ci-dessous et du catalogue réellement découvert, détermine les skills pertinents. Pour chaque skill retenu, lis intégralement son fichier SKILL.md avec un outil, puis indique le nom, le chemin effectivement lu et la raison de sa sélection. Si aucun skill ne convient, dis-le. Arrête-toi après ce routage : n’exécute pas la tâche métier. Ne lis aucun oracle, résultat antérieur, inventaire commenté ou plan d’évaluation. Demande à router :\n\n{prompt}",
+  "cases": [
+    {
+      "id": "CS-H01",
+      "kind": "historical",
+      "prompt": "Reconstitue l’incident CI documenté dans WO-061, ses conséquences et la qualification effectivement disponible. Rattache les constats historiques à leur run, SHA et environnement lorsqu’ils sont connus ; confronte-les aux contrôles actuels. Fournis une note de diagnostic et un tableau des preuves, des limites et du travail restant pour qualifier une nouvelle révision. Lire uniquement les sources autorisées et l’entrée du cas. Aucun réseau, application, base de données, Docker, Maven, scanner réel, CI, publication ou mutation des sources. Livrer la réponse finale ; le lanceur la conservera dans la sortie isolée.",
+      "source_ids": [
+        "CS-N03",
+        "CS-P01",
+        "CS-H01",
+        "CS-I01",
+        "CS-I02"
+      ],
+      "input_case": "CS-H01",
+      "status": "NOT_RUN"
+    },
+    {
+      "id": "CS-N01",
+      "kind": "new_task",
+      "prompt": "Produis une grille de qualification exploitable pour le dossier SCM et pipeline synthétique fourni, construit avec la politique du candidat courant du Lab. Pour chaque contrôle, indique l’exigence applicable, le résultat, le SHA concerné, la preuve, sa limite et la prochaine action utile. Distingue la qualification du dossier, son lien avec le candidat et ce qu’il permet de décider pour la PR. Cette tâche produit un nouveau livrable documentaire depuis les entrées versionnées. Lire uniquement les sources autorisées et l’entrée du cas. Aucun réseau, application, base de données, Docker, Maven, scanner réel, CI, publication ou mutation des sources. Livrer la réponse finale ; le lanceur la conservera dans la sortie isolée.",
+      "source_ids": [
+        "CS-N01",
+        "CS-N03",
+        "CS-P01",
+        "CS-I01",
+        "CS-I02",
+        "CS-I03",
+        "CS-I04",
+        "CS-I05"
+      ],
+      "input_case": "CS-N01",
+      "status": "NOT_RUN"
+    },
+    {
+      "id": "CS-C01",
+      "kind": "counterexample",
+      "prompt": "Relis les dossiers de tests et de conservation de preuves joints. Produis un diagnostic individuel et un verdict justifié pour chaque dossier, puis évalue la proposition de configuration jointe. Indique les preuves manquantes ou incohérentes et les démarches proportionnées permettant de poursuivre la qualification. Lire uniquement les sources autorisées et l’entrée du cas. Aucun réseau, application, base de données, Docker, Maven, scanner réel, CI, publication ou mutation des sources. Livrer la réponse finale ; le lanceur la conservera dans la sortie isolée.",
+      "source_ids": [
+        "CS-N01",
+        "CS-N03",
+        "CS-P01",
+        "CS-I01",
+        "CS-I02",
+        "CS-I03",
+        "CS-T01",
+        "CS-H01"
+      ],
+      "input_case": "CS-C01",
+      "status": "NOT_RUN"
+    },
+    {
+      "id": "CS-C02",
+      "kind": "counterexample",
+      "prompt": "Prépare une revue des candidats de promotion, de distribution locale et des résultats de scans joints. Établis pour chaque observation ce qui est applicable, établi, manquant ou contradictoire, avec la source précise. Le dossier contient plusieurs contextes indépendants : conserve leurs identités et explique la portée de chaque verdict. Lire uniquement les sources autorisées et l’entrée du cas. Aucun réseau, application, base de données, Docker, Maven, scanner réel, CI, publication ou mutation des sources. Livrer la réponse finale ; le lanceur la conservera dans la sortie isolée.",
+      "source_ids": [
+        "CS-N03",
+        "CS-I02",
+        "CS-I06",
+        "CS-I07",
+        "CS-I09",
+        "CS-I10",
+        "CS-P02",
+        "CS-T02",
+        "CS-T03"
+      ],
+      "input_case": "CS-C02",
+      "status": "NOT_RUN"
+    },
+    {
+      "id": "CS-S01",
+      "kind": "selection_explicit",
+      "prompt": "Utilise $ss-ci-security pour relire les preuves CI d’une PR du SofaScore Local Lab et expliquer le verdict de qualification.",
+      "source_ids": [],
+      "input_case": null,
+      "status": "NOT_RUN"
+    },
+    {
+      "id": "CS-S02",
+      "kind": "selection_implicit",
+      "prompt": "Dans le SofaScore Local Lab, les tests sont verts mais l’upload des rapports a échoué. Le run précédent avait réussi sur une autre révision ; peut-on considérer la PR actuelle qualifiée, et quelles preuves faut-il conserver ?",
+      "source_ids": [],
+      "input_case": null,
+      "status": "NOT_RUN"
+    },
+    {
+      "id": "CS-S03",
+      "kind": "selection_lot1",
+      "prompt": "Dans le SofaScore Local Lab, exécute la vérification standard Windows du changement documentaire, relève immédiatement les codes natifs et les résultats des rapports. Aucun diagnostic de pipeline distant ni de distribution n’est demandé.",
+      "source_ids": [],
+      "input_case": null,
+      "status": "NOT_RUN"
+    },
+    {
+      "id": "CS-S04",
+      "kind": "selection_other_repository",
+      "prompt": "Dans le dépôt atelier-recettes, projet Python indépendant du SofaScore Local Lab et du Betting Project, explique pourquoi son job pytest ne trouve pas le module recettes. Utilise uniquement son pyproject.toml et son journal local ; aucune qualification du Lab n’est demandée.",
+      "source_ids": [],
+      "input_case": null,
+      "status": "NOT_RUN"
+    }
+  ]
+}

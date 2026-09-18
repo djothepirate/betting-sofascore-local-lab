@@ -1,0 +1,1 @@
+Vérifie uniquement le build Windows de ce SofaScore Local Lab avec le wrapper Maven et lis les rapports effectifs. Aucun audit des données football, de parseur ou de campagne n'est demandé.

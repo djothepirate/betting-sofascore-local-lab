@@ -1,0 +1,61 @@
+{
+  "case_id": "FQ-S02",
+  "skill": "ss-football-quality",
+  "run_id": "run-01",
+  "started_at_utc": "2026-09-15T19:57:36.016260+00:00",
+  "ended_at_utc": "2026-09-15T19:58:30.732085+00:00",
+  "duration_seconds": 54.703,
+  "mode": "native_codex_exec_ephemeral_read_only",
+  "cli_version": "codex-cli 0.154.0-alpha.6.2",
+  "model": null,
+  "reasoning_effort": null,
+  "model_note": "Configured defaults; exact model/effort not exposed, no override.",
+  "launch_arguments": [
+    "exec",
+    "--ephemeral",
+    "--sandbox",
+    "read-only",
+    "--cd",
+    "C:\\Dev\\BettingProject\\codex\\betting-sofascore-local-lab\\.tmp\\wo062-skills-lot2\\.tmp\\wo062-evaluations\\ss-football-quality\\run-01\\FQ-S02",
+    "--json",
+    "--output-last-message",
+    "C:\\Dev\\BettingProject\\codex\\betting-sofascore-local-lab\\.tmp\\wo062-skills-lot2\\.tmp\\wo062-evaluations\\ss-football-quality\\run-01\\FQ-S02\\output\\response.md",
+    "-"
+  ],
+  "exit_code": 0,
+  "turn_completed": true,
+  "candidate_sha256": "8489375d22eff31a3248f78a5d3791b549a2f103d061cc6c46647a757d3eec58",
+  "source_head": "bfbe3fb6e787756544508e1a3e5a92674a678bd7",
+  "input_files": [
+    {
+      "path": ".agents/skills/ss-football-quality/SKILL.md",
+      "sha256": "8489375d22eff31a3248f78a5d3791b549a2f103d061cc6c46647a757d3eec58",
+      "bytes": 7330
+    },
+    {
+      "path": ".agents/skills/ss-football-quality/agents/openai.yaml",
+      "sha256": "8d295af442808d3efebbe68e8165ef96efd086b5b84908fc12f04c1c66bf51f2",
+      "bytes": 305
+    }
+  ],
+  "prompt_sha256": "a8eb2c73eaac0996e2bc288535d0d816cc1abd38d67e5e18fb62a230757c2d2a",
+  "request_sha256": "69dc730fcbb3297722c5a06c70b1ad48f70dc45e84ed9fbfc37491342f24cbec",
+  "oracle_supplied": false,
+  "design_history_supplied": false,
+  "raw_events_sha256": "240d87db5ef363c53446913267fe607799a54602e7a05b209f3a25f73021756a",
+  "native_events_sha256": "51897c08ad487f68b73f46288270cd5b5ad195a938a95edb865bc7ad99c03b09",
+  "commands_completed": 1,
+  "response_sha256": "3d918d61364bafa9af0f8a4d87a8bdaf9d75a4aba132b06e96e0ecf64f6cfcb5",
+  "catalogue_sha256": "5a01ab969fd197a2cb273ed8e7f69360f52f1d5f8615cea71d5bc4140ba14710",
+  "catalogue_note": "Local reconstruction after execution, not a capture of the transmitted request.",
+  "published_events_note": "Internal reasoning omitted; actual command outputs retained.",
+  "usage": {
+    "input_tokens": 55956,
+    "cached_input_tokens": 36096,
+    "cache_write_input_tokens": 0,
+    "output_tokens": 1422,
+    "reasoning_output_tokens": 470
+  },
+  "selection_instrumented": true,
+  "qualification_limit": "Tool-mediated selection/load with declared envelope; no automatic CLI injection claim."
+}

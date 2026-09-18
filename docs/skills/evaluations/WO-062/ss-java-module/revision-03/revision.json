@@ -1,0 +1,21 @@
+{
+  "schema": "wo062-candidate-revision-v1",
+  "prepared_at_utc": "2026-09-15T23:21:27.827905+00:00",
+  "base_commit": "2428914d813ee1dcd05bdac29e25fe8c473c0521",
+  "previous_candidate": "0.1.0-candidate.2",
+  "previous_candidate_sha256": "255655544771ae6cf2a71b967aba8efeb7e53e64acc41ca31dc784e16a719118",
+  "candidate_version": "0.1.0-candidate.3",
+  "candidate_sha256": "15237ab0f6773c87187481622ba4947ebc00f8c7e9a50dd1589911ede17ec332",
+  "candidate_bytes": 10384,
+  "changes": [
+    "Rendre explicite la transition terminale après perte du navigateur/contexte live et sa restitution distincte du nominal.",
+    "Décrire la cible com.microsoft.playwright et le périmètre src/main du garde textuel, avec sa limite."
+  ],
+  "description_yaml_changed": false,
+  "cases_inputs_oracle_changed": false,
+  "previous_runs_changed": false,
+  "planned_cases": 8,
+  "behavioral_qualification": "NOT_RUN",
+  "human_validation": false,
+  "personal_installation": false
+}

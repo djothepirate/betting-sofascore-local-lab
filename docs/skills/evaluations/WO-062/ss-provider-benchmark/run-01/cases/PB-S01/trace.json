@@ -1,0 +1,51 @@
+{
+  "case_id": "PB-S01",
+  "started_at_utc": "2026-09-15T17:03:09.6309341Z",
+  "ended_at_utc": "2026-09-15T17:03:31.1425325Z",
+  "duration_seconds": 21.511598,
+  "mode": "native_codex_exec_ephemeral_read_only",
+  "cli_version": "0.154.0-alpha.6.2",
+  "model": null,
+  "reasoning_effort": null,
+  "model_metadata_note": "Not exposed in the observed exec events; configured defaults used without override.",
+  "exact_user_case_prompt_sha256": "ae3d76ca52d167c47bf81db65645d1f54d18695f4d3f804a1c1edca3832d5455",
+  "routing_request_sha256": "6343e1865fe55e7d31ead51e297dab3fef43d8cb9cab5bb162e5b18ca4046e93",
+  "candidate_sha256": "4bcecee4dbe75ec74530a7bda63acc8cbc84cc15dcd7c07e2ab9e6f80cc7be94",
+  "exit_code": 0,
+  "oracle_supplied": false,
+  "raw_events_sha256": "dfee9674a2bcf8986374c1f97a2706a466b7c8641e07620623d56c83fbbc8d86",
+  "published_events_note": "Reasoning items omitted; command output bodies replaced by content hashes. Original raw events kept only in ignored runtime directory.",
+  "native_events_sha256": "a09e15cc98305dbe6d2e143efe75cfc62f5765d3794eb7d58ca9c5fd6c151f49",
+  "context_reconstruction": {
+    "timing": "Local rendering after execution using same CLI, directory, prompt and unchanged candidate; this is a reconstruction, not a capture of the transmitted request.",
+    "candidate_body_present": false,
+    "ss_catalogue_entries": [
+      "ss-data-contract-replay",
+      "ss-postgres-change",
+      "ss-provider-benchmark",
+      "ss-review-closeout",
+      "ss-verify",
+      "ss-work-order",
+      "ss-data-contract-replay",
+      "ss-postgres-change",
+      "ss-review-closeout",
+      "ss-verify",
+      "ss-work-order"
+    ],
+    "catalogue_sha256": "01714c362ff22576a0dbfe6b615a6c7892008777a667b9635b74d355839c3d26"
+  },
+  "commands_completed": [],
+  "usage": {
+    "input_tokens": 18937,
+    "cached_input_tokens": 0,
+    "cache_write_input_tokens": 0,
+    "output_tokens": 416,
+    "reasoning_output_tokens": 175
+  },
+  "authorization": "Explicit owner consent received for four ephemeral model routing sessions after initial auto-review rejection.",
+  "limits": [
+    "Selection only; no benchmark, build or commercial comparison performed.",
+    "Native event trace supports executed commands; context preload assessed through local reconstruction.",
+    "No claim about internal model reasoning or personal installation."
+  ]
+}

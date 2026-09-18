@@ -1,0 +1,206 @@
+{
+  "schema": "wo062-c4-final-document-review-v1",
+  "verdict": "PASS",
+  "scope": "Cohérence documentaire finale C4, sans réexamen des oracles ni des verdicts de cas",
+  "reviewer": "/root/jm_selection_review",
+  "reviewed_at_utc": "2026-09-16T00:05:11.434534+00:00",
+  "reviewed_worktree_head": "cb67d18c66aaa3989bfc6121ed7b51945fd95f9f",
+  "documents": [
+    {
+      "path": "docs/validation/WO062-C4-REQUALIFICATION-20260916.md",
+      "sha256": "69a24106f47457b333ab28fa9c9334cd78cc9ce2d5a34f03090e467f21df0827"
+    },
+    {
+      "path": "docs/work_orders/active/WO-SS-20260915-062-skills-lot2.md",
+      "sha256": "225642de0b760456d5be1ccf6a8e1c42ad022b39fc7e997efa250d4fb56d51af"
+    },
+    {
+      "path": "README.md",
+      "sha256": "33fcbc7399802b93908877bdaed23efefe3623d1ba75ef28afc6ce924acb6837"
+    },
+    {
+      "path": "docs/skills/README.md",
+      "sha256": "3c696a905ac7c3d0116cabc63ae780f355dd1e0549ea49b0ef9d833bb1727ae6"
+    },
+    {
+      "path": "CHANGELOG.md",
+      "sha256": "6722a7a9a2a17e0969a318418e0371a8fe508b6e8d468e97688458a15ec8e582"
+    }
+  ],
+  "evidence": [
+    {
+      "path": "docs/skills/evaluations/WO-062/ss-java-module/qualification.json",
+      "sha256": "2ddf95999865e9127119c0a8e5e6e71feaad367bc8a70be37454b33dfb6bf636"
+    },
+    {
+      "path": "docs/skills/evaluations/WO-062/ss-java-module/run-04/results.json",
+      "sha256": "e5e5c3a3c77040317f97d538456b77cd3ec429ca047cdc24f6d1d61277b058a6"
+    },
+    {
+      "path": "docs/skills/evaluations/WO-062/ss-java-module/run-04/current-results.json",
+      "sha256": "256111b1bf335275160469fd44bcd6e3b0f0c1deb8792a3c22bc97b334d06a71"
+    },
+    {
+      "path": "docs/skills/evaluations/WO-062/ss-java-module/run-04/preflight.json",
+      "sha256": "f5a90689e3de780b74acc7fad03f7734246ba8bab4744d3a11e1f38526df8ef6"
+    },
+    {
+      "path": "docs/skills/evaluations/WO-062/ss-windows-runtime/qualification.json",
+      "sha256": "76dbe27f8191e42e164fbc1bf5b268e821ec35bb75af3a597b21cf29d3117cfa"
+    },
+    {
+      "path": "docs/skills/evaluations/WO-062/ss-windows-runtime/run-04/results.json",
+      "sha256": "07f5df779ee09e2f197aac9f86e487351d824bf5cad6c2c5c6f5269c063eb1a0"
+    },
+    {
+      "path": "docs/skills/evaluations/WO-062/ss-windows-runtime/run-04/current-results.json",
+      "sha256": "1151e884b3fe220ce1cbd66b0e8b03e2fcae9f2850ec2a34895365a7ab584f89"
+    },
+    {
+      "path": "docs/skills/evaluations/WO-062/ss-windows-runtime/run-04/preflight.json",
+      "sha256": "d94cfbb974c41ced35b20e421636978d9789509384e9066f4b8a83dd426c267a"
+    },
+    {
+      "path": "docs/skills/evaluations/WO-062/ss-java-module/run-04/review-JM-N01.json",
+      "sha256": "474bd64e31867428a7dfbcffcfb3eec7b8de3834ab4aad0a028763e221c5973f"
+    },
+    {
+      "path": "docs/skills/evaluations/WO-062/ss-windows-runtime/run-04/review-WR-H01.json",
+      "sha256": "310e162527cecf791ba096597fe4365401c1d43152ada6a49bb10312ebe82269"
+    },
+    {
+      "path": "docs/skills/evaluations/WO-062/ss-windows-runtime/run-04/review-WR-N01.json",
+      "sha256": "0b62bd907fd73db33578a804c07bb452b49b62d1419e729ccd14026b7eecd955"
+    }
+  ],
+  "criteria": [
+    {
+      "id": "counts-and-origin",
+      "verdict": "PASS",
+      "evidence": "38 tentatives : Java25 et Windows13 ; cumul25PASS/7FAIL/6BLOCKED. Courant16cas : 13PASS/2FAIL/1BLOCKED. Java reprend huit cas .3 de run-04 seulement ; Windows six PASS C/S run-01 et H/N run-04. Qualifications et résultats concordants."
+    },
+    {
+      "id": "java-corrections",
+      "verdict": "PASS",
+      "evidence": "Synthèse24–45 et revue JM-N01 : les deux corrections ciblées et date/instant sont présentes ; 26 critères PASS et blocked-live-profile FAIL. Omission de restitution, aucune activation ou anomalie applicative déduite."
+    },
+    {
+      "id": "windows-h-dimensions",
+      "verdict": "PASS",
+      "evidence": "Synthèse13–22/47–88 et revue WR-H01 séparent huit critères substantiels PASS, exécution native PASS et F01 organisation FAIL. Une même session couvre harnais, retour, postflight, conclusion et réponse. Cible360s souple, watchdog900s respecté ; aucune causalité interne inventée."
+    },
+    {
+      "id": "windows-n-limits",
+      "verdict": "PASS",
+      "evidence": "Synthèse90–132 et revue WR-N01 : Get-FileHash ligne141 bloque le conducteur avant découverte Java/racine. Conducteur PID12548/handle2260/code1 ; zéro JVM, aucun failure/sleep ou nettoyage après expiration qualifié. Version PS5.1/CLR/architecture absentes et propriété historique séparées."
+    },
+    {
+      "id": "timing-and-provenance",
+      "verdict": "PASS",
+      "evidence": "Dix durées et comptes de commandes de la synthèse143–154 identiques aux traces. WR-H : harnais2686.1568ms, conducteur2872.3827ms, postflight83.3556ms, réponse426.031s/session428.25s. WR-N : conducteur225.287ms/retour798.1418ms/session531.828s. Événements natifs et diagnostic corroborent les phases H. SHA candidats et source_head des deux préflights conformes ; quatre commits cités résolus et dates confrontées aux traces."
+    },
+    {
+      "id": "documents-and-open-work",
+      "verdict": "PASS",
+      "evidence": "README158–165, skillsREADME56–70, CHANGELOG9–16 et WO162–184 concordent. Suite en cours WO420–423 corrigée après signalement ; elle conserve maintenant le succès H, la nouvelle omission Java et le préflight N à reprendre."
+    },
+    {
+      "id": "qualification-boundary",
+      "verdict": "PASS",
+      "evidence": "C reste incomplet et WO actif. Aucune validation humaine/installation C déduite, deux champs false. Modèle/effort effectifs inconnus ; catalogue après run non assimilé à la requête transmise. Aucune nouvelle exécution annoncée par la présente revue."
+    }
+  ],
+  "resolved_findings": [
+    {
+      "id": "DOC-01",
+      "severity": "P2",
+      "file": "docs/work_orders/active/WO-SS-20260915-062-skills-lot2.md",
+      "line": 420,
+      "initial": "Conclusion restée en C3 : deux omissions Java à résoudre et chaîne H à obtenir.",
+      "resolution": "Coordinateur a actualisé les lignes420–423 ; delta relu et conforme aux revues C4.",
+      "status": "RESOLVED"
+    }
+  ],
+  "blocking_findings": [],
+  "sessions": [
+    {
+      "case_id": "JM-H01",
+      "verdict": "PASS",
+      "duration_seconds": 301.156,
+      "commands_completed": 14,
+      "trace_sha256": "b58385aea1d7239222f710b57863414f49bfd6c8410ea1deca5184476ba58ae5"
+    },
+    {
+      "case_id": "JM-N01",
+      "verdict": "FAIL",
+      "duration_seconds": 550.469,
+      "commands_completed": 26,
+      "trace_sha256": "b9f76c93292f4e111b2b6e57a62b3bbcc4453f6fbe52186d979fa2b28fa7f125"
+    },
+    {
+      "case_id": "JM-C01",
+      "verdict": "PASS",
+      "duration_seconds": 328.016,
+      "commands_completed": 19,
+      "trace_sha256": "54d613d9b92cd2f75c87a788be2ced7f218597daee9668efde4d350262d39004"
+    },
+    {
+      "case_id": "JM-C02",
+      "verdict": "PASS",
+      "duration_seconds": 526.625,
+      "commands_completed": 28,
+      "trace_sha256": "2808b99a90fb870ae3256ac18cf6bcad14bb793bf42b77e24696c4b7ea671c0e"
+    },
+    {
+      "case_id": "JM-S01",
+      "verdict": "PASS",
+      "duration_seconds": 25.062,
+      "commands_completed": 1,
+      "trace_sha256": "a25faca06863a9ade9895931f50aa437b98dfd52de37bd6fca13d51cc1004039"
+    },
+    {
+      "case_id": "JM-S02",
+      "verdict": "PASS",
+      "duration_seconds": 52.828,
+      "commands_completed": 2,
+      "trace_sha256": "ae42312a5a1be517bb9ab83bdf0cd501c6d8d364279d7f8e2b3a638a3d5c9588"
+    },
+    {
+      "case_id": "JM-S03",
+      "verdict": "PASS",
+      "duration_seconds": 25.875,
+      "commands_completed": 1,
+      "trace_sha256": "d51b61dec67c4c470551a5a8cd4c76251b72cb60f26673c6cdf35dd94b43710a"
+    },
+    {
+      "case_id": "JM-S04",
+      "verdict": "PASS",
+      "duration_seconds": 29.578,
+      "commands_completed": 0,
+      "trace_sha256": "d4eef766636b5976d0cecbd09ed641404cb8226e6443b0954219d3cebd8e2da4"
+    },
+    {
+      "case_id": "WR-H01",
+      "verdict": "FAIL",
+      "duration_seconds": 428.25,
+      "commands_completed": 15,
+      "trace_sha256": "edff8ac3cbd15689dbf6d50a764cd9c81fe3fc3b5eebbf978f4cead2ac04ad5a"
+    },
+    {
+      "case_id": "WR-N01",
+      "verdict": "BLOCKED",
+      "duration_seconds": 531.828,
+      "commands_completed": 10,
+      "trace_sha256": "95661ce1c1ab838e7f8f77cd5f334f2b16d55ea0e6653d942b91de67394495f7"
+    }
+  ],
+  "limits": [
+    "Revue documentaire ; aucun oracle, ancienne réponse, source applicative ou verdict de cas réexaminé.",
+    "Contrôles check_c_delivery/check_c4_delivery, liens, secrets, conservation intégrale et octets Git confiés au coordinateur ; non relancés ici. Les37 réponses/une expiration historiques restent rattachées à ces contrôles existants.",
+    "Provenance rapprochée des préflights, revues, traces et horodatages Git locaux ; aucun modèle/effort effectif inféré.",
+    "Aucun modèle, sonde, test applicatif, publication ou délégation ; aucune modification suivie par le relecteur."
+  ],
+  "human_validation_performed": false,
+  "personal_installation_performed": false,
+  "tracked_files_modified_by_reviewer": false
+}

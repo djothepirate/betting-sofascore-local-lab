@@ -1,0 +1,22 @@
+{
+  "schema": "wo062-targeted-observation-results-v1",
+  "run_id": "observation-08",
+  "skill": "ss-java-module",
+  "candidate_version": "0.1.0-candidate.5",
+  "candidate_sha256": "d7171f978c2b13c852c2ce5e170d68c1bfc5087552661cfdc6271077a0fe6637",
+  "observation_count": 1,
+  "model_sessions_launched": 1,
+  "case_id": "JM-N01",
+  "verdict": "PASS",
+  "duration_seconds": 617.25,
+  "commands_completed": 38,
+  "formal_qualification": false,
+  "reusable_as_formal_qualification_result": false,
+  "review": "review-JM-N01.json",
+  "response": "cases/JM-N01/response.md",
+  "response_sha256": "887f63a16d33031cb91692d0d786d94ff9a8de36b89daad612a22f452d9c07c3",
+  "postflight": "postflight-integrity.json",
+  "other_cases_launched": false,
+  "candidate_modified": false,
+  "next_step": "Separate authorization required for a fresh formal eight-case campaign including JM-N01."
+}

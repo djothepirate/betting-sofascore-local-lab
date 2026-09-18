@@ -4,6 +4,151 @@ Les évolutions notables du SofaScore Local Lab sont consignées dans ce fichier
 
 ## [Non publié]
 
+### WO-062 — skills spécialisés du lot 2
+
+- Prépare la clôture documentaire autorisée : le WO-062 est classé dans `completed` et les
+  liens courants décrivent les cinq skills livrés. Le run PR
+  [35330560186](https://github.com/djothepirate/betting-sofascore-local-lab/actions/runs/35330560186)
+  qualifie `b4dc43b` avec les deux jobs obligatoires `SUCCESS`; les deux findings P2 sont résolus.
+  Ce seul commit documentaire doit encore recevoir ses propres checks avant la fusion de la PR #38
+  vers `feature/V0.1.0-RC01`.
+
+- Rend la livraison Windows portable et vérifiable dans tout clone : la matrice finale
+  `8 PASS / 0 FAIL / 0 BLOCKED` est versionnée sous
+  `ss-windows-runtime/final-qualification.json`, avec son SHA-256 inchangé depuis
+  l’archive finale. Le manifeste, le statut et la validation humaine la référencent
+  désormais par chemin relatif. L’installateur `WindowsRuntime` et `JavaModule`
+  vérifie avant toute copie le chemin, le SHA-256, le candidat, le bilan et les deux
+  fichiers candidats de la qualification liée. Les tests négatifs couvrent le refus
+  d’une qualification altérée. Le guide décrit l’état livré et les commandes
+  d’installation et de test des packages Java et Windows.
+
+- Réalise la recette Windows fraîche C9 de `ss-windows-runtime 0.1.0-candidate.1`
+  dans deux contextes neufs détenus par l’hôte, construits depuis les copies réparées,
+  avec un conducteur hôte intégrant le collecteur de racine runtime et une revue
+  postfreeze séparée. `WR-H01` est [PASS](docs/skills/evaluations/WO-062/c-requalification-09/postfreeze-01/postfreeze-review.md) :
+  harnais PowerShell 7, deux itérations, code 0, retour de prompt distinct, audit de
+  lecture et parent runtime vide. `WR-N01` est BLOCKED : après un préflight PS5.1 sans
+  JVM, l’image du processus `failure` est vide ; le conducteur refuse l’identité,
+  n’exécute pas `sleep`, ne force aucun arrêt et conserve le vrai résidu détenu. Les
+  preuves C4/C5 et le candidat restent inchangés. Qualification Windows : 7 PASS / 0
+  FAIL / 1 BLOCKED ; ni validation humaine ni installation personnelle.
+
+- Corrige et teste, hors recette, les gabarits Windows C5 sans modifier leurs sources
+  historiques ni `ss-windows-runtime`. La révision accepte l’artefact interne WR-H01
+  tout en refusant un chemin externe, rend son postflight sûr si `output/runtime` est
+  absent, établit l’image Java détenue avant la lecture des flux WR-N01 et remplace le
+  faux résidu d’un parent runtime vide par une inspection conservatrice de ses entrées.
+  Le [test technique borné](docs/skills/evaluations/WO-062/c-windows-operational-repair-06/validation.json)
+  passe : préflight H sans enfant, postflight, `failure` code 23, `sleep` vivant après
+  1 509 ms et résidu enfant toujours bloquant. Il ne lance ni modèle ni qualification ;
+  l’état Windows reste 6 PASS / 0 FAIL / 2 BLOCKED.
+
+- Exécute les deux sessions Windows C5 hôte-formelles de `ss-windows-runtime
+  0.1.0-candidate.1`, sans oracle, réponse antérieure ni relance. `WR-H01` se termine
+  en 361,375 s avec audit de lecture PASS, mais son gabarit gelé échoue avant le harnais
+  WO-044. `WR-N01` réussit son préflight PS5.1 et observe `failure` avec code 23, puis
+  son conducteur gelé bloque sur l’identité avant `sleep`; le postflight conserve aussi
+  l'observation mécanique du parent `output/runtime` vide. Les deux cas sont
+  [BLOCKED](docs/skills/evaluations/WO-062/ss-windows-runtime/run-05/results.json),
+  sans défaut démontré du candidat. La qualification reste incomplète à 6 PASS / 0 FAIL /
+  2 BLOCKED ; C4, les sources, le code applicatif, les fixtures, l'oracle, la validation
+  humaine et l'installation personnelle restent inchangés.
+
+- Réalise la campagne formelle fraîche C8 de `ss-java-module 0.1.0-candidate.5` :
+  huit sessions éphémères séquentielles, `JM-N01` compris, toutes terminées et gelées.
+  Les huit revues donnent PASS ; le résultat est [8 PASS / 0 FAIL / 0 BLOCKED](docs/skills/evaluations/WO-062/ss-java-module/run-08/results.json),
+  avec postflight d'intégrité, observation-08 explicitement non recyclée et une seule
+  alerte hook non bloquante conservée dans JM-N01. Le candidat est formellement qualifié,
+  en attente de validation humaine propriétaire ; aucune installation personnelle ni
+  changement applicatif n'est réalisé.
+
+- Réalise une seule [observation JM-N01 sur candidate.5](docs/skills/evaluations/WO-062/ss-java-module/observation-08/review-JM-N01.md) :
+  PASS après réponse fraîche et revue des preuves gelées ; l'isolation live/J3 et
+  les trois corrections précédentes sont restituées. Session terminée en 617,250 s,
+  avec diagnostics non bloquants conservés. Aucun autre cas lancé, aucun changement
+  du candidat ou des entrées ; huit cas formels encore NOT_RUN, observation exclue
+  de toute réutilisation dans une future campagne fraîche.
+
+- Prépare `ss-java-module 0.1.0-candidate.5` sans recette : correction minimale de
+  la restitution J3 pour interdire explicitement tout transfert de cookie, état de
+  stockage ou donnée de session du contexte live conservé vers le contexte J3 temporaire,
+  ainsi que toute continuité de session artificielle. Conserve candidate.4, ses octets,
+  ses C6/C7 et son résultat historique 7 PASS / 1 FAIL ; aucune fixture, oracle, code
+  applicatif, validation humaine ou installation personnelle n'est modifié. Le nouveau
+  candidat reste non qualifié et exige une future autorisation pour toute recette.
+
+- Réalise la [requalification C4](docs/validation/WO062-C4-REQUALIFICATION-20260916.md) :
+  candidat Java `.3` corrigé et versionné avant huit nouveaux essais ; les deux omissions
+  ciblées sont résolues, mais JM-N01 reste FAIL sur la restitution du profil live bloqué.
+  WR-H01 Windows `.1` accomplit la chaîne complète en 428,250 s, avec reproduction et
+  critères historiques PASS ; conserve un FAIL de conformité au complément C4 pour lectures
+  intégrales et répétées. WR-N01 bloque au préflight sur `Get-FileHash`, avant les deux modes
+  Java. Dix réponses finales nouvelles, 38 tentatives C au total ; preuves antérieures et
+  installations personnelles conservées. Qualification C encore ouverte.
+
+- Réalise la [reprise C ciblée du 16 septembre](docs/validation/WO062-C-TARGETED-REPRISE-20260916.md) :
+  JM-N01 frais reste FAIL sur deux omissions ; WR-H01 termine en 281,875 s avec réponse finale,
+  mais l'accès refusé au préflight empêche le harnais et maintient BLOCKED. Décompose les quinze
+  minutes historiques et instrumente les nouvelles phases. Prouve séparément la filiation d'une
+  JVM directe, revue PASS sur cette seule propriété, et prépare les conditions de reprise N01.
+  Les modes failure/sleep ne sont pas relancés. Conserve 28 tentatives C, 27 réponses et une
+  expiration historique ; candidats, preuves antérieures et installations personnelles inchangés.
+
+- Rédige `ss-java-module`, puis `ss-windows-runtime`, depuis 48 et 23 sources figées.
+  Conserve [seize premières recettes et leurs limites](docs/validation/WO062-JAVA-WINDOWS-CANDIDATES-20260915.md) :
+  Java `.1` 5 PASS / 3 FAIL pour omissions, Windows `.1` 6 PASS / 2 BLOCKED avant exécution.
+  Corrige Java en `.2` et prépare les nouveaux contextes Windows sans assouplir le sandbox.
+  Conserve les dix tentatives supplémentaires du 15–16 septembre : Java `.2` 7 PASS / 1 FAIL ;
+  Windows garde 6 PASS / 2 BLOCKED. La reproduction PowerShell 7 réussit, mais sa session
+  expire avant réponse finale ; la sonde Java est interrompue sur une identité de processus
+  incohérente, avant sleep, avec un résidu signalé. Qualification C incomplète ; aucune validation
+  humaine ou installation personnelle C, aucun changement des skills antérieurs ou du code.
+
+- Consigne la validation humaine de `ss-football-quality` et `ss-ci-security` version
+  `0.1.0-candidate.1` et réalise leur [installation personnelle vérifiée](docs/validation/WO062-FOOTBALL-QUALITY-CI-SECURITY-INSTALLATION-20260915.md).
+  Ajoute le paquet explicite `FootballQualityCiSecurity` avec quatre fichiers approuvés ;
+  32 cas isolés réussis, vérification et seconde installation sans réécriture.
+  Les douze fichiers personnels précédents sont conservés ; huit skills sont découverts.
+  Le défaut lot 1, le paquet PB et les contenus qualifiés restent identiques.
+
+- Réalise `ss-football-quality` puis `ss-ci-security`, version `0.1.0-candidate.1` :
+  [25 sources figées et huit cas PASS par skill](docs/validation/WO062-FOOTBALL-QUALITY-CI-SECURITY-CANDIDATES-20260915.md),
+  nouvelles analyses football/CI, lectures de sélection instrumentées et revues indépendantes.
+  Corrige et trace l’encodage UTF-8 des métadonnées football ; le corps évalué est inchangé.
+  À la fin de cette recette, validation humaine et installation personnelle restaient à réaliser.
+  PB, le lot 1, leurs preuves et l’installateur étaient alors inchangés.
+
+- Consigne la validation propriétaire de `ss-provider-benchmark 0.1.0-candidate.1` et réalise son
+  [installation personnelle vérifiée](docs/validation/WO062-PROVIDER-BENCHMARK-INSTALLATION-20260915.md).
+  Ajoute le paquet explicite `ProviderBenchmark`, son manifeste de deux fichiers approuvés
+  et les contrôles de coexistence avec le lot 1 ; 18 cas d'installation isolée réussis.
+  Le contenu du skill, les preuves A1/A2 et les dix fichiers personnels du lot 1 restent intacts.
+
+- Complète PB-S01 par une réexécution instrumentée : lecture intégrale du candidat inchangé,
+  empreintes concordantes et revue indépendante PASS. La [qualification courante](docs/validation/WO062-PROVIDER-BENCHMARK-PBS01-QUALIFICATION-20260915.md)
+  réunit douze cas PASS, en conservant le BLOCKED historique du premier run. Validation humaine
+  et installation personnelle restaient à réaliser à la fin de cet essai.
+
+- Rédige le candidat `ss-provider-benchmark` depuis A1 et conserve ses douze réponses évaluées
+  dans des contextes indépendants de l'oracle : run-01 à 11 PASS, PB-S01 alors bloqué pour une
+  preuve de chargement explicite insuffisante. Le routage des quatre cas de sélection est correct.
+- Produit le [protocole et la scorecard prematch/live](docs/skills/evaluations/WO-062/ss-provider-benchmark/run-01/cases/PB-N01/response.md),
+  avec trois revues indépendantes et [preuves A2](docs/validation/WO062-PROVIDER-BENCHMARK-CANDIDATE-20260915.md).
+  Protège les octets des preuves contre la normalisation Git ; validation humaine et installation étaient alors à faire.
+
+- Consigne l'acceptation du WO-062 et réalise la préparation A1 de `ss-provider-benchmark` :
+  [38 sources et 12 cas](docs/skills/evaluations/WO-062/ss-provider-benchmark/evaluation-plan.md),
+  corpus synthétique, oracle séparé et manifeste d'empreintes. Les évaluations étaient `NOT_RUN` à cette étape ;
+  voir la [preuve de préparation](docs/validation/WO062-PROVIDER-BENCHMARK-PREPARATION-20260915.md).
+- Prépare le [WO-062](docs/work_orders/completed/WO-SS-20260915-062-skills-lot2.md) pour développer
+  `ss-provider-benchmark`, puis `ss-football-quality` et `ss-ci-security`, puis `ss-java-module`
+  et `ss-windows-runtime`, selon les rôles de la conversation « Skills du lot 2 ».
+- Définit les adaptations propres au Lab, les sources actuelles, dix évaluations métier,
+  vingt cas de sélection et l'évolution de l'installateur avec conservation du lot 1.
+- Distingue les [contrôles du cadrage](docs/validation/WO062-SKILLS-LOT2-SCOPING-20260915.md)
+  de la réalisation, de la validation humaine et de l'installation futures des cinq skills.
+
 ### WO-061 — CI locale et maîtrise des quotas
 
 - Prépare la clôture documentaire et la fusion de la [PR #37](https://github.com/djothepirate/betting-sofascore-local-lab/pull/37)
@@ -3596,3 +3741,9 @@ Les évolutions notables du SofaScore Local Lab sont consignées dans ce fichier
 - profil `sofascore-live-test` bloqué ;
 - aucune URI SofaScore intégrée ;
 - aucun accès au VPS ni exposition réseau non locale.
+
+### WO-062 — clôture de rétention des preuves Windows (2026-09-18)
+
+- Les statuts, validations, manifestes et sources des skills restent versionnés ; ss-java-module est installé après sa qualification 8/0/0 et ss-windows-runtime reste qualifié, installé et vérifié à l’usage.
+- Les 919 artefacts non suivis ont été archivés localement avec tailles et SHA-256 vérifiés, dont un paquet final Windows de 25 pièces. Les 22 caches Python temporaires avaient déjà été retirés sans archive.
+- Les copies de travail C12/C13, contextes temporaires, produits de diagnostic, révisions abandonnées et doublons de scripts/résultats sont retirés du worktree. Aucun candidat, fixture, oracle, code applicatif, configuration, ACL ou politique persistante n’a changé.

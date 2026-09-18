@@ -1,0 +1,15 @@
+{
+  "schema": "wo062-additional-evaluation-authorization-v1",
+  "decision_date": "2026-09-15",
+  "owner_reply": "J’autorise ces dix sessions",
+  "authorized": true,
+  "additional_model_sessions": 10,
+  "order": [
+    {"skill": "ss-java-module", "version": "0.1.0-candidate.2", "run_id": "run-02", "cases": ["JM-H01", "JM-N01", "JM-C01", "JM-C02", "JM-S01", "JM-S02", "JM-S03", "JM-S04"]},
+    {"skill": "ss-windows-runtime", "version": "0.1.0-candidate.1", "run_id": "run-02", "cases": ["WR-H01", "WR-N01"]}
+  ],
+  "scope": "Sessions éphémères du service de modèle configuré, candidat concerné, catalogue local et seules entrées versionnées prévues, sans oracle ni résultats précédents. Deux sondes Windows avec bornes figées, ressources isolées et sandbox conservé.",
+  "first_sixteen_responses_preserved": true,
+  "human_validation": false,
+  "personal_installation": false
+}

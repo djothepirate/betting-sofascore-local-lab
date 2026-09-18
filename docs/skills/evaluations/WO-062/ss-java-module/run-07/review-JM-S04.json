@@ -1,0 +1,73 @@
+{
+  "schema": "wo062-independent-case-review-v1",
+  "case_id": "JM-S04",
+  "run_id": "run-07",
+  "skill": "ss-java-module",
+  "reviewer": "/root",
+  "independent_semantic_reviewer": "/root/c7_selection_review",
+  "reviewed_on": "2026-09-16",
+  "verdict": "PASS",
+  "behavioral_verdict": "PASS",
+  "technical_execution_verdict": "COMPLETED",
+  "candidate_version": "0.1.0-candidate.4",
+  "candidate_sha256": "f1f6533f678c5cdb4ae6a5bc9c996c062af419005e4f4cd6104a51c91e442d97",
+  "candidate_body_commit": "966062d677c30e7ce67b61454bd54695497064f5",
+  "response_sha256": "cae21fd83191944caa729bdfabd1f683886f9a981b6542e603ece3cf5242880d",
+  "freeze_sha256": "8a434d4f2e06d8f120184536a363da719c402b246359354ecb8309db1cb7f789",
+  "native_events_sha256": "c0ae403f581edacb319c2c90bb3b31933a31456a35c8c174ca1ab2f4e71ccaa9",
+  "trace_sha256": "f646726c35fb1f0777e775c90f25e84610812415fcdd451a108966d5fa3b1d9f",
+  "preflight_sha256": "ec60a8efa17c45f4d7ac9898d4eff9b6798b3d3a54048d60db95910b8fa346a1",
+  "authorization_sha256": "f6ca7e104d5a040b4e79dec21d9f83f5e9f7aa91cfe9a2c214d397e494828921",
+  "oracle_sha256": "d13dc8c5ec833f30dc9025c3c22a22c00e60656eae3a89dc30361861ea390bd1",
+  "source_head": "2af5b07e9a5c8c4f96dc3137971b7e11d9ee00e8",
+  "policy_source_commit": "6648dd423e556b5248b8793a539ae85a7680f9bc",
+  "frozen_at_utc": "2026-09-16T08:21:43.075446+00:00",
+  "frozen_before_review": true,
+  "required_criteria_missing": [],
+  "failure_kind": null,
+  "criteria": [
+    {
+      "criterion_id": "integrity",
+      "required": true,
+      "result": "PASS",
+      "evidence": "Les fichiers gelés et les copies publiées correspondent aux tailles et SHA-256 déclarés ; trace, prompt, requête, réponse et événements natifs concordent.",
+      "limit": "Le gel établit les octets et l’ordre de revue, pas une qualification applicative."
+    },
+    {
+      "criterion_id": "one-authorized-session",
+      "required": true,
+      "result": "PASS",
+      "evidence": "La trace documente une session native éphémère en lecture seule, un thread.started, un turn.started et un turn.completed ; exit_code et collector_exit_code sont 0, timed_out=false.",
+      "limit": "Les avertissements de service sont conservés séparément ; ils ne sont pas présentés comme une seconde session."
+    },
+    {
+      "criterion_id": "isolation-and-action-scope",
+      "required": true,
+      "result": "PASS",
+      "evidence": "oracle_supplied=false et design_history_supplied=false. L’audit postflight ne relève ni build, test applicatif, Java, Docker, navigateur, base, réseau ni mutation de source.",
+      "limit": "L’inspection des commandes est une preuve postflight, pas une barrière sandbox."
+    },
+    {
+      "criterion_id": "negative-independent-repository-selection",
+      "required": true,
+      "result": "PASS",
+      "evidence": "La réponse écarte ss-java-module pour atelier-factures, dépôt indépendant du SofaScore Local Lab, et n’impose aucun skill ss-*.",
+      "limit": "La lecture du candidat sert à vérifier son exclusion ; elle ne le transforme pas en skill retenu."
+    },
+    {
+      "criterion_id": "routing-only",
+      "required": true,
+      "result": "PASS",
+      "evidence": "La réponse s’arrête après le non-routage sans analyser de fichier métier.",
+      "limit": "PASS limité au routage négatif."
+    }
+  ],
+  "limitations": [
+    "Le catalogue archivé est une reconstruction postérieure à l’exécution, non une capture de requête.",
+    "Aucun build, test, navigateur, base, collecte fournisseur, validation humaine ou installation personnelle ne découle de cette revue."
+  ],
+  "application_tests_executed": false,
+  "model_sessions_launched_by_reviewer": 0,
+  "source_or_candidate_modified": false,
+  "prior_runs_unchanged": true
+}

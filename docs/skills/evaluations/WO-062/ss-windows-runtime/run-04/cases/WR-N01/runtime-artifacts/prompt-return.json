@@ -1,0 +1,7 @@
+{
+  "event": "WR_PROMPT_RETURNED",
+  "utc": "2026-09-15T23:43:52.7775217Z",
+  "prior_tool_chunk": "2b5c3d",
+  "prior_tool_exit_code": 1,
+  "command": "Write-Output WR_PROMPT_RETURNED"
+}

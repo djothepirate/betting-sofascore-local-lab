@@ -1,0 +1,33 @@
+{
+  "exit_code": 2,
+  "stdout": "",
+  "stderr": "error: the following required arguments were not provided:\n  --permission-profile <NAME>\n\nUsage: codex sandbox --permission-profile <NAME> --config <key=value> --cd <DIR> <COMMAND>...\n\nFor more information, try '--help'.\n",
+  "timed_out": false,
+  "schema": "wo062-non-model-sandbox-preflight-v1",
+  "started_at_utc": "2026-09-15T21:30:03.473218+00:00",
+  "ended_at_utc": "2026-09-15T21:30:03.788622+00:00",
+  "target": "C:\\Dev\\BettingProject\\codex\\betting-sofascore-local-lab\\.tmp\\wo062-skills-lot2\\.tmp\\c-runtime-preflight\\33752f4a-6e39-4dab-8145-93180e9e4cb1",
+  "command": [
+    "C:\\Users\\geoff\\AppData\\Local\\OpenAI\\Codex\\bin\\12219cbfbcbddde7\\codex.exe",
+    "sandbox",
+    "-c",
+    "sandbox_mode=\"workspace-write\"",
+    "-C",
+    "C:\\Dev\\BettingProject\\codex\\betting-sofascore-local-lab\\.tmp\\wo062-skills-lot2\\.tmp\\c-runtime-preflight\\33752f4a-6e39-4dab-8145-93180e9e4cb1",
+    "powershell.exe",
+    "-NoProfile",
+    "-NonInteractive",
+    "-ExecutionPolicy",
+    "Bypass",
+    "-File",
+    "C:\\Dev\\BettingProject\\codex\\betting-sofascore-local-lab\\.tmp\\wo062-skills-lot2\\.tmp\\c-runtime-preflight\\33752f4a-6e39-4dab-8145-93180e9e4cb1\\preflight.ps1"
+  ],
+  "created_by": "asusggo2025\\geoff",
+  "model_invoked": false,
+  "skill_evaluation": false,
+  "candidate_or_oracle_supplied": false,
+  "global_configuration_changed": false,
+  "sandbox_disabled": false,
+  "probe_residue_exists": false,
+  "script_sha256": "d3a7ef58fbcccbe3d6f05c5143534705dfad63c77564d05cbcb7acc1abd25d70"
+}

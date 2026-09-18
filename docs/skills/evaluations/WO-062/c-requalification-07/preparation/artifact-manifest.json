@@ -1,0 +1,51 @@
+{
+  "schema": "wo062-c7-preparation-artifact-manifest-v1",
+  "scope": "Static C7 preparation only; no model session, response, oracle or human validation.",
+  "files": [
+    {
+      "path": "context-check.py.txt",
+      "bytes": 3915,
+      "sha256": "f51036ee912d54694069769091790600d5f4ae127863e5b2b7e879e221cbfc4a"
+    },
+    {
+      "path": "context-integrity.json",
+      "bytes": 1478,
+      "sha256": "3c99cd6c019b31b6c9c9f62560e04b3aeecec014a785ff1d4af59d5a18524571"
+    },
+    {
+      "path": "context-preparation.json",
+      "bytes": 987,
+      "sha256": "a56dff3326ae5258e529415bf2141481e1c3e68aaa4af1107928bdd7587b98eb"
+    },
+    {
+      "path": "evaluator.py.txt",
+      "bytes": 23356,
+      "sha256": "27cee327e523b88cfcb0ea5cb629bfe2c78ee7f5016cc439b6035f7a2c591b8d"
+    },
+    {
+      "path": "prelaunch-checks.json",
+      "bytes": 667,
+      "sha256": "ce36b5d6452bb28c4334b0cff850b2eadf0d99d4d2c489d39d9034d38dc7f14b"
+    },
+    {
+      "path": "runner-correction.json",
+      "bytes": 1183,
+      "sha256": "fe121f73ac7a4905230beeaae42c8cd00dcf2aa53a94a31d583aa5d96cda1b6c"
+    },
+    {
+      "path": "runner-correction.md",
+      "bytes": 738,
+      "sha256": "a1e2a6d9fdf24333d5fd0ca9e5bb80684fbb1637147998acae30cceeee4a4758"
+    },
+    {
+      "path": "static-review.json",
+      "bytes": 1929,
+      "sha256": "9728b335f5d00a47b058b465b4493af86536e714cf3c9d53ca907182f4869d19"
+    },
+    {
+      "path": "static-review.md",
+      "bytes": 1652,
+      "sha256": "229aa1dfe827f30e238a5d069c2c4bf56dd15fcb5b0811f8821478325793fe1b"
+    }
+  ]
+}

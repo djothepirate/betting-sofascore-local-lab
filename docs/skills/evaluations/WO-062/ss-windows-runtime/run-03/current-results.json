@@ -1,0 +1,117 @@
+{
+  "schema": "wo062-current-skill-results-v1",
+  "skill": "ss-windows-runtime",
+  "candidate_version": "0.1.0-candidate.1",
+  "candidate_sha256": "b89925d5395238010bb0afe9c1e1a22b0aa5ec4e7d1fb9946c671d241e7976c6",
+  "case_count": 8,
+  "executions": 11,
+  "total_executions_all_versions": 11,
+  "cases": [
+    {
+      "case_id": "WR-H01",
+      "verdict": "BLOCKED",
+      "source_run": "run-03",
+      "review": "review-WR-H01.json",
+      "response": "cases/WR-H01/response.md",
+      "response_sha256": "14c84a8fbfb11d13b090b4e17070615e2b876b6bd6df6174594589e813f80771"
+    },
+    {
+      "case_id": "WR-N01",
+      "verdict": "BLOCKED",
+      "source_run": "run-02",
+      "review": "../run-02/review-WR-N01.json",
+      "response": "../run-02/cases/WR-N01/response.md",
+      "response_sha256": "0148ebd3172cab3e9529214ac50db040d12b4709198091e5440c8048290290a3"
+    },
+    {
+      "case_id": "WR-C01",
+      "verdict": "PASS",
+      "review": "../run-01/review-WR-C01.json",
+      "response": "../run-01/cases/WR-C01/response.md",
+      "response_sha256": "a6dffb6ac38fdc857afca5b6e8604249858cf804f1820db8bb1089a37a24929f",
+      "source_run": "run-01"
+    },
+    {
+      "case_id": "WR-C02",
+      "verdict": "PASS",
+      "review": "../run-01/review-WR-C02.json",
+      "response": "../run-01/cases/WR-C02/response.md",
+      "response_sha256": "52ae8da369c63ece95bd6121013d2678f2a746f62e731fb8c88a37b2214a695e",
+      "source_run": "run-01"
+    },
+    {
+      "case_id": "WR-S01",
+      "verdict": "PASS",
+      "review": "../run-01/review-WR-S01.json",
+      "response": "../run-01/cases/WR-S01/response.md",
+      "response_sha256": "1f993f4faa084e09c2490109612cd6363fe95ca968111e73e05bdbd24a764b5f",
+      "source_run": "run-01"
+    },
+    {
+      "case_id": "WR-S02",
+      "verdict": "PASS",
+      "review": "../run-01/review-WR-S02.json",
+      "response": "../run-01/cases/WR-S02/response.md",
+      "response_sha256": "3cd8c62a551202ed5049a78e35d2a4104fcb85edf47e5031adbe0e1b92ed567c",
+      "source_run": "run-01"
+    },
+    {
+      "case_id": "WR-S03",
+      "verdict": "PASS",
+      "review": "../run-01/review-WR-S03.json",
+      "response": "../run-01/cases/WR-S03/response.md",
+      "response_sha256": "3c2fa465bf220bc1da007f60fddb71e54c9039c0f14729a316534f65d6d18292",
+      "source_run": "run-01"
+    },
+    {
+      "case_id": "WR-S04",
+      "verdict": "PASS",
+      "review": "../run-01/review-WR-S04.json",
+      "response": "../run-01/cases/WR-S04/response.md",
+      "response_sha256": "062cd7a7704976261537d7fe5c97ef624f03ddbc23df177253a16e89c492b9b0",
+      "source_run": "run-01"
+    }
+  ],
+  "pass": 6,
+  "fail": 0,
+  "blocked": 2,
+  "historical_runs": [
+    {
+      "run_id": "run-01",
+      "candidate_version": "0.1.0-candidate.1",
+      "candidate_sha256": "b89925d5395238010bb0afe9c1e1a22b0aa5ec4e7d1fb9946c671d241e7976c6",
+      "executions": 8,
+      "pass": 6,
+      "fail": 0,
+      "blocked": 2,
+      "results": "run-01/results.json",
+      "artifact_manifest_sha256": "9203e756a55fbba088f4d33beb42b79894edb0a2f0aa654565b7da3e54ee6bd8",
+      "candidate_files": [
+        {
+          "path": "agents/openai.yaml",
+          "bytes": 300,
+          "sha256": "3038015980952bc18b21f45f0d4af514b35a8841394e4b80824986b7e30ccd9f"
+        },
+        {
+          "path": "SKILL.md",
+          "bytes": 9217,
+          "sha256": "b89925d5395238010bb0afe9c1e1a22b0aa5ec4e7d1fb9946c671d241e7976c6"
+        }
+      ],
+      "candidate_body_commit": "9e7b777e3be75f582f2198dfa8cca386b43426c2",
+      "candidate_package_commit": "9e7b777e3be75f582f2198dfa8cca386b43426c2",
+      "source_commit": "6648dd423e556b5248b8793a539ae85a7680f9bc"
+    },
+    {
+      "run_id": "run-02",
+      "candidate_version": "0.1.0-candidate.1",
+      "candidate_sha256": "b89925d5395238010bb0afe9c1e1a22b0aa5ec4e7d1fb9946c671d241e7976c6",
+      "executions": 2,
+      "pass": 0,
+      "fail": 0,
+      "blocked": 2,
+      "results": "run-02/results.json",
+      "artifact_manifest_sha256": "cace19f5de60f4fd7f7e69518cf939d27ecdbca5c4ea78588b7c4ce725135e9f"
+    }
+  ]
+}

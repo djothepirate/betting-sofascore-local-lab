@@ -1,0 +1,52 @@
+{
+  "schema": "wo062-frozen-skill-results-v1",
+  "skill": "ss-java-module",
+  "run_id": "run-06",
+  "candidate_version": "0.1.0-candidate.4",
+  "candidate_sha256": "f1f6533f678c5cdb4ae6a5bc9c996c062af419005e4f4cd6104a51c91e442d97",
+  "source_head": "91fccf1f29e2c27f95ddfb65c4a5019ff2c4c65f",
+  "reviewed_on": "2026-09-16",
+  "case_count": 1,
+  "prepared_case_count": 8,
+  "executions": 1,
+  "behavioral_executions": 1,
+  "cases": [
+    {
+      "case_id": "JM-H01",
+      "verdict": "PASS",
+      "technical_execution_verdict": "COMPLETED",
+      "source_run": "run-06",
+      "review": "review-JM-H01.json",
+      "response": "cases/JM-H01/response.md",
+      "response_sha256": "6dbfb8e8c3afba4e7777bc5c9c7f1890b62a28a74753094bb77186391af593b9",
+      "trace": "cases/JM-H01/trace.json",
+      "candidate_behavior_assessed": true
+    }
+  ],
+  "unstarted_case_ids": [
+    "JM-N01",
+    "JM-C01",
+    "JM-C02",
+    "JM-S01",
+    "JM-S02",
+    "JM-S03",
+    "JM-S04"
+  ],
+  "pass": 1,
+  "fail": 0,
+  "blocked": 0,
+  "not_run": 7,
+  "preceding_transport_incident": {
+    "run_id": "run-05",
+    "case_id": "JM-H01",
+    "technical_execution_verdict": "BLOCKED_BEFORE_MODEL_COMMAND",
+    "preserved": true,
+    "current_case_verdict_superseded_by_c6": true
+  },
+  "limits": [
+    "The C6 PASS is limited to the observed candidate.4 behavior for JM-H01.",
+    "The other seven candidate.4 Java cases remain deliberately NOT_RUN.",
+    "Candidate.3 results remain historical and do not transfer.",
+    "No application build, application test, database, provider collection, CI, human validation or personal installation is established by this result."
+  ]
+}

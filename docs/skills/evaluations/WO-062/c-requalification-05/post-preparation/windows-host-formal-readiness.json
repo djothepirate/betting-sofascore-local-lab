@@ -1,0 +1,67 @@
+{
+  "schema": "wo062-c5-host-formal-readiness-v1",
+  "purpose": "Record the prepared, host-owned physical Windows contexts before any future C5 model-session consumption.",
+  "logical_run_id": "run-05",
+  "physical_context_label": "run-05-host-formal-20260916",
+  "skill": "ss-windows-runtime",
+  "candidate_version": "0.1.0-candidate.1",
+  "candidate_sha256": "b89925d5395238010bb0afe9c1e1a22b0aa5ec4e7d1fb9946c671d241e7976c6",
+  "authorized_case_order": [
+    "WR-H01",
+    "WR-N01"
+  ],
+  "authorization": {
+    "path": "../authorization.json",
+    "sha256": "a4c35ea2bd91920a520eb889dfdeca60d4ab89d8eb0ce2463c28881543173d41",
+    "automatic_retry": false,
+    "human_validation": false,
+    "personal_installation": false
+  },
+  "receipts": [
+    {
+      "path": "windows-host-formal-context-integrity.json",
+      "sha256": "0a06d4c5daa5953327f7442b16429c6c19297c45dedc7c7df1012f1f6a29ceab"
+    },
+    {
+      "path": "windows-host-formal-preflight.raw.json",
+      "sha256": "6c1a1ed05758b1b43cf8e7478189dc0510a4120bdabee779f13f232ed143d009"
+    },
+    {
+      "path": "windows-host-formal-context.md",
+      "sha256": "16622764fbe504de05e6ca7fb8f61c6b39925e5833e4cf77e5e5aa29b5916086"
+    },
+    {
+      "path": "windows-host-formal-execution-plan.md",
+      "sha256": "a684af061ae80474b6ad04c6793552fc982ea4207363249a59abd0f9317fb88e"
+    }
+  ],
+  "formal_host_preflight": {
+    "model_invoked": false,
+    "runtime_probe_executed": false,
+    "java_started": false,
+    "configuration_changed": false,
+    "WR-H01": {
+      "exit_code": 0,
+      "duration_seconds": 0.73,
+      "temporary_residue_exists": false
+    },
+    "WR-N01": {
+      "exit_code": 0,
+      "duration_seconds": 0.68,
+      "temporary_residue_exists": false
+    }
+  },
+  "future_execution_constraints": {
+    "model_session_started": false,
+    "harness_executed": false,
+    "java_started": false,
+    "sandbox": "workspace-write",
+    "ephemeral": true,
+    "watchdog_seconds": 900,
+    "fallback_unelevated": false,
+    "configuration_change": false,
+    "start_WR_N01_only_after_complete_WR_H01": true
+  },
+  "status": "READY_FOR_AUTHORIZED_EXECUTION_NOT_INVOKED",
+  "qualification_scope": "Preparation and sandbox-access evidence only. Neither WR-H01 nor WR-N01 has started, so neither has a model response, harness result, Java result, or semantic verdict."
+}

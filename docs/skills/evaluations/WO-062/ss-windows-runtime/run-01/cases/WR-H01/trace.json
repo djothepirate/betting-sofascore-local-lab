@@ -1,0 +1,124 @@
+{
+  "case_id": "WR-H01",
+  "skill": "ss-windows-runtime",
+  "run_id": "run-01",
+  "started_at_utc": "2026-09-15T21:23:21.932583+00:00",
+  "ended_at_utc": "2026-09-15T21:24:43.377327+00:00",
+  "duration_seconds": 81.454,
+  "mode": "native_codex_exec_ephemeral_workspace-write",
+  "execution_mode": "bounded_local_runtime",
+  "cli_version": "codex-cli 0.154.0-alpha.6.2",
+  "model": null,
+  "reasoning_effort": null,
+  "model_note": "Configured defaults; exact model/effort not exposed, no override.",
+  "launch_arguments": [
+    "exec",
+    "--ephemeral",
+    "--sandbox",
+    "workspace-write",
+    "--cd",
+    "C:\\Dev\\BettingProject\\codex\\betting-sofascore-local-lab\\.tmp\\wo062-skills-lot2\\.tmp\\wo062-evaluations\\ss-windows-runtime\\run-01\\WR-H01",
+    "--json",
+    "--output-last-message",
+    "C:\\Dev\\BettingProject\\codex\\betting-sofascore-local-lab\\.tmp\\wo062-skills-lot2\\.tmp\\wo062-evaluations\\ss-windows-runtime\\run-01\\WR-H01\\output\\response.md",
+    "-"
+  ],
+  "exit_code": 0,
+  "turn_completed": true,
+  "candidate_sha256": "b89925d5395238010bb0afe9c1e1a22b0aa5ec4e7d1fb9946c671d241e7976c6",
+  "source_head": "9e7b777e3be75f582f2198dfa8cca386b43426c2",
+  "input_files": [
+    {
+      "path": "AGENTS.md",
+      "sha256": "6509ac77cd4c87094a91da7e4c750b5991eeb4585a69a609def5289b91cf6ab5",
+      "bytes": 10320
+    },
+    {
+      "path": "docs/validation/J9-WO044-JAVA-JAR-PATH-ARGUMENT-BOUNDARY-QUALIFICATION-20260904.md",
+      "sha256": "02008824316e688b6e42c523aaec45acf7b8edb776f49a9b11a822afd6a125a7",
+      "bytes": 8729
+    },
+    {
+      "path": "docs/validation/J9-WO053-CTRL-BREAK-DIAGNOSTIC-20260905.md",
+      "sha256": "8718125554e239925dcb8a785a4143dd8e9232f9d2cb554e91d0a6d864ff55fa",
+      "bytes": 7335
+    },
+    {
+      "path": "docs/validation/J9-WO053-REVIEW-HARDENING-20260905.md",
+      "sha256": "bacd897e4e4621e687935f9aa09f91469f69942869dbc3a95e8792fcdc8cf34e",
+      "bytes": 4179
+    },
+    {
+      "path": "scripts/wo036/WO036-CampaignTools.psm1",
+      "sha256": "43c7bc8eb242161729f6c18f8b0feb67c46715ce911b27572e4bd13e5956bd74",
+      "bytes": 176724
+    },
+    {
+      "path": "scripts/wo044/Invoke-WO044JavaJarArgumentBoundaryQualification.ps1",
+      "sha256": "59996b14941700523007e1f6b0784b102d65e088569f95e882340250d43565e4",
+      "bytes": 11212
+    },
+    {
+      "path": "scripts/wo044/Capture-WO044NativeArguments.ps1",
+      "sha256": "841428737a500fd9ccb1407d3c0822b56872f40b308568ee59ab48bae88b7818",
+      "bytes": 948
+    },
+    {
+      "path": "scripts/Tests/WO044JavaJarArgumentBoundary.Tests.ps1",
+      "sha256": "e1f661b0380c72b86374331b79419e6a2c8b551ebb0d195775f04aa731f1c29f",
+      "bytes": 4669
+    },
+    {
+      "path": "inputs/runtime-protocol.md",
+      "sha256": "b4748a356b881a8574a78156c0ac00c90f493874efe8303d40a7224c12d91a52",
+      "bytes": 10630
+    },
+    {
+      "path": ".agents/skills/ss-windows-runtime/SKILL.md",
+      "sha256": "b89925d5395238010bb0afe9c1e1a22b0aa5ec4e7d1fb9946c671d241e7976c6",
+      "bytes": 9217
+    },
+    {
+      "path": ".agents/skills/ss-windows-runtime/agents/openai.yaml",
+      "sha256": "3038015980952bc18b21f45f0d4af514b35a8841394e4b80824986b7e30ccd9f",
+      "bytes": 300
+    },
+    {
+      "path": "input.json",
+      "sha256": "d49bea0e90ca263b75840a198dd7abbdf67e2dc45541d5474d9e26b833812a57",
+      "bytes": 1475
+    }
+  ],
+  "prompt_sha256": "fa04ddaebf0c1b1a65645c05aabec1ad62e729aefc168d3862afd201ac88b2ab",
+  "request_sha256": "3da32b78268554b03c1e58c48e4ef32b4abe0d4f9d079dd8074d92810adb6476",
+  "oracle_supplied": false,
+  "design_history_supplied": false,
+  "raw_events_sha256": "a506958c2f90ceae5b36e29d93997e021ea2651fe97790b61db72cebf42cd5ba",
+  "native_events_sha256": "8842d9b1188563428146334361a6c5e480537f5ba42131d703a2e944e5d3f328",
+  "commands_completed": 0,
+  "response_sha256": "23b413061c2327f55f9971021a33a00175b0fd94e4b3b0b99f29f6c160863377",
+  "catalogue_sha256": "fb58c7d146d5c704ab4c30821cf53a4fd6e4aac0081169ee62a587c1ad139395",
+  "catalogue_note": "Local reconstruction after execution, not a capture of the transmitted request.",
+  "published_events_note": "Internal reasoning omitted; actual command outputs retained.",
+  "usage": {
+    "input_tokens": 163918,
+    "cached_input_tokens": 131456,
+    "cache_write_input_tokens": 0,
+    "output_tokens": 2152,
+    "reasoning_output_tokens": 263
+  },
+  "selection_instrumented": false,
+  "qualification_limit": "Tool-mediated selection/load with declared envelope; no automatic CLI injection claim.",
+  "timed_out": false,
+  "automatic_retry": false,
+  "diagnostics": [
+    {
+      "stage": "runtime_artifact",
+      "error": "MissingRuntimeArtifacts"
+    }
+  ],
+  "qualification_status": "NOT_REVIEWED",
+  "runtime_artifacts": [],
+  "collection_completed": false,
+  "collector_exit_code": 1
+}

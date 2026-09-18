@@ -1,0 +1,70 @@
+"""Check exact fresh JM-N01 context against frozen C7, without invoking a model."""
+from pathlib import Path
+import hashlib
+import json
+import shutil
+import subprocess
+from datetime import datetime, timezone
+
+ROOT = Path(__file__).resolve().parent.parent
+BASE = ROOT/'docs/skills/evaluations/WO-062/ss-java-module'
+PUBLIC = BASE/'observation-08'
+RUNTIME = ROOT/'.tmp/wo062-evaluations/ss-java-module/observation-08'
+CANDIDATE = 'd7171f978c2b13c852c2ce5e170d68c1bfc5087552661cfdc6271077a0fe6637'
+sha=lambda p:hashlib.sha256(p.read_bytes()).hexdigest()
+read=lambda p:json.loads(p.read_text(encoding='utf-8-sig'))
+def write(p,v):p.write_text(json.dumps(v,ensure_ascii=False,indent=2)+'\n',encoding='utf-8',newline='\n')
+
+auth=read(PUBLIC/'authorization.json')
+before=read(RUNTIME/'preflight.json')
+baseline=next(c for c in read(BASE/'run-07/preflight.json')['cases'] if c['case_id']=='JM-N01')
+assert auth['cases']==['JM-N01'] and auth['max_model_sessions']==1
+assert auth['formal_qualification'] is False and auth['reusable_as_formal_qualification_result'] is False
+assert before['case_count']==1 and before['candidate_version']=='0.1.0-candidate.5'
+assert before['candidate_sha256']==auth['candidate_sha256']==CANDIDATE
+case=before['cases'][0]
+assert case['case_id']=='JM-N01' and case['execution_mode']=='read_only'
+assert case['oracle_supplied'] is False and case['design_history_supplied'] is False
+assert case['prompt_sha256']==baseline['prompt_sha256']
+assert case['request_sha256']==baseline['request_sha256']
+old={e['path']:e for e in baseline['input_files']}
+new={e['path']:e for e in case['input_files']}
+assert old.keys()==new.keys()
+delta=[p for p in new if old[p]!=new[p]]
+assert delta==['.agents/skills/ss-java-module/SKILL.md']
+assert new[delta[0]]['sha256']==CANDIDATE
+case_dir=RUNTIME/'JM-N01'
+expected=set(new)|{'case-prompt.txt','request.txt'}
+actual={p.relative_to(case_dir).as_posix() for p in case_dir.rglob('*') if p.is_file() and '.git' not in p.relative_to(case_dir).parts}
+assert actual==expected, sorted(actual^expected)
+assert not any((case_dir/'output').iterdir())
+assert not (RUNTIME/'frozen').exists()
+for f in case['input_files']:
+    p=case_dir/f['path']
+    assert sha(p)==f['sha256'] and p.stat().st_size==f['bytes'],f['path']
+assert sha(case_dir/'request.txt')==case['request_sha256']
+assert sha(case_dir/'case-prompt.txt')==case['prompt_sha256']
+runner=ROOT/'.tmp/wo062_observe08.py'
+assert sha(runner)==sha(PUBLIC/'preparation/evaluator.py.txt')
+body=runner.read_text(encoding='utf-8')
+assert "C7_CASES=('JM-N01',)" in body
+assert "assert not any(out.iterdir())" in body
+assert "--ephemeral" in body and "'read-only'" in body
+result={
+ 'schema':'wo062-observation08-prelaunch-v1','status':'PASS_PRELAUNCH',
+ 'checked_at_utc':datetime.now(timezone.utc).isoformat(),
+ 'candidate_sha256':CANDIDATE,'cases':['JM-N01'],'input_file_count':len(new),
+ 'baseline':'run-07/preflight.json','baseline_sha256':sha(BASE/'run-07/preflight.json'),
+ 'only_input_delta':delta,'prompt_identical_to_c7':True,'request_identical_to_c7':True,
+ 'exact_context_file_set':True,'oracle_or_prior_answer_in_context':False,
+ 'outputs_empty_before_launch':True,'automatic_retry':False,'workers':1,
+ 'formal_qualification':False,'reusable_as_formal_qualification_result':False,
+ 'authorization_sha256':sha(PUBLIC/'authorization.json'),'runner_sha256':sha(runner),
+ 'preparation_head':subprocess.check_output(['git','rev-parse','HEAD'],cwd=ROOT,text=True).strip(),
+ 'model_invoked':False
+}
+shutil.copyfile(RUNTIME/'preflight.json',PUBLIC/'preflight.json')
+shutil.copyfile(Path(__file__),PUBLIC/'preparation/context-check.py.txt')
+shutil.copyfile(ROOT/'.tmp/prepare_jmn01_observation08.py',PUBLIC/'preparation/runner-preparation.py.txt')
+write(PUBLIC/'preparation/prelaunch-checks.json',result)
+print(json.dumps(result,ensure_ascii=False,indent=2))

@@ -1,0 +1,46 @@
+{
+    "case":  "WR-N01",
+    "session_uuid":  "a27cb0e7-ef81-4d56-852e-9acf74ce7924",
+    "temporary_root":  "C:\\Dev\\BettingProject\\codex\\betting-sofascore-local-lab\\.tmp\\wo062-skills-lot2\\.tmp\\wo062-evaluations\\ss-windows-runtime\\run-04\\WR-N01\\output\\runtime\\WR native probe a27cb0e7-ef81-4d56-852e-9acf74ce7924",
+    "main_result":  "BLOCKED_OR_INCOMPLETE",
+    "cleanup_result":  "CONFIRMED",
+    "conductor_exit":  1,
+    "events":  [
+                   {
+                       "event":  "conductor_error",
+                       "utc":  "2026-09-15T23:43:44.5797700Z",
+                       "monotonic_ms":  214.4678,
+                       "data":  {
+                                    "id":  "CommandNotFoundException",
+                                    "message":  "Le terme « Get-FileHash » n\u0027est pas reconnu comme nom d\u0027applet de commande, fonction, fichier de script ou programme exécutable. Vérifiez l\u0027orthographe du nom, ou si un chemin d\u0027accès existe, vérifiez que le chemin d\u0027accès est correct et réessayez.",
+                                    "stage":  "preflight",
+                                    "line":  141,
+                                    "type":  "System.Management.Automation.CommandNotFoundException",
+                                    "stack":  "à \u003cScriptBlock\u003e, C:\\Dev\\BettingProject\\codex\\betting-sofascore-local-lab\\.tmp\\wo062-skills-lot2\\.tmp\\wo062-evaluations\\ss-windows-runtime\\run-04\\WR-N01\\output\\runtime-artifacts\\Invoke-WRN01.ps1 : ligne 137",
+                                    "position":  "Au caractère C:\\Dev\\BettingProject\\codex\\betting-sofascore-local-lab\\.tmp\\wo062-skills-lot2\\.tmp\\wo062-evaluations\\ss-windows-runtime\\run-04\\WR-N01\\output\\runtime-artifacts\\Invoke-WRN01.ps1:141 : 75\r\n+ ... UTF-8 no BOM\u0027; fixture=$fixture; fixture_sha256=(Get-FileHash -Litera ...\r\n+                                                      ~~~~~~~~~~~~"
+                                }
+                   },
+                   {
+                       "event":  "temporary_root_postflight",
+                       "utc":  "2026-09-15T23:43:44.5956486Z",
+                       "monotonic_ms":  224.9118,
+                       "data":  {
+                                    "cleanup":  "CONFIRMED",
+                                    "path":  "C:\\Dev\\BettingProject\\codex\\betting-sofascore-local-lab\\.tmp\\wo062-skills-lot2\\.tmp\\wo062-evaluations\\ss-windows-runtime\\run-04\\WR-N01\\output\\runtime\\WR native probe a27cb0e7-ef81-4d56-852e-9acf74ce7924",
+                                    "absent":  true
+                                }
+                   },
+                   {
+                       "event":  "conductor_return",
+                       "utc":  "2026-09-15T23:43:44.5956486Z",
+                       "monotonic_ms":  225.38500000000002,
+                       "data":  {
+                                    "main_result":  "BLOCKED_OR_INCOMPLETE",
+                                    "cleanup_result":  "CONFIRMED",
+                                    "budget_ms":  45000,
+                                    "elapsed_ms":  225.287,
+                                    "exit_code":  1
+                                }
+                   }
+               ]
+}

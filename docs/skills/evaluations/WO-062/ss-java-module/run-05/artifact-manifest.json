@@ -1,0 +1,93 @@
+{
+  "schema": "wo062-skill-run-artifacts-v1",
+  "skill": "ss-java-module",
+  "run_id": "run-05",
+  "files": [
+    {
+      "path": "authorization.json",
+      "bytes": 2256,
+      "sha256": "a4c35ea2bd91920a520eb889dfdeca60d4ab89d8eb0ce2463c28881543173d41"
+    },
+    {
+      "path": "cases/JM-H01/freeze.json",
+      "bytes": 1607,
+      "sha256": "7ec0d8ea7632ed43d202f2d7807ce75c9a335d28653b36de0167e94f9d2a419d"
+    },
+    {
+      "path": "cases/JM-H01/host-runtime.json",
+      "bytes": 371,
+      "sha256": "a0c98023f3999faf8e4e8b403cf38e2558351fd72943d46796c631d1341b7cb9"
+    },
+    {
+      "path": "cases/JM-H01/input.json",
+      "bytes": 772,
+      "sha256": "bc36cc69daad9b42c547b0a863e88fea59c8921563d8f3740b98bb579184698d"
+    },
+    {
+      "path": "cases/JM-H01/native-events.json",
+      "bytes": 3554,
+      "sha256": "e6096f9352bcf1daa6fbf3248777a3825282dd538d34db809c8562665d59478b"
+    },
+    {
+      "path": "cases/JM-H01/native-timing-summary.json",
+      "bytes": 432,
+      "sha256": "b23679c1e7bb681217328dcf9fb351eefb7940410eb87ec13f298b31efc5238f"
+    },
+    {
+      "path": "cases/JM-H01/native-timing.jsonl",
+      "bytes": 6237,
+      "sha256": "3eb8433d77c4e467af3a96f873c0f484785c346ae2aad18c186709042bc157a1"
+    },
+    {
+      "path": "cases/JM-H01/prompt.txt",
+      "bytes": 620,
+      "sha256": "3eab6b461bd8b2964ba5aebb98baaeaa34ba408d7e7f1f47081e6b73395739d9"
+    },
+    {
+      "path": "cases/JM-H01/reading-audit.json",
+      "bytes": 312,
+      "sha256": "572adce2dd306fceacf8efa1c9ee1d113e89ccf6b03ee50c39e567365fc88e66"
+    },
+    {
+      "path": "cases/JM-H01/request.txt",
+      "bytes": 2322,
+      "sha256": "7e5ce27f03c8c8a8207eaf56775a70d5298131d46fe0a6a14b240ca5f330752b"
+    },
+    {
+      "path": "cases/JM-H01/stderr.log",
+      "bytes": 10978,
+      "sha256": "4a882ed2ea05c5e341369ba20bd66bed1af3185bf8435a95ec1765a9f0fdf247"
+    },
+    {
+      "path": "cases/JM-H01/trace.json",
+      "bytes": 5962,
+      "sha256": "f1cf6851f4c85b45d6a02f65e0068a284d9fa95c8b985970c5bace82f50e6aec"
+    },
+    {
+      "path": "preflight.json",
+      "bytes": 27898,
+      "sha256": "a975e1b4cfa71ea0a6ae0f1c5ad275baf40d259401ed8cd236204d496e452fa4"
+    },
+    {
+      "path": "previous-qualification.json",
+      "bytes": 3997,
+      "sha256": "2ddf95999865e9127119c0a8e5e6e71feaad367bc8a70be37454b33dfb6bf636"
+    },
+    {
+      "path": "results.json",
+      "bytes": 1398,
+      "sha256": "ed29dc7c2323e95adb9d9e88a1a758ba842e199e1ec71bf9119f4b96625ba23a"
+    },
+    {
+      "path": "review-JM-H01.json",
+      "bytes": 5051,
+      "sha256": "e603de7b301cf8db72cac8edee0a971ef48e03f706a7fb636759a85b3aff01bd"
+    },
+    {
+      "path": "review-JM-H01.md",
+      "bytes": 2089,
+      "sha256": "1f265b35efd45c123d4e0c06d2233e612f226c0dc68993147e5a47e060110bd3"
+    }
+  ],
+  "hash_contract": "Exact bytes; manifest excludes itself, internal reasoning omitted from native events. Missing response.md and catalogue.txt are intentional evidence of BLOCKED_BEFORE_MODEL_COMMAND."
+}

@@ -1,0 +1,152 @@
+{
+  "schema": "wo062-windows-runtime-selection-review-v1",
+  "case_id": "WR-S03",
+  "verdict": "PASS",
+  "reviewer": "jm_selection_review",
+  "reviewed_at_utc": "2026-09-15 21:31:29 UTC",
+  "source_head": "9e7b777e3be75f582f2198dfa8cca386b43426c2",
+  "candidate_version": "0.1.0-candidate.1",
+  "candidate_sha256": "b89925d5395238010bb0afe9c1e1a22b0aa5ec4e7d1fb9946c671d241e7976c6",
+  "response_sha256": "3c2fa465bf220bc1da007f60fddb71e54c9039c0f14729a316534f65d6d18292",
+  "freeze_sha256": "beacbe9561ccaa496cb44118d4c20fc6a9fc4b0c81e6a3129fa1d5ec1bac6be2",
+  "frozen_at": "2026-09-15T23:28:39.044541+02:00",
+  "selected_skills": [
+    "ss-work-order"
+  ],
+  "candidate_selected": false,
+  "candidate_read_in_routing": false,
+  "candidate_discovery": {
+    "name": "ss-windows-runtime",
+    "path": "C:/Dev/BettingProject/codex/betting-sofascore-local-lab/.tmp/wo062-skills-lot2/.tmp/wo062-evaluations/ss-windows-runtime/run-01/WR-S03/.agents/skills/ss-windows-runtime/SKILL.md",
+    "scope": "REPO (inferred from case path)"
+  },
+  "catalogue": {
+    "entry_count": 24,
+    "ss_entry_count": 9,
+    "personal_skill_names": [
+      "ss-ci-security",
+      "ss-data-contract-replay",
+      "ss-football-quality",
+      "ss-postgres-change",
+      "ss-provider-benchmark",
+      "ss-review-closeout",
+      "ss-verify",
+      "ss-work-order"
+    ],
+    "duplicate_names": [],
+    "duplicate_paths": [],
+    "source": "Post-execution reconstruction; scopes inferred from resolved paths."
+  },
+  "mandatory_criteria": [
+    {
+      "criterion": "Gel et intégrité",
+      "status": "PASS",
+      "evidence": [
+        "Les huit fichiers de frozen/WR-S03/freeze.json ont des tailles et SHA-256 recalculés conformes. Les six empreintes de trace.json pour événements bruts/natifs, prompt, requête, réponse et catalogue concordent.",
+        "native-events.json égale exactement les événements bruts après seule exclusion des entrées reasoning ; les sorties des commandes restent intégrales. response.md égale exactement le texte du dernier agent_message."
+      ]
+    },
+    {
+      "criterion": "Prompt et isolation déclarée",
+      "status": "PASS",
+      "evidence": [
+        "prompt.txt égale le prompt de cases.json suivi de LF ; request.txt égale selection_envelope substituée par ce prompt, suivie de LF. Les empreintes du préflight et de la trace concordent.",
+        "Le prompt et son enveloppe conservent la reprise documentaire et son exclusion explicite du diagnostic Windows ; aucun nom attendu ni corps de skill n’est ajouté.",
+        "Le lancement enregistré utilise exec --ephemeral --sandbox read-only dans le répertoire isolé du cas ; aucun oracle ou historique n’est lu par les commandes observées. Le CLI termine sans expiration ni relance automatique déclarée."
+      ]
+    },
+    {
+      "criterion": "Identité du candidat",
+      "status": "PASS",
+      "evidence": [
+        "La copie isolée et le SKILL canonique sont identiques en UTF-8 strict : name ss-windows-runtime ; version 0.1.0-candidate.1 ; 9 217 octets ; SHA-256 b89925d5395238010bb0afe9c1e1a22b0aa5ec4e7d1fb9946c671d241e7976c6.",
+        "agents/openai.yaml : 300 octets ; SHA-256 3038015980952bc18b21f45f0d4af514b35a8841394e4b80824986b7e30ccd9f ; default_prompt référence $ss-windows-runtime. Les copies concordent avec le préflight."
+      ]
+    },
+    {
+      "criterion": "Découverte, chemins et dédoublonnage",
+      "status": "PASS",
+      "evidence": [
+        "Le catalogue figé égale le bloc Skills de output/prompt-render.json suivi de LF. Ses 24 noms et 24 chemins résolus sont uniques ; une seule entrée ss-windows-runtime résout C:/Dev/BettingProject/codex/betting-sofascore-local-lab/.tmp/wo062-skills-lot2/.tmp/wo062-evaluations/ss-windows-runtime/run-01/WR-S03/.agents/skills/ss-windows-runtime/SKILL.md.",
+        "Les neuf entrées ss-* comprennent le candidat local du cas et huit skills personnels sous C:/Users/geoff/.agents/skills. REPO et USER sont déduits de ces chemins ; le catalogue textuel n’expose pas un champ scope.",
+        "La reconstruction après exécution corrobore les noms, descriptions et chemins. Elle n’est ni une capture de la requête transmise au modèle ni une preuve d’injection automatique du corps."
+      ]
+    },
+    {
+      "criterion": "Routage attendu",
+      "status": "PASS",
+      "evidence": [
+        "Seul ss-work-order est retenu pour la fiche de reprise documentaire du Work Order. ss-windows-runtime est explicitement écarté, comme les diagnostics et exécutions Windows exclus de la demande. Aucun skill supplémentaire n’est sélectionné."
+      ]
+    },
+    {
+      "criterion": "Lecture par outil et attribution des chemins",
+      "status": "PASS",
+      "evidence": [
+        "item_1 lit C:/Users/geoff/.agents/skills/ss-work-order/SKILL.md par Get-Content -LiteralPath -Raw, code 0. La sortie de 2 278 caractères égale exactement le fichier personnel UTF-8 de 2 325 octets, augmenté du seul CRLF console. SHA-256 07f92e9d7e35fae64b814b2d92d62538d15e298b544242d6a772400de6712700 ; contenu identique au canonique docs/skills/local-lab/ss-work-order/SKILL.md. Le candidat Windows n’est pas lu dans ce cas.",
+        "Les commandes et sorties sont conservées dans les événements natifs et concordent avec les événements bruts. Aucun marqueur de troncature n’est observé."
+      ]
+    },
+    {
+      "criterion": "Arrêt au routage",
+      "status": "PASS",
+      "evidence": [
+        "1 commande(s) de lecture ou de découverte seulement. Aucun fichier métier, diagnostic de processus, reproduction, build, Java, Maven, Docker, réseau, navigateur, base, installation ou mutation ne suit le routage.",
+        "La réponse termine le routage et le CLI finit avec code 0 et turn.completed. Cette réussite n’établit aucun résultat de sonde Windows, de WR-H01 ou de WR-N01."
+      ]
+    }
+  ],
+  "findings": [],
+  "limits": [
+    "Catalogue reconstruit après exécution : corroboration de découverte, pas capture de la requête modèle. Aucune injection automatique du corps CLI démontrée ou revendiquée.",
+    "Modèle et effort exacts non exposés ; traces déclarant les valeurs configurées par défaut sans substitution.",
+    "PASS porte sur le routage et la lecture instrumentée. Il ne qualifie aucune exécution applicative Windows, aucun incident réel ni les sondes métier du run. Gain global de temps/qualité non mesuré.",
+    "Aucun cas ou modèle relancé par le relecteur. Aucun fichier suivi, candidat ou résultat figé modifié ; seuls les rapports et un auxiliaire runtime de vérification ont été écrits."
+  ],
+  "verified_frozen_files": [
+    {
+      "path": "catalogue.txt",
+      "sha256": "9003f2ab6bb52cfef4c06ea29556d754dd782ada187aefcb113c5aadd5a20913"
+    },
+    {
+      "path": "host-runtime.json",
+      "sha256": "145e6ce888841dda98c7912be57acc53f26a7e7bd665c35cb82f0cfa97b24e24"
+    },
+    {
+      "path": "native-events.json",
+      "sha256": "59f3c156fd666a56d9c73c2cfe6c6c3869c190a96285d1c1b44125c0bd8aa46c"
+    },
+    {
+      "path": "prompt.txt",
+      "sha256": "ea31f58411bb4e9af60f74319e1571aa3d6a3234bddf019af097795e6b17c31a"
+    },
+    {
+      "path": "request.txt",
+      "sha256": "980f6c4f325f157f1cfaa11bdf65578d5d3a01fa484a6363b13dcf1ff013ce14"
+    },
+    {
+      "path": "response.md",
+      "sha256": "3c2fa465bf220bc1da007f60fddb71e54c9039c0f14729a316534f65d6d18292"
+    },
+    {
+      "path": "stderr.log",
+      "sha256": "e5eb381885fe77d3e163f5212cc3159ccdb50a158ba6a34659e7e90f7d4f1e55"
+    },
+    {
+      "path": "trace.json",
+      "sha256": "fb148f580466960666587280c24c47f8fed36791e8454070b774a1b333665f40"
+    }
+  ],
+  "command_evidence": [
+    {
+      "id": "item_1",
+      "command": "\"C:\\\\Program Files\\\\PowerShell\\\\7\\\\pwsh.exe\" -Command \"Get-Content -LiteralPath 'C:/Users/geoff/.agents/skills/ss-work-order/SKILL.md' -Raw\"",
+      "exit_code": 0,
+      "output_characters": 2278,
+      "contains_entire_candidate": false,
+      "equals_candidate_plus_console_crlf": false,
+      "mentions_truncation": false
+    }
+  ]
+}
+

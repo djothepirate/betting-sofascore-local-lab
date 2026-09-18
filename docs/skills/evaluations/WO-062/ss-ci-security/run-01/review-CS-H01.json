@@ -1,0 +1,64 @@
+{
+  "case_id": "CS-H01",
+  "verdict": "PASS",
+  "mandatory_criteria": [
+    {
+      "criterion": "Gel préalable et intégrité des pièces",
+      "status": "PASS",
+      "evidence": "Les sept fichiers de frozen/CS-H01/freeze.json concordent en SHA-256 et taille après recalcul indépendant. Gel déclaré 2026-09-15T19:58:36.941142+00:00. response.md = 23a9872aa367a20196cf30661d8fb0d2ba37bb38838eb289d4786cc2ea7493bb ; native-events.json = 38bc3ddf37a3d433d50420cb154285ea0c9854379d958f95d10ca22a62cf0a95. Les huit input_files de trace.json concordent avec les copies isolées ; les cinq sources du corpus concordent aussi avec manifest.json. Les cinq fichiers du corpus de préparation concordent avec leur manifeste."
+    },
+    {
+      "criterion": "Lecture intégrale du corps exact du skill par outil",
+      "status": "PASS",
+      "evidence": "native-events.json, item_1 completed : Get-Content -LiteralPath '.agents/skills/ss-ci-security/SKILL.md' -Raw, code 0. aggregated_output commence par les 7 340 caractères exacts du fichier candidat et ajoute seulement CRLF (13,10). Le fichier de 7 522 octets a pour SHA-256 ca0bba1cf60c0c9965f21b3201e39c3e5dcba3bd73888c2a2ee5d148dbb8c0c5, identique à trace.candidate_sha256. Lecture observée avant input.json et les sources métier."
+    },
+    {
+      "criterion": "Bornes de toutes les commandes et séparation de l'oracle",
+      "status": "PASS",
+      "evidence": "8 commandes commencées et terminées, toutes code 0 : item_1 skill, item_2 input, item_3 recherche rg dans ADR/runbook/rapport autorisés, item_4 runbook, item_5 ADR, item_6 rapport WO-061, item_8 workflow GitHub, item_9 GitLab. Les lectures numérotées n'exécutent pas les commandes contenues dans les sources. Aucun chemin hors liste de request.txt, réseau, mutation, Maven, test, application, DB, Docker, scanner ou pipeline observé. request.txt contient le prompt et la liste autorisée, aucun oracle ni attentes réservées ; trace.oracle_supplied=false et design_history_supplied=false concordent avec les commandes observées. Lancement --ephemeral --sandbox read-only."
+    },
+    {
+      "criterion": "Incident historique identifié et diagnostic distinct d'une régression",
+      "status": "PASS",
+      "evidence": "response.md:23-35 et :100-101 identifient GitHub 34950465172, job Linux 104319936308, tests Windows/Linux et packaging réussis, puis upload du snapshot échoué sur quota. Le texte refuse explicitement d'en déduire une régression ou un échec historique d'upload XML. Conforme à CS-H01, rapport WO061-CI-LOCAL-QUOTAS-20260915.md, section État distant observé."
+    },
+    {
+      "criterion": "Identités Git sans invention ni transfert",
+      "status": "PASS",
+      "evidence": "response.md:80-90 distingue la base 59b4daedd089b778d1fd2560799f20dd16658cf1, le commit fonctionnel a3ed5e7c854369f82d74291255fdcefdb3727792, la provenance déclarée 57c0614627e628077b0a7775eb66a7c490b422e0 et les SHA non fournis du run incident et du nouveau candidat. Aucun SHA du run incident n'est inventé et aucun historique n'est transféré au candidat."
+    },
+    {
+      "criterion": "Qualification locale datée et compteurs corrects",
+      "status": "PASS",
+      "evidence": "response.md:2, :92-111 situe le rapport au 15 septembre 2026, Windows/Java 25.0.4/Wrapper 3.9.16/Docker Desktop 29.7.2, standard 2 440 déclarés dont 5 ignorés, 2 435 exécutés, intégration 286 dont 0 ignoré, aucun échec/erreur. Ces valeurs sont présentées comme résultats consignés, sans réexécution ni seuil permanent. Elles concordent avec le rapport historique."
+    },
+    {
+      "criterion": "Résolution Maven initiale distinguée des tests",
+      "status": "PASS",
+      "evidence": "response.md:102-105 : première tentative FAIL de résolution du POM parent, tests NOT_EXECUTED ; réexécution ultérieure historiquement autorisée et réussie. Conforme au paragraphe suivant le tableau Qualification locale de CS-H01. Aucun échec de test inféré de la restriction réseau initiale."
+    },
+    {
+      "criterion": "Politique actuelle de preuves obligatoires et exclusions justifiées",
+      "status": "PASS",
+      "evidence": "response.md:64-76 et :138-154 : aucun bundle intermédiaire automatique ; XML, résumé Failsafe et upload requis restent bloquants ; quota toujours possible. Javadoc n'est facultative qu'en l'absence d'une exigence WO. Les observations automatiques retirées ne sont pas réintroduites et leur absence ne vaut pas approbation de sécurité. Conforme à CS-P01 et ADR-SS-004:95-100,127-146,170-173 ainsi qu'aux workflows CS-I01/CS-I02."
+    },
+    {
+      "criterion": "Purge historique limitée et absence de nouvelle autorisation",
+      "status": "PASS",
+      "evidence": "response.md:37-48 : 22 bundles, 1 202 214 595 octets, aucune preuve de test ni release taguée supprimée ; caches séparés, deux entrées et 18 249 921 octets non purgés. Autorisation limitée à la session historique ; aucune nouvelle purge ni gain instantané de quota revendiqué. Conforme au rapport CS-H01 et au runbook CS-P01."
+    },
+    {
+      "criterion": "Limites distantes et prochaines preuves proportionnées",
+      "status": "PASS",
+      "evidence": "response.md:50-62 rappelle HTTP 403 sur les protections GitHub, keep_latest_artifact=false observé alors et aucune purge GitLab ; :108 distingue validation YAML et pipeline exécuté ; :138-170 rend les lacunes visibles et demande les propres SHA, commandes, rapports et disponibilité du nouveau candidat. Aucune action réelle demandée par l'essai n'est lancée."
+    }
+  ],
+  "findings": [],
+  "limits": [
+    "PASS est le verdict de cet essai documentaire du skill ; il ne qualifie aucun pipeline, test, scanner, application, base de données, PR ou distribution réelle.",
+    "L'oracle et les règles ont été confrontés au corpus local figé. Aucun état distant actuel, artefact supprimé ou rapport XML réel historique n'a été consulté.",
+    "catalogue.txt est explicitement reconstruit après exécution, et non une capture du catalogue transmis. H01 demande explicitement le skill ; cette revue établit sa lecture par outil, sans revendiquer une découverte implicite ou une injection automatique du CLI.",
+    "La revue utilise les événements natifs publiés avec sorties de commandes ; le raisonnement interne est omis par le lanceur. Le modèle et l'effort exacts ne sont pas exposés dans trace.json.",
+    "Le SHA 658309c0e8d9d18e7d96396d8768ac90d8d16cca est la provenance source du lancement déclarée par trace.json ; il ne remplace ni le SHA historique inconnu ni la provenance de politique 57c0614 déclarée par input.json."
+  ]
+}

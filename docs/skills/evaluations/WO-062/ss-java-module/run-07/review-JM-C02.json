@@ -1,0 +1,109 @@
+{
+  "schema": "wo062-independent-case-review-v1",
+  "case_id": "JM-C02",
+  "run_id": "run-07",
+  "skill": "ss-java-module",
+  "reviewer": "/root",
+  "independent_semantic_reviewer": "/root/c7_semantic_c01c02",
+  "reviewed_on": "2026-09-16",
+  "verdict": "PASS",
+  "behavioral_verdict": "PASS",
+  "technical_execution_verdict": "COMPLETED_WITH_TRANSPORT_RECONNECTS",
+  "candidate_version": "0.1.0-candidate.4",
+  "candidate_sha256": "f1f6533f678c5cdb4ae6a5bc9c996c062af419005e4f4cd6104a51c91e442d97",
+  "candidate_body_commit": "966062d677c30e7ce67b61454bd54695497064f5",
+  "response_sha256": "674998bbb9330322426724c759d0d1fdb56eaa037f5bb37c70ecba5499af4864",
+  "freeze_sha256": "3eab9593376c96f106f64d9fae1a1238dde24ff80add374285b6e065ca556dfe",
+  "native_events_sha256": "fb8f855bd34c3d7b63dcfa8733d1db7a173c62b303622f4490a45cab6de58ae6",
+  "trace_sha256": "dd14722c90e829f5d31308c00ee181f6742e208eb9c6333f5ac7b66c53cd499d",
+  "preflight_sha256": "ec60a8efa17c45f4d7ac9898d4eff9b6798b3d3a54048d60db95910b8fa346a1",
+  "authorization_sha256": "f6ca7e104d5a040b4e79dec21d9f83f5e9f7aa91cfe9a2c214d397e494828921",
+  "oracle_sha256": "d13dc8c5ec833f30dc9025c3c22a22c00e60656eae3a89dc30361861ea390bd1",
+  "source_head": "2af5b07e9a5c8c4f96dc3137971b7e11d9ee00e8",
+  "policy_source_commit": "6648dd423e556b5248b8793a539ae85a7680f9bc",
+  "frozen_at_utc": "2026-09-16T08:19:21.602610+00:00",
+  "frozen_before_review": true,
+  "required_criteria_missing": [],
+  "failure_kind": null,
+  "criteria": [
+    {
+      "criterion_id": "integrity",
+      "required": true,
+      "result": "PASS",
+      "evidence": "Les fichiers gelés et les copies publiées correspondent aux tailles et SHA-256 déclarés ; trace, prompt, requête, réponse et événements natifs concordent.",
+      "limit": "Le gel établit les octets et l’ordre de revue, pas une qualification applicative."
+    },
+    {
+      "criterion_id": "one-authorized-session",
+      "required": true,
+      "result": "PASS",
+      "evidence": "La trace documente une session native éphémère en lecture seule, un thread.started, un turn.started et un turn.completed ; exit_code et collector_exit_code sont 0, timed_out=false.",
+      "limit": "Les avertissements de service sont conservés séparément ; ils ne sont pas présentés comme une seconde session."
+    },
+    {
+      "criterion_id": "isolation-and-action-scope",
+      "required": true,
+      "result": "PASS",
+      "evidence": "oracle_supplied=false et design_history_supplied=false. L’audit postflight ne relève ni build, test applicatif, Java, Docker, navigateur, base, réseau ni mutation de source.",
+      "limit": "L’inspection des commandes est une preuve postflight, pas une barrière sandbox."
+    },
+    {
+      "criterion_id": "candidate-tool-read",
+      "required": true,
+      "result": "PASS",
+      "evidence": "La première commande lit intégralement le candidat .4 exact avec Get-Content -Raw.",
+      "limit": "Lecture locale par outil, pas injection automatique revendiquée."
+    },
+    {
+      "criterion_id": "standard-and-generic-native-selection",
+      "required": true,
+      "result": "PASS",
+      "evidence": "La réponse refuse la sélection Chromium dans le standard, distingue le motif exact *LocalQualificationIT et n’annonce aucun build courant.",
+      "limit": "Profil présent, compilation, packaging et lancement restent distincts."
+    },
+    {
+      "criterion_id": "archunit-and-spring-boundaries",
+      "required": true,
+      "result": "PASS",
+      "evidence": "Elle refuse l’affirmation ArchUnit, borne le garde textuel et distingue contexte Spring restreint et composition @Primary complète.",
+      "limit": "Aucune couverture exhaustive ni graphe Spring complet n’est inventé."
+    },
+    {
+      "criterion_id": "historical-current-and-publication",
+      "required": true,
+      "result": "PASS",
+      "evidence": "Elle ne transfère pas le rapport historique aux octets actuels et conserve la frontière transactionnelle de publication, avec relais PostgreSQL/verify.",
+      "limit": "Migrations et course de rétention complète restent hors de la preuve."
+    },
+    {
+      "criterion_id": "paused-live-maintenance-and-missed-orders",
+      "required": true,
+      "result": "PASS",
+      "evidence": "Elle refuse recréation ou extension du live, rappelle le garde de contexte Web et refuse rattrapage global ou effacement des refus fournisseur.",
+      "limit": "Les pannes et qualifications natives restent des travaux futurs."
+    },
+    {
+      "criterion_id": "bounded-conclusions",
+      "required": true,
+      "result": "PASS",
+      "evidence": "Les propositions synthétiques sont traitées comme données, les limites explicitées et les changements relayés aux skills appropriés.",
+      "limit": "Aucun changement, build ou qualification applicative n’est annoncé."
+    },
+    {
+      "criterion_id": "service-transport-anomaly",
+      "required": false,
+      "result": "LIMITATION",
+      "evidence": "stderr et les événements natifs conservent deux reconnexions internes de sampling après ruptures WebSocket, puis un seul turn.completed.",
+      "limit": "automatic_retry=false reste vrai au niveau du conducteur : aucun second thread, codex exec ou relancement du cas n’est observé."
+    }
+  ],
+  "limitations": [
+    "Deux reprises internes de sampling et un échec de routage interne de collaboration sont conservés dans stderr.",
+    "Une seule session, un seul thread et un seul tour finalisé sont observés.",
+    "Aucun build, test, navigateur, base, collecte fournisseur, validation humaine ou installation personnelle ne découle de cette revue."
+  ],
+  "application_tests_executed": false,
+  "model_sessions_launched_by_reviewer": 0,
+  "source_or_candidate_modified": false,
+  "prior_runs_unchanged": true
+}

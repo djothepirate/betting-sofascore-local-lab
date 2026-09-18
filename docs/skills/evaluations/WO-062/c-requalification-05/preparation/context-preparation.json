@@ -1,0 +1,62 @@
+{
+  "schema": "wo062-c5-context-preparation-v1",
+  "prepared_at_utc": "2026-09-16T00:40:50Z",
+  "source_head": "d0021090d9cf718d5b338bbf8d06109586e4518a",
+  "run_id": "run-05",
+  "sessions": {
+    "ss-java-module": {
+      "candidate_version": "0.1.0-candidate.4",
+      "candidate_sha256": "f1f6533f678c5cdb4ae6a5bc9c996c062af419005e4f4cd6104a51c91e442d97",
+      "case_count": 8,
+      "preflight": {
+        "path": "java-context-preflight.json",
+        "bytes": 27898,
+        "sha256": "a975e1b4cfa71ea0a6ae0f1c5ad275baf40d259401ed8cd236204d496e452fa4"
+      }
+    },
+    "ss-windows-runtime": {
+      "candidate_version": "0.1.0-candidate.1",
+      "candidate_sha256": "b89925d5395238010bb0afe9c1e1a22b0aa5ec4e7d1fb9946c671d241e7976c6",
+      "case_count": 2,
+      "preflight": {
+        "path": "windows-context-preflight.json",
+        "bytes": 11033,
+        "sha256": "269ba6e1ce7e5f540a79e788035c2323442b410f389dc13a2921aaa8519b988b"
+      }
+    }
+  },
+  "context_integrity": {
+    "path": "context-integrity.json",
+    "bytes": 1534,
+    "sha256": "401ebb0a6ec5978cc3b10eedb1e1ade162d23d5dacf0dbc03ccc01765f91daab",
+    "status": "PASS"
+  },
+  "nested_windows_access_probe": {
+    "path": "prepared-access.json",
+    "bytes": 3264,
+    "sha256": "a917744fc3422ff32101f954e44bbfb488f9b565ad673be35996b93162e3ad6f",
+    "status": "BLOCKED_PRE_MODEL",
+    "detail": "The direct codex sandbox restricted-token probe returned CreateRestrictedToken failed: 87 before a model, Java, harness or runtime probe started. Input bytes and cleanup remained intact. The actual C5 evaluator has not been launched by this probe."
+  },
+  "host_windows_access_probe": {
+    "path": "host-prepared-access.json",
+    "bytes": 3278,
+    "sha256": "dd730ea3d1421e60752374ae5804b285bcdc8a2dd2c41162d422ed6ffdc671d3",
+    "launcher": "asusggo2025\\geoff",
+    "status": "BLOCKED_PRE_MODEL",
+    "detail": "The host launcher reached the Windows sandbox but both context checks failed before PowerShell with helper_unknown_error: setup refresh had errors. No model, Java, harness or case runtime started; candidate bytes and temporary cleanup remained intact."
+  },
+  "sandbox_diagnosis": {
+    "path": "sandbox-diagnosis.md",
+    "bytes": 6216,
+    "sha256": "aa0c65fab11308a4841978d58c1ab1ee2e2b776dba6b03a9cfda76f2f5ab6618"
+  },
+  "exclusions": {
+    "oracle_supplied": false,
+    "prior_answers_supplied": false,
+    "model_calls": 0,
+    "application_changes": false,
+    "human_validation": false,
+    "personal_installation": false
+  }
+}

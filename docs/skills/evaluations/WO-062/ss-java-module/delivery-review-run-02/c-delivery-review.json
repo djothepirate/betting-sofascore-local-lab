@@ -1,0 +1,753 @@
+{
+  "schema": "wo062-java-delivery-consistency-review-v1",
+  "reviewer": "/root/jm_selection_review",
+  "reviewed_at_utc": "2026-09-15T22:08:33.444793+00:00",
+  "source_head": "3f758491c5a4bdf3c07daacc7fedec7a8458d2ec",
+  "tracked_status_at_start": "",
+  "verdict": "PASS",
+  "qualification_verdict_unchanged": "INCOMPLETE_QUALIFICATION",
+  "current_behavioral_counts": {
+    "pass": 7,
+    "fail": 1,
+    "blocked": 0
+  },
+  "checks": [
+    {
+      "id": "current-cases-exact",
+      "verdict": "PASS",
+      "evidence": [
+        "JM-H01",
+        "JM-N01",
+        "JM-C01",
+        "JM-C02",
+        "JM-S01",
+        "JM-S02",
+        "JM-S03",
+        "JM-S04"
+      ]
+    },
+    {
+      "id": "current-case-records-equal",
+      "verdict": "PASS",
+      "evidence": "results.json and current-results.json"
+    },
+    {
+      "id": "qualification-current-projection",
+      "verdict": "PASS",
+      "evidence": [
+        {
+          "case_id": "JM-H01",
+          "verdict": "PASS",
+          "source_run": "run-02"
+        },
+        {
+          "case_id": "JM-N01",
+          "verdict": "FAIL",
+          "source_run": "run-02"
+        },
+        {
+          "case_id": "JM-C01",
+          "verdict": "PASS",
+          "source_run": "run-02"
+        },
+        {
+          "case_id": "JM-C02",
+          "verdict": "PASS",
+          "source_run": "run-02"
+        },
+        {
+          "case_id": "JM-S01",
+          "verdict": "PASS",
+          "source_run": "run-02"
+        },
+        {
+          "case_id": "JM-S02",
+          "verdict": "PASS",
+          "source_run": "run-02"
+        },
+        {
+          "case_id": "JM-S03",
+          "verdict": "PASS",
+          "source_run": "run-02"
+        },
+        {
+          "case_id": "JM-S04",
+          "verdict": "PASS",
+          "source_run": "run-02"
+        }
+      ]
+    },
+    {
+      "id": "current-counts",
+      "verdict": "PASS",
+      "evidence": {
+        "pass": 7,
+        "fail": 1,
+        "blocked": 0
+      }
+    },
+    {
+      "id": "current-version-and-origin",
+      "verdict": "PASS",
+      "evidence": {
+        "candidate_sha256": "255655544771ae6cf2a71b967aba8efeb7e53e64acc41ca31dc784e16a719118",
+        "source_runs": [
+          "run-02"
+        ]
+      }
+    },
+    {
+      "id": "current-distinct-and-executions",
+      "verdict": "PASS",
+      "evidence": "Eight new executions, eight current cases"
+    },
+    {
+      "id": "historical-counts",
+      "verdict": "PASS",
+      "evidence": {
+        "pass": 5,
+        "fail": 3,
+        "blocked": 0
+      }
+    },
+    {
+      "id": "history-preserved",
+      "verdict": "PASS",
+      "evidence": [
+        {
+          "run_id": "run-01",
+          "candidate_version": "0.1.0-candidate.1",
+          "candidate_sha256": "d20c8b838a9c4b9713e27c576e22272427d3f64fef50a670f5a09364cf849eb4",
+          "executions": 8,
+          "pass": 5,
+          "fail": 3,
+          "blocked": 0,
+          "results": "run-01/results.json",
+          "artifact_manifest_sha256": "6b6b057a742ebd8f3b064adf4be7b57ac02ff9309ad76cf7b3599b7e72e56649",
+          "candidate_files": [
+            {
+              "path": "agents/openai.yaml",
+              "bytes": 309,
+              "sha256": "ccc4fc2a4707838dd6defdd73ef6f6c7ee0d69e6df86e41689a46884691573ae"
+            },
+            {
+              "path": "SKILL.md",
+              "bytes": 8306,
+              "sha256": "d20c8b838a9c4b9713e27c576e22272427d3f64fef50a670f5a09364cf849eb4"
+            }
+          ],
+          "candidate_body_commit": "d89f9f2f3da136faf00976266202a4ff9b8c8c1f"
+        }
+      ]
+    },
+    {
+      "id": "all-versions-execution-totals",
+      "verdict": "PASS",
+      "evidence": {
+        "pass": 12,
+        "fail": 4,
+        "blocked": 0
+      }
+    },
+    {
+      "id": "incomplete-no-human-installation",
+      "verdict": "PASS",
+      "evidence": {
+        "status": "INCOMPLETE_QUALIFICATION",
+        "human_validation": false,
+        "personal_installation": false
+      }
+    },
+    {
+      "id": "qualification-links",
+      "verdict": "PASS",
+      "evidence": {
+        "results": "run-02/current-results.json",
+        "run_results": "run-02/results.json",
+        "static_review": "run-02/review-static.json"
+      }
+    },
+    {
+      "id": "current-candidate-unique-paths",
+      "verdict": "PASS",
+      "evidence": 2
+    },
+    {
+      "id": "current-candidate-exact-bytes",
+      "verdict": "PASS",
+      "evidence": {
+        "checked": 2,
+        "mismatches": []
+      }
+    },
+    {
+      "id": "candidate-body-exact",
+      "verdict": "PASS",
+      "evidence": "255655544771ae6cf2a71b967aba8efeb7e53e64acc41ca31dc784e16a719118"
+    },
+    {
+      "id": "run-01-manifest-unique-paths",
+      "verdict": "PASS",
+      "evidence": 102
+    },
+    {
+      "id": "run-01-manifest-exact-bytes",
+      "verdict": "PASS",
+      "evidence": {
+        "checked": 102,
+        "mismatches": []
+      }
+    },
+    {
+      "id": "run-01-manifest-inventory",
+      "verdict": "PASS",
+      "evidence": {
+        "files": 103,
+        "extra": [],
+        "missing": []
+      }
+    },
+    {
+      "id": "run-01-manifest-binding",
+      "verdict": "PASS",
+      "evidence": "6b6b057a742ebd8f3b064adf4be7b57ac02ff9309ad76cf7b3599b7e72e56649"
+    },
+    {
+      "id": "run-02-manifest-unique-paths",
+      "verdict": "PASS",
+      "evidence": 104
+    },
+    {
+      "id": "run-02-manifest-exact-bytes",
+      "verdict": "PASS",
+      "evidence": {
+        "checked": 104,
+        "mismatches": []
+      }
+    },
+    {
+      "id": "run-02-manifest-inventory",
+      "verdict": "PASS",
+      "evidence": {
+        "files": 105,
+        "extra": [],
+        "missing": []
+      }
+    },
+    {
+      "id": "run-02-manifest-binding",
+      "verdict": "PASS",
+      "evidence": "2f7122962f8051445dce31a3019dcb381aa88c6fc9823790596199b117a45e37"
+    },
+    {
+      "id": "JM-H01-freeze-unique-paths",
+      "verdict": "PASS",
+      "evidence": 9
+    },
+    {
+      "id": "JM-H01-freeze-exact-bytes",
+      "verdict": "PASS",
+      "evidence": {
+        "checked": 9,
+        "mismatches": []
+      }
+    },
+    {
+      "id": "JM-H01-review-response-binding",
+      "verdict": "PASS",
+      "evidence": {
+        "verdict": "PASS",
+        "response_sha256": "8b8818e00e902b318b1ef805e51cbc46cf6fc89459e458b6721f258f2c1793c3"
+      }
+    },
+    {
+      "id": "JM-H01-trace-output-bindings",
+      "verdict": "PASS",
+      "evidence": "response and native events"
+    },
+    {
+      "id": "JM-H01-scope",
+      "verdict": "PASS",
+      "evidence": "Unknown model/effort; no oracle or retry"
+    },
+    {
+      "id": "JM-H01-prepared-inputs-unique-paths",
+      "verdict": "PASS",
+      "evidence": 14
+    },
+    {
+      "id": "JM-H01-prepared-inputs-exact-bytes",
+      "verdict": "PASS",
+      "evidence": {
+        "checked": 14,
+        "mismatches": []
+      }
+    },
+    {
+      "id": "JM-N01-freeze-unique-paths",
+      "verdict": "PASS",
+      "evidence": 9
+    },
+    {
+      "id": "JM-N01-freeze-exact-bytes",
+      "verdict": "PASS",
+      "evidence": {
+        "checked": 9,
+        "mismatches": []
+      }
+    },
+    {
+      "id": "JM-N01-review-response-binding",
+      "verdict": "PASS",
+      "evidence": {
+        "verdict": "FAIL",
+        "response_sha256": "795fd863934d2eae50d0c30706167d842d3c5aaeaf3d30ec696a1580255f311c"
+      }
+    },
+    {
+      "id": "JM-N01-trace-output-bindings",
+      "verdict": "PASS",
+      "evidence": "response and native events"
+    },
+    {
+      "id": "JM-N01-scope",
+      "verdict": "PASS",
+      "evidence": "Unknown model/effort; no oracle or retry"
+    },
+    {
+      "id": "JM-N01-prepared-inputs-unique-paths",
+      "verdict": "PASS",
+      "evidence": 39
+    },
+    {
+      "id": "JM-N01-prepared-inputs-exact-bytes",
+      "verdict": "PASS",
+      "evidence": {
+        "checked": 39,
+        "mismatches": []
+      }
+    },
+    {
+      "id": "JM-C01-freeze-unique-paths",
+      "verdict": "PASS",
+      "evidence": 9
+    },
+    {
+      "id": "JM-C01-freeze-exact-bytes",
+      "verdict": "PASS",
+      "evidence": {
+        "checked": 9,
+        "mismatches": []
+      }
+    },
+    {
+      "id": "JM-C01-review-response-binding",
+      "verdict": "PASS",
+      "evidence": {
+        "verdict": "PASS",
+        "response_sha256": "c6a3ee9a0d7e4319aadce1e26b2eb7b8240520beb11d83581d2e4d1817b68a22"
+      }
+    },
+    {
+      "id": "JM-C01-trace-output-bindings",
+      "verdict": "PASS",
+      "evidence": "response and native events"
+    },
+    {
+      "id": "JM-C01-scope",
+      "verdict": "PASS",
+      "evidence": "Unknown model/effort; no oracle or retry"
+    },
+    {
+      "id": "JM-C01-prepared-inputs-unique-paths",
+      "verdict": "PASS",
+      "evidence": 17
+    },
+    {
+      "id": "JM-C01-prepared-inputs-exact-bytes",
+      "verdict": "PASS",
+      "evidence": {
+        "checked": 17,
+        "mismatches": []
+      }
+    },
+    {
+      "id": "JM-C02-freeze-unique-paths",
+      "verdict": "PASS",
+      "evidence": 9
+    },
+    {
+      "id": "JM-C02-freeze-exact-bytes",
+      "verdict": "PASS",
+      "evidence": {
+        "checked": 9,
+        "mismatches": []
+      }
+    },
+    {
+      "id": "JM-C02-review-response-binding",
+      "verdict": "PASS",
+      "evidence": {
+        "verdict": "PASS",
+        "response_sha256": "6705a6c247a28f344e14ebdc2764f15934a6b34174aa1df3c47f0a63092ab16c"
+      }
+    },
+    {
+      "id": "JM-C02-trace-output-bindings",
+      "verdict": "PASS",
+      "evidence": "response and native events"
+    },
+    {
+      "id": "JM-C02-scope",
+      "verdict": "PASS",
+      "evidence": "Unknown model/effort; no oracle or retry"
+    },
+    {
+      "id": "JM-C02-prepared-inputs-unique-paths",
+      "verdict": "PASS",
+      "evidence": 27
+    },
+    {
+      "id": "JM-C02-prepared-inputs-exact-bytes",
+      "verdict": "PASS",
+      "evidence": {
+        "checked": 27,
+        "mismatches": []
+      }
+    },
+    {
+      "id": "JM-S01-freeze-unique-paths",
+      "verdict": "PASS",
+      "evidence": 8
+    },
+    {
+      "id": "JM-S01-freeze-exact-bytes",
+      "verdict": "PASS",
+      "evidence": {
+        "checked": 8,
+        "mismatches": []
+      }
+    },
+    {
+      "id": "JM-S01-review-response-binding",
+      "verdict": "PASS",
+      "evidence": {
+        "verdict": "PASS",
+        "response_sha256": "dc869ab663cada403bcdec3feb59c28354d35352f321fb560a1cc9e2df990644"
+      }
+    },
+    {
+      "id": "JM-S01-trace-output-bindings",
+      "verdict": "PASS",
+      "evidence": "response and native events"
+    },
+    {
+      "id": "JM-S01-scope",
+      "verdict": "PASS",
+      "evidence": "Unknown model/effort; no oracle or retry"
+    },
+    {
+      "id": "JM-S01-prepared-inputs-unique-paths",
+      "verdict": "PASS",
+      "evidence": 2
+    },
+    {
+      "id": "JM-S01-prepared-inputs-exact-bytes",
+      "verdict": "PASS",
+      "evidence": {
+        "checked": 2,
+        "mismatches": []
+      }
+    },
+    {
+      "id": "JM-S02-freeze-unique-paths",
+      "verdict": "PASS",
+      "evidence": 8
+    },
+    {
+      "id": "JM-S02-freeze-exact-bytes",
+      "verdict": "PASS",
+      "evidence": {
+        "checked": 8,
+        "mismatches": []
+      }
+    },
+    {
+      "id": "JM-S02-review-response-binding",
+      "verdict": "PASS",
+      "evidence": {
+        "verdict": "PASS",
+        "response_sha256": "810df70a3e5335fa5430f8422986bf1bcc5f771900edfe08d2c838a72043e403"
+      }
+    },
+    {
+      "id": "JM-S02-trace-output-bindings",
+      "verdict": "PASS",
+      "evidence": "response and native events"
+    },
+    {
+      "id": "JM-S02-scope",
+      "verdict": "PASS",
+      "evidence": "Unknown model/effort; no oracle or retry"
+    },
+    {
+      "id": "JM-S02-prepared-inputs-unique-paths",
+      "verdict": "PASS",
+      "evidence": 2
+    },
+    {
+      "id": "JM-S02-prepared-inputs-exact-bytes",
+      "verdict": "PASS",
+      "evidence": {
+        "checked": 2,
+        "mismatches": []
+      }
+    },
+    {
+      "id": "JM-S03-freeze-unique-paths",
+      "verdict": "PASS",
+      "evidence": 8
+    },
+    {
+      "id": "JM-S03-freeze-exact-bytes",
+      "verdict": "PASS",
+      "evidence": {
+        "checked": 8,
+        "mismatches": []
+      }
+    },
+    {
+      "id": "JM-S03-review-response-binding",
+      "verdict": "PASS",
+      "evidence": {
+        "verdict": "PASS",
+        "response_sha256": "ec31db95074ef133017e5789da24f3f8c0e40b3a2669d359bd4c6471737ffb35"
+      }
+    },
+    {
+      "id": "JM-S03-trace-output-bindings",
+      "verdict": "PASS",
+      "evidence": "response and native events"
+    },
+    {
+      "id": "JM-S03-scope",
+      "verdict": "PASS",
+      "evidence": "Unknown model/effort; no oracle or retry"
+    },
+    {
+      "id": "JM-S03-prepared-inputs-unique-paths",
+      "verdict": "PASS",
+      "evidence": 2
+    },
+    {
+      "id": "JM-S03-prepared-inputs-exact-bytes",
+      "verdict": "PASS",
+      "evidence": {
+        "checked": 2,
+        "mismatches": []
+      }
+    },
+    {
+      "id": "JM-S04-freeze-unique-paths",
+      "verdict": "PASS",
+      "evidence": 8
+    },
+    {
+      "id": "JM-S04-freeze-exact-bytes",
+      "verdict": "PASS",
+      "evidence": {
+        "checked": 8,
+        "mismatches": []
+      }
+    },
+    {
+      "id": "JM-S04-review-response-binding",
+      "verdict": "PASS",
+      "evidence": {
+        "verdict": "PASS",
+        "response_sha256": "1786066f181d1dbdf005fa56662bc5b8ebbd5e844a15152321a3f1357d962b62"
+      }
+    },
+    {
+      "id": "JM-S04-trace-output-bindings",
+      "verdict": "PASS",
+      "evidence": "response and native events"
+    },
+    {
+      "id": "JM-S04-scope",
+      "verdict": "PASS",
+      "evidence": "Unknown model/effort; no oracle or retry"
+    },
+    {
+      "id": "JM-S04-prepared-inputs-unique-paths",
+      "verdict": "PASS",
+      "evidence": 2
+    },
+    {
+      "id": "JM-S04-prepared-inputs-exact-bytes",
+      "verdict": "PASS",
+      "evidence": {
+        "checked": 2,
+        "mismatches": []
+      }
+    },
+    {
+      "id": "n01-three-omission-identities",
+      "verdict": "PASS",
+      "evidence": [
+        {
+          "criterion_id": "N02",
+          "kind": "mandatory_content_omission",
+          "detail": "Les champs temporels sont séparés de la date cible, mais leur nature UTC n'est pas restituée."
+        },
+        {
+          "criterion_id": "N08",
+          "kind": "mandatory_content_omission",
+          "detail": "La réponse couvre le retour nominal au contexte live initial, mais omet l'arrêt sans reprise après perte du navigateur/contexte live."
+        },
+        {
+          "criterion_id": "N13",
+          "kind": "mandatory_content_omission",
+          "detail": "La réponse décrit un garde textuel non exhaustif sans préciser l'interdiction com.microsoft.playwright dans src/main."
+        }
+      ]
+    },
+    {
+      "id": "n01-no-inverse-decision-or-false-proof",
+      "verdict": "PASS",
+      "evidence": "The case remains FAIL for three required omissions"
+    },
+    {
+      "id": "JM-S01-full-tool-read",
+      "verdict": "PASS",
+      "evidence": {
+        "body_sha256": "255655544771ae6cf2a71b967aba8efeb7e53e64acc41ca31dc784e16a719118",
+        "console_suffix": "CRLF only",
+        "completed_commands": 1,
+        "scope": "S04 reads to exclude the candidate; no skill selected"
+      }
+    },
+    {
+      "id": "JM-S02-full-tool-read",
+      "verdict": "PASS",
+      "evidence": {
+        "body_sha256": "255655544771ae6cf2a71b967aba8efeb7e53e64acc41ca31dc784e16a719118",
+        "console_suffix": "CRLF only",
+        "completed_commands": 1,
+        "scope": "S04 reads to exclude the candidate; no skill selected"
+      }
+    },
+    {
+      "id": "JM-S03-full-tool-read",
+      "verdict": "PASS",
+      "evidence": {
+        "body_sha256": "8a89922f8cc1dd5144e054f0586d6d24f92d2a1c82264d37e00642d8376d9e2c",
+        "console_suffix": "CRLF only",
+        "completed_commands": 2,
+        "scope": "S04 reads to exclude the candidate; no skill selected"
+      }
+    },
+    {
+      "id": "JM-S04-full-tool-read",
+      "verdict": "PASS",
+      "evidence": {
+        "body_sha256": "255655544771ae6cf2a71b967aba8efeb7e53e64acc41ca31dc784e16a719118",
+        "console_suffix": "CRLF only",
+        "completed_commands": 2,
+        "scope": "S04 reads to exclude the candidate; no skill selected"
+      }
+    },
+    {
+      "id": "summary-local-links",
+      "verdict": "PASS",
+      "evidence": {
+        "missing": []
+      }
+    },
+    {
+      "id": "summary-provisional-windows-and-bounds",
+      "verdict": "PASS",
+      "evidence": "Java final subset, Windows provisional; human validation and injection scope explicit"
+    }
+  ],
+  "manual_assessments": [
+    {
+      "id": "three-omissions",
+      "verdict": "PASS",
+      "evidence": "Summary preserves exactly N02 UTC, N08 no restart/recreation after live context loss, N13 com.microsoft.playwright prohibition in src/main. Oracle and relevant response sections read directly.",
+      "limit": "No case verdict changed; these omissions remain mandatory and JM-N01 remains FAIL."
+    },
+    {
+      "id": "conditional-import-finding",
+      "verdict": "PASS",
+      "evidence": "Frozen J3RuntimeService lines 144-161 and 214-218 plus JdbcJ3AutomationStore 102-110 establish put-before-durable-conflict and removal in catch. Summary says may remove original bytes.",
+      "limit": "Static conditional deduction for an original order still waiting; no reproduction or application fix."
+    },
+    {
+      "id": "j8-failure-boundary",
+      "verdict": "PASS",
+      "evidence": "Frozen Executor 132-144 uses null audit on fallback; Completion 17-32 excludes J8 from committedProof/interrupt; ExecutionIT 145-157 expects old catalogue and zero J8 terminals. Summary states subsequent terminal treatment remains to qualify.",
+      "limit": "Later reconciliation and complete production composition are not established; missing coverage is not converted into a universal defect."
+    },
+    {
+      "id": "native-test-selection",
+      "verdict": "PASS",
+      "evidence": "Frozen pom.xml line 355 includes **/*LocalQualificationIT.java; J3LivePauseWorkerQualificationIT class does not match. Response distinguishes explicit historical -Dit.test and named Failsafe goals.",
+      "limit": "Does not claim this class is absent or that a current native execution succeeded."
+    },
+    {
+      "id": "selection-and-human-boundaries",
+      "verdict": "PASS",
+      "evidence": "S01/S02 select Java, S03 PostgreSQL, S04 none; only routing and reads. Four full tool outputs compare exactly to body plus console CRLF. Summary preserves reconstruction-after-run limit, unknown model/effort, no automatic body injection, unmeasured general gain, absent human validation/installation.",
+      "limit": "Separate candidate encounters with eight existing skills do not qualify ten-skill coexistence; D remains future work."
+    }
+  ],
+  "evidence": [
+    {
+      "path": "docs/skills/evaluations/WO-062/ss-java-module/qualification.json",
+      "bytes": 3643,
+      "sha256": "ee5065f201f6fcab4694444bae4268226a6038222b1bee8ea7ecf5ba68fcad9e"
+    },
+    {
+      "path": "docs/skills/evaluations/WO-062/ss-java-module/run-02/results.json",
+      "bytes": 2686,
+      "sha256": "00fb2ac4934a253937ce2607cbc40267720a4ed3147e3f76dce31bebd016fac6"
+    },
+    {
+      "path": "docs/skills/evaluations/WO-062/ss-java-module/run-02/current-results.json",
+      "bytes": 3387,
+      "sha256": "25dca4754eba7804bcdacd33dc51d65b4622bf19602dd089c7caafb5a6a53a93"
+    },
+    {
+      "path": "docs/validation/WO062-JAVA-WINDOWS-CANDIDATES-20260915.md",
+      "bytes": 12761,
+      "sha256": "5c4a9c7e7c606b631e1a5f2c0fbd6eda8fe19d74672b9ca92db37468a21d1960"
+    },
+    {
+      "path": "docs/skills/evaluations/WO-062/ss-java-module/run-01/results.json",
+      "bytes": 2252,
+      "sha256": "8a2eaca8fae094edafc6d6262be19e427593dd1f2571c86310ed39dbdeaa6888"
+    },
+    {
+      "path": "docs/skills/evaluations/WO-062/ss-java-module/oracle.md",
+      "bytes": 13217,
+      "sha256": "d13dc8c5ec833f30dc9025c3c22a22c00e60656eae3a89dc30361861ea390bd1"
+    },
+    {
+      "path": "docs/skills/evaluations/WO-062/ss-java-module/run-02/review-JM-N01.json",
+      "bytes": 12716,
+      "sha256": "cd34894ab7777efc2707281bd94880e86490bf208a799b4b1a58515af00f49e8"
+    },
+    {
+      "path": "docs/skills/evaluations/WO-062/ss-java-module/run-02/cases/JM-N01/response.md",
+      "bytes": 36777,
+      "sha256": "795fd863934d2eae50d0c30706167d842d3c5aaeaf3d30ec696a1580255f311c"
+    }
+  ],
+  "tracked_status_at_end": "",
+  "limits": [
+    "Coherence review of the recorded Java publication; does not replace the eight independent case reviews.",
+    "Windows run-02 remains provisional in this exact report; this review grants no Windows verdict.",
+    "Read-only inspection, hashing and JSON comparison only; no model, application build, database, browser, publication, candidate correction or installation."
+  ]
+}

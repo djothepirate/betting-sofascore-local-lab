@@ -1,0 +1,108 @@
+{
+  "schema": "wo062-frozen-skill-results-v1",
+  "skill": "ss-java-module",
+  "run_id": "run-07",
+  "candidate_version": "0.1.0-candidate.4",
+  "candidate_sha256": "f1f6533f678c5cdb4ae6a5bc9c996c062af419005e4f4cd6104a51c91e442d97",
+  "source_head": "2af5b07e9a5c8c4f96dc3137971b7e11d9ee00e8",
+  "reviewed_on": "2026-09-16",
+  "case_count": 7,
+  "authorized_session_count": 7,
+  "executions": 7,
+  "behavioral_executions": 7,
+  "cases": [
+    {
+      "case_id": "JM-N01",
+      "verdict": "FAIL",
+      "technical_execution_verdict": "COMPLETED",
+      "source_run": "run-07",
+      "review": "review-JM-N01.json",
+      "response": "cases/JM-N01/response.md",
+      "response_sha256": "971bc4db546a212b143ed3a69e9f6683c7e2e5e5485826832fcefabd8fb2ab96",
+      "trace": "cases/JM-N01/trace.json",
+      "candidate_behavior_assessed": true
+    },
+    {
+      "case_id": "JM-C01",
+      "verdict": "PASS",
+      "technical_execution_verdict": "COMPLETED",
+      "source_run": "run-07",
+      "review": "review-JM-C01.json",
+      "response": "cases/JM-C01/response.md",
+      "response_sha256": "9558bd03e9fc378d04a3f84614caacadf5d655fd273172bff71ea3b1271ff4c9",
+      "trace": "cases/JM-C01/trace.json",
+      "candidate_behavior_assessed": true
+    },
+    {
+      "case_id": "JM-C02",
+      "verdict": "PASS",
+      "technical_execution_verdict": "COMPLETED_WITH_TRANSPORT_RECONNECTS",
+      "source_run": "run-07",
+      "review": "review-JM-C02.json",
+      "response": "cases/JM-C02/response.md",
+      "response_sha256": "674998bbb9330322426724c759d0d1fdb56eaa037f5bb37c70ecba5499af4864",
+      "trace": "cases/JM-C02/trace.json",
+      "candidate_behavior_assessed": true
+    },
+    {
+      "case_id": "JM-S01",
+      "verdict": "PASS",
+      "technical_execution_verdict": "COMPLETED",
+      "source_run": "run-07",
+      "review": "review-JM-S01.json",
+      "response": "cases/JM-S01/response.md",
+      "response_sha256": "a4f381d472fef3d09865a1d3f938688d51f06786ece39eca2ddaff4ae3bdbfd7",
+      "trace": "cases/JM-S01/trace.json",
+      "candidate_behavior_assessed": true
+    },
+    {
+      "case_id": "JM-S02",
+      "verdict": "PASS",
+      "technical_execution_verdict": "COMPLETED",
+      "source_run": "run-07",
+      "review": "review-JM-S02.json",
+      "response": "cases/JM-S02/response.md",
+      "response_sha256": "d358a48eef7cbeef66f2eb85d12bd3da24d65e2b4e27cfbad103805e61db431e",
+      "trace": "cases/JM-S02/trace.json",
+      "candidate_behavior_assessed": true
+    },
+    {
+      "case_id": "JM-S03",
+      "verdict": "PASS",
+      "technical_execution_verdict": "COMPLETED",
+      "source_run": "run-07",
+      "review": "review-JM-S03.json",
+      "response": "cases/JM-S03/response.md",
+      "response_sha256": "672599ea0812aa655f9e6617efcb1cd97bec79bd0ddf07b874576d697dee6f82",
+      "trace": "cases/JM-S03/trace.json",
+      "candidate_behavior_assessed": true
+    },
+    {
+      "case_id": "JM-S04",
+      "verdict": "PASS",
+      "technical_execution_verdict": "COMPLETED",
+      "source_run": "run-07",
+      "review": "review-JM-S04.json",
+      "response": "cases/JM-S04/response.md",
+      "response_sha256": "cae21fd83191944caa729bdfabd1f683886f9a981b6542e603ece3cf5242880d",
+      "trace": "cases/JM-S04/trace.json",
+      "candidate_behavior_assessed": true
+    }
+  ],
+  "pass": 6,
+  "fail": 1,
+  "blocked": 0,
+  "not_run": 0,
+  "pre_model_launcher_rejection": {
+    "occurred": true,
+    "codex_exec_started": false,
+    "model_session_consumed": false,
+    "evidence": "../../c-requalification-07/preparation/runner-correction.json"
+  },
+  "limits": [
+    "Exactly seven fresh C7 model sessions were launched sequentially; no outer retry or eighth session was launched.",
+    "JM-C02 completed one recorded turn after two internal service sampling reconnects; stderr and postflight preserve them.",
+    "JM-N01 is a semantic FAIL because it omits the mandatory no-transfer-of-session-state statement between live and temporary J3 contexts.",
+    "No application build, application test, database, provider collection, CI, human validation or personal installation is established by this result."
+  ]
+}

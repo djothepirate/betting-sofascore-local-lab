@@ -1,0 +1,24 @@
+{
+  "files": [
+    {
+      "path": "preflight.json",
+      "bytes": 27890,
+      "sha256": "512f386535ff91ad6a9a5298c96951790c050654c860f956c15bd476c2a84d4c"
+    },
+    {
+      "path": "review-static.json",
+      "bytes": 4254,
+      "sha256": "d7cbed2287997b9081e96f5627ba3221e257cd385d151110e104cdb107130fc6"
+    },
+    {
+      "path": "review-static.md",
+      "bytes": 3568,
+      "sha256": "c3d9e1adcce157fc16bc733952712fc5c35f61a3d0c79e6060670c3552b45509"
+    },
+    {
+      "path": "revision.json",
+      "bytes": 1079,
+      "sha256": "5410eff6fb0eeb2f19d29ac3142af2bcafb8dde31a0e548af10ee9fed69e5514"
+    }
+  ]
+}

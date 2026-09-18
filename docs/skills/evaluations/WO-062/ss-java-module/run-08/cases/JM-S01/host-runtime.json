@@ -1,0 +1,7 @@
+{
+  "observed_at_utc": "2026-09-16T12:58:31.038309+00:00",
+  "native_windows_powershell_exit": 0,
+  "stdout": "5.1.26100.9444\r\nC:\\Program Files\\Common Files\\Oracle\\Java\\javapath\\java.exe\r\nC:\\Program Files\\PowerShell\\7\\pwsh.exe\r\n",
+  "stderr": "",
+  "note": "Read-only host tool resolution; actual case runtime must be demonstrated by its own commands."
+}

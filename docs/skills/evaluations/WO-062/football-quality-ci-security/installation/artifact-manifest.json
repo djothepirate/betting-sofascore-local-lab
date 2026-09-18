@@ -1,0 +1,92 @@
+{
+  "schema_version": 1,
+  "work_order": "WO-062",
+  "files": [
+    {
+      "path": "checks.json",
+      "bytes": 9238,
+      "sha256": "def789b74ce228e45c5fd866a0d85578f982ade09bf64c0171eccfd746ffabb6"
+    },
+    {
+      "path": "discovery.json",
+      "bytes": 4898,
+      "sha256": "c0bb5cc3686f44aece45b37e1904bfe5f000b6934adb55419ddc12ca61720cc1"
+    },
+    {
+      "path": "idempotence.log",
+      "bytes": 60,
+      "sha256": "6f5cd111765dda66a20f79ecd63bc34f5fdf02b8c451e8543ca4d2e416316091"
+    },
+    {
+      "path": "initial-runtime-failure.json",
+      "bytes": 1939,
+      "sha256": "a6a41a79e694916cb7bd1f6477cde7afe101856f8bf38fa46d76fbf7f40dcbea"
+    },
+    {
+      "path": "install-failed-01.log",
+      "bytes": 731,
+      "sha256": "c2eef6f5f23b353fa1d55f505320d60d1364111e5ef15272ed56c4c99f8ad3d7"
+    },
+    {
+      "path": "install.log",
+      "bytes": 60,
+      "sha256": "b61846721717d57e2e6aef64cfed8bd9db612cda9dc1921ce696bdd05c753344"
+    },
+    {
+      "path": "installation-execution.json",
+      "bytes": 3565,
+      "sha256": "d138278d8658121f3067291d452f279e2150c312304398f8f2c113256e1b3fe9"
+    },
+    {
+      "path": "preflight.json",
+      "bytes": 4578,
+      "sha256": "16ce209ce048d97e516bfcaa58866f31a73416dd3c92089086517d9793ea2524"
+    },
+    {
+      "path": "result.json",
+      "bytes": 6057,
+      "sha256": "e2969264f020b828d6b4c9c577d974ee2667953250714e2654fc1e986eee1072"
+    },
+    {
+      "path": "review.json",
+      "bytes": 6725,
+      "sha256": "6e12bd79aba9a0ba4fa97a88c3f448b6fff62100968ba8f107ac074a8b2cbd40"
+    },
+    {
+      "path": "review.md",
+      "bytes": 3853,
+      "sha256": "16b487edea56fde91b6534a95bcc00f709b39c39cd8d5d5fd72ead78e7037f3f"
+    },
+    {
+      "path": "ss-ci-security-qualification-before-installation.json",
+      "bytes": 1721,
+      "sha256": "3237ed729f18cb407ed46c7778f40bcfdbde45cd9ab6ff26460525af9c8a1b30"
+    },
+    {
+      "path": "ss-football-quality-qualification-before-installation.json",
+      "bytes": 2380,
+      "sha256": "692954afbfb96c216036b8fdeef09ea76df9f1833cdab7ae939798b8d24dcfc5"
+    },
+    {
+      "path": "tests-b.txt",
+      "bytes": 903,
+      "sha256": "a2d888acc5baef2029e27f3f4d1de2696c55c1f190450e6d9697be004a96e4e5"
+    },
+    {
+      "path": "tests-lot1.txt",
+      "bytes": 490,
+      "sha256": "def5a4ee35d7a147d7de876cb1d990ba644459e559810586d5e655914c78b1a0"
+    },
+    {
+      "path": "tests-provider.txt",
+      "bytes": 743,
+      "sha256": "2f6132fc82511a32b11936a3ec4b1aaf00802b2217b80ab3cb673a0c3f253fa8"
+    },
+    {
+      "path": "verify.log",
+      "bytes": 59,
+      "sha256": "3623c25c7d45403b9989b66fa1c6463ab4dfdb15b185b275c0ee21e7289db4c0"
+    }
+  ],
+  "hash_contract": "Exact published bytes; text logs normalized to UTF-8 LF; manifest excludes itself."
+}

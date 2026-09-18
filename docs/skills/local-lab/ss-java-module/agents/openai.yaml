@@ -1,0 +1,4 @@
+interface:
+  display_name: "Architecture Java du Local Lab"
+  short_description: "Placer les responsabilités et vérifier les frontières Java"
+  default_prompt: "Utilise $ss-java-module pour examiner une évolution Java du SofaScore Local Lab, ses responsabilités, dépendances et contrôles applicables."

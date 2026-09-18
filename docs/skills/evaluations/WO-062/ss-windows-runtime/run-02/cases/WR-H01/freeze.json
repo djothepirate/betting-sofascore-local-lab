@@ -1,0 +1,151 @@
+{
+  "frozen_at_utc": "2026-09-15T22:08:58.806430+00:00",
+  "before_independent_review": true,
+  "files": [
+    {
+      "path": "host-runtime.json",
+      "bytes": 371,
+      "sha256": "23c1ba7629aced037b76acbee1703d2c712146d1977a3abf9c3a02348a5a0ac0"
+    },
+    {
+      "path": "input.json",
+      "bytes": 1475,
+      "sha256": "d49bea0e90ca263b75840a198dd7abbdf67e2dc45541d5474d9e26b833812a57"
+    },
+    {
+      "path": "native-events.json",
+      "bytes": 397577,
+      "sha256": "2895f515191aa47d889dbf436ac17ec74dc94f8018087fb16a41897c0f35c0ae"
+    },
+    {
+      "path": "prompt.txt",
+      "bytes": 677,
+      "sha256": "fa04ddaebf0c1b1a65645c05aabec1ad62e729aefc168d3862afd201ac88b2ab"
+    },
+    {
+      "path": "request.txt",
+      "bytes": 2675,
+      "sha256": "3da32b78268554b03c1e58c48e4ef32b4abe0d4f9d079dd8074d92810adb6476"
+    },
+    {
+      "path": "runtime-artifacts/artifact-manifest.json",
+      "bytes": 4263,
+      "sha256": "c6a37b2d2a24067d406dd9abf1862aad4892ff58ab00b2bc542bda81e458bef9"
+    },
+    {
+      "path": "runtime-artifacts/cim-observation-block.json",
+      "bytes": 549,
+      "sha256": "09b3bb01c07c9b4f1b6d2914a36125c19b73ba657673916aa6da653ee284ea74"
+    },
+    {
+      "path": "runtime-artifacts/execution-outer-return.json",
+      "bytes": 505,
+      "sha256": "eb6a42d35976b2fff66aed1bb94f1229453da0305fff08aa4dba5d8987731962"
+    },
+    {
+      "path": "runtime-artifacts/execution-prompt-return.json",
+      "bytes": 318,
+      "sha256": "2e4a269740d4facad98d3aedafd6d9b1d62a916da08271547bf3189301f0049f"
+    },
+    {
+      "path": "runtime-artifacts/execution-transcript.txt",
+      "bytes": 1116,
+      "sha256": "f33215dff62ee197ec3d937308a5b7dc63e65013e778b7a6ea48e71098360a78"
+    },
+    {
+      "path": "runtime-artifacts/execution.json",
+      "bytes": 25158,
+      "sha256": "382d40b80d2ff45b73ff044dda418eb9b8bce56b35534912eb9103ea787a9666"
+    },
+    {
+      "path": "runtime-artifacts/execution.stderr.txt",
+      "bytes": 0,
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    {
+      "path": "runtime-artifacts/execution.stdout.txt",
+      "bytes": 547,
+      "sha256": "2ea5456171ee72aba19170d19f6bd8fb94af6ec7579d49c057b6478804e97d9d"
+    },
+    {
+      "path": "runtime-artifacts/harness.stderr.txt",
+      "bytes": 0,
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    {
+      "path": "runtime-artifacts/harness.stdout.txt",
+      "bytes": 0,
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    {
+      "path": "runtime-artifacts/independent-postflight.json",
+      "bytes": 4285,
+      "sha256": "dab997775f9c713ced21611f847df12c35b73f298b6710be6c0c32756f4d2c58"
+    },
+    {
+      "path": "runtime-artifacts/Invoke-WRH01.ps1",
+      "bytes": 20496,
+      "sha256": "8a01b76dd72a6702f1ad312905a339d51cc4f44788ce6d1db03458faa47386ac"
+    },
+    {
+      "path": "runtime-artifacts/Invoke-WRH01Harness.ps1",
+      "bytes": 16118,
+      "sha256": "89fc081c70036da058e261d2e37b2a10ad98394e69c1dbe5df97d593536a0655"
+    },
+    {
+      "path": "runtime-artifacts/outer-return.json",
+      "bytes": 645,
+      "sha256": "8d5eb2e9547641db589a7633cf7ca7a1f87c8a8cb96be34794352998b9e8ea86"
+    },
+    {
+      "path": "runtime-artifacts/Postflight-WRH01.ps1",
+      "bytes": 2613,
+      "sha256": "15dd8a177500851bb9dbe717da3f6fbcd6c61099319bfdb5afff95cee3d20bd2"
+    },
+    {
+      "path": "runtime-artifacts/prompt-return.json",
+      "bytes": 188,
+      "sha256": "471f269618bebd3e8326ee51810c601ee4244c33a867820b852c49bcef907bbc"
+    },
+    {
+      "path": "runtime-artifacts/README.md",
+      "bytes": 15376,
+      "sha256": "62730e1b1371a1c39ea7f5555258e4f0ff78fbacc682ad79b3ab856ca4b55707"
+    },
+    {
+      "path": "runtime-artifacts/Run-WRH01.ps1",
+      "bytes": 1099,
+      "sha256": "7b43544e2c565a58abfc7c1bcfefb5b3ae54ada9d7d24e82290241b0990d7d9e"
+    },
+    {
+      "path": "runtime-artifacts/Run-WRH01Harness.ps1",
+      "bytes": 838,
+      "sha256": "9df2ff4bbeec4ed8c85715d9a4f7c16a24ac1c6e62da95191b4f3f48b88b64a0"
+    },
+    {
+      "path": "runtime-artifacts/run.json",
+      "bytes": 4948,
+      "sha256": "a411f3a606afadd6dac2d86b0d8c25dd268029bbd4339f6e66d10d76c415b461"
+    },
+    {
+      "path": "runtime-artifacts/tool-events.json",
+      "bytes": 7579,
+      "sha256": "04846f4de6c14c315a5f37600d8ead4d3980ef805ae32e1d5354ebbdd22ed620"
+    },
+    {
+      "path": "runtime-artifacts/transcript.txt",
+      "bytes": 787,
+      "sha256": "4a0764850ea92a73cf4940e72f09dbaa246cd82a9a1ac12ba9f761f60cad5fb5"
+    },
+    {
+      "path": "stderr.log",
+      "bytes": 878,
+      "sha256": "01f168fd8e9ba1166034736989d0cc0f35f28c82ae16e11bb94547e957c79f6e"
+    },
+    {
+      "path": "trace.json",
+      "bytes": 8663,
+      "sha256": "cb08aa0de49b8411884b7bf40f0e7bee951dab33c8d3333b97dcaf11911046d0"
+    }
+  ]
+}

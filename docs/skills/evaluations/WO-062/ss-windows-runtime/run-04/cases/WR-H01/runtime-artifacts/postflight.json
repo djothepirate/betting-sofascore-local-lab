@@ -1,0 +1,14 @@
+{
+  "marker": "WR_POSTFLIGHT",
+  "utc": "2026-09-15T23:33:48.1453075Z",
+  "command": "& './output/runtime-artifacts/Test-WR-H01Postflight.ps1'",
+  "runtimeRoot": "C:\\Dev\\BettingProject\\codex\\betting-sofascore-local-lab\\.tmp\\wo062-skills-lot2\\.tmp\\wo062-evaluations\\ss-windows-runtime\\run-04\\WR-H01\\output\\runtime",
+  "runtimeEntryCount": 0,
+  "runtimeEntries": [],
+  "outerPid": 8500,
+  "outerIdentityStatus": "PID_ABSENT",
+  "harnessDescendantsEvidence": "Frozen harness stdout reports exact owned process residual count; no independent descendant identity log exported by that harness",
+  "runtimeBaseRetainedEmpty": true,
+  "cleanupPerformedBy": "Frozen WO044 harness; postflight performs no deletion or termination",
+  "elapsedMs": 83.3556
+}

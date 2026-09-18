@@ -1,0 +1,348 @@
+{
+  "schema": "wo062-windows-runtime-preparation-v1",
+  "status": "PREPARED_NOT_RUN",
+  "purpose": "EVALUATION_PREPARATION_NOT_INSTALLATION",
+  "source_commit": "6648dd423e556b5248b8793a539ae85a7680f9bc",
+  "preparation_parent_head": "21e16ccf01b9a48128fdfa8009b3a5225a88f40a",
+  "concurrent_preparation_note": "HEAD advanced only for the independent Java preparation after Windows inventory started. All 23 Windows source paths were checked unchanged from source_commit before hashing.",
+  "prepared_on": "2026-09-15",
+  "skill_name": "ss-windows-runtime",
+  "skill_exists": false,
+  "skill_sha256": null,
+  "case_count": 8,
+  "source_count": 23,
+  "source_worktree": "C:/Dev/BettingProject/codex/betting-sofascore-local-lab/.tmp/wo062-skills-lot2",
+  "hash_contract": "git_blob_oid identifies committed source bytes at source_commit; worktree_sha256 hashes the exact local materialization, potentially CRLF. Preparation files are UTF-8 LF. The manifest does not hash itself. Every execution must freeze its actual source/candidate/input bytes independently.",
+  "scoping_source_note": "WR-N02 is fixed at its source_commit/blob and excluded from every case source_ids; later WO edits do not alter frozen inputs.",
+  "evaluation_isolation": "Only allowlisted sources, the matching input_case with common provenance, its input_files and the exact candidate reach a business session. Oracle, source inventory, evaluation plan, prior responses and design history are excluded.",
+  "runtime_method": "WR-H01 uses the historical PowerShell 7 Windows capture unchanged; WR-N01 must execute new controlled native processes in Windows PowerShell 5.1 with Java25. Exact runtime_envelope; only output/runtime-artifacts evidence and output/runtime temporary resources may be written. No application, Maven, Docker, network, global stop or persistent environment changes.",
+  "selection_method": "Four native ephemeral sessions with real metadata discovery and full tool reads of selected exact SKILL.md files. Exact generic selection_envelope. No claim of automatic CLI body injection.",
+  "sources": [
+    {
+      "id": "WR-N01",
+      "category": "normative",
+      "path": "AGENTS.md",
+      "use": "Statuts locaux, Java 25, absence de fournisseur, propriété et portée des changements.",
+      "locator": "Invariants ; socle ; tests",
+      "git_blob_oid": "32be42cccccdf85f27d8b0e3846dec4a5c740ebf",
+      "bytes": 10320,
+      "worktree_sha256": "6509ac77cd4c87094a91da7e4c750b5991eeb4585a69a609def5289b91cf6ab5"
+    },
+    {
+      "id": "WR-N02",
+      "category": "scoping",
+      "path": "docs/work_orders/active/WO-SS-20260915-062-skills-lot2.md",
+      "use": "Contrat du skill et obligation de deux exécutions utiles ; cadrage exclu des entrées évaluées.",
+      "locator": "Sections 4.C2, 5 et 6",
+      "git_blob_oid": "28a5786b81e553ea815245ad0918cdb7a526df1d",
+      "bytes": 30672,
+      "worktree_sha256": "c7fd49cc7c7c2dcbe0adf362266864d5867af3b7b94c6ad5b09d0cda4b3c5cbf"
+    },
+    {
+      "id": "WR-P01",
+      "category": "procedure",
+      "path": "docs/runbooks/RUNBOOK-LOCAL.md",
+      "use": "Eclipse, UTF-8, contrôles locaux et incidents ports ; procédures soumises à la propriété des ressources.",
+      "locator": "Sections 1, 4 et 6",
+      "git_blob_oid": "5de82a1430536b2e3e322c0725f24bb0b00fe4e8",
+      "bytes": 100893,
+      "worktree_sha256": "8ea183d2abc94ab7fb863201b659de36d8fa35fb0b100f5675ae2fdeaf359ab3"
+    },
+    {
+      "id": "WR-P02",
+      "category": "procedure_implementation",
+      "path": "scripts/Preflight-Local.ps1",
+      "use": "Préflight réel : commande présente, code natif et moteur accessible sont distincts.",
+      "locator": "Assert-Command ; java --version ; docker info",
+      "git_blob_oid": "04dad089b885ead635c4b0e029d2023e694837a2",
+      "bytes": 1940,
+      "worktree_sha256": "2c8480640262a3e7faa80d7ac194867666f520f0b9048730d493e3b80fa1e318"
+    },
+    {
+      "id": "WR-P03",
+      "category": "procedure_implementation",
+      "path": "scripts/Verify-Local.ps1",
+      "use": "Commande Windows effective avec skipITs et ajout explicite intégration.",
+      "locator": "Préflight ; Push-Location ; commandes Maven",
+      "git_blob_oid": "d4a9c0ac85e0dda730d6466cd8bcbe4b412af98e",
+      "bytes": 6256,
+      "worktree_sha256": "068bf5a3826fe77c9bb8fe5984b0cd80fef44d04aee17008b4d8e021369ba3ff"
+    },
+    {
+      "id": "WR-I01",
+      "category": "implementation",
+      "path": "pom.xml",
+      "use": "Java 25, Spring Boot 4.1.0, monomodule et version du train.",
+      "locator": "parent ; version ; java.version ; profils",
+      "git_blob_oid": "b6746484877941bc9b5fed47b9878ba3426b28ac",
+      "bytes": 16856,
+      "worktree_sha256": "e01e011e360fa847842d826a5bcf2960c34eae91da037e2a6f002e71a3513a46"
+    },
+    {
+      "id": "WR-I02",
+      "category": "implementation",
+      "path": "mvnw.cmd",
+      "use": "Frontière Windows du wrapper ; lecture uniquement, aucun Maven dans les cas runtime.",
+      "locator": "JAVA_HOME ; MAVEN_OPTS ; exécution Java",
+      "git_blob_oid": "283f5461f978146c7abbb62f48b2257b959dd2b2",
+      "bytes": 172,
+      "worktree_sha256": "d1c7f9e92c2ea256572d33996318bc550726ef2c987a88fb4d783e736ea068ce"
+    },
+    {
+      "id": "WR-I03",
+      "category": "implementation",
+      "path": ".mvn/wrapper/maven-wrapper.properties",
+      "use": "Version Maven résolue par le wrapper, sans installation ni téléchargement.",
+      "locator": "distributionUrl ; wrapperVersion",
+      "git_blob_oid": "a3c407ffc277c729e4bd22dcd7aeda4862a44d02",
+      "bytes": 259,
+      "worktree_sha256": "51b221ede4e074d19bb44d6d485bb7b298e77874572a09697aba0a9e234e0745"
+    },
+    {
+      "id": "WR-I04",
+      "category": "implementation",
+      "path": "src/main/resources/application.yml",
+      "use": "Adresse loopback et configuration courante ; aucune application lancée.",
+      "locator": "server.address ; flags fournisseur",
+      "git_blob_oid": "b70bc55684e069bb123c53a57163ff3f950f717e",
+      "bytes": 12048,
+      "worktree_sha256": "9036e582ba1fe78fb934669853a91b7277511d099558352c97f28792f1821e28"
+    },
+    {
+      "id": "WR-I05",
+      "category": "implementation",
+      "path": "src/main/resources/application-local.yml",
+      "use": "Surcharges locales versionnées, sans lire .env ni démarrer une base.",
+      "locator": "configuration locale ; JDBC",
+      "git_blob_oid": "209f9629782b7eed048d44f9a990f9017ed46869",
+      "bytes": 247,
+      "worktree_sha256": "2545c2c8cb1fa4a5add52dbe58e7c4b0f61f8030033f915c2881f54cff2872f4"
+    },
+    {
+      "id": "WR-H01",
+      "category": "historical",
+      "path": "docs/validation/J9-WO044-JAVA-JAR-PATH-ARGUMENT-BOUNDARY-QUALIFICATION-20260904.md",
+      "use": "Split natif reproduit, correction bornée et écart Testcontainers déclaré.",
+      "locator": "Sections 2 à 6",
+      "git_blob_oid": "ce4182537fda3f5bd76af8b54b8725035512ff08",
+      "bytes": 8729,
+      "worktree_sha256": "02008824316e688b6e42c523aaec45acf7b8edb776f49a9b11a822afd6a125a7"
+    },
+    {
+      "id": "WR-H02",
+      "category": "historical",
+      "path": "docs/validation/J9-WO053-CTRL-BREAK-DIAGNOSTIC-20260905.md",
+      "use": "Instrumentation, différences hôte/runner et cause originale NOT_ESTABLISHED.",
+      "locator": "Contrat expurgé ; exécutions locales ; essais GitHub",
+      "git_blob_oid": "13a21a50f6e94ec49bbac95189f0f4f1ff902f94",
+      "bytes": 7335,
+      "worktree_sha256": "8718125554e239925dcb8a785a4143dd8e9232f9d2cb554e91d0a6d864ff55fa"
+    },
+    {
+      "id": "WR-H03",
+      "category": "historical",
+      "path": "docs/validation/J9-WO053-REVIEW-HARDENING-20260905.md",
+      "use": "Contre-épreuves du relais et cleanup ; nouveau diff et preuves anciennes distingués.",
+      "locator": "Portée ; matrice ; vérifications",
+      "git_blob_oid": "c81c5890335575690e6d3d72f8c77a402016227a",
+      "bytes": 4179,
+      "worktree_sha256": "bacd897e4e4621e687935f9aa09f91469f69942869dbc3a95e8792fcdc8cf34e"
+    },
+    {
+      "id": "WR-H04",
+      "category": "historical",
+      "path": "docs/validation/WO062-FOOTBALL-QUALITY-CI-SECURITY-INSTALLATION-20260915.md",
+      "use": "Incident PSModulePath observé dans B, correction uniquement enfant.",
+      "locator": "Incident initial et portée des preuves",
+      "git_blob_oid": "968f7f9e7044b2528b328b0dc554e445ee081fee",
+      "bytes": 9389,
+      "worktree_sha256": "aa4b9d8eaca2ccddc093936b06652cf66938414c55442489526fa70f33769374"
+    },
+    {
+      "id": "WR-H05",
+      "category": "historical",
+      "path": "docs/skills/evaluations/WO-062/football-quality-ci-security/installation/initial-runtime-failure.json",
+      "use": "Échec Get-FileHash et comparaison héritage/defaults dans un contexte exact.",
+      "locator": "diagnostic ; resolution",
+      "git_blob_oid": "ef95879d42588a734d93e3f130d0d36f4543d658",
+      "bytes": 1939,
+      "worktree_sha256": "a6a41a79e694916cb7bd1f6477cde7afe101856f8bf38fa46d76fbf7f40dcbea"
+    },
+    {
+      "id": "WR-I06",
+      "category": "implementation",
+      "path": "scripts/wo036/WO036-CampaignTools.psm1",
+      "use": "Protection de la valeur JAR, flags et frontière native ; module lu/importé par le seul harnais autorisé.",
+      "locator": "ConvertTo-WO036JavaJarStartProcessArgument ; Start-WO036ComponentCore",
+      "git_blob_oid": "c0ec86b164b07bca38f2066b6a6584f56fa171af",
+      "bytes": 176724,
+      "worktree_sha256": "43c7bc8eb242161729f6c18f8b0feb67c46715ce911b27572e4bd13e5956bd74"
+    },
+    {
+      "id": "WR-P04",
+      "category": "controlled_qualification",
+      "path": "scripts/wo044/Invoke-WO044JavaJarArgumentBoundaryQualification.ps1",
+      "use": "Reproduction contrôlée existante PS7, capture par enfant et nettoyage exact.",
+      "locator": "Préflight ; Invoke-WO044ArgumentCapture ; finally",
+      "git_blob_oid": "b455390a455c8b20d16ad990b463997d9eec9aa0",
+      "bytes": 11212,
+      "worktree_sha256": "59996b14941700523007e1f6b0784b102d65e088569f95e882340250d43565e4"
+    },
+    {
+      "id": "WR-P05",
+      "category": "controlled_fixture",
+      "path": "scripts/wo044/Capture-WO044NativeArguments.ps1",
+      "use": "Enfant de capture réel sans Java, réseau ni application.",
+      "locator": "args ; sortie JSON UTF-8",
+      "git_blob_oid": "3b9f716351326874b6d1485f1310cc1fbffa6d5b",
+      "bytes": 948,
+      "worktree_sha256": "841428737a500fd9ccb1407d3c0822b56872f40b308568ee59ab48bae88b7818"
+    },
+    {
+      "id": "WR-T01",
+      "category": "test",
+      "path": "scripts/Tests/WO044JavaJarArgumentBoundary.Tests.ps1",
+      "use": "Assertions du contrat ; lecture seulement, aucune suite Pester exécutée par ce cas.",
+      "locator": "Describe WO-044 Java JAR native argument boundary",
+      "git_blob_oid": "e3912a0d9ebe651fff1effa0746cfda94b9939d5",
+      "bytes": 4669,
+      "worktree_sha256": "e1f661b0380c72b86374331b79419e6a2c8b551ebb0d195775f04aa731f1c29f"
+    },
+    {
+      "id": "WR-I07",
+      "category": "implementation",
+      "path": "scripts/J6-NativeBinaryPipeline.psm1",
+      "use": "Preuve de propriété, délais et nettoyage séparé du résultat ; ne pas importer pour la petite sonde.",
+      "locator": "J6WindowsKillOnCloseJob ; New-J6OwnedProcessIdentity ; cleanup",
+      "git_blob_oid": "243735333a3752243a93e246ef5844e440908d4e",
+      "bytes": 74231,
+      "worktree_sha256": "68b49fbf46a9dba3102fe23e4c0654d7f1eadcee70699aa4f9400025ba350349"
+    },
+    {
+      "id": "WR-T02",
+      "category": "test",
+      "path": "scripts/Test-J6CtrlBreakDiagnosticContract.ps1",
+      "use": "Contrat de diagnostic synthétique, ne reproduit pas la cause CI.",
+      "locator": "allowlist ; diagnostic ; failure isolation",
+      "git_blob_oid": "9f02b77cf285e0143af28369c2f05bbecc22314f",
+      "bytes": 4704,
+      "worktree_sha256": "a9d24f42cf74e44f7a2da178a557586e1fbb0d593a7c6e3c84e623c1481e9e21"
+    },
+    {
+      "id": "WR-R01",
+      "category": "routing",
+      "path": "docs/skills/local-lab/ss-verify/SKILL.md",
+      "use": "Frontière lot 1 : vérification standard sans incident Windows à diagnostiquer.",
+      "locator": "Choisir l'exécution ; diagnostic et résultats",
+      "git_blob_oid": "1ace7771fe147a3ac53e7f5a1e874b50bedb8353",
+      "bytes": 3044,
+      "worktree_sha256": "9eccf7b71f664a7d74c543b53b09fb7e58b5b2d96efe304925884c80e353b4ca"
+    },
+    {
+      "id": "WR-R02",
+      "category": "routing",
+      "path": "docs/skills/local-lab/ss-work-order/SKILL.md",
+      "use": "Frontière lot 1 : reprise et périmètre du WO.",
+      "locator": "Reprise ; cadrage",
+      "git_blob_oid": "0a0a12985807b2360f51f070acb84599406ff87d",
+      "bytes": 2325,
+      "worktree_sha256": "07f92e9d7e35fae64b814b2d92d62538d15e298b544242d6a772400de6712700"
+    }
+  ],
+  "files": [
+    {
+      "path": "source-inventory.md",
+      "bytes": 13099,
+      "sha256": "829309f7af53e58afe2a539044ccd2e5f1303c3a5f22260c44df407ea2f60d74"
+    },
+    {
+      "path": "cases.json",
+      "bytes": 7490,
+      "sha256": "8c3698a19463bc8093fbb8c209c15b0be142439d76a132514f9ba054bed8bae2"
+    },
+    {
+      "path": "inputs.json",
+      "bytes": 6773,
+      "sha256": "47811b9687a6e24b727c2ada4048dce597e6e5cee23022727564b469512e35b1"
+    },
+    {
+      "path": "oracle.md",
+      "bytes": 10701,
+      "sha256": "213dc98b419c2c6dad5104347a3e422ecb1516d9149967a15b0a8e06c6c6d437"
+    },
+    {
+      "path": "evaluation-plan.md",
+      "bytes": 6826,
+      "sha256": "dacc3fb69042b852852c7e8712b093db3e89ff7b56f02883a0e39691f4b88648"
+    },
+    {
+      "path": "runtime-protocol.md",
+      "bytes": 10630,
+      "sha256": "b4748a356b881a8574a78156c0ac00c90f493874efe8303d40a7224c12d91a52"
+    },
+    {
+      "path": "fixtures/NativeProbe.java",
+      "bytes": 1009,
+      "sha256": "4e29c5867eba0fb76518de2307391449c83450449bea0393179738505c69bc8b"
+    }
+  ],
+  "evaluation_files": [
+    {
+      "path": "source-inventory.md",
+      "bytes": 13099,
+      "sha256": "829309f7af53e58afe2a539044ccd2e5f1303c3a5f22260c44df407ea2f60d74"
+    },
+    {
+      "path": "cases.json",
+      "bytes": 7490,
+      "sha256": "8c3698a19463bc8093fbb8c209c15b0be142439d76a132514f9ba054bed8bae2"
+    },
+    {
+      "path": "inputs.json",
+      "bytes": 6773,
+      "sha256": "47811b9687a6e24b727c2ada4048dce597e6e5cee23022727564b469512e35b1"
+    },
+    {
+      "path": "oracle.md",
+      "bytes": 10701,
+      "sha256": "213dc98b419c2c6dad5104347a3e422ecb1516d9149967a15b0a8e06c6c6d437"
+    },
+    {
+      "path": "evaluation-plan.md",
+      "bytes": 6826,
+      "sha256": "dacc3fb69042b852852c7e8712b093db3e89ff7b56f02883a0e39691f4b88648"
+    },
+    {
+      "path": "runtime-protocol.md",
+      "bytes": 10630,
+      "sha256": "b4748a356b881a8574a78156c0ac00c90f493874efe8303d40a7224c12d91a52"
+    },
+    {
+      "path": "fixtures/NativeProbe.java",
+      "bytes": 1009,
+      "sha256": "4e29c5867eba0fb76518de2307391449c83450449bea0393179738505c69bc8b"
+    }
+  ],
+  "case_ids": [
+    "WR-H01",
+    "WR-N01",
+    "WR-C01",
+    "WR-C02",
+    "WR-S01",
+    "WR-S02",
+    "WR-S03",
+    "WR-S04"
+  ],
+  "not_executed": [
+    "candidate authoring",
+    "historical harness reproduction",
+    "new native PowerShell5.1 qualification",
+    "behavioral evaluations",
+    "selection sessions",
+    "application tests",
+    "Maven",
+    "Docker",
+    "personal installation",
+    "Git publication"
+  ]
+}

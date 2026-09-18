@@ -1,0 +1,45 @@
+import pathlib,json,hashlib,subprocess
+from datetime import datetime,timezone
+r=pathlib.Path(__file__).resolve().parent.parent;e=r/'docs/skills/evaluations/WO-062'
+read=lambda p:json.loads(p.read_text(encoding='utf-8-sig'))
+sha=lambda p:hashlib.sha256(p.read_bytes()).hexdigest()
+base='2428914d813ee1dcd05bdac29e25fe8c473c0521'
+total={'pass':0,'fail':0,'blocked':0};current={k:0 for k in total};attempts=0;finals=0;timeouts=0;new=[];oldpaths=[]
+for skill in ['ss-java-module','ss-windows-runtime']:
+ p=e/skill;q=read(p/'qualification.json');cur=read(p/q['results']);assert len(cur['cases'])==8
+ ctotal={k:0 for k in total};n=0
+ for run in ['run-01','run-02','run-03','run-04']:
+  rr=read(p/run/'results.json');attempts+=rr['case_count'];n+=rr['case_count']
+  if run!='run-04':oldpaths.append((p/run).relative_to(r).as_posix())
+  for c in rr['cases']:
+   v=c['verdict'].lower();ctotal[v]+=1;total[v]+=1
+   d=p/run/'cases'/c['case_id'];t=read(d/'trace.json');finals+=bool(t.get('response_sha256'));timeouts+=bool(t.get('timed_out'))
+   if run=='run-04':
+    review=read(p/run/c['review']);assert review['verdict']==c['verdict'] and review['candidate_sha256']==rr['candidate_sha256']
+    if c['response']:assert sha(p/run/c['response'])==review['response_sha256']
+    new.append({'skill':skill,'case_id':c['case_id'],'verdict':c['verdict'],'duration_seconds':t['duration_seconds'],'cli_exit_code':t['exit_code'],'collector_exit_code':t['collector_exit_code'],'turn_completed':t['turn_completed'],'timed_out':t['timed_out'],'trace':d.relative_to(r).as_posix()+'/trace.json','commands_completed':t['commands_completed']})
+ assert n==q['total_executions'] and ctotal==q['execution_totals']
+ for k in current:current[k]+=q[k];assert q[k]==sum(c['verdict'].lower()==k for c in cur['cases'])
+ for c in cur['cases']:
+  rev=read(p/'run-04'/c['review']);assert c['verdict']==rev['verdict']
+  if c['response']:assert sha(p/'run-04'/c['response'])==c['response_sha256']
+ if skill=='ss-java-module':assert all(c['source_run']=='run-04' for c in cur['cases']) and q['candidate_version']=='0.1.0-candidate.3' and q['executions']==8
+ else:assert q['candidate_version']=='0.1.0-candidate.1' and q['executions']==13
+ for name in ['manifest.json','cases.json','inputs.json','oracle.md','source-inventory.md','evaluation-plan.md','fixtures','runtime-protocol.md']:
+  if (p/name).exists():oldpaths.append((p/name).relative_to(r).as_posix())
+oldpaths+=['docs/skills/local-lab/ss-windows-runtime','docs/skills/evaluations/WO-062/c-targeted-reprise','docs/skills/evaluations/WO-062/c-targeted-results','docs/validation/WO062-C-TARGETED-REPRISE-20260916.md','docs/validation/WO062-C-TARGETED-CHECKS-20260916.json']
+assert not subprocess.check_output(['git','diff',base,'--']+oldpaths,cwd=r)
+assert attempts==38 and len(new)==10 and finals+timeouts==38
+man_count=0
+for mf in (e/'c-requalification-04').rglob('artifact-manifest.json'):
+ names=set()
+ for f in read(mf)['files']:
+  p=mf.parent/f['path'];assert sha(p)==f['sha256'] and p.stat().st_size==f['bytes'];names.add(f['path']);man_count+=1
+ assert {p.relative_to(mf.parent).as_posix() for p in mf.parent.rglob('*') if p.is_file()}==names|{'artifact-manifest.json'}
+for skill in ['ss-java-module','ss-windows-runtime']:
+ rt=r/'.tmp/wo062-evaluations'/skill
+ assert not list(rt.glob('run-0[5-9]'))
+expected=read(r/'.tmp/c-delivery-checks.json');assert expected['protected_app_and_prior_skills_unchanged'] and expected['personal_C_skills_absent'] and expected['existing_personal_files_unchanged_including_mtimes']==16
+out={'schema':'wo062-c4-delivery-checks-v1','checked_at_utc':datetime.now(timezone.utc).isoformat(),'base':base,'integrity_status':'PASS','new_sessions':new,'historical':{'attempts':attempts,'final_responses':finals,'timed_out_sessions':timeouts,**total},'current_distinct_cases':{'cases':16,**current},'old_cases_candidates_except_requested_java_revision_oracles_preserved':True,'preparation_and_support_manifest_files_checked':man_count,'general_delivery':expected,'links_status':'PENDING','secret_scan_status':'PENDING','human_validation':False,'personal_installation':False,'maven':{'executed_again':False,'reused_end_utc':'2026-09-15T15:58:40Z','declared':2440,'executed':2435,'skipped':5,'failures':0,'errors':0,'scope':'Application code unchanged; original WO test proof reused.'},'git_commit_audit':'Performed separately after commit; no self-referential commit claim.'}
+(r/'docs/validation/WO062-C4-CHECKS-20260916.json').write_text(json.dumps(out,ensure_ascii=False,indent=2)+'\n',encoding='utf-8',newline='\n')
+print(json.dumps({k:out[k] for k in ['integrity_status','historical','current_distinct_cases']}))

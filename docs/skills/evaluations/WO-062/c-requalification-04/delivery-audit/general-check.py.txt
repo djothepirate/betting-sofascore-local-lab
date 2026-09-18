@@ -1,0 +1,48 @@
+import pathlib,json,hashlib,subprocess,re
+from datetime import datetime,timezone
+r=pathlib.Path(__file__).resolve().parent.parent
+sha=lambda p:hashlib.sha256(p.read_bytes()).hexdigest()
+read=lambda p:json.loads(p.read_text(encoding='utf-8-sig'))
+base=read(r/'.tmp/c-baseline.json');checks=[]
+for skill in ['ss-java-module','ss-windows-runtime']:
+ p=r/'docs/skills/evaluations/WO-062'/skill;m=read(p/'manifest.json')
+ for f in m.get('evaluation_files',m.get('files')):
+  a=p/f['path'];assert sha(a)==f['sha256'] and a.stat().st_size==f['bytes'],a
+ for s in m['sources']:
+  oid=subprocess.check_output(['git','rev-parse',m['source_commit']+':'+s['path']],cwd=r,text=True).strip()
+  assert oid==s['git_blob_oid'],s['path']
+  if 'WO-SS-20260915-062-skills-lot2.md' not in s['path']:assert sha(r/s['path'])==s['worktree_sha256'],s['path']
+ c=r/'docs/skills/local-lab'/skill;q=read(p/'qualification.json')
+ for f in q['candidate_files']:assert sha(c/f['path'])==f['sha256'],f
+ for a in c.rglob('*'):
+  if a.is_file():
+   t=a.read_bytes().decode('utf-8');assert not t.startswith('\ufeff') and '\ufffd' not in t and '\0' not in t and '\r' not in t
+ assert q['human_validation'] is False and q['personal_installation'] is False
+ counts={}
+ for run in sorted(p.glob('run-*')):
+  if not (run/'artifact-manifest.json').exists():continue
+  manifest=read(run/'artifact-manifest.json')
+  for f in manifest['files']:
+   a=run/f['path'];assert sha(a)==f['sha256'] and a.stat().st_size==f['bytes'],a
+  results=read(run/'results.json')
+  for case in results['cases']:
+   d=run/'cases'/case['case_id'];t=read(d/'trace.json')
+   assert not t['oracle_supplied'] and not t['design_history_supplied']
+   assert t['candidate_sha256']==results['candidate_sha256']
+   assert case['verdict']==read(run/case['review'])['verdict']
+   for f in read(d/'freeze.json')['files']:assert sha(d/f['path'])==f['sha256'],d/f['path']
+   if case['verdict']=='PASS':assert t['exit_code']==0 and t['collector_exit_code']==0 and t['collection_completed'] and t['turn_completed'],d
+  counts[run.name]={k:results[k] for k in ['case_count','pass','fail','blocked']}
+ checks.append({'skill':skill,'sources':len(m['sources']),'frozen_preparation_files':len(m.get('evaluation_files',m['files'])),'runs':counts,'integrity':'PASS','candidate_utf8_lf':'PASS','human_validation':False,'personal_installation':False})
+existing=['ss-work-order','ss-verify','ss-postgres-change','ss-data-contract-replay','ss-review-closeout','ss-provider-benchmark','ss-football-quality','ss-ci-security']
+paths=['src','ci','.github','.gitlab-ci.yml','pom.xml','AGENTS.md','scripts','docs/skills/evaluations/SKL-002']
+paths+=['docs/skills/local-lab/'+s for s in existing]
+paths+=['docs/skills/evaluations/WO-062/'+s for s in ['ss-provider-benchmark','ss-football-quality','ss-ci-security','football-quality-ci-security']]
+paths+=[x for x in subprocess.check_output(['git','ls-files','ADR*'],cwd=r,text=True).splitlines()]
+assert not subprocess.check_output(['git','diff',base['head'],'--']+paths,cwd=r),'Protected source changed'
+for f in base['personal_files']:
+ p=pathlib.Path(f['path']);assert sha(p)==f['sha256'] and p.stat().st_size==f['bytes'] and p.stat().st_mtime_ns==f['mtime_ns'],p
+for skill in ['ss-java-module','ss-windows-runtime']:assert not (pathlib.Path('C:/Users/geoff/.agents/skills')/skill).exists()
+out={'checked_at_utc':datetime.now(timezone.utc).isoformat(),'base':base['head'],'checks':checks,'protected_app_and_prior_skills_unchanged':True,'existing_personal_files_unchanged_including_mtimes':len(base['personal_files']),'personal_C_skills_absent':True}
+(r/'.tmp/c-delivery-checks.json').write_text(json.dumps(out,ensure_ascii=False,indent=2)+'\n',encoding='utf-8',newline='\n')
+print(json.dumps(out))

@@ -1,0 +1,294 @@
+{
+  "prepared_at_utc": "2026-09-16T00:40:49.753388+00:00",
+  "skill": "ss-windows-runtime",
+  "run_id": "run-05",
+  "candidate_version": "0.1.0-candidate.1",
+  "candidate_sha256": "b89925d5395238010bb0afe9c1e1a22b0aa5ec4e7d1fb9946c671d241e7976c6",
+  "source_head": "d0021090d9cf718d5b338bbf8d06109586e4518a",
+  "preparation_manifest_sha256": "d62271db051e64edc261f4812f4969511993e314fb07cb8f6d3115ae446e29f7",
+  "case_count": 2,
+  "cases": [
+    {
+      "case_id": "WR-H01",
+      "kind": "historical",
+      "execution_mode": "bounded_local_runtime",
+      "input_files": [
+        {
+          "path": "AGENTS.md",
+          "sha256": "6509ac77cd4c87094a91da7e4c750b5991eeb4585a69a609def5289b91cf6ab5",
+          "bytes": 10320,
+          "access_role": "readable"
+        },
+        {
+          "path": "docs/validation/J9-WO044-JAVA-JAR-PATH-ARGUMENT-BOUNDARY-QUALIFICATION-20260904.md",
+          "sha256": "02008824316e688b6e42c523aaec45acf7b8edb776f49a9b11a822afd6a125a7",
+          "bytes": 8729,
+          "access_role": "readable"
+        },
+        {
+          "path": "docs/validation/J9-WO053-CTRL-BREAK-DIAGNOSTIC-20260905.md",
+          "sha256": "8718125554e239925dcb8a785a4143dd8e9232f9d2cb554e91d0a6d864ff55fa",
+          "bytes": 7335,
+          "access_role": "readable"
+        },
+        {
+          "path": "docs/validation/J9-WO053-REVIEW-HARDENING-20260905.md",
+          "sha256": "bacd897e4e4621e687935f9aa09f91469f69942869dbc3a95e8792fcdc8cf34e",
+          "bytes": 4179,
+          "access_role": "readable"
+        },
+        {
+          "path": "scripts/wo036/WO036-CampaignTools.psm1",
+          "sha256": "43c7bc8eb242161729f6c18f8b0feb67c46715ce911b27572e4bd13e5956bd74",
+          "bytes": 176724,
+          "access_role": "runtime_dependency_only"
+        },
+        {
+          "path": "scripts/wo044/Invoke-WO044JavaJarArgumentBoundaryQualification.ps1",
+          "sha256": "59996b14941700523007e1f6b0784b102d65e088569f95e882340250d43565e4",
+          "bytes": 11212,
+          "access_role": "readable"
+        },
+        {
+          "path": "scripts/wo044/Capture-WO044NativeArguments.ps1",
+          "sha256": "841428737a500fd9ccb1407d3c0822b56872f40b308568ee59ab48bae88b7818",
+          "bytes": 948,
+          "access_role": "readable"
+        },
+        {
+          "path": "scripts/Tests/WO044JavaJarArgumentBoundary.Tests.ps1",
+          "sha256": "e1f661b0380c72b86374331b79419e6a2c8b551ebb0d195775f04aa731f1c29f",
+          "bytes": 4669,
+          "access_role": "readable"
+        },
+        {
+          "path": "inputs/runtime-protocol.md",
+          "sha256": "b4748a356b881a8574a78156c0ac00c90f493874efe8303d40a7224c12d91a52",
+          "bytes": 10630,
+          "access_role": "readable"
+        },
+        {
+          "path": ".agents/skills/ss-windows-runtime/SKILL.md",
+          "sha256": "b89925d5395238010bb0afe9c1e1a22b0aa5ec4e7d1fb9946c671d241e7976c6",
+          "bytes": 9217,
+          "access_role": "candidate"
+        },
+        {
+          "path": ".agents/skills/ss-windows-runtime/agents/openai.yaml",
+          "sha256": "3038015980952bc18b21f45f0d4af514b35a8841394e4b80824986b7e30ccd9f",
+          "bytes": 300,
+          "access_role": "candidate"
+        },
+        {
+          "path": "input.json",
+          "sha256": "d49bea0e90ca263b75840a198dd7abbdf67e2dc45541d5474d9e26b833812a57",
+          "bytes": 1475,
+          "access_role": "readable"
+        },
+        {
+          "path": "inputs/c5/windows-session-protocol.md",
+          "bytes": 5870,
+          "sha256": "15d42d9601d1ef85652370ba80562d38c923d43f2c31528e833ba7294f2dab27",
+          "access_role": "readable"
+        },
+        {
+          "path": "inputs/c5/wrh-module-extract.md",
+          "bytes": 1784,
+          "sha256": "2cdccf624516126f800bc36e4da42c7c0139a670ad2b7033028dca800584bc5f",
+          "access_role": "readable"
+        },
+        {
+          "path": "inputs/c5/wrh-harness-template.ps1",
+          "bytes": 8859,
+          "sha256": "c1d8c2d34ae0990a6d4404e9f8ec6d42bad0b6d2f33f1f0fc922b17182ac17ef",
+          "access_role": "operational_template"
+        },
+        {
+          "path": "inputs/c5/wrh-postflight-template.ps1",
+          "bytes": 1458,
+          "sha256": "6e9428d28209acd4b8a966a454dc17fd82a03b5500f11058ede532c69b8ecb6b",
+          "access_role": "operational_template"
+        }
+      ],
+      "prompt_sha256": "fa04ddaebf0c1b1a65645c05aabec1ad62e729aefc168d3862afd201ac88b2ab",
+      "request_sha256": "fb8d58630e7d6055acd143184b453ff57b82f2c0ba2136c316ed9f459deff8bd",
+      "oracle_supplied": false,
+      "design_history_supplied": false,
+      "candidate_body_manually_pasted": false,
+      "runtime_dependency_only": [
+        "scripts/wo036/WO036-CampaignTools.psm1"
+      ],
+      "readable_input_paths": [
+        "AGENTS.md",
+        "docs/validation/J9-WO044-JAVA-JAR-PATH-ARGUMENT-BOUNDARY-QUALIFICATION-20260904.md",
+        "docs/validation/J9-WO053-CTRL-BREAK-DIAGNOSTIC-20260905.md",
+        "docs/validation/J9-WO053-REVIEW-HARDENING-20260905.md",
+        "scripts/wo044/Invoke-WO044JavaJarArgumentBoundaryQualification.ps1",
+        "scripts/wo044/Capture-WO044NativeArguments.ps1",
+        "scripts/Tests/WO044JavaJarArgumentBoundary.Tests.ps1",
+        "inputs/runtime-protocol.md",
+        ".agents/skills/ss-windows-runtime/SKILL.md",
+        ".agents/skills/ss-windows-runtime/agents/openai.yaml",
+        "input.json",
+        "inputs/c5/windows-session-protocol.md",
+        "inputs/c5/wrh-module-extract.md"
+      ],
+      "operational_templates": [
+        "inputs/c5/wrh-harness-template.ps1",
+        "inputs/c5/wrh-postflight-template.ps1"
+      ]
+    },
+    {
+      "case_id": "WR-N01",
+      "kind": "new_task",
+      "execution_mode": "bounded_local_runtime",
+      "input_files": [
+        {
+          "path": "AGENTS.md",
+          "sha256": "6509ac77cd4c87094a91da7e4c750b5991eeb4585a69a609def5289b91cf6ab5",
+          "bytes": 10320,
+          "access_role": "readable"
+        },
+        {
+          "path": "scripts/Preflight-Local.ps1",
+          "sha256": "2c8480640262a3e7faa80d7ac194867666f520f0b9048730d493e3b80fa1e318",
+          "bytes": 1940,
+          "access_role": "readable"
+        },
+        {
+          "path": "scripts/Verify-Local.ps1",
+          "sha256": "068bf5a3826fe77c9bb8fe5984b0cd80fef44d04aee17008b4d8e021369ba3ff",
+          "bytes": 6256,
+          "access_role": "readable"
+        },
+        {
+          "path": "pom.xml",
+          "sha256": "e01e011e360fa847842d826a5bcf2960c34eae91da037e2a6f002e71a3513a46",
+          "bytes": 16856,
+          "access_role": "readable"
+        },
+        {
+          "path": "mvnw.cmd",
+          "sha256": "d1c7f9e92c2ea256572d33996318bc550726ef2c987a88fb4d783e736ea068ce",
+          "bytes": 172,
+          "access_role": "readable"
+        },
+        {
+          "path": ".mvn/wrapper/maven-wrapper.properties",
+          "sha256": "51b221ede4e074d19bb44d6d485bb7b298e77874572a09697aba0a9e234e0745",
+          "bytes": 259,
+          "access_role": "readable"
+        },
+        {
+          "path": "src/main/resources/application.yml",
+          "sha256": "9036e582ba1fe78fb934669853a91b7277511d099558352c97f28792f1821e28",
+          "bytes": 12048,
+          "access_role": "readable"
+        },
+        {
+          "path": "inputs/runtime-protocol.md",
+          "sha256": "b4748a356b881a8574a78156c0ac00c90f493874efe8303d40a7224c12d91a52",
+          "bytes": 10630,
+          "access_role": "readable"
+        },
+        {
+          "path": "inputs/fixtures/NativeProbe.java",
+          "sha256": "4e29c5867eba0fb76518de2307391449c83450449bea0393179738505c69bc8b",
+          "bytes": 1009,
+          "access_role": "readable"
+        },
+        {
+          "path": ".agents/skills/ss-windows-runtime/SKILL.md",
+          "sha256": "b89925d5395238010bb0afe9c1e1a22b0aa5ec4e7d1fb9946c671d241e7976c6",
+          "bytes": 9217,
+          "access_role": "candidate"
+        },
+        {
+          "path": ".agents/skills/ss-windows-runtime/agents/openai.yaml",
+          "sha256": "3038015980952bc18b21f45f0d4af514b35a8841394e4b80824986b7e30ccd9f",
+          "bytes": 300,
+          "access_role": "candidate"
+        },
+        {
+          "path": "input.json",
+          "sha256": "76687203add1b1059600052f0f8809cd915224628738a937733b7f69e18374b7",
+          "bytes": 1643,
+          "access_role": "readable"
+        },
+        {
+          "path": "inputs/c5/windows-session-protocol.md",
+          "bytes": 5870,
+          "sha256": "15d42d9601d1ef85652370ba80562d38c923d43f2c31528e833ba7294f2dab27",
+          "access_role": "readable"
+        },
+        {
+          "path": "inputs/c5/wrn-conductor-template.ps1",
+          "bytes": 29020,
+          "sha256": "b1f4cd49dc1ae97eb7218e75afc9d14dab007d9970131ca38e2bfddcfcc0615a",
+          "access_role": "operational_template"
+        }
+      ],
+      "prompt_sha256": "526d0d877ac644775f25742231f5f870bbe3bfacfb729e66a59a933082c10c5b",
+      "request_sha256": "8a8556e6ff16dd9edd4f2bccb1e23086f61550f97daea1a0e8569bc4245d460f",
+      "oracle_supplied": false,
+      "design_history_supplied": false,
+      "candidate_body_manually_pasted": false,
+      "runtime_dependency_only": [],
+      "readable_input_paths": [
+        "AGENTS.md",
+        "scripts/Preflight-Local.ps1",
+        "scripts/Verify-Local.ps1",
+        "pom.xml",
+        "mvnw.cmd",
+        ".mvn/wrapper/maven-wrapper.properties",
+        "src/main/resources/application.yml",
+        "inputs/runtime-protocol.md",
+        "inputs/fixtures/NativeProbe.java",
+        ".agents/skills/ss-windows-runtime/SKILL.md",
+        ".agents/skills/ss-windows-runtime/agents/openai.yaml",
+        "input.json",
+        "inputs/c5/windows-session-protocol.md"
+      ],
+      "operational_templates": [
+        "inputs/c5/wrn-conductor-template.ps1"
+      ]
+    }
+  ],
+  "c5_operational_inputs": [
+    {
+      "path": "authorization.json",
+      "bytes": 2256,
+      "sha256": "a4c35ea2bd91920a520eb889dfdeca60d4ab89d8eb0ce2463c28881543173d41"
+    },
+    {
+      "path": "windows-session-protocol.md",
+      "bytes": 5870,
+      "sha256": "15d42d9601d1ef85652370ba80562d38c923d43f2c31528e833ba7294f2dab27"
+    },
+    {
+      "path": "wrh-harness-template.ps1",
+      "bytes": 8859,
+      "sha256": "c1d8c2d34ae0990a6d4404e9f8ec6d42bad0b6d2f33f1f0fc922b17182ac17ef"
+    },
+    {
+      "path": "wrh-module-extract.md",
+      "bytes": 1784,
+      "sha256": "2cdccf624516126f800bc36e4da42c7c0139a670ad2b7033028dca800584bc5f"
+    },
+    {
+      "path": "wrh-postflight-template.ps1",
+      "bytes": 1458,
+      "sha256": "6e9428d28209acd4b8a966a454dc17fd82a03b5500f11058ede532c69b8ecb6b"
+    },
+    {
+      "path": "wrn-conductor-dependency-preflight.ps1",
+      "bytes": 5067,
+      "sha256": "2fc352093e470677f9c386bb11ea7700f687d3950eafafc596445fa123faf368"
+    },
+    {
+      "path": "wrn-conductor-template.ps1",
+      "bytes": 29020,
+      "sha256": "b1f4cd49dc1ae97eb7218e75afc9d14dab007d9970131ca38e2bfddcfcc0615a"
+    }
+  ]
+}

@@ -1,0 +1,18 @@
+import pathlib,re,json,urllib.parse
+root=pathlib.Path(__file__).resolve().parent.parent
+paths=['docs/validation/WO062-JAVA-WINDOWS-CANDIDATES-20260915.md','docs/skills/README.md','docs/work_orders/active/WO-SS-20260915-062-skills-lot2.md','README.md','CHANGELOG.md']
+paths.append('docs/validation/WO062-C-TARGETED-REPRISE-20260916.md')
+paths.append('docs/validation/WO062-C4-REQUALIFICATION-20260916.md')
+broken=[];count=0
+for rel in paths:
+ p=root/rel;txt=p.read_text(encoding='utf-8')
+ assert '\ufffd' not in txt and '\0' not in txt
+ for link in re.findall(r'\]\(([^)]+)\)',txt):
+  link=link.strip('<>')
+  if re.match(r'[a-zA-Z][a-zA-Z0-9+.-]*:',link) or link.startswith('#'):continue
+  link=urllib.parse.unquote(link.split('#')[0])
+  if not link:continue
+  count+=1
+  if not (p.parent/link).exists():broken.append({'file':rel,'target':link})
+assert not broken,broken
+print(json.dumps({'local_links_checked':count,'broken_links':0,'utf8':True}))
