@@ -1,0 +1,42 @@
+{
+  "schema": "wo062-current-java-skill-status-v1",
+  "skill": "ss-java-module",
+  "candidate_version": "0.1.0-candidate.5",
+  "status": "QUALIFIED_HUMAN_VALIDATED_INSTALLED_HASH_VERIFIED",
+  "qualification": {
+    "pass": 8,
+    "fail": 0,
+    "blocked": 0,
+    "not_run": 0,
+    "formal_campaign": "run-08",
+    "qualification_path": "docs/skills/evaluations/WO-062/ss-java-module/qualification.json"
+  },
+  "human_validation": true,
+  "personal_installation": "HASH_VERIFIED",
+  "destination": "C:\\Users\\geoff\\.agents\\skills\\ss-java-module",
+  "package_files": [
+    {
+      "path": "SKILL.md",
+      "bytes": 11263,
+      "sha256": "d7171f978c2b13c852c2ce5e170d68c1bfc5087552661cfdc6271077a0fe6637"
+    },
+    {
+      "path": "agents/openai.yaml",
+      "bytes": 309,
+      "sha256": "ccc4fc2a4707838dd6defdd73ef6f6c7ee0d69e6df86e41689a46884691573ae"
+    }
+  ],
+  "source_candidate_unchanged": true,
+  "personal_installation_checks": [
+    "Install-LocalLabSkills.ps1 JavaModule copied exactly two approved files",
+    "Install-LocalLabSkills.ps1 JavaModule VerifyOnly passed",
+    "independent SHA-256 and byte-size listing matched both manifest files"
+  ],
+  "preserved_lab_status": [
+    "EXPERIMENTAL",
+    "LOCAL_ONLY",
+    "NOT_PRODUCTION_APPROVED",
+    "NO_CRITICAL_DEPENDENCY"
+  ],
+  "recorded_at_utc": "2026-09-18T07:38:55.6622647Z"
+}

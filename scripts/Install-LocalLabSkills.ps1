@@ -2,7 +2,7 @@
 param(
     [string]$Destination = (Join-Path $env:USERPROFILE '.agents/skills'),
     [switch]$VerifyOnly,
-    [ValidateSet('Lot1', 'ProviderBenchmark', 'FootballQualityCiSecurity')]
+    [ValidateSet('Lot1', 'ProviderBenchmark', 'FootballQualityCiSecurity', 'WindowsRuntime', 'JavaModule')]
     [string]$Package = 'Lot1'
 )
 
@@ -22,11 +22,20 @@ elseif ($Package -eq 'FootballQualityCiSecurity') {
     $manifestPath = Join-Path $repositoryRoot 'docs/skills/evaluations/WO-062/football-quality-ci-security/installation-manifest.json'
     $skillNames = @('ss-football-quality', 'ss-ci-security')
 }
+elseif ($Package -eq 'WindowsRuntime') {
+    $manifestPath = Join-Path $repositoryRoot 'docs/skills/evaluations/WO-062/ss-windows-runtime/installation-manifest.json'
+    $skillNames = @('ss-windows-runtime')
+}
+elseif ($Package -eq 'JavaModule') {
+    $manifestPath = Join-Path $repositoryRoot 'docs/skills/evaluations/WO-062/ss-java-module/installation-manifest.json'
+    $skillNames = @('ss-java-module')
+}
 $manifest = Get-Content -LiteralPath $manifestPath -Raw -Encoding UTF8 | ConvertFrom-Json
+$expectedCandidateVersion = if ($Package -eq 'JavaModule') { '0.1.0-candidate.5' } else { '0.1.0-candidate.1' }
 if ($Package -ne 'Lot1' -and
     ($manifest.owner_validated -isnot [bool] -or -not $manifest.owner_validated -or
      $manifest.personal_installation_authorized -isnot [bool] -or -not $manifest.personal_installation_authorized -or
-     $manifest.candidate_version -cne '0.1.0-candidate.1')) {
+     $manifest.candidate_version -cne $expectedCandidateVersion)) {
     throw 'Selected package lacks approval for the exact candidate version.'
 }
 $expectedPaths = @($skillNames | ForEach-Object {

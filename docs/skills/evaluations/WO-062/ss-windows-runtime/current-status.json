@@ -1,0 +1,52 @@
+{
+  "schema": "wo062-current-windows-skill-status-v1",
+  "skill": "ss-windows-runtime",
+  "candidate_version": "0.1.0-candidate.1",
+  "status": "QUALIFIED_HUMAN_VALIDATED_INSTALLED_USE_VERIFIED",
+  "windows_volet": "COMPLETE_LOCAL",
+  "WO_062": "OPEN",
+  "qualification": {
+    "pass": 8,
+    "fail": 0,
+    "blocked": 0,
+    "matrix_path": "C:\\Dev\\BettingProject\\codex\\betting-sofascore-local-lab\\.tmp\\wo062-skills-lot2\\docs\\skills\\evaluations\\WO-062\\c-requalification-13\\revision-03-appserver-transport\\host-preparation-03-run24\\c13-observation-01\\current-qualification.json",
+    "fresh_eight_case_campaign": false,
+    "retained_cases": 6,
+    "fresh_practical_cases": 2
+  },
+  "human_validation": true,
+  "personal_installation": "HASH_VERIFIED",
+  "destination": "C:\\Users\\geoff\\.agents\\skills\\ss-windows-runtime",
+  "discovery": "PASS_NATIVE_USER_SCOPE",
+  "installed_smoke": "PASS",
+  "verified_usage": "Analysis of supplied existing Windows launch evidence in the qualified Lab scope",
+  "usage_evidence": "C:\\Dev\\BettingProject\\codex\\betting-sofascore-local-lab\\.tmp\\wo062-skills-lot2\\docs\\skills\\evaluations\\WO-062\\ss-windows-runtime\\installation-01\\revision-01-native-smoke\\postfreeze-review.json",
+  "completion_audit": "C:\\Dev\\BettingProject\\codex\\betting-sofascore-local-lab\\.tmp\\wo062-skills-lot2\\docs\\skills\\evaluations\\WO-062\\ss-windows-runtime\\installation-01\\revision-01-native-smoke\\completion-audit.json",
+  "owned_cleanup": "CONFIRMED",
+  "rollback": "NOT_REQUIRED",
+  "current_helper_provisioning": "NOT_VALIDATED_BY_THIS_SMOKE",
+  "historical_infrastructure_root_cause": "ROOT_CAUSE_NOT_ESTABLISHED",
+  "first_smoke": "BLOCKED_INFRASTRUCTURE_PRESERVED",
+  "C13": "CONSUMED_NO_REEXECUTION_AUTHORIZED",
+  "source_candidate_unchanged": true,
+  "windows_sandbox": "elevated_unchanged",
+  "package_files": [
+    {
+      "path": "SKILL.md",
+      "bytes": 9217,
+      "sha256": "b89925d5395238010bb0afe9c1e1a22b0aa5ec4e7d1fb9946c671d241e7976c6"
+    },
+    {
+      "path": "agents/openai.yaml",
+      "bytes": 300,
+      "sha256": "3038015980952bc18b21f45f0d4af514b35a8841394e4b80824986b7e30ccd9f"
+    }
+  ],
+  "preserved_lab_status": [
+    "EXPERIMENTAL",
+    "LOCAL_ONLY",
+    "NOT_PRODUCTION_APPROVED",
+    "NO_CRITICAL_DEPENDENCY"
+  ],
+  "recorded_at_utc": "2026-09-18T00:40:12.6363578Z"
+}

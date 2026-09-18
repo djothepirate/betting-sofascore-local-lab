@@ -1,7 +1,7 @@
 [CmdletBinding()]
 param(
     [string]$TestRoot = (Join-Path ([System.IO.Path]::GetTempPath()) ('lab-skills-test-' + [guid]::NewGuid().ToString('N'))),
-    [ValidateSet('Lot1', 'ProviderBenchmark', 'FootballQualityCiSecurity')]
+    [ValidateSet('Lot1', 'ProviderBenchmark', 'FootballQualityCiSecurity', 'WindowsRuntime', 'JavaModule')]
     [string]$Package = 'Lot1'
 )
 
@@ -24,6 +24,16 @@ elseif ($Package -eq 'FootballQualityCiSecurity') {
     $lastSkill = 'ss-ci-security'
     $fileCount = 4
     $manifestRelative = 'docs/skills/evaluations/WO-062/football-quality-ci-security/installation-manifest.json'
+}
+elseif ($Package -eq 'WindowsRuntime') {
+    $firstSkill = $lastSkill = 'ss-windows-runtime'
+    $fileCount = 2
+    $manifestRelative = 'docs/skills/evaluations/WO-062/ss-windows-runtime/installation-manifest.json'
+}
+elseif ($Package -eq 'JavaModule') {
+    $firstSkill = $lastSkill = 'ss-java-module'
+    $fileCount = 2
+    $manifestRelative = 'docs/skills/evaluations/WO-062/ss-java-module/installation-manifest.json'
 }
 
 if (Test-Path -LiteralPath $TestRoot) {
@@ -120,26 +130,36 @@ $badDestination = Join-Path $TestRoot 'must-remain-absent'
 Assert-Refused { & (Join-Path $badRepository 'scripts/Install-LocalLabSkills.ps1') -Package $Package -Destination $badDestination } '*source hash or size mismatch*'
 Assert-True (-not (Test-Path -LiteralPath $badDestination)) 'Bad source validation created a destination.'
 Write-Output 'PASS source hash mismatch refused before any copy'
+# Subsequent manifest checks must exercise manifest guards, not reuse the intentionally corrupted source.
+Copy-Item -LiteralPath (Join-Path $repositoryRoot "docs/skills/local-lab/$lastSkill/agents/openai.yaml") -Destination $badSource -Force
 $caseCount = 7
 if ($Package -ne 'Lot1') {
     $coexist = Join-Path $TestRoot 'lot1 already installed'
     & $installer -Destination $coexist | Out-Null
     $priorCount = 10
-    if ($Package -eq 'FootballQualityCiSecurity') {
+    if ($Package -in @('FootballQualityCiSecurity', 'WindowsRuntime', 'JavaModule')) {
         & $installer -Package ProviderBenchmark -Destination $coexist | Out-Null
         $priorCount += 2
+    }
+    if ($Package -eq 'WindowsRuntime') {
+        & $installer -Package FootballQualityCiSecurity -Destination $coexist | Out-Null
+        $priorCount += 4
     }
     $before = Get-FileState $coexist
     $result = & $installer -Package $Package -Destination $coexist
     Assert-True ($result -like "*FILES=$fileCount; COPIED=$fileCount;*") 'Adding the package did not copy exactly its approved files.'
     $afterPrior = @(Get-FileState $coexist | Where-Object {
-        $_ -notlike "*$firstSkill*" -and $_ -notlike "*$lastSkill*"
+        -not $_.StartsWith(((Join-Path $coexist $firstSkill) + [IO.Path]::DirectorySeparatorChar), [StringComparison]::OrdinalIgnoreCase) -and
+        -not $_.StartsWith(((Join-Path $coexist $lastSkill) + [IO.Path]::DirectorySeparatorChar), [StringComparison]::OrdinalIgnoreCase)
     })
     Assert-True (@(Compare-Object $before $afterPrior).Count -eq 0) 'Adding the package changed previously installed files.'
     Assert-True (@(Get-ChildItem -LiteralPath $coexist -Recurse -File).Count -eq ($priorCount + $fileCount)) 'Unexpected coexistence file count.'
     & $installer -Destination $coexist -VerifyOnly | Out-Null
-    if ($Package -eq 'FootballQualityCiSecurity') {
+    if ($Package -in @('FootballQualityCiSecurity', 'WindowsRuntime', 'JavaModule')) {
         & $installer -Package ProviderBenchmark -Destination $coexist -VerifyOnly | Out-Null
+    }
+    if ($Package -eq 'WindowsRuntime') {
+        & $installer -Package FootballQualityCiSecurity -Destination $coexist -VerifyOnly | Out-Null
     }
     & $installer -Package $Package -Destination $coexist -VerifyOnly | Out-Null
     Write-Output 'PASS coexistence without rewriting previously installed files'
@@ -164,13 +184,14 @@ if ($Package -ne 'Lot1') {
     Write-Output 'PASS unapproved package refused before any copy'
 
     $badManifest.owner_validated = $true
-    $badManifest.files[$fileCount - 1].path = 'docs/skills/local-lab/ss-java-module/agents/openai.yaml'
+    $foreignSkill = if ($lastSkill -eq 'ss-java-module') { 'ss-windows-runtime' } else { 'ss-java-module' }
+    $badManifest.files[$fileCount - 1].path = "docs/skills/local-lab/$foreignSkill/agents/openai.yaml"
     [System.IO.File]::WriteAllText($badManifestPath, ($badManifest | ConvertTo-Json -Depth 10), $utf8)
     Assert-Refused { & (Join-Path $badRepository 'scripts/Install-LocalLabSkills.ps1') -Package $Package -Destination $badDestination } '*exactly the approved skill paths*'
     Assert-True (-not (Test-Path -LiteralPath $badDestination)) 'An out-of-scope manifest created a destination.'
     Write-Output 'PASS manifest path outside the selected package refused'
     $caseCount += 4
-    if ($Package -eq 'FootballQualityCiSecurity') {
+    if ($Package -in @('FootballQualityCiSecurity', 'WindowsRuntime', 'JavaModule')) {
         foreach ($variant in @('personal-approval-missing', 'approval-not-boolean', 'different-version')) {
             $badManifest = Get-Content -LiteralPath (Join-Path $repositoryRoot $manifestRelative) -Raw -Encoding UTF8 | ConvertFrom-Json
             switch ($variant) {

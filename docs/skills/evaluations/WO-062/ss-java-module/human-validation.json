@@ -1,0 +1,26 @@
+{
+  "schema_version": 1,
+  "skill": "ss-java-module",
+  "candidate_version": "0.1.0-candidate.5",
+  "human_validation": true,
+  "personal_installation_authorized": true,
+  "owner_statement": "Current owner request: install ss-java-module after its formal qualification completed with the expected results.",
+  "authority": "Explicit owner message in current Codex task",
+  "scope": "Exact two-file candidate package only; no candidate version or instruction change; bounded personal installation and hash verification.",
+  "qualification_path": "docs/skills/evaluations/WO-062/ss-java-module/qualification.json",
+  "qualification_sha256": "1fd21724824688f746d660f59f747d74a354ce5e53279589bd60aa9cb75c2bb9",
+  "files": [
+    {
+      "path": "docs/skills/local-lab/ss-java-module/SKILL.md",
+      "bytes": 11263,
+      "sha256": "d7171f978c2b13c852c2ce5e170d68c1bfc5087552661cfdc6271077a0fe6637"
+    },
+    {
+      "path": "docs/skills/local-lab/ss-java-module/agents/openai.yaml",
+      "bytes": 309,
+      "sha256": "ccc4fc2a4707838dd6defdd73ef6f6c7ee0d69e6df86e41689a46884691573ae"
+    }
+  ],
+  "recorded_at_utc": "2026-09-18T07:33:18.4431977Z",
+  "work_order": "WO-062"
+}
