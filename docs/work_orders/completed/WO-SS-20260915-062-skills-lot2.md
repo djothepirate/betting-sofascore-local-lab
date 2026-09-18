@@ -1,6 +1,6 @@
 # WO-SS-20260915-062 — Développement des skills spécialisés du lot 2
 
-- **Statut :** `OWNER_ACCEPTED — A_INSTALLED — B_INSTALLED — C_INSTALLED — IMPLEMENTATION_COMPLETE_PENDING_PR_MERGE` ; les cinq skills sont qualifiés, validés humainement et installés personnellement. `ss-java-module 0.1.0-candidate.5` est qualifié par C8 avec huit PASS. `ss-windows-runtime 0.1.0-candidate.1` est qualifié à huit PASS, zéro FAIL et zéro BLOCKED : les six revues historiques revalidées et les deux cas pratiques C13/run-24 sont liés par la matrice portable `ss-windows-runtime/final-qualification.json`, hashée et vérifiée par l’installateur. Les diagnostics Windows volumineux restent archivés localement. La PR #38 cible le train ; clôture et fusion restent conditionnées aux checks et à la revue.
+- **Statut :** `COMPLETED_OWNER_AUTHORIZED_PREMERGE` — les cinq skills sont qualifiés, validés humainement et installés personnellement. `ss-java-module 0.1.0-candidate.5` est qualifié par C8 avec huit PASS. `ss-windows-runtime 0.1.0-candidate.1` est qualifié à huit PASS, zéro FAIL et zéro BLOCKED : les six revues historiques revalidées et les deux cas pratiques C13/run-24 sont liés par la matrice portable `ss-windows-runtime/final-qualification.json`, hashée et vérifiée par l'installateur. Les diagnostics Windows volumineux restent archivés localement. Le classement documentaire précède la fusion ; la clôture effective est liée à l'état fusionné de la PR #38 vers le train.
 - **Date :** 2026-09-15.
 - **Autorité :** demande propriétaire de préparer un WO avec `ss-work-order`, à partir de la conversation « Skills du lot 2 », dans l'ordre précisé ci-dessous.
 - **Acceptation :** le 15 septembre 2026, le propriétaire confirme « J’accepte le WO-062 » et autorise l'inventaire des sources et la préparation des cas d'évaluation de `ss-provider-benchmark`.
@@ -10,6 +10,7 @@
 - **Validation et installation B :** le propriétaire accepte le contenu, le périmètre et les limites des deux candidats ; [décisions et installation vérifiée](../../validation/WO062-FOOTBALL-QUALITY-CI-SECURITY-INSTALLATION-20260915.md).
 - **Branche :** `feature/V0.1.0-RC01-CODEX-WO-SS-20260915-062`.
 - **Cible de PR :** `feature/V0.1.0-RC01`.
+- **PR :** [#38 — skills spécialisés du lot 2](https://github.com/djothepirate/betting-sofascore-local-lab/pull/38).
 - **Base canonique vérifiée sur GitHub :** `74d3f38afd64ce587353fbd645cad7a388e9756c` ; train local et distant identiques lors du cadrage, après fusion de la PR #37 / WO-061.
 - **Version Maven :** `0.1.0-rc.1-SNAPSHOT`.
 - **Worktree :** `.tmp/wo062-skills-lot2`, distinct du checkout du train et d'Eclipse.
@@ -662,3 +663,25 @@ la livraison Git et sa clôture suivent le workflow de revue et de fusion décri
 - La matrice finale Windows, auparavant référencée par un chemin absolu dans l’archive C13/run-24, est conservée comme copie portable strictement hashée sous `ss-windows-runtime/final-qualification.json`. Les chemins du manifeste d’installation, de la validation humaine et du statut courant sont relatifs et concordants ; l’archive conserve les pièces C13 plus volumineuses.
 - `Install-LocalLabSkills.ps1` refuse maintenant `JavaModule` ou `WindowsRuntime` avant toute copie si la qualification portable manque, ne correspond pas au SHA-256, ne décrit pas le candidat attendu, ne donne pas huit PASS/zéro FAIL/zéro BLOCKED, ou ne correspond pas aux deux fichiers candidats du manifeste. Les deux packages ont un contre-test de qualification altérée.
 - Le guide des skills décrit les cinq packages livrés, les versions C finales et les commandes d’installation/test pour `JavaModule` et `WindowsRuntime`. Ces changements répondent aux deux findings P2 ; ils n’altèrent aucun candidat, fixture, oracle, qualification historique ou artefact archivé.
+
+## Clôture autorisée — 18 septembre 2026
+
+Le propriétaire a autorisé la fusion après checks verts et absence de nouveau commentaire
+actionnable. Les deux findings P2 de la PR #38 ont été corrigés par `b4dc43b` :
+la qualification Windows portable est versionnée, vérifiée avant copie par l'installateur,
+et le guide décrit les packages C livrés. Les deux fils P2 sont résolus ; aucun autre
+commentaire n'est présent.
+
+Le [run GitHub 35330560186](https://github.com/djothepirate/betting-sofascore-local-lab/actions/runs/35330560186)
+qualifie exactement b4dc43bd2efac108d4dec8e5e2f5effcbd767e54 :
+
+| Check obligatoire | Résultat constaté |
+| --- | --- |
+| Windows — garde locale et tests standards | SUCCESS en 5 min 27 s ; garde locale, bundle, worker hors ligne et preuves XML validés. |
+| Linux — sécurité, PostgreSQL et distribution locale | SUCCESS en 12 min 32 s ; tests standards/PostgreSQL-Testcontainers, diff et preuves XML validés. |
+
+Le présent commit ne modifie que le classement du WO, les liens et le changelog de clôture.
+Il ne modifie aucun candidat, fixture, oracle, preuve gelée, code applicatif, configuration
+ni installation personnelle. Il doit obtenir ses propres checks verts avant la fusion de la
+PR #38. Le classement dans completed ne prouve pas seul cette fusion ; GitHub en conserve
+l'état effectif et le SHA de merge.

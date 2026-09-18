@@ -6,6 +6,13 @@ Les évolutions notables du SofaScore Local Lab sont consignées dans ce fichier
 
 ### WO-062 — skills spécialisés du lot 2
 
+- Prépare la clôture documentaire autorisée : le WO-062 est classé dans `completed` et les
+  liens courants décrivent les cinq skills livrés. Le run PR
+  [35330560186](https://github.com/djothepirate/betting-sofascore-local-lab/actions/runs/35330560186)
+  qualifie `b4dc43b` avec les deux jobs obligatoires `SUCCESS`; les deux findings P2 sont résolus.
+  Ce seul commit documentaire doit encore recevoir ses propres checks avant la fusion de la PR #38
+  vers `feature/V0.1.0-RC01`.
+
 - Rend la livraison Windows portable et vérifiable dans tout clone : la matrice finale
   `8 PASS / 0 FAIL / 0 BLOCKED` est versionnée sous
   `ss-windows-runtime/final-qualification.json`, avec son SHA-256 inchangé depuis
@@ -134,7 +141,7 @@ Les évolutions notables du SofaScore Local Lab sont consignées dans ce fichier
   [38 sources et 12 cas](docs/skills/evaluations/WO-062/ss-provider-benchmark/evaluation-plan.md),
   corpus synthétique, oracle séparé et manifeste d'empreintes. Les évaluations étaient `NOT_RUN` à cette étape ;
   voir la [preuve de préparation](docs/validation/WO062-PROVIDER-BENCHMARK-PREPARATION-20260915.md).
-- Prépare le [WO-062](docs/work_orders/active/WO-SS-20260915-062-skills-lot2.md) pour développer
+- Prépare le [WO-062](docs/work_orders/completed/WO-SS-20260915-062-skills-lot2.md) pour développer
   `ss-provider-benchmark`, puis `ss-football-quality` et `ss-ci-security`, puis `ss-java-module`
   et `ss-windows-runtime`, selon les rôles de la conversation « Skills du lot 2 ».
 - Définit les adaptations propres au Lab, les sources actuelles, dix évaluations métier,

@@ -140,29 +140,18 @@ les HTTP 404 des trois familles J5 comme des indisponibilités à réinterroger 
 planifié, et bloque la sélection J4 d'une rencontre déjà suivie, sauf `STOPPED_ERROR`.
 La reprise fournisseur après ce correctif reste à valider par l'opérateur.
 
-**Skills du lot 2 — WO accepté le 15 septembre 2026 :** le
-[WO-062](docs/work_orders/active/WO-SS-20260915-062-skills-lot2.md) prépare, dans cet ordre,
-`ss-provider-benchmark`, `ss-football-quality`, `ss-ci-security`, `ss-java-module` et
-`ss-windows-runtime`. Le premier candidat `ss-provider-benchmark` est rédigé et ses douze
-cas figés sont qualifiés : 12 PASS au bilan cumulé, après réexécution instrumentée de PB-S01
-avec preuve de lecture intégrale du candidat exact.
-Le [protocole et la scorecard prematch/live](docs/skills/evaluations/WO-062/ss-provider-benchmark/run-01/cases/PB-N01/response.md)
-sont produits. Voir la [qualification courante](docs/validation/WO062-PROVIDER-BENCHMARK-PBS01-QUALIFICATION-20260915.md)
-et le [guide des skills](docs/skills/README.md). La version `0.1.0-candidate.1` est désormais
-[validée par le propriétaire et installée personnellement](docs/validation/WO062-PROVIDER-BENCHMARK-INSTALLATION-20260915.md),
-avec ses limites documentées et ses deux fichiers inchangés.
-Les candidats `ss-football-quality` et `ss-ci-security`, version `0.1.0-candidate.1`,
-sont à leur tour [qualifiés sur huit cas chacun](docs/validation/WO062-FOOTBALL-QUALITY-CI-SECURITY-CANDIDATES-20260915.md),
-avec sources figées et revue indépendante. Leur contenu, périmètre et limites ont ensuite été
-[validés par le propriétaire et leurs quatre fichiers installés personnellement](docs/validation/WO062-FOOTBALL-QUALITY-CI-SECURITY-INSTALLATION-20260915.md).
-La [requalification C4 du 16 septembre](docs/validation/WO062-C4-REQUALIFICATION-20260916.md)
-corrige Java en `.3` et conserve dix nouvelles sessions terminées. Les deux omissions ciblées
-de JM-N01 sont corrigées ; une autre omission, le profil live bloqué, maintient ce cas FAIL.
-WR-H01 Windows `.1` exécute enfin la chaîne complète en 428,250 s : reproduction et critères
-historiques PASS, avec un FAIL distinct pour les lectures contraires au complément C4.
-WR-N01 bloque sur `Get-FileHash` avant Java : failure et sleep restent non exécutés.
-Les essais précédents, la preuve séparée de propriété et le résidu historique sont conservés.
-La qualification reste incomplète ; validation humaine, installation et consolidation restent à réaliser.
+**Skills du lot 2 — clôture pré-fusion le 18 septembre 2026 :** le
+[WO-062](docs/work_orders/completed/WO-SS-20260915-062-skills-lot2.md) livre, dans l'ordre prévu,
+ss-provider-benchmark, ss-football-quality, ss-ci-security, ss-java-module et
+ss-windows-runtime. Les versions livrées sont qualifiées, validées humainement et installées
+personnellement : Provider Benchmark (12 PASS), Football Quality (8 PASS), CI Security (8 PASS),
+Java Module 0.1.0-candidate.5 (8 PASS / 0 FAIL / 0 BLOCKED) et Windows Runtime
+0.1.0-candidate.1 (8 PASS / 0 FAIL / 0 BLOCKED). La
+[matrice finale Windows portable](docs/skills/evaluations/WO-062/ss-windows-runtime/final-qualification.json)
+est liée au manifeste par SHA-256 ; les traces C13 détaillées restent dans l'archive locale
+hashée. Les commandes d'installation et de vérification figurent dans le
+[guide des skills](docs/skills/README.md). La PR #38 doit encore fusionner vers
+feature/V0.1.0-RC01 pour rendre cette clôture effective.
 
 **Skills du lot 1 validés — 5 septembre 2026 :** les cinq skills `ss-*` sont livrés avec
 leur [guide et installateur personnel](docs/skills/README.md), sous

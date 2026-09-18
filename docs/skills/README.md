@@ -12,8 +12,8 @@ Les cinq skills du lot 1 ont été validés par le propriétaire le 5 septembre 
 
 ## Lot 2 — cinq skills qualifiés, validés humainement et installés personnellement
 
-Le [WO-062](../work_orders/active/WO-SS-20260915-062-skills-lot2.md), préparé le 15 septembre 2026,
-adapte au Local Lab les rôles de la conversation « Skills du lot 2 » dans l’ordre demandé.
+Le [WO-062](../work_orders/completed/WO-SS-20260915-062-skills-lot2.md), classé en clôture pré-fusion le 18 septembre 2026,
+adapte au Local Lab les rôles de la conversation « Skills du lot 2 » dans l'ordre demandé. La clôture effective reste liée à la fusion de la PR #38.
 
 | Étape | Skill | Version livrée | Qualification et état courant |
 |---|---|---|---|
